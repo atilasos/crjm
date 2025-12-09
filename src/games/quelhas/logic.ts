@@ -1,296 +1,284 @@
-import { QuelhasState, Celula, Posicao, Peca } from './types';
+import { QuelhasState, Celula, Posicao, Segmento } from './types';
 import { GameMode, GameStatus, Player } from '../../types';
 
-const TAMANHO_TABULEIRO = 4;
+const TAMANHO_TABULEIRO = 10;
+const COMPRIMENTO_MINIMO = 2;
 
-// Criar tabuleiro inicial
+// Criar tabuleiro inicial vazio
 export function criarTabuleiroInicial(): Celula[][] {
-  const tabuleiro: Celula[][] = Array(TAMANHO_TABULEIRO)
+  return Array(TAMANHO_TABULEIRO)
     .fill(null)
-    .map(() => Array(TAMANHO_TABULEIRO).fill(null));
-
-  // Jogador 1 começa na linha 0 (cima) com peças 1,2,3,4
-  for (let col = 0; col < 4; col++) {
-    tabuleiro[0][col] = { jogador: 'jogador1', valor: col + 1 };
-  }
-
-  // Jogador 2 começa na linha 3 (baixo) com peças 1,2,3,4
-  for (let col = 0; col < 4; col++) {
-    tabuleiro[3][col] = { jogador: 'jogador2', valor: col + 1 };
-  }
-
-  return tabuleiro;
+    .map(() => Array(TAMANHO_TABULEIRO).fill('vazia'));
 }
 
-// Criar estado inicial do jogo
-export function criarEstadoInicial(modo: GameMode): QuelhasState {
-  return {
-    tabuleiro: criarTabuleiroInicial(),
-    modo,
-    jogadorAtual: 'jogador1',
-    estado: 'a-jogar',
-    pecaSelecionada: null,
-    jogadasValidas: [],
-    objetivoJogador1: [
-      { linha: 3, coluna: 0 },
-      { linha: 3, coluna: 1 },
-      { linha: 3, coluna: 2 },
-      { linha: 3, coluna: 3 },
-    ],
-    objetivoJogador2: [
-      { linha: 0, coluna: 0 },
-      { linha: 0, coluna: 1 },
-      { linha: 0, coluna: 2 },
-      { linha: 0, coluna: 3 },
-    ],
-  };
+// Obter orientação do jogador
+function getOrientacao(jogador: Player): 'vertical' | 'horizontal' {
+  return jogador === 'jogador1' ? 'vertical' : 'horizontal';
 }
 
-// Verificar se posição está dentro do tabuleiro
-function dentroDoTabuleiro(pos: Posicao): boolean {
-  return pos.linha >= 0 && pos.linha < TAMANHO_TABULEIRO && 
-         pos.coluna >= 0 && pos.coluna < TAMANHO_TABULEIRO;
-}
+// Calcular todos os segmentos válidos para o jogador atual
+export function calcularJogadasValidas(tabuleiro: Celula[][], jogador: Player): Segmento[] {
+  const orientacao = getOrientacao(jogador);
+  const jogadas: Segmento[] = [];
 
-// Obter jogadas válidas para uma peça
-export function getJogadasParaPeca(tabuleiro: Celula[][], pos: Posicao): Posicao[] {
-  const peca = tabuleiro[pos.linha][pos.coluna];
-  if (!peca) return [];
-
-  const movimentos = peca.valor;
-  const jogadas: Posicao[] = [];
-  
-  // Direções: cima, baixo, esquerda, direita
-  const direcoes = [
-    { dl: -1, dc: 0 }, // cima
-    { dl: 1, dc: 0 },  // baixo
-    { dl: 0, dc: -1 }, // esquerda
-    { dl: 0, dc: 1 },  // direita
-  ];
-
-  for (const dir of direcoes) {
-    // Tentar mover exatamente 'movimentos' casas nesta direção
-    let posAtual = { ...pos };
-    let podeChegar = true;
-
-    for (let i = 0; i < movimentos; i++) {
-      const proximaPos: Posicao = {
-        linha: posAtual.linha + dir.dl,
-        coluna: posAtual.coluna + dir.dc,
-      };
-
-      if (!dentroDoTabuleiro(proximaPos)) {
-        podeChegar = false;
-        break;
-      }
-
-      // Nas casas intermédias, não pode haver peças
-      if (i < movimentos - 1) {
-        if (tabuleiro[proximaPos.linha][proximaPos.coluna] !== null) {
-          podeChegar = false;
-          break;
+  if (orientacao === 'vertical') {
+    // Segmentos verticais: varrer colunas
+    for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
+      let inicioSegmento = -1;
+      
+      for (let linha = 0; linha <= TAMANHO_TABULEIRO; linha++) {
+        const celulaVazia = linha < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        
+        if (celulaVazia && inicioSegmento === -1) {
+          inicioSegmento = linha;
+        } else if (!celulaVazia && inicioSegmento !== -1) {
+          // Fim de sequência de células vazias
+          const comprimentoMax = linha - inicioSegmento;
+          
+          // Gerar todos os segmentos possíveis nesta sequência
+          for (let comp = COMPRIMENTO_MINIMO; comp <= comprimentoMax; comp++) {
+            for (let start = inicioSegmento; start <= linha - comp; start++) {
+              jogadas.push({
+                inicio: { linha: start, coluna },
+                comprimento: comp,
+                orientacao: 'vertical',
+              });
+            }
+          }
+          inicioSegmento = -1;
         }
       }
-      // Na casa final, também não pode haver peças
-      else {
-        if (tabuleiro[proximaPos.linha][proximaPos.coluna] !== null) {
-          podeChegar = false;
-          break;
-        }
-      }
-
-      posAtual = proximaPos;
     }
-
-    if (podeChegar) {
-      jogadas.push(posAtual);
+  } else {
+    // Segmentos horizontais: varrer linhas
+    for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
+      let inicioSegmento = -1;
+      
+      for (let coluna = 0; coluna <= TAMANHO_TABULEIRO; coluna++) {
+        const celulaVazia = coluna < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        
+        if (celulaVazia && inicioSegmento === -1) {
+          inicioSegmento = coluna;
+        } else if (!celulaVazia && inicioSegmento !== -1) {
+          // Fim de sequência de células vazias
+          const comprimentoMax = coluna - inicioSegmento;
+          
+          // Gerar todos os segmentos possíveis nesta sequência
+          for (let comp = COMPRIMENTO_MINIMO; comp <= comprimentoMax; comp++) {
+            for (let start = inicioSegmento; start <= coluna - comp; start++) {
+              jogadas.push({
+                inicio: { linha, coluna: start },
+                comprimento: comp,
+                orientacao: 'horizontal',
+              });
+            }
+          }
+          inicioSegmento = -1;
+        }
+      }
     }
   }
 
   return jogadas;
 }
 
-// Verificar condição de vitória
-function verificarVitoria(tabuleiro: Celula[][], objetivos: Posicao[], jogador: Player): boolean {
-  // O jogador ganha se ocupar TODAS as casas objetivo com as suas peças
-  return objetivos.every(obj => {
-    const celula = tabuleiro[obj.linha][obj.coluna];
-    return celula !== null && celula.jogador === jogador;
-  });
-}
-
-// Selecionar uma peça
-export function selecionarPeca(state: QuelhasState, pos: Posicao): QuelhasState {
-  const { tabuleiro, jogadorAtual } = state;
-  const celula = tabuleiro[pos.linha][pos.coluna];
-
-  // Verificar se a peça pertence ao jogador atual
-  if (!celula || celula.jogador !== jogadorAtual) {
-    return { ...state, pecaSelecionada: null, jogadasValidas: [] };
-  }
-
-  const jogadasValidas = getJogadasParaPeca(tabuleiro, pos);
-
+// Criar estado inicial do jogo
+export function criarEstadoInicial(modo: GameMode): QuelhasState {
+  const tabuleiro = criarTabuleiroInicial();
+  const jogadasValidas = calcularJogadasValidas(tabuleiro, 'jogador1');
+  
   return {
-    ...state,
-    pecaSelecionada: pos,
+    tabuleiro,
+    modo,
+    jogadorAtual: 'jogador1', // Vertical começa
+    estado: 'a-jogar',
+    segmentoPreview: null,
     jogadasValidas,
+    primeiraJogada: true,
   };
 }
 
-// Executar uma jogada
-export function executarJogada(state: QuelhasState, destino: Posicao): QuelhasState {
-  const { pecaSelecionada, tabuleiro, jogadorAtual, jogadasValidas } = state;
-  
-  if (!pecaSelecionada) return state;
-
-  // Verificar se é uma jogada válida
-  const jogadaValida = jogadasValidas.some(
-    j => j.linha === destino.linha && j.coluna === destino.coluna
+// Verificar se um segmento é válido
+export function isSegmentoValido(state: QuelhasState, segmento: Segmento): boolean {
+  return state.jogadasValidas.some(
+    s => s.inicio.linha === segmento.inicio.linha &&
+         s.inicio.coluna === segmento.inicio.coluna &&
+         s.comprimento === segmento.comprimento &&
+         s.orientacao === segmento.orientacao
   );
-  
-  if (!jogadaValida) return state;
+}
 
-  // Criar novo tabuleiro
-  const novoTabuleiro = tabuleiro.map(linha => [...linha]);
-  
-  // Mover a peça
-  const peca = novoTabuleiro[pecaSelecionada.linha][pecaSelecionada.coluna];
-  novoTabuleiro[pecaSelecionada.linha][pecaSelecionada.coluna] = null;
-  novoTabuleiro[destino.linha][destino.coluna] = peca;
+// Colocar um segmento no tabuleiro
+export function colocarSegmento(state: QuelhasState, segmento: Segmento): QuelhasState {
+  if (!isSegmentoValido(state, segmento)) return state;
 
-  // Verificar vitória
-  let novoEstado: GameStatus = 'a-jogar';
-  
-  if (jogadorAtual === 'jogador1') {
-    if (verificarVitoria(novoTabuleiro, state.objetivoJogador1, 'jogador1')) {
-      novoEstado = 'vitoria-jogador1';
-    }
-  } else {
-    if (verificarVitoria(novoTabuleiro, state.objetivoJogador2, 'jogador2')) {
-      novoEstado = 'vitoria-jogador2';
+  const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
+
+  // Marcar células como ocupadas
+  for (let i = 0; i < segmento.comprimento; i++) {
+    if (segmento.orientacao === 'vertical') {
+      novoTabuleiro[segmento.inicio.linha + i][segmento.inicio.coluna] = 'ocupada';
+    } else {
+      novoTabuleiro[segmento.inicio.linha][segmento.inicio.coluna + i] = 'ocupada';
     }
   }
 
-  const proximoJogador: Player = jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1';
+  const proximoJogador: Player = state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1';
+  
+  // Calcular jogadas válidas para o próximo jogador
+  const jogadasProximoJogador = calcularJogadasValidas(novoTabuleiro, proximoJogador);
+
+  // MISÈRE: Se o próximo jogador NÃO tem jogadas, ele GANHA
+  // (porque o jogador atual foi o último a jogar e portanto perde)
+  let novoEstado: GameStatus = 'a-jogar';
+  if (jogadasProximoJogador.length === 0) {
+    // O próximo jogador ganha porque não tem jogadas (misère)
+    novoEstado = proximoJogador === 'jogador1' ? 'vitoria-jogador1' : 'vitoria-jogador2';
+  }
 
   return {
     ...state,
     tabuleiro: novoTabuleiro,
     jogadorAtual: proximoJogador,
     estado: novoEstado,
-    pecaSelecionada: null,
-    jogadasValidas: [],
+    segmentoPreview: null,
+    jogadasValidas: jogadasProximoJogador,
+    primeiraJogada: false,
   };
 }
 
-// Verificar se um jogador tem alguma jogada válida
-function temJogadasValidas(tabuleiro: Celula[][], jogador: Player): boolean {
-  for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
-    for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
-      const celula = tabuleiro[linha][coluna];
-      if (celula && celula.jogador === jogador) {
-        const jogadas = getJogadasParaPeca(tabuleiro, { linha, coluna });
-        if (jogadas.length > 0) return true;
-      }
-    }
-  }
-  return false;
+// Atualizar preview do segmento
+export function atualizarPreview(state: QuelhasState, segmento: Segmento | null): QuelhasState {
+  return { ...state, segmentoPreview: segmento };
 }
 
-// Obter todas as peças de um jogador com as suas jogadas
-function getPecasComJogadas(tabuleiro: Celula[][], jogador: Player): Array<{ pos: Posicao; peca: Peca; jogadas: Posicao[] }> {
-  const resultado: Array<{ pos: Posicao; peca: Peca; jogadas: Posicao[] }> = [];
+// Obter segmento a partir de uma posição clicada (tenta encontrar o menor segmento válido)
+export function getSegmentoParaPosicao(state: QuelhasState, pos: Posicao): Segmento | null {
+  const orientacao = getOrientacao(state.jogadorAtual);
   
-  for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
-    for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
-      const celula = tabuleiro[linha][coluna];
-      if (celula && celula.jogador === jogador) {
-        const jogadas = getJogadasParaPeca(tabuleiro, { linha, coluna });
-        if (jogadas.length > 0) {
-          resultado.push({
-            pos: { linha, coluna },
-            peca: celula,
-            jogadas,
-          });
+  // Encontrar segmentos que incluem esta posição
+  const segmentosPossiveis = state.jogadasValidas.filter(s => {
+    if (s.orientacao !== orientacao) return false;
+    
+    if (orientacao === 'vertical') {
+      return s.inicio.coluna === pos.coluna &&
+             pos.linha >= s.inicio.linha &&
+             pos.linha < s.inicio.linha + s.comprimento;
+    } else {
+      return s.inicio.linha === pos.linha &&
+             pos.coluna >= s.inicio.coluna &&
+             pos.coluna < s.inicio.coluna + s.comprimento;
+    }
+  });
+
+  if (segmentosPossiveis.length === 0) return null;
+
+  // Retornar o menor segmento que inclui esta posição
+  segmentosPossiveis.sort((a, b) => a.comprimento - b.comprimento);
+  return segmentosPossiveis[0];
+}
+
+// IA do computador (misère)
+// Estratégia: tentar forçar o adversário a ser o último a jogar
+export function jogadaComputador(state: QuelhasState): QuelhasState {
+  const jogadas = state.jogadasValidas;
+  if (jogadas.length === 0) return state;
+
+  // Avaliar cada jogada
+  const jogadasAvaliadas = jogadas.map(jogada => {
+    // Simular a jogada
+    const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
+    for (let i = 0; i < jogada.comprimento; i++) {
+      if (jogada.orientacao === 'vertical') {
+        novoTabuleiro[jogada.inicio.linha + i][jogada.inicio.coluna] = 'ocupada';
+      } else {
+        novoTabuleiro[jogada.inicio.linha][jogada.inicio.coluna + i] = 'ocupada';
+      }
+    }
+
+    // Contar jogadas de cada lado após esta jogada
+    const jogadasAdversario = calcularJogadasValidas(novoTabuleiro, 
+      state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1');
+    const minhasJogadasFuturas = calcularJogadasValidas(novoTabuleiro, state.jogadorAtual);
+
+    let pontuacao = 0;
+
+    // MISÈRE: Queremos que o adversário seja o último a jogar
+    // Se o adversário ficar sem jogadas, nós perdemos (ele ganha)
+    if (jogadasAdversario.length === 0) {
+      // Péssimo! Nós seríamos o último a jogar
+      pontuacao = -1000;
+    } else if (minhasJogadasFuturas.length === 0 && jogadasAdversario.length > 0) {
+      // Bom! Adversário será forçado a continuar a jogar
+      pontuacao = 500;
+    } else {
+      // Heurística misère: preferir ter MENOS jogadas que o adversário
+      // (para ele ser forçado a fazer o último movimento)
+      pontuacao = jogadasAdversario.length - minhasJogadasFuturas.length;
+      
+      // Preferir segmentos mais curtos (dão mais controlo)
+      pontuacao -= jogada.comprimento * 2;
+      
+      // Preferir jogar em zonas mais preenchidas (força o adversário)
+      const densidadeLocal = calcularDensidadeLocal(novoTabuleiro, jogada);
+      pontuacao += densidadeLocal * 3;
+    }
+
+    // Adicionar pequena aleatoriedade
+    pontuacao += Math.random() * 5;
+
+    return { jogada, pontuacao };
+  });
+
+  // Ordenar por pontuação
+  jogadasAvaliadas.sort((a, b) => b.pontuacao - a.pontuacao);
+
+  // Escolher a melhor jogada
+  const melhorJogada = jogadasAvaliadas[0].jogada;
+
+  return colocarSegmento(state, melhorJogada);
+}
+
+// Calcular densidade de células ocupadas perto de um segmento
+function calcularDensidadeLocal(tabuleiro: Celula[][], segmento: Segmento): number {
+  let ocupadas = 0;
+  const raio = 2;
+
+  for (let i = 0; i < segmento.comprimento; i++) {
+    let linha: number, coluna: number;
+    if (segmento.orientacao === 'vertical') {
+      linha = segmento.inicio.linha + i;
+      coluna = segmento.inicio.coluna;
+    } else {
+      linha = segmento.inicio.linha;
+      coluna = segmento.inicio.coluna + i;
+    }
+
+    for (let dl = -raio; dl <= raio; dl++) {
+      for (let dc = -raio; dc <= raio; dc++) {
+        const nl = linha + dl;
+        const nc = coluna + dc;
+        if (nl >= 0 && nl < TAMANHO_TABULEIRO && nc >= 0 && nc < TAMANHO_TABULEIRO) {
+          if (tabuleiro[nl][nc] === 'ocupada') {
+            ocupadas++;
+          }
         }
       }
     }
   }
-  
-  return resultado;
+
+  return ocupadas;
 }
 
-// IA do computador
-export function jogadaComputador(state: QuelhasState): QuelhasState {
-  const { tabuleiro, jogadorAtual, objetivoJogador2 } = state;
-  
-  const pecasComJogadas = getPecasComJogadas(tabuleiro, jogadorAtual);
-  if (pecasComJogadas.length === 0) return state;
-
-  // Avaliar todas as jogadas possíveis
-  const todasJogadas: Array<{ pos: Posicao; destino: Posicao; pontuacao: number }> = [];
-
-  for (const { pos, jogadas } of pecasComJogadas) {
-    for (const destino of jogadas) {
-      let pontuacao = 0;
-      
-      // Prioridade: avançar em direção ao objetivo (linha 0 para jogador2)
-      // Quanto mais perto de linha 0, melhor para jogador2
-      const distanciaObjetivo = destino.linha; // Para jogador2, linha 0 é o objetivo
-      pontuacao -= distanciaObjetivo * 10;
-      
-      // Verificar se o destino é uma casa objetivo
-      const ehObjetivo = objetivoJogador2.some(
-        obj => obj.linha === destino.linha && obj.coluna === destino.coluna
-      );
-      if (ehObjetivo) {
-        pontuacao += 50;
-      }
-      
-      // Preferir manter peças juntas (defesa)
-      const peçasVizinhas = contarPecasVizinhas(tabuleiro, destino, jogadorAtual);
-      pontuacao += peçasVizinhas * 2;
-
-      // Adicionar alguma aleatoriedade
-      pontuacao += Math.random() * 5;
-
-      todasJogadas.push({ pos, destino, pontuacao });
+// Obter células de um segmento
+export function getCelulasSegmento(segmento: Segmento): Posicao[] {
+  const celulas: Posicao[] = [];
+  for (let i = 0; i < segmento.comprimento; i++) {
+    if (segmento.orientacao === 'vertical') {
+      celulas.push({ linha: segmento.inicio.linha + i, coluna: segmento.inicio.coluna });
+    } else {
+      celulas.push({ linha: segmento.inicio.linha, coluna: segmento.inicio.coluna + i });
     }
   }
-
-  if (todasJogadas.length === 0) return state;
-
-  // Ordenar por pontuação
-  todasJogadas.sort((a, b) => b.pontuacao - a.pontuacao);
-  
-  // Escolher a melhor jogada
-  const melhorJogada = todasJogadas[0];
-
-  // Executar a jogada
-  const stateComSelecao = selecionarPeca(state, melhorJogada.pos);
-  return executarJogada(stateComSelecao, melhorJogada.destino);
+  return celulas;
 }
-
-// Contar peças vizinhas do mesmo jogador
-function contarPecasVizinhas(tabuleiro: Celula[][], pos: Posicao, jogador: Player): number {
-  let count = 0;
-  const vizinhos = [
-    { linha: pos.linha - 1, coluna: pos.coluna },
-    { linha: pos.linha + 1, coluna: pos.coluna },
-    { linha: pos.linha, coluna: pos.coluna - 1 },
-    { linha: pos.linha, coluna: pos.coluna + 1 },
-  ];
-  
-  for (const v of vizinhos) {
-    if (dentroDoTabuleiro(v)) {
-      const celula = tabuleiro[v.linha][v.coluna];
-      if (celula && celula.jogador === jogador) {
-        count++;
-      }
-    }
-  }
-  
-  return count;
-}
-

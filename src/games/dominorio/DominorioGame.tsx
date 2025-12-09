@@ -17,12 +17,13 @@ interface DominorioGameProps {
 }
 
 const REGRAS = [
-  'O tabuleiro é 5×5.',
-  'Os jogadores colocam peças de dominó alternadamente (cada dominó ocupa 2 casas).',
-  'O Jogador 1 coloca dominós na HORIZONTAL (─).',
-  'O Jogador 2 coloca dominós na VERTICAL (│).',
-  'Não se pode sobrepor dominós nem colocar fora do tabuleiro.',
-  'Perde o jogador que não conseguir colocar um dominó.',
+  'Tabuleiro 8×8.',
+  'O Jogador Vertical coloca dominós VERTICAIS (2 casas).',
+  'O Jogador Horizontal coloca dominós HORIZONTAIS (2 casas).',
+  'Começa o Vertical.',
+  'Cada dominó ocupa duas casas livres adjacentes.',
+  'Ganha quem colocar a ÚLTIMA peça.',
+  'Se não tiveres jogadas no teu turno, PERDES.',
 ];
 
 export function DominorioGame({ onVoltar }: DominorioGameProps) {
@@ -106,40 +107,13 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       } else {
         classes += 'bg-gray-100 hover:bg-gray-200 cursor-pointer';
       }
-    } else if (celula === 'ocupada-horizontal') {
+    } else if (celula === 'ocupada-vertical') {
       classes += 'bg-pink-500';
     } else {
       classes += 'bg-cyan-500';
     }
     
     return classes;
-  };
-
-  // Verificar se célula está conectada com vizinha (para visual do dominó)
-  const getConexao = (linha: number, coluna: number): string | null => {
-    const celula = state.tabuleiro[linha][coluna];
-    if (celula === 'vazia') return null;
-    
-    if (celula === 'ocupada-horizontal') {
-      // Verificar se conecta à direita
-      if (coluna < 4 && state.tabuleiro[linha][coluna + 1] === 'ocupada-horizontal') {
-        return 'direita';
-      }
-      // Verificar se conecta à esquerda
-      if (coluna > 0 && state.tabuleiro[linha][coluna - 1] === 'ocupada-horizontal') {
-        return 'esquerda';
-      }
-    } else {
-      // Verificar se conecta abaixo
-      if (linha < 4 && state.tabuleiro[linha + 1][coluna] === 'ocupada-vertical') {
-        return 'baixo';
-      }
-      // Verificar se conecta acima
-      if (linha > 0 && state.tabuleiro[linha - 1][coluna] === 'ocupada-vertical') {
-        return 'cima';
-      }
-    }
-    return null;
   };
 
   return (
@@ -150,8 +124,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           modo={state.modo}
           jogadorAtual={state.jogadorAtual}
           estado={state.estado}
-          nomeJogador1="Horizontal"
-          nomeJogador2="Vertical"
+          nomeJogador1="Vertical"
+          nomeJogador2="Horizontal"
           corJogador1="bg-pink-500"
           corJogador2="bg-cyan-500"
           onNovoJogo={novoJogo}
@@ -162,33 +136,23 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
         <div className="game-container">
           <div className="aspect-square max-w-md mx-auto">
             <div 
-              className="grid grid-cols-5 gap-2 h-full bg-emerald-800 p-3 rounded-xl"
+              className="grid grid-cols-8 gap-1 h-full bg-emerald-800 p-2 rounded-xl"
               onMouseLeave={handleMouseLeave}
             >
               {state.tabuleiro.map((linha, linhaIdx) =>
-                linha.map((_, colunaIdx) => {
-                  const conexao = getConexao(linhaIdx, colunaIdx);
-                  
-                  return (
-                    <button
-                      key={`${linhaIdx}-${colunaIdx}`}
-                      onClick={() => handleCellClick({ linha: linhaIdx, coluna: colunaIdx })}
-                      onMouseEnter={() => handleMouseEnter({ linha: linhaIdx, coluna: colunaIdx })}
-                      className={`${getCelulaClasses(linhaIdx, colunaIdx)} relative`}
-                      style={{
-                        // Estender visualmente para conectar dominós
-                        marginRight: conexao === 'direita' ? '-8px' : '0',
-                        marginBottom: conexao === 'baixo' ? '-8px' : '0',
-                        zIndex: conexao ? 1 : 0,
-                      }}
-                    >
-                      {/* Ponto do dominó */}
-                      {state.tabuleiro[linhaIdx][colunaIdx] !== 'vazia' && (
-                        <div className="w-3 h-3 rounded-full bg-white/50"></div>
-                      )}
-                    </button>
-                  );
-                })
+                linha.map((_, colunaIdx) => (
+                  <button
+                    key={`${linhaIdx}-${colunaIdx}`}
+                    onClick={() => handleCellClick({ linha: linhaIdx, coluna: colunaIdx })}
+                    onMouseEnter={() => handleMouseEnter({ linha: linhaIdx, coluna: colunaIdx })}
+                    className={getCelulaClasses(linhaIdx, colunaIdx)}
+                  >
+                    {/* Ponto do dominó */}
+                    {state.tabuleiro[linhaIdx][colunaIdx] !== 'vazia' && (
+                      <div className="w-2 h-2 rounded-full bg-white/50"></div>
+                    )}
+                  </button>
+                ))
               )}
             </div>
           </div>
@@ -196,12 +160,12 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           {/* Legenda */}
           <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-4 bg-pink-500 rounded"></div>
-              <span>Horizontal (Jogador 1)</span>
+              <div className="w-4 h-8 bg-pink-500 rounded"></div>
+              <span>Vertical (J1)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-8 bg-cyan-500 rounded"></div>
-              <span>Vertical (Jogador 2)</span>
+              <div className="w-8 h-4 bg-cyan-500 rounded"></div>
+              <span>Horizontal (J2)</span>
             </div>
           </div>
 
@@ -210,8 +174,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
             {state.estado === 'a-jogar' && (
               <>
                 {state.jogadorAtual === 'jogador1' 
-                  ? 'Clica para colocar um dominó HORIZONTAL' 
-                  : 'Clica para colocar um dominó VERTICAL'}
+                  ? 'Clica para colocar um dominó VERTICAL' 
+                  : 'Clica para colocar um dominó HORIZONTAL'}
                 {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
               </>
             )}
@@ -224,8 +188,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
         <WinnerAnnouncement
           estado={state.estado}
           modo={state.modo}
-          nomeJogador1="Horizontal"
-          nomeJogador2="Vertical"
+          nomeJogador1="Vertical"
+          nomeJogador2="Horizontal"
           onFechar={() => setMostrarVencedor(false)}
           onNovoJogo={novoJogo}
         />
@@ -233,4 +197,3 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     </GameLayout>
   );
 }
-

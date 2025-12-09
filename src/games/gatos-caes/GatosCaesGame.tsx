@@ -2,11 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
-import { GatosCaesState, Posicao } from './types';
+import { GatosCaesState, Posicao, CASAS_CENTRAIS } from './types';
 import { 
   criarEstadoInicial, 
-  selecionarPeca, 
-  executarJogada,
+  colocarPeca,
+  isJogadaValida,
   jogadaComputador,
 } from './logic';
 import { GameMode } from '../../types';
@@ -16,13 +16,14 @@ interface GatosCaesGameProps {
 }
 
 const REGRAS = [
-  'O tabuleiro é 5×5. Só se joga nas casas escuras (diagonais).',
-  'Os GATOS (3 peças) começam em cima e movem-se em diagonal para baixo.',
-  'O CÃO (1 peça) começa em baixo e move-se em qualquer diagonal.',
-  'O CÃO pode capturar gatos saltando por cima deles.',
-  'Os GATOS ganham se bloquearem o cão (ele fica sem jogadas).',
-  'O CÃO ganha se chegar à linha de cima ou capturar todos os gatos.',
-  'Não é obrigatório capturar.',
+  'Tabuleiro 8×8.',
+  'Jogadores alternam colocando UMA peça (Gato ou Cão).',
+  'Começam os Gatos.',
+  'O primeiro Gato deve ser colocado numa das 4 casas centrais.',
+  'O primeiro Cão deve ser colocado FORA das casas centrais.',
+  'Nunca podes colocar um Gato adjacente (↑↓←→) a um Cão, nem vice-versa.',
+  'Ganha quem colocar a ÚLTIMA peça.',
+  'Se não tiveres casas legais no teu turno, PERDES.',
 ];
 
 export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
@@ -56,30 +57,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     if (state.estado !== 'a-jogar') return;
     if (state.modo === 'vs-computador' && state.jogadorAtual === 'jogador2') return;
 
-    const { tabuleiro, pecaSelecionada, jogadasValidas } = state;
-    const peca = tabuleiro[pos.linha][pos.coluna];
-
-    // Se já tem peça selecionada e clicou em jogada válida
-    if (pecaSelecionada) {
-      const jogadaValida = jogadasValidas.some(
-        j => j.linha === pos.linha && j.coluna === pos.coluna
-      );
-      
-      if (jogadaValida) {
-        setState(prev => executarJogada(prev, pos));
-        return;
-      }
-    }
-
-    // Verificar se pode selecionar esta peça
-    const podeSelecionarGato = state.jogadorAtual === 'jogador1' && peca === 'gato';
-    const podeSelecionarCao = state.jogadorAtual === 'jogador2' && peca === 'cao';
-
-    if (podeSelecionarGato || podeSelecionarCao) {
-      setState(prev => selecionarPeca(prev, pos));
-    } else if (pecaSelecionada) {
-      // Desselecionar se clicou em casa inválida
-      setState(prev => ({ ...prev, pecaSelecionada: null, jogadasValidas: [], capturas: [] }));
+    if (isJogadaValida(state, pos)) {
+      setState(prev => colocarPeca(prev, pos));
     }
   }, [state]);
 
@@ -94,9 +73,41 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     setMostrarVencedor(false);
   }, [state.modo]);
 
-  // Determinar se uma célula é escura (jogável)
-  const isCelulaEscura = (linha: number, coluna: number) => {
-    return (linha + coluna) % 2 === 0;
+  // Verificar se é casa central
+  const isCasaCentral = (linha: number, coluna: number): boolean => {
+    return CASAS_CENTRAIS.some(c => c.linha === linha && c.coluna === coluna);
+  };
+
+  // Verificar se é jogada válida
+  const isJogadaValidaPos = (linha: number, coluna: number): boolean => {
+    return state.jogadasValidas.some(j => j.linha === linha && j.coluna === coluna);
+  };
+
+  // Obter classe CSS para cada célula
+  const getCelulaClasses = (linha: number, coluna: number): string => {
+    const celula = state.tabuleiro[linha][coluna];
+    const central = isCasaCentral(linha, coluna);
+    const jogadaValida = isJogadaValidaPos(linha, coluna);
+    
+    let classes = 'aspect-square rounded-md flex items-center justify-center transition-all duration-200 text-3xl md:text-4xl ';
+    
+    // Fundo base
+    if (central && celula === 'vazia') {
+      classes += 'bg-amber-200 ';
+    } else if (celula === 'vazia') {
+      classes += 'bg-gray-100 ';
+    } else {
+      classes += 'bg-gray-50 ';
+    }
+    
+    // Destacar jogadas válidas
+    if (jogadaValida) {
+      classes += 'ring-3 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
+    } else if (celula === 'vazia') {
+      classes += 'cursor-not-allowed opacity-70 ';
+    }
+    
+    return classes;
   };
 
   return (
@@ -108,7 +119,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           jogadorAtual={state.jogadorAtual}
           estado={state.estado}
           nomeJogador1="Gatos"
-          nomeJogador2="Cão"
+          nomeJogador2="Cães"
           corJogador1="bg-orange-500"
           corJogador2="bg-blue-500"
           onNovoJogo={novoJogo}
@@ -118,68 +129,59 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
         {/* Tabuleiro */}
         <div className="game-container">
           <div className="aspect-square max-w-md mx-auto">
-            <div className="grid grid-cols-5 gap-1 h-full bg-amber-900 p-2 rounded-xl">
+            <div className="grid grid-cols-8 gap-1 h-full bg-amber-900 p-2 rounded-xl">
               {state.tabuleiro.map((linha, linhaIdx) =>
-                linha.map((celula, colunaIdx) => {
-                  const pos = { linha: linhaIdx, coluna: colunaIdx };
-                  const escura = isCelulaEscura(linhaIdx, colunaIdx);
-                  const selecionada = state.pecaSelecionada?.linha === linhaIdx && 
-                                      state.pecaSelecionada?.coluna === colunaIdx;
-                  const jogadaValida = state.jogadasValidas.some(
-                    j => j.linha === linhaIdx && j.coluna === colunaIdx
-                  );
-                  const captura = state.capturas.some(
-                    c => c.linha === linhaIdx && c.coluna === colunaIdx
-                  );
-
-                  return (
-                    <button
-                      key={`${linhaIdx}-${colunaIdx}`}
-                      onClick={() => escura && handleCellClick(pos)}
-                      disabled={!escura}
-                      className={`
-                        aspect-square rounded-lg flex items-center justify-center
-                        text-4xl md:text-5xl transition-all duration-200
-                        ${escura 
-                          ? 'bg-amber-700 hover:bg-amber-600 cursor-pointer' 
-                          : 'bg-amber-200 cursor-not-allowed'
-                        }
-                        ${selecionada ? 'ring-4 ring-yellow-400 bg-amber-500' : ''}
-                        ${jogadaValida ? 'ring-4 ring-green-400 bg-green-600/30' : ''}
-                        ${captura ? 'ring-4 ring-red-400 bg-red-600/30' : ''}
-                      `}
-                    >
-                      {celula === 'gato' && (
-                        <span className="drop-shadow-lg select-none">🐱</span>
-                      )}
-                      {celula === 'cao' && (
-                        <span className="drop-shadow-lg select-none">🐶</span>
-                      )}
-                      {jogadaValida && !celula && (
-                        <span className="w-4 h-4 rounded-full bg-green-400 opacity-75"></span>
-                      )}
-                    </button>
-                  );
-                })
+                linha.map((celula, colunaIdx) => (
+                  <button
+                    key={`${linhaIdx}-${colunaIdx}`}
+                    onClick={() => handleCellClick({ linha: linhaIdx, coluna: colunaIdx })}
+                    className={getCelulaClasses(linhaIdx, colunaIdx)}
+                    disabled={!isJogadaValidaPos(linhaIdx, colunaIdx)}
+                  >
+                    {celula === 'gato' && (
+                      <span className="drop-shadow-lg select-none">🐱</span>
+                    )}
+                    {celula === 'cao' && (
+                      <span className="drop-shadow-lg select-none">🐶</span>
+                    )}
+                  </button>
+                ))
               )}
             </div>
           </div>
 
           {/* Legenda */}
-          <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🐱</span>
-              <span>Gatos (Jogador 1)</span>
+          <div className="mt-4 flex flex-col items-center gap-2 text-sm text-gray-600">
+            <div className="flex justify-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🐱</span>
+                <span>Gatos (J1): {state.totalGatos}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🐶</span>
+                <span>Cães (J2): {state.totalCaes}</span>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🐶</span>
-              <span>Cão (Jogador 2)</span>
+            <div className="flex items-center gap-2 text-xs">
+              <div className="w-4 h-4 bg-amber-200 rounded border"></div>
+              <span>Casas centrais (1.º Gato)</span>
             </div>
           </div>
 
-          {/* Gatos restantes */}
+          {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
-            Gatos restantes: {state.gatosRestantes}
+            {state.estado === 'a-jogar' && (
+              <>
+                {state.jogadorAtual === 'jogador1' 
+                  ? !state.primeiroGatoColocado 
+                    ? 'Coloca o primeiro Gato numa casa central (amarela)' 
+                    : 'Coloca um Gato (não pode ser adjacente a Cães)'
+                  : !state.primeiroCaoColocado
+                    ? 'Coloca o primeiro Cão fora das casas centrais'
+                    : 'Coloca um Cão (não pode ser adjacente a Gatos)'}
+                {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -190,7 +192,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           estado={state.estado}
           modo={state.modo}
           nomeJogador1="Gatos"
-          nomeJogador2="Cão"
+          nomeJogador2="Cães"
           onFechar={() => setMostrarVencedor(false)}
           onNovoJogo={novoJogo}
         />
@@ -198,4 +200,3 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     </GameLayout>
   );
 }
-

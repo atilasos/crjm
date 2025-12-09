@@ -55,7 +55,7 @@ export function App() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <GameCard
               titulo="Gatos & Cães"
-              descricao="Um jogo de estratégia onde gatos e cães competem no tabuleiro."
+              descricao="Jogo de colocação: coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada!"
               emoji="🐱🐶"
               corFundo="bg-gradient-to-br from-orange-500 to-amber-600"
               onClick={() => setPaginaAtual('gatos-caes')}
@@ -63,7 +63,7 @@ export function App() {
             
             <GameCard
               titulo="Dominório"
-              descricao="Coloca peças de dominó e conquista o território."
+              descricao="Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça!"
               emoji="🁓"
               corFundo="bg-gradient-to-br from-emerald-500 to-teal-600"
               onClick={() => setPaginaAtual('dominorio')}
@@ -71,8 +71,8 @@ export function App() {
             
             <GameCard
               titulo="Quelhas"
-              descricao="Move as tuas peças estrategicamente para vencer."
-              emoji="⬡"
+              descricao="Coloca segmentos no tabuleiro: um joga na vertical, outro na horizontal. ATENÇÃO: Perde quem fizer a última jogada!"
+              emoji="▮"
               corFundo="bg-gradient-to-br from-blue-500 to-indigo-600"
               onClick={() => setPaginaAtual('quelhas')}
             />
@@ -94,6 +94,12 @@ export function App() {
               Podes jogar sozinho contra o computador ou com um amigo no mesmo computador.
               As regras de cada jogo seguem as regras oficiais do campeonato.
             </p>
+            <div className="bg-yellow-500/20 border border-yellow-400/50 rounded-lg p-3 mt-4">
+              <p className="text-yellow-200 text-sm">
+                <strong>💡 Dica importante:</strong> O Quelhas é um jogo <strong>misère</strong> — 
+                perde quem faz a última jogada! Nos outros dois jogos, ganha quem faz a última jogada.
+              </p>
+            </div>
             <p className="text-sm">
               Para mais informações sobre o CRJM, visita:{' '}
               <a 

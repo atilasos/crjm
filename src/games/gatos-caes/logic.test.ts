@@ -2,38 +2,31 @@ import { test, expect, describe } from "bun:test";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
-  getJogadasValidas,
-  selecionarPeca,
-  executarJogada,
+  calcularJogadasValidas,
+  colocarPeca,
+  isJogadaValida,
+  CASAS_CENTRAIS,
 } from "./logic";
 
 describe("Gatos & Cães - Tabuleiro Inicial", () => {
-  test("deve criar tabuleiro 5x5", () => {
+  test("deve criar tabuleiro 8x8", () => {
     const tabuleiro = criarTabuleiroInicial();
-    expect(tabuleiro.length).toBe(5);
-    expect(tabuleiro[0].length).toBe(5);
+    expect(tabuleiro.length).toBe(8);
+    expect(tabuleiro[0].length).toBe(8);
   });
 
-  test("deve ter 3 gatos na primeira linha", () => {
+  test("tabuleiro inicial deve estar todo vazio", () => {
     const tabuleiro = criarTabuleiroInicial();
-    const gatos = tabuleiro[0].filter(c => c === 'gato');
-    expect(gatos.length).toBe(3);
-  });
-
-  test("deve ter 1 cão na última linha", () => {
-    const tabuleiro = criarTabuleiroInicial();
-    const caes = tabuleiro[4].filter(c => c === 'cao');
-    expect(caes.length).toBe(1);
-  });
-
-  test("cão deve estar no centro", () => {
-    const tabuleiro = criarTabuleiroInicial();
-    expect(tabuleiro[4][2]).toBe('cao');
+    for (const linha of tabuleiro) {
+      for (const celula of linha) {
+        expect(celula).toBe('vazia');
+      }
+    }
   });
 });
 
 describe("Gatos & Cães - Estado Inicial", () => {
-  test("jogador 1 (gatos) deve começar", () => {
+  test("jogador 1 (Gatos) deve começar", () => {
     const estado = criarEstadoInicial('dois-jogadores');
     expect(estado.jogadorAtual).toBe('jogador1');
   });
@@ -43,41 +36,110 @@ describe("Gatos & Cães - Estado Inicial", () => {
     expect(estado.estado).toBe('a-jogar');
   });
 
-  test("deve ter 3 gatos restantes", () => {
+  test("primeiro gato não foi colocado", () => {
     const estado = criarEstadoInicial('dois-jogadores');
-    expect(estado.gatosRestantes).toBe(3);
+    expect(estado.primeiroGatoColocado).toBe(false);
+  });
+
+  test("primeiro cão não foi colocado", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    expect(estado.primeiroCaoColocado).toBe(false);
   });
 });
 
-describe("Gatos & Cães - Jogadas Válidas", () => {
-  test("gatos devem ter jogadas no início", () => {
+describe("Gatos & Cães - Primeiro Gato", () => {
+  test("primeiro gato só pode ser colocado nas 4 casas centrais", () => {
     const estado = criarEstadoInicial('dois-jogadores');
-    const jogadas = getJogadasValidas(estado);
-    expect(jogadas.length).toBeGreaterThan(0);
+    
+    expect(estado.jogadasValidas.length).toBe(4);
+    
+    for (const jogada of estado.jogadasValidas) {
+      const isCentral = CASAS_CENTRAIS.some(
+        c => c.linha === jogada.linha && c.coluna === jogada.coluna
+      );
+      expect(isCentral).toBe(true);
+    }
   });
 
-  test("gatos só movem para baixo na diagonal", () => {
-    const estado = criarEstadoInicial('dois-jogadores');
-    const jogadas = getJogadasValidas(estado);
+  test("após colocar primeiro gato, turno passa para cães", () => {
+    let estado = criarEstadoInicial('dois-jogadores');
+    const jogada = estado.jogadasValidas[0];
     
-    // Todas as jogadas devem ir para linha maior (para baixo)
-    for (const jogada of jogadas) {
-      expect(jogada.destino.linha).toBeGreaterThan(jogada.origem.linha);
+    estado = colocarPeca(estado, jogada);
+    
+    expect(estado.jogadorAtual).toBe('jogador2');
+    expect(estado.primeiroGatoColocado).toBe(true);
+    expect(estado.totalGatos).toBe(1);
+  });
+});
+
+describe("Gatos & Cães - Primeiro Cão", () => {
+  test("primeiro cão deve ser colocado fora das casas centrais", () => {
+    let estado = criarEstadoInicial('dois-jogadores');
+    
+    // Colocar primeiro gato
+    estado = colocarPeca(estado, estado.jogadasValidas[0]);
+    
+    // Verificar jogadas do cão
+    for (const jogada of estado.jogadasValidas) {
+      const isCentral = CASAS_CENTRAIS.some(
+        c => c.linha === jogada.linha && c.coluna === jogada.coluna
+      );
+      expect(isCentral).toBe(false);
+    }
+  });
+
+  test("primeiro cão não pode ser adjacente ao gato", () => {
+    let estado = criarEstadoInicial('dois-jogadores');
+    
+    // Colocar primeiro gato em (3,3)
+    estado = colocarPeca(estado, { linha: 3, coluna: 3 });
+    
+    // Verificar que posições adjacentes ao gato não estão nas jogadas válidas
+    const adjacentes = [
+      { linha: 2, coluna: 3 },
+      { linha: 4, coluna: 3 },
+      { linha: 3, coluna: 2 },
+      { linha: 3, coluna: 4 },
+    ];
+    
+    for (const adj of adjacentes) {
+      const temAdjacente = estado.jogadasValidas.some(
+        j => j.linha === adj.linha && j.coluna === adj.coluna
+      );
+      expect(temAdjacente).toBe(false);
     }
   });
 });
 
-describe("Gatos & Cães - Seleção de Peças", () => {
-  test("jogador 1 pode selecionar gato", () => {
-    const estado = criarEstadoInicial('dois-jogadores');
-    const novoEstado = selecionarPeca(estado, { linha: 0, coluna: 0 });
-    expect(novoEstado.pecaSelecionada).toEqual({ linha: 0, coluna: 0 });
-  });
-
-  test("jogador 1 não pode selecionar cão", () => {
-    const estado = criarEstadoInicial('dois-jogadores');
-    const novoEstado = selecionarPeca(estado, { linha: 4, coluna: 2 });
-    expect(novoEstado.pecaSelecionada).toBeNull();
+describe("Gatos & Cães - Regra de Adjacência", () => {
+  test("gato não pode ser colocado adjacente a cão", () => {
+    let estado = criarEstadoInicial('dois-jogadores');
+    
+    // Colocar primeiro gato
+    estado = colocarPeca(estado, { linha: 3, coluna: 3 });
+    
+    // Colocar primeiro cão longe do gato
+    estado = colocarPeca(estado, { linha: 0, coluna: 0 });
+    
+    // Verificar que gato não pode ser adjacente ao cão
+    const adjacentesAoCao = [
+      { linha: 0, coluna: 1 },
+      { linha: 1, coluna: 0 },
+    ];
+    
+    for (const adj of adjacentesAoCao) {
+      const podeColocar = estado.jogadasValidas.some(
+        j => j.linha === adj.linha && j.coluna === adj.coluna
+      );
+      expect(podeColocar).toBe(false);
+    }
   });
 });
 
+describe("Gatos & Cães - Condição de Vitória Normal Play", () => {
+  test("estado inicial permite continuar a jogar", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    expect(estado.estado).toBe('a-jogar');
+  });
+});

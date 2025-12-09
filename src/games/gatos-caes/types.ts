@@ -1,15 +1,16 @@
 import { GameMode, Player, GameStatus } from '../../types';
 
-// No jogo Gatos & Cães:
-// - Tabuleiro 5x5
-// - Jogador 1 controla os GATOS (3 peças, começam em cima)
-// - Jogador 2 controla o CÃO (1 peça, começa em baixo no centro)
-// - Gatos só movem para baixo (diagonal esquerda ou direita)
-// - Cão move em qualquer diagonal (pode capturar gatos saltando por cima)
-// - Gatos ganham se bloquearem o cão (ele não tem jogadas válidas)
-// - Cão ganha se chegar à linha de topo OU se capturar todos os gatos
+// Gatos & Cães - Jogo de colocação (normal play - último a jogar ganha)
+// - Tabuleiro 8×8
+// - Jogadores alternam colocando UMA peça (Gato ou Cão)
+// - Começam os Gatos
+// - Primeiro Gato deve ser colocado nas 4 casas centrais (3,3), (3,4), (4,3), (4,4)
+// - Primeiro Cão deve ser colocado FORA da zona central
+// - Nunca pode haver Gato ortogonalmente adjacente a Cão
+// - NORMAL PLAY: Ganha quem realizar a última jogada válida
+// - Se um jogador não tiver casas legais, PERDE
 
-export type Peca = 'gato' | 'cao' | null;
+export type Celula = 'vazia' | 'gato' | 'cao';
 
 export interface Posicao {
   linha: number;
@@ -17,19 +18,21 @@ export interface Posicao {
 }
 
 export interface GatosCaesState {
-  tabuleiro: Peca[][];
+  tabuleiro: Celula[][];
   modo: GameMode;
-  jogadorAtual: Player; // jogador1 = gatos, jogador2 = cão
+  jogadorAtual: Player; // jogador1 = Gatos, jogador2 = Cães
   estado: GameStatus;
-  pecaSelecionada: Posicao | null;
   jogadasValidas: Posicao[];
-  capturas: Posicao[]; // posições onde há captura disponível
-  gatosRestantes: number;
+  primeiroGatoColocado: boolean;
+  primeiroCaoColocado: boolean;
+  totalGatos: number;
+  totalCaes: number;
 }
 
-export interface Jogada {
-  origem: Posicao;
-  destino: Posicao;
-  captura?: Posicao; // posição do gato capturado, se houver
-}
-
+// Casas centrais (índices 0-based para tabuleiro 8x8)
+export const CASAS_CENTRAIS: Posicao[] = [
+  { linha: 3, coluna: 3 },
+  { linha: 3, coluna: 4 },
+  { linha: 4, coluna: 3 },
+  { linha: 4, coluna: 4 },
+];

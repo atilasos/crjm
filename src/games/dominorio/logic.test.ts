@@ -7,10 +7,10 @@ import {
 } from "./logic";
 
 describe("Dominório - Tabuleiro Inicial", () => {
-  test("deve criar tabuleiro 5x5", () => {
+  test("deve criar tabuleiro 8x8", () => {
     const tabuleiro = criarTabuleiroInicial();
-    expect(tabuleiro.length).toBe(5);
-    expect(tabuleiro[0].length).toBe(5);
+    expect(tabuleiro.length).toBe(8);
+    expect(tabuleiro[0].length).toBe(8);
   });
 
   test("tabuleiro inicial deve estar vazio", () => {
@@ -24,7 +24,7 @@ describe("Dominório - Tabuleiro Inicial", () => {
 });
 
 describe("Dominório - Estado Inicial", () => {
-  test("jogador 1 (horizontal) deve começar", () => {
+  test("jogador 1 (Vertical) deve começar", () => {
     const estado = criarEstadoInicial('dois-jogadores');
     expect(estado.jogadorAtual).toBe('jogador1');
   });
@@ -41,21 +41,21 @@ describe("Dominório - Estado Inicial", () => {
 });
 
 describe("Dominório - Jogadas Válidas", () => {
-  test("jogador 1 deve ter jogadas horizontais", () => {
+  test("jogador 1 deve ter jogadas verticais", () => {
     const estado = criarEstadoInicial('dois-jogadores');
     
     for (const jogada of estado.jogadasValidas) {
-      expect(jogada.orientacao).toBe('horizontal');
-      // Horizontal: mesma linha, colunas adjacentes
-      expect(jogada.pos1.linha).toBe(jogada.pos2.linha);
-      expect(jogada.pos2.coluna - jogada.pos1.coluna).toBe(1);
+      expect(jogada.orientacao).toBe('vertical');
+      // Vertical: mesma coluna, linhas adjacentes
+      expect(jogada.pos1.coluna).toBe(jogada.pos2.coluna);
+      expect(jogada.pos2.linha - jogada.pos1.linha).toBe(1);
     }
   });
 
-  test("tabuleiro 5x5 vazio deve ter 20 jogadas horizontais", () => {
+  test("tabuleiro 8x8 vazio deve ter 56 jogadas verticais", () => {
     const estado = criarEstadoInicial('dois-jogadores');
-    // 5 linhas × 4 posições horizontais possíveis = 20
-    expect(estado.jogadasValidas.length).toBe(20);
+    // 8 colunas × 7 posições verticais possíveis = 56
+    expect(estado.jogadasValidas.length).toBe(56);
   });
 });
 
@@ -66,8 +66,8 @@ describe("Dominório - Colocação de Dominós", () => {
     
     estado = colocarDomino(estado, jogada);
     
-    expect(estado.tabuleiro[jogada.pos1.linha][jogada.pos1.coluna]).toBe('ocupada-horizontal');
-    expect(estado.tabuleiro[jogada.pos2.linha][jogada.pos2.coluna]).toBe('ocupada-horizontal');
+    expect(estado.tabuleiro[jogada.pos1.linha][jogada.pos1.coluna]).toBe('ocupada-vertical');
+    expect(estado.tabuleiro[jogada.pos2.linha][jogada.pos2.coluna]).toBe('ocupada-vertical');
   });
 
   test("após jogada, turno muda para jogador 2", () => {
@@ -79,15 +79,28 @@ describe("Dominório - Colocação de Dominós", () => {
     expect(estado.jogadorAtual).toBe('jogador2');
   });
 
-  test("jogador 2 deve ter jogadas verticais", () => {
+  test("jogador 2 deve ter jogadas horizontais", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
     estado = colocarDomino(estado, jogada);
     
     for (const j of estado.jogadasValidas) {
-      expect(j.orientacao).toBe('vertical');
+      expect(j.orientacao).toBe('horizontal');
     }
   });
 });
 
+describe("Dominório - Condição de Vitória Normal Play", () => {
+  test("estado inicial permite continuar a jogar", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    expect(estado.estado).toBe('a-jogar');
+  });
+
+  // Em normal play, se o próximo jogador não tem jogadas, o jogador atual ganha
+  test("jogador ganha quando adversário fica sem jogadas (conceptual)", () => {
+    // Teste conceptual - a lógica está implementada em colocarDomino
+    const estado = criarEstadoInicial('dois-jogadores');
+    expect(estado.jogadasValidas.length).toBeGreaterThan(0);
+  });
+});

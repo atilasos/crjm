@@ -1,13 +1,14 @@
 import { GameMode, Player, GameStatus } from '../../types';
 
-// No jogo Dominório:
-// - Tabuleiro 5x5
-// - Jogadores alternadamente colocam peças de dominó (ocupam 2 casas)
-// - Jogador 1 coloca dominós na HORIZONTAL
-// - Jogador 2 coloca dominós na VERTICAL
-// - O jogador que não conseguir colocar um dominó perde
+// Dominório - Jogo de dominós (normal play - último a jogar ganha)
+// - Tabuleiro 8×8
+// - Jogador Vertical coloca dominós verticais (2 casas)
+// - Jogador Horizontal coloca dominós horizontais (2 casas)
+// - Começa o Vertical
+// - NORMAL PLAY: Ganha quem colocar a última peça
+// - Se um jogador não tiver jogadas, PERDE (o adversário ganhou)
 
-export type Celula = 'vazia' | 'ocupada-horizontal' | 'ocupada-vertical';
+export type Celula = 'vazia' | 'ocupada-vertical' | 'ocupada-horizontal';
 
 export interface Posicao {
   linha: number;
@@ -23,11 +24,9 @@ export interface Domino {
 export interface DominorioState {
   tabuleiro: Celula[][];
   modo: GameMode;
-  jogadorAtual: Player; // jogador1 = horizontal, jogador2 = vertical
+  jogadorAtual: Player; // jogador1 = Vertical, jogador2 = Horizontal
   estado: GameStatus;
   dominoPreview: Domino | null;
-  celulaSelecionada: Posicao | null;
   jogadasValidas: Domino[];
   dominosColocados: Domino[];
 }
-
