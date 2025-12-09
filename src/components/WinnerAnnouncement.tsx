@@ -5,6 +5,7 @@ interface WinnerAnnouncementProps {
   modo: GameMode;
   nomeJogador1?: string;
   nomeJogador2?: string;
+  humanoEhJogador1?: boolean; // Em modo vs-computador, indica qual jogador o humano controla
   onFechar: () => void;
   onNovoJogo: () => void;
 }
@@ -14,6 +15,7 @@ export function WinnerAnnouncement({
   modo,
   nomeJogador1 = 'Jogador 1',
   nomeJogador2 = 'Jogador 2',
+  humanoEhJogador1 = true,
   onFechar,
   onNovoJogo,
 }: WinnerAnnouncementProps) {
@@ -25,6 +27,30 @@ export function WinnerAnnouncement({
   };
 
   const getConteudo = () => {
+    // Em modo vs-computador, determinar se o humano ganhou ou perdeu
+    if (modo === 'vs-computador') {
+      const humanoGanhou = 
+        (estado === 'vitoria-jogador1' && humanoEhJogador1) ||
+        (estado === 'vitoria-jogador2' && !humanoEhJogador1);
+      
+      if (humanoGanhou) {
+        return {
+          emoji: '🎉',
+          titulo: 'Parabéns!',
+          mensagem: 'Ganhaste!',
+          corFundo: 'from-yellow-400 via-orange-400 to-pink-500',
+        };
+      } else if (estado === 'vitoria-jogador1' || estado === 'vitoria-jogador2') {
+        return {
+          emoji: '🤖',
+          titulo: 'Perdeste...',
+          mensagem: 'O computador ganhou!',
+          corFundo: 'from-blue-400 via-indigo-400 to-purple-500',
+        };
+      }
+    }
+
+    // Modo dois-jogadores ou outros casos
     switch (estado) {
       case 'vitoria-jogador1':
         return {
@@ -34,14 +60,6 @@ export function WinnerAnnouncement({
           corFundo: 'from-yellow-400 via-orange-400 to-pink-500',
         };
       case 'vitoria-jogador2':
-        if (modo === 'vs-computador') {
-          return {
-            emoji: '🤖',
-            titulo: 'Perdeste...',
-            mensagem: 'O computador ganhou!',
-            corFundo: 'from-blue-400 via-indigo-400 to-purple-500',
-          };
-        }
         return {
           emoji: '🎉',
           titulo: 'Parabéns!',

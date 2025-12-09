@@ -7,8 +7,11 @@ import { GameMode, Player, GameStatus } from '../../types';
 // - Começa o Vertical
 // - MISÈRE: Perde quem realizar a última jogada válida
 // - Se um jogador não tiver jogadas, GANHA (o adversário foi o último a jogar)
+// - Regra de troca: O jogador Horizontal pode, na sua primeira jogada, trocar de papel com o Vertical
 
 export type Celula = 'vazia' | 'ocupada';
+
+export type Orientacao = 'vertical' | 'horizontal';
 
 export interface Posicao {
   linha: number;
@@ -19,15 +22,21 @@ export interface Posicao {
 export interface Segmento {
   inicio: Posicao;
   comprimento: number;
-  orientacao: 'vertical' | 'horizontal';
+  orientacao: Orientacao;
 }
 
 export interface QuelhasState {
   tabuleiro: Celula[][];
   modo: GameMode;
-  jogadorAtual: Player; // jogador1 = Vertical, jogador2 = Horizontal
+  jogadorAtual: Player;
   estado: GameStatus;
   segmentoPreview: Segmento | null;
   jogadasValidas: Segmento[];
-  primeiraJogada: boolean; // Para regra de troca na primeira jogada do Horizontal
+  primeiraJogada: boolean;
+  // Orientações dinâmicas (podem trocar após a regra de troca)
+  orientacaoJogador1: Orientacao;
+  orientacaoJogador2: Orientacao;
+  // Controlo da regra de troca
+  trocaDisponivel: boolean; // Janela em que a troca pode ser exercida
+  trocaEfetuada: boolean;   // Se a troca já foi usada neste jogo
 }
