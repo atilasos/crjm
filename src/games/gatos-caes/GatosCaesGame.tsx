@@ -9,7 +9,7 @@ import {
   isJogadaValida,
   jogadaComputador,
 } from './logic';
-import { GameMode } from '../../types';
+import { GameMode, Player } from '../../types';
 
 interface GatosCaesGameProps {
   onVoltar: () => void;
@@ -31,12 +31,13 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
+  const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
 
   // Efeito para jogada do computador
   useEffect(() => {
     if (
       state.modo === 'vs-computador' && 
-      state.jogadorAtual === 'jogador2' && 
+      state.jogadorAtual !== humanPlayer && 
       state.estado === 'a-jogar'
     ) {
       const timer = setTimeout(() => {
@@ -44,7 +45,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [state.jogadorAtual, state.modo, state.estado]);
+  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -55,12 +56,12 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
-    if (state.modo === 'vs-computador' && state.jogadorAtual === 'jogador2') return;
+    if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
     if (isJogadaValida(state, pos)) {
       setState(prev => colocarPeca(prev, pos));
     }
-  }, [state]);
+  }, [state, humanPlayer]);
 
   const novoJogo = useCallback(() => {
     setState(criarEstadoInicial(state.modo));
@@ -71,7 +72,14 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
+    setHumanPlayer('jogador1'); // Reset ao trocar modo
   }, [state.modo]);
+
+  const handleChangeHumanPlayer = useCallback((player: Player) => {
+    setHumanPlayer(player);
+    setState(criarEstadoInicial('vs-computador'));
+    setMostrarVencedor(false);
+  }, []);
 
   // Verificar se é casa central
   const isCasaCentral = (linha: number, coluna: number): boolean => {
@@ -122,6 +130,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           nomeJogador2="Cães"
           corJogador1="bg-orange-500"
           corJogador2="bg-blue-500"
+          humanPlayer={humanPlayer}
+          onChangeHumanPlayer={handleChangeHumanPlayer}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
@@ -193,6 +203,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           modo={state.modo}
           nomeJogador1="Gatos"
           nomeJogador2="Cães"
+          humanoEhJogador1={humanPlayer === 'jogador1'}
           onFechar={() => setMostrarVencedor(false)}
           onNovoJogo={novoJogo}
         />

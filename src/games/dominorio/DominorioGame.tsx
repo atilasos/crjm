@@ -10,7 +10,7 @@ import {
   getDominoPreview,
   jogadaComputador,
 } from './logic';
-import { GameMode } from '../../types';
+import { GameMode, Player } from '../../types';
 
 interface DominorioGameProps {
   onVoltar: () => void;
@@ -31,12 +31,13 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
+  const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
 
   // Efeito para jogada do computador
   useEffect(() => {
     if (
       state.modo === 'vs-computador' && 
-      state.jogadorAtual === 'jogador2' && 
+      state.jogadorAtual !== humanPlayer && 
       state.estado === 'a-jogar'
     ) {
       const timer = setTimeout(() => {
@@ -44,7 +45,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [state.jogadorAtual, state.modo, state.estado]);
+  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -55,9 +56,9 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
   const handleMouseEnter = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
-    if (state.modo === 'vs-computador' && state.jogadorAtual === 'jogador2') return;
+    if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
     setState(prev => atualizarPreview(prev, pos));
-  }, [state.estado, state.modo, state.jogadorAtual]);
+  }, [state.estado, state.modo, state.jogadorAtual, humanPlayer]);
 
   const handleMouseLeave = useCallback(() => {
     setState(prev => ({ ...prev, dominoPreview: null }));
@@ -65,13 +66,13 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
-    if (state.modo === 'vs-computador' && state.jogadorAtual === 'jogador2') return;
+    if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
     const preview = getDominoPreview(state, pos);
     if (preview) {
       setState(prev => colocarDomino(prev, preview));
     }
-  }, [state]);
+  }, [state, humanPlayer]);
 
   const novoJogo = useCallback(() => {
     setState(criarEstadoInicial(state.modo));
@@ -82,7 +83,14 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
+    setHumanPlayer('jogador1'); // Reset ao trocar modo
   }, [state.modo]);
+
+  const handleChangeHumanPlayer = useCallback((player: Player) => {
+    setHumanPlayer(player);
+    setState(criarEstadoInicial('vs-computador'));
+    setMostrarVencedor(false);
+  }, []);
 
   // Verificar se uma célula faz parte do preview
   const isPreview = (linha: number, coluna: number): boolean => {
@@ -128,6 +136,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           nomeJogador2="Horizontal"
           corJogador1="bg-pink-500"
           corJogador2="bg-cyan-500"
+          humanPlayer={humanPlayer}
+          onChangeHumanPlayer={handleChangeHumanPlayer}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
@@ -190,6 +200,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           modo={state.modo}
           nomeJogador1="Vertical"
           nomeJogador2="Horizontal"
+          humanoEhJogador1={humanPlayer === 'jogador1'}
           onFechar={() => setMostrarVencedor(false)}
           onNovoJogo={novoJogo}
         />
