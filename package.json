@@ -1,8 +1,9 @@
 {
-  "name": "bun-react-template",
-  "version": "0.1.0",
+  "name": "jogos-matematicos-crjm",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "Site de treino para o Campeonato Regional de Jogos Matemáticos da Madeira - 1.º Ciclo",
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",

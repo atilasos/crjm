@@ -1,50 +1,249 @@
 @import "tailwindcss";
 
+/* Custom CSS Variables */
+:root {
+  --color-primary: #6366f1;
+  --color-primary-dark: #4f46e5;
+  --color-secondary: #8b5cf6;
+  --color-accent: #f59e0b;
+  --color-success: #10b981;
+  --color-danger: #ef4444;
+  --color-cat: #f97316;
+  --color-dog: #3b82f6;
+  --color-player1: #ec4899;
+  --color-player2: #06b6d4;
+  --font-display: 'Fredoka', sans-serif;
+  --font-handwriting: 'Patrick Hand', cursive;
+}
+
 @layer base {
-  :root {
-    @apply text-[rgba(255,255,255,0.87)] bg-[#242424] font-sans;
+  * {
+    box-sizing: border-box;
   }
-
+  
+  html {
+    scroll-behavior: smooth;
+  }
+  
   body {
-    @apply grid place-items-center min-w-[320px] min-h-screen relative m-0;
+    @apply m-0 min-h-screen;
+    font-family: var(--font-display);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    background-attachment: fixed;
+  }
+  
+  #root {
+    @apply min-h-screen;
   }
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  opacity: 0.05;
-  background: url("./logo.svg");
-  background-size: 256px;
-  transform: rotate(-12deg) scale(1.35);
-  animation: slide 30s linear infinite;
-  pointer-events: none;
+@layer components {
+  /* Game Card Styles */
+  .game-card {
+    @apply relative overflow-hidden rounded-3xl p-6 cursor-pointer;
+    @apply transition-all duration-300 ease-out;
+    @apply hover:scale-105 hover:shadow-2xl;
+    @apply active:scale-95;
+  }
+  
+  .game-card::before {
+    content: '';
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
+  }
+  
+  .game-card:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Button Styles */
+  .btn {
+    @apply px-6 py-3 rounded-2xl font-semibold text-white;
+    @apply transition-all duration-200 ease-out;
+    @apply hover:scale-105 hover:shadow-lg;
+    @apply active:scale-95;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
+  }
+  
+  .btn-primary {
+    @apply bg-gradient-to-r from-indigo-500 to-purple-600;
+    @apply hover:from-indigo-600 hover:to-purple-700;
+  }
+  
+  .btn-secondary {
+    @apply bg-gradient-to-r from-gray-500 to-gray-600;
+    @apply hover:from-gray-600 hover:to-gray-700;
+  }
+  
+  .btn-success {
+    @apply bg-gradient-to-r from-emerald-500 to-green-600;
+    @apply hover:from-emerald-600 hover:to-green-700;
+  }
+  
+  .btn-danger {
+    @apply bg-gradient-to-r from-rose-500 to-red-600;
+    @apply hover:from-rose-600 hover:to-red-700;
+  }
+
+  /* Board Cell Styles */
+  .board-cell {
+    @apply flex items-center justify-center;
+    @apply transition-all duration-200 ease-out;
+    @apply cursor-pointer select-none;
+  }
+  
+  .board-cell:hover:not(.disabled) {
+    @apply scale-110;
+  }
+  
+  .board-cell.disabled {
+    @apply cursor-not-allowed opacity-60;
+  }
+  
+  .board-cell.highlight {
+    @apply ring-4 ring-yellow-400/75;
+    animation: pulse-highlight 1s ease-in-out infinite;
+  }
+
+  /* Player Indicator */
+  .player-indicator {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold;
+    @apply transition-all duration-300;
+  }
+  
+  .player-indicator.active {
+    @apply scale-110 shadow-lg;
+    animation: bounce-subtle 0.6s ease-in-out infinite;
+  }
+
+  /* Rules Panel */
+  .rules-panel {
+    @apply bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-xl;
+    @apply border-2 border-indigo-200;
+  }
+  
+  .rules-panel h3 {
+    @apply text-xl font-bold text-indigo-800 mb-4;
+    font-family: var(--font-display);
+  }
+  
+  .rules-panel ul {
+    @apply space-y-2 text-gray-700;
+  }
+  
+  .rules-panel li {
+    @apply flex items-start gap-2;
+  }
+  
+  .rules-panel li::before {
+    content: '•';
+    @apply text-indigo-500 font-bold;
+  }
+
+  /* Game Container */
+  .game-container {
+    @apply bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-6;
+    @apply border-4 border-white/50;
+  }
+
+  /* Winner Announcement */
+  .winner-announcement {
+    @apply fixed inset-0 flex items-center justify-center z-50;
+    @apply bg-black/50 backdrop-blur-sm;
+    animation: fade-in 0.3s ease-out;
+  }
+  
+  .winner-card {
+    @apply bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500;
+    @apply rounded-3xl p-8 text-center shadow-2xl;
+    @apply border-4 border-white;
+    animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
 }
 
-@keyframes slide {
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+  }
+}
+
+/* Animations */
+@keyframes pulse-highlight {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(250, 204, 21, 0);
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: scale(1.1) translateY(0);
+  }
+  50% {
+    transform: scale(1.1) translateY(-3px);
+  }
+}
+
+@keyframes fade-in {
   from {
-    background-position: 0 0;
+    opacity: 0;
   }
   to {
-    background-position: 256px 224px;
+    opacity: 1;
   }
 }
 
-@keyframes spin {
-  from {
-    transform: rotate(0);
+@keyframes pop-in {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
   }
-  to {
-    transform: rotate(360deg);
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }
 
-@media (prefers-reduced-motion) {
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes wiggle {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
   *,
   ::before,
   ::after {
-    animation: none !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
+
