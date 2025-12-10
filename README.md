@@ -2,14 +2,22 @@
 
 Site de treino para o **Campeonato Regional de Jogos Matemáticos da Madeira** (CRJM).
 
-Este projeto contém os 3 jogos do **1.º Ciclo**:
-- 🐱🐶 **Gatos & Cães** - Jogo de estratégia onde gatos tentam bloquear o cão
-- 🁓 **Dominório** - Coloca dominós estrategicamente no tabuleiro
-- ⬡ **Quelhas** - Move peças numeradas para conquistar o território adversário
+Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do **1.º Ciclo ao Secundário**:
+
+### Jogos disponíveis
+
+| Jogo | Ciclos | Descrição |
+|------|--------|-----------|
+| 🐱🐶 **Gatos & Cães** | 1.º | Coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada! |
+| 🁓 **Dominório** | 1.º, 2.º | Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça! |
+| ▮ **Quelhas** | 1.º, 2.º, 3.º | Coloca segmentos no tabuleiro. **MISÈRE**: perde quem fizer a última jogada! |
+| ✖️ **Produto** | 2.º, 3.º, Sec. | Maximiza a pontuação dos teus grupos num tabuleiro hexagonal. Sabota o adversário unindo os grupos dele! |
+| ⚫⚪ **Atari Go** | 3.º, Sec. | Variante simplificada do Go. A primeira captura vence o jogo! |
+| 🔗 **Nex** | Sec. | Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário! |
 
 ## 🎮 Funcionalidades
 
-- Jogar contra o **computador** (IA)
+- Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
 - Regras oficiais do CRJM
 - Interface em **Português de Portugal** (PT-PT)
@@ -40,6 +48,13 @@ bun run dev
 ```
 
 O site estará disponível em `http://localhost:3000`.
+
+### Testes
+
+```bash
+# Executar testes unitários
+bun test
+```
 
 ### Build para produção
 
@@ -104,7 +119,7 @@ As regras completas de cada jogo estão disponíveis no site oficial do CRJM:
 
 ```
 src/
-├── components/          # Componentes de UI reutilizáveis
+├── components/           # Componentes de UI reutilizáveis
 │   ├── GameCard.tsx
 │   ├── GameLayout.tsx
 │   ├── Header.tsx
@@ -112,23 +127,41 @@ src/
 │   ├── RulesPanel.tsx
 │   └── WinnerAnnouncement.tsx
 ├── games/
-│   ├── gatos-caes/     # Jogo Gatos & Cães
+│   ├── gatos-caes/       # Jogo Gatos & Cães (1.º Ciclo)
 │   │   ├── types.ts
 │   │   ├── logic.ts
+│   │   ├── logic.test.ts
 │   │   └── GatosCaesGame.tsx
-│   ├── dominorio/      # Jogo Dominório
+│   ├── dominorio/        # Jogo Dominório (1.º, 2.º Ciclo)
 │   │   ├── types.ts
 │   │   ├── logic.ts
+│   │   ├── logic.test.ts
 │   │   └── DominorioGame.tsx
-│   └── quelhas/        # Jogo Quelhas
+│   ├── quelhas/          # Jogo Quelhas (1.º, 2.º, 3.º Ciclo) - MISÈRE
+│   │   ├── types.ts
+│   │   ├── logic.ts
+│   │   ├── logic.test.ts
+│   │   └── QuelhasGame.tsx
+│   ├── produto/          # Jogo Produto (2.º, 3.º Ciclo, Secundário)
+│   │   ├── types.ts
+│   │   ├── logic.ts
+│   │   ├── logic.test.ts
+│   │   └── ProdutoGame.tsx
+│   ├── atari-go/         # Atari Go (3.º Ciclo, Secundário)
+│   │   ├── types.ts
+│   │   ├── logic.ts
+│   │   ├── logic.test.ts
+│   │   └── AtariGoGame.tsx
+│   └── nex/              # Jogo Nex (Secundário)
 │       ├── types.ts
 │       ├── logic.ts
-│       └── QuelhasGame.tsx
-├── types/              # Tipos TypeScript comuns
-├── App.tsx             # Componente principal
-├── frontend.tsx        # Entrada React
-├── index.html          # HTML base
-└── index.css           # Estilos globais
+│       ├── logic.test.ts
+│       └── NexGame.tsx
+├── types/                # Tipos TypeScript comuns
+├── App.tsx               # Componente principal
+├── frontend.tsx          # Entrada React
+├── index.html            # HTML base
+└── index.css             # Estilos globais
 ```
 
 ## 📝 Licença
