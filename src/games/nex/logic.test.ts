@@ -106,24 +106,24 @@ describe("Nex - Estado Inicial", () => {
 });
 
 describe("Nex - Verificação de Vitória", () => {
-  test("vitória das pretas (conexão x=0 a x=10)", () => {
+  test("vitória das pretas (conexão y=0 a y=10 - Noroeste a Sudeste)", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
-    // Criar caminho de pretas da esquerda para a direita
-    for (let x = 0; x < LADO_TABULEIRO; x++) {
-      tabuleiro[x][5] = 'preta';
+    // Criar caminho de pretas de y=0 (NW) a y=10 (SE)
+    for (let y = 0; y < LADO_TABULEIRO; y++) {
+      tabuleiro[5][y] = 'preta';
     }
     
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(true);
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(false);
   });
 
-  test("vitória das brancas (conexão y=0 a y=10)", () => {
+  test("vitória das brancas (conexão x=0 a x=10 - Sudoeste a Nordeste)", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
-    // Criar caminho de brancas de cima para baixo
-    for (let y = 0; y < LADO_TABULEIRO; y++) {
-      tabuleiro[5][y] = 'branca';
+    // Criar caminho de brancas de x=0 (SW) a x=10 (NE)
+    for (let x = 0; x < LADO_TABULEIRO; x++) {
+      tabuleiro[x][5] = 'branca';
     }
     
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
@@ -133,9 +133,9 @@ describe("Nex - Verificação de Vitória", () => {
   test("sem vitória se caminho incompleto", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
-    // Caminho incompleto
-    for (let x = 0; x < 5; x++) {
-      tabuleiro[x][5] = 'preta';
+    // Caminho incompleto para pretas (y=0 a y=10)
+    for (let y = 0; y < 5; y++) {
+      tabuleiro[5][y] = 'preta';
     }
     
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(false);
@@ -145,19 +145,19 @@ describe("Nex - Verificação de Vitória", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
     // Caminho diagonal puro usando apenas (+1,-1)
-    // De (0,10) até (10,0) - diagonal perfeita
-    // Direções válidas: (+1,0), (-1,0), (0,+1), (0,-1), (+1,-1), (-1,+1)
-    tabuleiro[0][10] = 'preta';
-    tabuleiro[1][9] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[2][8] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[3][7] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[4][6] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[5][5] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[6][4] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[7][3] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[8][2] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[9][1] = 'preta';   // vizinho via (+1,-1)
-    tabuleiro[10][0] = 'preta';  // vizinho via (+1,-1)
+    // Pretas conectam y=0 (NW) a y=10 (SE)
+    // De (10,0) até (0,10) - diagonal perfeita
+    tabuleiro[10][0] = 'preta';
+    tabuleiro[9][1] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[8][2] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[7][3] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[6][4] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[5][5] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[4][6] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[3][7] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[2][8] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[1][9] = 'preta';   // vizinho via (-1,+1)
+    tabuleiro[0][10] = 'preta';  // vizinho via (-1,+1)
     
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(true);
   });
@@ -166,42 +166,41 @@ describe("Nex - Verificação de Vitória", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
     // Caminho que usa especificamente o vizinho (-1,+1)
-    // Direções válidas: (+1,0), (-1,0), (0,+1), (0,-1), (+1,-1), (-1,+1)
-    // (0,5) -> (1,5) -> (2,5) -> (2,6) -> (1,7) -> (2,7) -> (3,7) -> ... -> (10,7)
-    tabuleiro[0][5] = 'preta';
-    tabuleiro[1][5] = 'preta';   // (+1,0) de (0,5)
-    tabuleiro[2][5] = 'preta';   // (+1,0) de (1,5)
-    tabuleiro[2][6] = 'preta';   // (0,+1) de (2,5)
-    tabuleiro[1][7] = 'preta';   // (-1,+1) de (2,6) - testa esta direção!
-    tabuleiro[2][7] = 'preta';   // (+1,0) de (1,7)
-    tabuleiro[3][7] = 'preta';   // (+1,0)
-    tabuleiro[4][7] = 'preta';
+    // Pretas conectam y=0 (NW) a y=10 (SE)
+    // (5,0) -> (5,1) -> (5,2) -> (4,3) -> (5,3) -> (5,4) -> ... -> (5,10)
+    tabuleiro[5][0] = 'preta';
+    tabuleiro[5][1] = 'preta';   // (0,+1) de (5,0)
+    tabuleiro[5][2] = 'preta';   // (0,+1) de (5,1)
+    tabuleiro[4][3] = 'preta';   // (-1,+1) de (5,2) - testa esta direção!
+    tabuleiro[5][3] = 'preta';   // (+1,0) de (4,3)
+    tabuleiro[5][4] = 'preta';
+    tabuleiro[5][5] = 'preta';
+    tabuleiro[5][6] = 'preta';
     tabuleiro[5][7] = 'preta';
-    tabuleiro[6][7] = 'preta';
-    tabuleiro[7][7] = 'preta';
-    tabuleiro[8][7] = 'preta';
-    tabuleiro[9][7] = 'preta';
-    tabuleiro[10][7] = 'preta';
+    tabuleiro[5][8] = 'preta';
+    tabuleiro[5][9] = 'preta';
+    tabuleiro[5][10] = 'preta';
     
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(true);
   });
 
-  test("vitória das brancas com caminho diagonal (usando vizinho (-1,+1))", () => {
+  test("vitória das brancas com caminho diagonal (usando vizinho (+1,-1))", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
-    // Caminho diagonal para brancas (y=0 a y=10) usando (-1,+1)
-    // De (10,0) até (0,10)
-    tabuleiro[10][0] = 'branca';
-    tabuleiro[9][1] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[8][2] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[7][3] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[6][4] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[5][5] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[4][6] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[3][7] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[2][8] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[1][9] = 'branca';   // vizinho via (-1,+1)
-    tabuleiro[0][10] = 'branca';  // vizinho via (-1,+1)
+    // Caminho diagonal para brancas (x=0 a x=10)
+    // Brancas conectam SW (x=0) a NE (x=10)
+    // De (0,10) até (10,0) usando (+1,-1)
+    tabuleiro[0][10] = 'branca';
+    tabuleiro[1][9] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[2][8] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[3][7] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[4][6] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[5][5] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[6][4] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[7][3] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[8][2] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[9][1] = 'branca';   // vizinho via (+1,-1)
+    tabuleiro[10][0] = 'branca';  // vizinho via (+1,-1)
     
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
   });
@@ -210,7 +209,7 @@ describe("Nex - Verificação de Vitória", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
     // Este caminho tenta usar (+1,+1) como vizinho, mas NÃO é válido
-    // Portanto NÃO deve detectar vitória
+    // Pretas precisam conectar y=0 a y=10
     // (0,0) -> (1,1) -> (2,2) -> ... -> (10,10) NÃO é caminho válido!
     tabuleiro[0][0] = 'preta';
     tabuleiro[1][1] = 'preta';   // (+1,+1) de (0,0) - NÃO É VIZINHO!
@@ -224,7 +223,7 @@ describe("Nex - Verificação de Vitória", () => {
     tabuleiro[9][9] = 'preta';
     tabuleiro[10][10] = 'preta';
     
-    // Pretas vão de x=0 a x=10, MAS o caminho não é conexo!
+    // Pretas vão de y=0 a y=10, MAS o caminho não é conexo!
     // Porque (+1,+1) não é uma direção válida de vizinho
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(false);
   });
@@ -232,28 +231,22 @@ describe("Nex - Verificação de Vitória", () => {
   test("SEM vitória se caminho usa (-1,-1) que NÃO é vizinho válido", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
-    // Brancas de y=0 a y=10 usando (-1,-1) - NÃO É VIZINHO VÁLIDO
-    tabuleiro[10][0] = 'branca';
-    tabuleiro[9][1] = 'branca';   // (-1,+1) - este É válido
-    // Agora se saltarmos para (8,0) via (-1,-1) de (9,1):
-    // (8,0) não é vizinho de (9,1)! Os vizinhos de (9,1) são:
-    // (10,1), (8,1), (9,2), (9,0), (10,0), (8,2)
-    // Então (8,0) NÃO é vizinho de (9,1)
-    
+    // Brancas precisam conectar x=0 a x=10
     // Vamos criar um caminho quebrado
-    tabuleiro[5][0] = 'branca';
-    // Saltar para (4,2) usando "(-1,+2)" que não existe
-    tabuleiro[4][2] = 'branca';
-    tabuleiro[3][3] = 'branca';
-    tabuleiro[2][4] = 'branca';
-    tabuleiro[1][5] = 'branca';
-    tabuleiro[0][6] = 'branca';
-    tabuleiro[0][7] = 'branca';
-    tabuleiro[0][8] = 'branca';
-    tabuleiro[0][9] = 'branca';
-    tabuleiro[0][10] = 'branca';
+    tabuleiro[0][5] = 'branca';
+    // Saltar para (2,3) usando "(-1,-1)" que não é vizinho
+    tabuleiro[1][4] = 'branca';   // (+1,-1) - este É válido
+    tabuleiro[2][3] = 'branca';   // (+1,-1) - este É válido
+    // Agora vamos quebrar o caminho
+    tabuleiro[4][3] = 'branca';   // (4,3) NÃO é vizinho de (2,3)! Salto de 2 casas em x
+    tabuleiro[5][3] = 'branca';
+    tabuleiro[6][3] = 'branca';
+    tabuleiro[7][3] = 'branca';
+    tabuleiro[8][3] = 'branca';
+    tabuleiro[9][3] = 'branca';
+    tabuleiro[10][3] = 'branca';
     
-    // Este caminho está quebrado porque (5,0) e (4,2) não são vizinhos
+    // Este caminho está quebrado porque (2,3) e (4,3) não são vizinhos
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(false);
   });
 });
@@ -437,11 +430,12 @@ describe("Nex - IA", () => {
     let estado = criarEstadoInicial('vs-computador');
     
     // Criar situação onde IA (brancas, jogador2) pode vencer
-    // Caminho quase completo de y=0 a y=10
-    for (let y = 0; y < LADO_TABULEIRO - 1; y++) {
-      estado.tabuleiro[5][y] = 'branca';
+    // Brancas conectam x=0 (SW) a x=10 (NE)
+    // Caminho quase completo de x=0 a x=10
+    for (let x = 0; x < LADO_TABULEIRO - 1; x++) {
+      estado.tabuleiro[x][5] = 'branca';
     }
-    // Falta uma peça para vencer
+    // Falta uma peça para vencer (x=10)
     
     estado.jogadorAtual = 'jogador2';
     estado.primeiraJogada = false;

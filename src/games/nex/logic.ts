@@ -67,8 +67,19 @@ function getCorJogador(jogador: Player): 'preta' | 'branca' {
 }
 
 // Verificar se jogador conectou as suas margens
-// Preto: conecta ↖ superior-esquerdo (x=0) a inferior-direito ↘ (x=LADO-1)
-// Branco: conecta ↗ superior-direito (y=0) a inferior-esquerdo ↙ (y=LADO-1)
+// Layout do tabuleiro (losango horizontal):
+//   - (0,0) está na ESQUERDA (W)
+//   - (10,10) está na DIREITA (E)
+//   - (10,0) está no TOPO (N)
+//   - (0,10) está na BASE (S)
+// Margens:
+//   - y=0: borda NOROESTE (de W a N)
+//   - y=10: borda SUDESTE (de S a E)
+//   - x=0: borda SUDOESTE (de W a S)
+//   - x=10: borda NORDESTE (de N a E)
+// Segundo as regras:
+//   - Preto: conecta Noroeste (y=0) a Sudeste (y=10)
+//   - Branco: conecta Sudoeste (x=0) a Nordeste (x=10)
 export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca'): boolean {
   const visitadas = new Set<string>();
   
@@ -77,16 +88,7 @@ export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca')
   let isMargeFim: (pos: Posicao) => boolean;
   
   if (cor === 'preta') {
-    // Preto: conecta ↖ superior-esquerdo (x=0) a inferior-direito ↘ (x=LADO-1)
-    posicoesInicio = [];
-    for (let y = 0; y < LADO_TABULEIRO; y++) {
-      if (tabuleiro[0][y] === cor) {
-        posicoesInicio.push({ x: 0, y });
-      }
-    }
-    isMargeFim = (pos) => pos.x === LADO_TABULEIRO - 1;
-  } else {
-    // Branco: conecta ↗ superior-direito (y=0) a inferior-esquerdo ↙ (y=LADO-1)
+    // Preto: conecta Noroeste (y=0) a Sudeste (y=10)
     posicoesInicio = [];
     for (let x = 0; x < LADO_TABULEIRO; x++) {
       if (tabuleiro[x][0] === cor) {
@@ -94,6 +96,15 @@ export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca')
       }
     }
     isMargeFim = (pos) => pos.y === LADO_TABULEIRO - 1;
+  } else {
+    // Branco: conecta Sudoeste (x=0) a Nordeste (x=10)
+    posicoesInicio = [];
+    for (let y = 0; y < LADO_TABULEIRO; y++) {
+      if (tabuleiro[0][y] === cor) {
+        posicoesInicio.push({ x: 0, y });
+      }
+    }
+    isMargeFim = (pos) => pos.x === LADO_TABULEIRO - 1;
   }
   
   // BFS para verificar conexão
