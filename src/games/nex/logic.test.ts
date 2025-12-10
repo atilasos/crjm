@@ -15,8 +15,56 @@ import {
   isAcaoCompleta,
   executarAcao,
   cancelarAcao,
+  getVizinhos,
 } from "./logic";
 import { Celula, LADO_TABULEIRO } from "./types";
+
+describe("Nex - Vizinhos Hexagonais", () => {
+  test("célula central (5,5) tem 6 vizinhos corretos", () => {
+    const vizinhos = getVizinhos({ x: 5, y: 5 });
+    expect(vizinhos.length).toBe(6);
+    
+    // Verificar que os vizinhos são os corretos
+    const vizinhosEsperados = [
+      { x: 6, y: 5 },  // (+1,0)
+      { x: 4, y: 5 },  // (-1,0)
+      { x: 5, y: 6 },  // (0,+1)
+      { x: 5, y: 4 },  // (0,-1)
+      { x: 6, y: 4 },  // (+1,-1)
+      { x: 4, y: 6 },  // (-1,+1)
+    ];
+    
+    for (const esperado of vizinhosEsperados) {
+      expect(vizinhos).toContainEqual(esperado);
+    }
+  });
+
+  test("(5,5) NÃO tem (6,6) como vizinho - (+1,+1) não é válido", () => {
+    const vizinhos = getVizinhos({ x: 5, y: 5 });
+    expect(vizinhos).not.toContainEqual({ x: 6, y: 6 });
+  });
+
+  test("(5,5) NÃO tem (4,4) como vizinho - (-1,-1) não é válido", () => {
+    const vizinhos = getVizinhos({ x: 5, y: 5 });
+    expect(vizinhos).not.toContainEqual({ x: 4, y: 4 });
+  });
+
+  test("célula de canto (0,0) tem apenas 2 vizinhos válidos", () => {
+    const vizinhos = getVizinhos({ x: 0, y: 0 });
+    expect(vizinhos.length).toBe(2);
+    expect(vizinhos).toContainEqual({ x: 1, y: 0 });
+    expect(vizinhos).toContainEqual({ x: 0, y: 1 });
+  });
+
+  test("célula de borda (0,5) tem 4 vizinhos válidos", () => {
+    const vizinhos = getVizinhos({ x: 0, y: 5 });
+    expect(vizinhos.length).toBe(4);
+    expect(vizinhos).toContainEqual({ x: 1, y: 5 });  // (+1,0)
+    expect(vizinhos).toContainEqual({ x: 0, y: 6 });  // (0,+1)
+    expect(vizinhos).toContainEqual({ x: 0, y: 4 });  // (0,-1)
+    expect(vizinhos).toContainEqual({ x: 1, y: 4 });  // (+1,-1)
+  });
+});
 
 describe("Nex - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 11x11", () => {
@@ -156,6 +204,57 @@ describe("Nex - Verificação de Vitória", () => {
     tabuleiro[0][10] = 'branca';  // vizinho via (-1,+1)
     
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
+  });
+
+  test("SEM vitória se caminho usa (+1,+1) que NÃO é vizinho válido", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    
+    // Este caminho tenta usar (+1,+1) como vizinho, mas NÃO é válido
+    // Portanto NÃO deve detectar vitória
+    // (0,0) -> (1,1) -> (2,2) -> ... -> (10,10) NÃO é caminho válido!
+    tabuleiro[0][0] = 'preta';
+    tabuleiro[1][1] = 'preta';   // (+1,+1) de (0,0) - NÃO É VIZINHO!
+    tabuleiro[2][2] = 'preta';
+    tabuleiro[3][3] = 'preta';
+    tabuleiro[4][4] = 'preta';
+    tabuleiro[5][5] = 'preta';
+    tabuleiro[6][6] = 'preta';
+    tabuleiro[7][7] = 'preta';
+    tabuleiro[8][8] = 'preta';
+    tabuleiro[9][9] = 'preta';
+    tabuleiro[10][10] = 'preta';
+    
+    // Pretas vão de x=0 a x=10, MAS o caminho não é conexo!
+    // Porque (+1,+1) não é uma direção válida de vizinho
+    expect(verificarVitoria(tabuleiro, 'preta')).toBe(false);
+  });
+
+  test("SEM vitória se caminho usa (-1,-1) que NÃO é vizinho válido", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    
+    // Brancas de y=0 a y=10 usando (-1,-1) - NÃO É VIZINHO VÁLIDO
+    tabuleiro[10][0] = 'branca';
+    tabuleiro[9][1] = 'branca';   // (-1,+1) - este É válido
+    // Agora se saltarmos para (8,0) via (-1,-1) de (9,1):
+    // (8,0) não é vizinho de (9,1)! Os vizinhos de (9,1) são:
+    // (10,1), (8,1), (9,2), (9,0), (10,0), (8,2)
+    // Então (8,0) NÃO é vizinho de (9,1)
+    
+    // Vamos criar um caminho quebrado
+    tabuleiro[5][0] = 'branca';
+    // Saltar para (4,2) usando "(-1,+2)" que não existe
+    tabuleiro[4][2] = 'branca';
+    tabuleiro[3][3] = 'branca';
+    tabuleiro[2][4] = 'branca';
+    tabuleiro[1][5] = 'branca';
+    tabuleiro[0][6] = 'branca';
+    tabuleiro[0][7] = 'branca';
+    tabuleiro[0][8] = 'branca';
+    tabuleiro[0][9] = 'branca';
+    tabuleiro[0][10] = 'branca';
+    
+    // Este caminho está quebrado porque (5,0) e (4,2) não são vizinhos
+    expect(verificarVitoria(tabuleiro, 'branca')).toBe(false);
   });
 });
 
