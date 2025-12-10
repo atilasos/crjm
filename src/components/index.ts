@@ -4,4 +4,5 @@ export { RulesPanel } from './RulesPanel';
 export { PlayerInfo } from './PlayerInfo';
 export { WinnerAnnouncement } from './WinnerAnnouncement';
 export { GameCard } from './GameCard';
+export { CampeonatoPage } from './CampeonatoPage';
 

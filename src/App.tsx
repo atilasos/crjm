@@ -2,6 +2,7 @@ import { useState } from 'react';
 import "./index.css";
 import { Header } from './components/Header';
 import { GameCard } from './components/GameCard';
+import { CampeonatoPage } from './components/CampeonatoPage';
 import { GatosCaesGame } from './games/gatos-caes/GatosCaesGame';
 import { DominorioGame } from './games/dominorio/DominorioGame';
 import { QuelhasGame } from './games/quelhas/QuelhasGame';
@@ -9,12 +10,16 @@ import { AtariGoGame } from './games/atari-go/AtariGoGame';
 import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
 
-type Pagina = 'inicio' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+type Pagina = 'inicio' | 'campeonato' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
 
 export function App() {
   const [paginaAtual, setPaginaAtual] = useState<Pagina>('inicio');
 
   const voltarInicio = () => setPaginaAtual('inicio');
+
+  if (paginaAtual === 'campeonato') {
+    return <CampeonatoPage onVoltar={voltarInicio} />;
+  }
 
   if (paginaAtual === 'gatos-caes') {
     return <GatosCaesGame onVoltar={voltarInicio} />;
@@ -67,6 +72,17 @@ export function App() {
             Escolhe um jogo para começar
           </h2>
           
+          {/* Card especial do Campeonato */}
+          <div className="mb-8">
+            <GameCard
+              titulo="🏆 Modo Campeonato"
+              descricao="Participa no campeonato interno da escola! Liga-te ao servidor, compete contra colegas em dupla eliminação e representa a escola no CRJM."
+              emoji="🏆"
+              corFundo="bg-gradient-to-br from-yellow-500 to-orange-600"
+              onClick={() => setPaginaAtual('campeonato')}
+            />
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <GameCard
               titulo="Gatos & Cães"
