@@ -4,30 +4,22 @@ import {
 } from './types';
 import { GameMode, GameStatus, Player } from '../../types';
 
-// Direções dos 6 vizinhos hexagonais para grelha losango
-// Offset coordinates (odd-r)
-const DIRECOES_HEX_PAR = [
-  { dx: 1, dy: 0 },   // Este
-  { dx: 0, dy: -1 },  // Norte
-  { dx: -1, dy: -1 }, // Noroeste
-  { dx: -1, dy: 0 },  // Oeste
-  { dx: -1, dy: 1 },  // Sudoeste
-  { dx: 0, dy: 1 },   // Sul
-];
-
-const DIRECOES_HEX_IMPAR = [
-  { dx: 1, dy: 0 },   // Este
-  { dx: 1, dy: -1 },  // Nordeste
-  { dx: 0, dy: -1 },  // Norte
-  { dx: -1, dy: 0 },  // Oeste
-  { dx: 0, dy: 1 },   // Sul
-  { dx: 1, dy: 1 },   // Sudeste
+// Direções dos 6 vizinhos hexagonais para grelha losango em coordenadas axiais
+// Neste sistema (usado no rendering), os vizinhos são constantes para todas as células:
+// - O tabuleiro é renderizado com: screen_x = (x+y)*scale, screen_y = (y-x)*scale
+// - Isto cria um losango horizontal onde cada célula tem 6 vizinhos fixos
+const DIRECOES_HEX = [
+  { dx: 1, dy: 0 },   // Este (direita ao longo do eixo x)
+  { dx: -1, dy: 0 },  // Oeste (esquerda ao longo do eixo x)
+  { dx: 0, dy: 1 },   // Sul (baixo ao longo do eixo y)
+  { dx: 0, dy: -1 },  // Norte (cima ao longo do eixo y)
+  { dx: 1, dy: -1 },  // Nordeste (diagonal)
+  { dx: -1, dy: 1 },  // Sudoeste (diagonal)
 ];
 
 // Obter vizinhos de uma posição
 function getVizinhos(pos: Posicao): Posicao[] {
-  const direcoes = pos.y % 2 === 0 ? DIRECOES_HEX_PAR : DIRECOES_HEX_IMPAR;
-  return direcoes
+  return DIRECOES_HEX
     .map(dir => ({ x: pos.x + dir.dx, y: pos.y + dir.dy }))
     .filter(p => dentroDoTabuleiro(p));
 }

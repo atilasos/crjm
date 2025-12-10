@@ -92,6 +92,71 @@ describe("Nex - Verificação de Vitória", () => {
     
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(false);
   });
+
+  test("vitória das pretas com caminho diagonal (usando vizinho (+1,-1))", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    
+    // Caminho diagonal puro usando apenas (+1,-1)
+    // De (0,10) até (10,0) - diagonal perfeita
+    // Direções válidas: (+1,0), (-1,0), (0,+1), (0,-1), (+1,-1), (-1,+1)
+    tabuleiro[0][10] = 'preta';
+    tabuleiro[1][9] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[2][8] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[3][7] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[4][6] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[5][5] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[6][4] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[7][3] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[8][2] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[9][1] = 'preta';   // vizinho via (+1,-1)
+    tabuleiro[10][0] = 'preta';  // vizinho via (+1,-1)
+    
+    expect(verificarVitoria(tabuleiro, 'preta')).toBe(true);
+  });
+
+  test("vitória das pretas com caminho usando vizinho (-1,+1)", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    
+    // Caminho que usa especificamente o vizinho (-1,+1)
+    // Direções válidas: (+1,0), (-1,0), (0,+1), (0,-1), (+1,-1), (-1,+1)
+    // (0,5) -> (1,5) -> (2,5) -> (2,6) -> (1,7) -> (2,7) -> (3,7) -> ... -> (10,7)
+    tabuleiro[0][5] = 'preta';
+    tabuleiro[1][5] = 'preta';   // (+1,0) de (0,5)
+    tabuleiro[2][5] = 'preta';   // (+1,0) de (1,5)
+    tabuleiro[2][6] = 'preta';   // (0,+1) de (2,5)
+    tabuleiro[1][7] = 'preta';   // (-1,+1) de (2,6) - testa esta direção!
+    tabuleiro[2][7] = 'preta';   // (+1,0) de (1,7)
+    tabuleiro[3][7] = 'preta';   // (+1,0)
+    tabuleiro[4][7] = 'preta';
+    tabuleiro[5][7] = 'preta';
+    tabuleiro[6][7] = 'preta';
+    tabuleiro[7][7] = 'preta';
+    tabuleiro[8][7] = 'preta';
+    tabuleiro[9][7] = 'preta';
+    tabuleiro[10][7] = 'preta';
+    
+    expect(verificarVitoria(tabuleiro, 'preta')).toBe(true);
+  });
+
+  test("vitória das brancas com caminho diagonal (usando vizinho (-1,+1))", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    
+    // Caminho diagonal para brancas (y=0 a y=10) usando (-1,+1)
+    // De (10,0) até (0,10)
+    tabuleiro[10][0] = 'branca';
+    tabuleiro[9][1] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[8][2] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[7][3] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[6][4] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[5][5] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[4][6] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[3][7] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[2][8] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[1][9] = 'branca';   // vizinho via (-1,+1)
+    tabuleiro[0][10] = 'branca';  // vizinho via (-1,+1)
+    
+    expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
+  });
 });
 
 describe("Nex - Ação de Colocação", () => {
