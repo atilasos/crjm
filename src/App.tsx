@@ -5,8 +5,11 @@ import { GameCard } from './components/GameCard';
 import { GatosCaesGame } from './games/gatos-caes/GatosCaesGame';
 import { DominorioGame } from './games/dominorio/DominorioGame';
 import { QuelhasGame } from './games/quelhas/QuelhasGame';
+import { AtariGoGame } from './games/atari-go/AtariGoGame';
+import { ProdutoGame } from './games/produto/ProdutoGame';
+import { NexGame } from './games/nex/NexGame';
 
-type Pagina = 'inicio' | 'gatos-caes' | 'dominorio' | 'quelhas';
+type Pagina = 'inicio' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
 
 export function App() {
   const [paginaAtual, setPaginaAtual] = useState<Pagina>('inicio');
@@ -23,6 +26,18 @@ export function App() {
 
   if (paginaAtual === 'quelhas') {
     return <QuelhasGame onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'atari-go') {
+    return <AtariGoGame onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'produto') {
+    return <ProdutoGame onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'nex') {
+    return <NexGame onVoltar={voltarInicio} />;
   }
 
   return (
@@ -42,7 +57,7 @@ export function App() {
             Campeonato Regional de Jogos Matemáticos da Madeira
           </p>
           <p className="text-lg text-white/75 max-w-xl mx-auto">
-            Pratica os jogos do 1.º Ciclo e fica preparado para o campeonato!
+            Pratica todos os jogos oficiais do campeonato — do 1.º Ciclo ao Secundário!
           </p>
         </section>
 
@@ -52,7 +67,7 @@ export function App() {
             Escolhe um jogo para começar
           </h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <GameCard
               titulo="Gatos & Cães"
               descricao="Jogo de colocação: coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada!"
@@ -76,6 +91,30 @@ export function App() {
               corFundo="bg-gradient-to-br from-blue-500 to-indigo-600"
               onClick={() => setPaginaAtual('quelhas')}
             />
+            
+            <GameCard
+              titulo="Produto"
+              descricao="Maximiza a pontuação dos teus grupos num tabuleiro hexagonal. Sabota o adversário unindo os grupos dele!"
+              emoji="✖️"
+              corFundo="bg-gradient-to-br from-purple-500 to-fuchsia-600"
+              onClick={() => setPaginaAtual('produto')}
+            />
+            
+            <GameCard
+              titulo="Atari Go"
+              descricao="Variante simplificada do Go: rodeia as pedras adversárias. A primeira captura vence o jogo!"
+              emoji="⚫⚪"
+              corFundo="bg-gradient-to-br from-stone-600 to-stone-800"
+              onClick={() => setPaginaAtual('atari-go')}
+            />
+            
+            <GameCard
+              titulo="Nex"
+              descricao="Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário!"
+              emoji="🔗"
+              corFundo="bg-gradient-to-br from-cyan-500 to-sky-600"
+              onClick={() => setPaginaAtual('nex')}
+            />
           </div>
         </section>
 
@@ -87,17 +126,27 @@ export function App() {
           </h2>
           <div className="text-white/80 space-y-3">
             <p>
-              Este site foi criado para ajudar os alunos do 1.º Ciclo a praticarem 
-              os jogos do Campeonato Regional de Jogos Matemáticos da Madeira (CRJM).
+              Este site permite praticar todos os jogos oficiais do Campeonato Regional 
+              de Jogos Matemáticos da Madeira (CRJM), abrangendo do 1.º Ciclo ao Secundário.
             </p>
             <p>
               Podes jogar sozinho contra o computador ou com um amigo no mesmo computador.
               As regras de cada jogo seguem as regras oficiais do campeonato.
             </p>
-            <div className="bg-yellow-500/20 border border-yellow-400/50 rounded-lg p-3 mt-4">
+            <div className="bg-blue-500/20 border border-blue-400/50 rounded-lg p-3 mt-4">
+              <p className="text-blue-200 text-sm">
+                <strong>📚 Jogos por ciclo:</strong><br/>
+                • 1.º Ciclo: Gatos & Cães, Dominório, Quelhas<br/>
+                • 2.º Ciclo: Dominório, Quelhas, Produto<br/>
+                • 3.º Ciclo: Quelhas, Produto, Atari Go<br/>
+                • Secundário: Produto, Atari Go, Nex
+              </p>
+            </div>
+            <div className="bg-yellow-500/20 border border-yellow-400/50 rounded-lg p-3 mt-2">
               <p className="text-yellow-200 text-sm">
                 <strong>💡 Dica importante:</strong> O Quelhas é um jogo <strong>misère</strong> — 
-                perde quem faz a última jogada! Nos outros dois jogos, ganha quem faz a última jogada.
+                perde quem faz a última jogada! Nos outros jogos, ganha quem faz a última jogada 
+                (exceto Atari Go, onde a primeira captura vence).
               </p>
             </div>
             <p className="text-sm">
