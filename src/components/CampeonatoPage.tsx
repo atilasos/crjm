@@ -2,12 +2,15 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Header } from './Header';
 import {
   createTournamentClient,
+  tournamentStateFromUpdate,
+  fromNetworkGameState,
   type TournamentClient,
   type ConnectionStatus,
   type ServerMessage,
   type GameId,
   type TournamentState,
   type Match,
+  type TournamentStateUpdateMessage,
   GAME_NAMES,
   // Boards
   GatosCaesBoard,
@@ -31,9 +34,15 @@ interface LogEntry {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+// URL do servidor de torneio via variável de ambiente ou default
+const DEFAULT_SERVER_URL = typeof import.meta !== 'undefined' 
+  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '') 
+  : '';
+
 export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   // Estado de conexão
-  const [serverUrl, setServerUrl] = useState('ws://localhost:8080');
+  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
+  const [useMockServer, setUseMockServer] = useState(!DEFAULT_SERVER_URL);
   const [playerName, setPlayerName] = useState('');
   const [classId, setClassId] = useState('');
   const [selectedGame, setSelectedGame] = useState<GameId>('gatos-caes');
@@ -48,6 +57,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [currentGameId, setCurrentGameId] = useState<GameId | null>(null);
+  
+  // Estado do jogo dentro do match (novo protocolo não inclui isto no Match)
+  const [currentGameNumber, setCurrentGameNumber] = useState(1);
+  const [matchScore, setMatchScore] = useState<{ player1Wins: number; player2Wins: number }>({ player1Wins: 0, player2Wins: 0 });
 
   // Estado do jogo atual
   const [gameState, setGameState] = useState<GatosCaesState | DominorioState | null>(null);
@@ -59,6 +72,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Cliente de torneio
   const clientRef = useRef<TournamentClient | null>(null);
+  
+  // Refs para handlers - evita recriar o cliente quando o estado muda
+  const playerIdRef = useRef<string | null>(null);
+  const currentGameIdRef = useRef<GameId | null>(null);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
     const entry: LogEntry = {
@@ -74,6 +91,16 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [logs]);
 
+  // Mantém as refs sincronizadas com o estado
+  useEffect(() => {
+    playerIdRef.current = playerId;
+  }, [playerId]);
+
+  useEffect(() => {
+    currentGameIdRef.current = currentGameId;
+  }, [currentGameId]);
+
+  // Handler de mensagens que usa refs em vez de estado diretamente
   const handleServerMessage = useCallback((message: ServerMessage) => {
     switch (message.type) {
       case 'welcome':
@@ -84,59 +111,112 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         addLog('Inscrito no campeonato!', 'success');
         break;
 
-      case 'tournament_state_update':
-        setTournamentState(message.tournamentState);
+      case 'tournament_state_update': {
+        // Novo protocolo: campos flat, usar helper para converter
+        const newState = tournamentStateFromUpdate(message as TournamentStateUpdateMessage);
+        setTournamentState(newState);
         break;
+      }
 
       case 'match_assigned':
         setCurrentMatch(message.match);
         setMyRole(message.yourRole);
+        setCurrentGameNumber(1);
+        setMatchScore({ player1Wins: 0, player2Wins: 0 });
         setPhase('match');
-        const opponent = message.yourRole === 'player1' 
-          ? message.match.player2?.name 
-          : message.match.player1?.name;
-        addLog(`Confronto atribuído: Tu vs ${opponent}`, 'success');
+        // Novo protocolo inclui opponentName directamente
+        addLog(`Confronto atribuído: Tu vs ${message.opponentName}`, 'success');
         break;
 
-      case 'game_start':
+      case 'game_start': {
         setIsMyTurn(message.youStart);
-        setGameState(message.initialState as GatosCaesState | DominorioState);
+        setCurrentGameNumber(message.gameNumber);
+        // Atualiza myRole se fornecido (novo protocolo)
+        if (message.yourRole) {
+          setMyRole(message.yourRole);
+        }
+        // Garante que o match atual passa para fase 'playing' quando o jogo começa
+        setCurrentMatch(prev =>
+          prev
+            ? {
+                ...prev,
+                phase: 'playing',
+              }
+            : prev
+        );
+        // Converte estado de rede para local se necessário
+        const gameIdForConversion = currentGameIdRef.current || 'gatos-caes';
+        try {
+          const localInitialState = fromNetworkGameState(gameIdForConversion, message.initialState);
+          setGameState(localInitialState as GatosCaesState | DominorioState);
+        } catch {
+          // Fallback: assume que já está no formato local
+          setGameState(message.initialState as GatosCaesState | DominorioState);
+        }
         addLog(
           `Jogo ${message.gameNumber} começou! ${message.youStart ? 'É a tua vez!' : 'Aguarda a jogada do adversário.'}`,
           'info'
         );
         break;
+      }
 
-      case 'game_state_update':
+      case 'game_state_update': {
         setIsMyTurn(message.yourTurn);
-        setGameState(message.gameState as GatosCaesState | DominorioState);
+        // Converte estado de rede para local se necessário
+        const gameIdForUpdate = currentGameIdRef.current || 'gatos-caes';
+        try {
+          const localState = fromNetworkGameState(gameIdForUpdate, message.gameState);
+          setGameState(localState as GatosCaesState | DominorioState);
+        } catch {
+          // Fallback: assume que já está no formato local
+          setGameState(message.gameState as GatosCaesState | DominorioState);
+        }
         break;
+      }
 
-      case 'game_end':
-        setGameState(message.finalState as GatosCaesState | DominorioState);
+      case 'game_end': {
+        // Converte estado de rede para local se necessário
+        const gameIdForEnd = currentGameIdRef.current || 'gatos-caes';
+        try {
+          const localFinalState = fromNetworkGameState(gameIdForEnd, message.finalState);
+          setGameState(localFinalState as GatosCaesState | DominorioState);
+        } catch {
+          // Fallback: assume que já está no formato local
+          setGameState(message.finalState as GatosCaesState | DominorioState);
+        }
+        // Novo protocolo inclui matchScore
+        if (message.matchScore) {
+          setMatchScore(message.matchScore);
+        }
         addLog(`Jogo ${message.gameNumber} terminou!`, 'info');
         break;
+      }
 
       case 'match_end':
         setCurrentMatch(null);
         setMyRole(null);
         setGameState(null);
+        setCurrentGameNumber(1);
+        setMatchScore({ player1Wins: 0, player2Wins: 0 });
         if (message.youWon) {
           addLog(`🎉 Ganhaste o confronto! ${message.finalScore.player1Wins}-${message.finalScore.player2Wins}`, 'success');
         } else {
           addLog(`Perdeste o confronto. ${message.finalScore.player1Wins}-${message.finalScore.player2Wins}`, 'warning');
         }
-        if (message.nextBracket === 'losers') {
-          addLog('Vais para a Losers Bracket. Uma derrota e estás eliminado!', 'warning');
-        } else if (message.nextBracket === 'eliminated') {
+        // Novo protocolo usa eliminatedFromTournament
+        if (message.eliminatedFromTournament) {
           addLog('Foste eliminado do campeonato.', 'error');
           setPhase('finished');
+        } else if (!message.youWon) {
+          addLog('Vais para a Losers Bracket. Uma derrota e estás eliminado!', 'warning');
         }
         break;
 
       case 'tournament_end':
         setPhase('finished');
-        const isChampion = message.championId === playerId;
+        // Usa a ref para obter o playerId atual
+        const currentPlayerId = playerIdRef.current;
+        const isChampion = message.championId === currentPlayerId;
         addLog(
           isChampion 
             ? '🏆 PARABÉNS! És o CAMPEÃO!' 
@@ -153,32 +233,18 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         addLog(message.message, 'info');
         break;
     }
-  }, [addLog, playerId]);
+  }, [addLog]); // Removido playerId das dependências - usa ref em vez disso
 
+  // Configura os handlers do cliente - chamado uma vez no mount
   useEffect(() => {
-    const client = createTournamentClient();
-    clientRef.current = client;
-
-    client.setEventHandlers({
-      onConnectionStatusChange: (status, error) => {
-        setConnectionStatus(status);
-        setConnectionError(error ?? null);
-        if (status === 'connected') {
-          addLog('Ligado ao servidor!', 'success');
-        } else if (status === 'error') {
-          addLog(`Erro de ligação: ${error}`, 'error');
-        } else if (status === 'disconnected') {
-          addLog('Desligado do servidor.', 'warning');
-          setPhase('connect');
-        }
-      },
-      onMessage: handleServerMessage,
-    });
-
+    // Cleanup no unmount
     return () => {
-      client.disconnect();
+      if (clientRef.current) {
+        clientRef.current.disconnect();
+        clientRef.current = null;
+      }
     };
-  }, [addLog, handleServerMessage]);
+  }, []);
 
   const handleConnect = async () => {
     if (!playerName.trim()) {
@@ -186,11 +252,41 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       return;
     }
 
-    const client = clientRef.current;
-    if (!client) return;
+    if (!useMockServer && !serverUrl.trim()) {
+      addLog('Introduz o endereço do servidor!', 'error');
+      return;
+    }
+
+    // Limpa cliente anterior se existir
+    if (clientRef.current) {
+      clientRef.current.disconnect();
+      clientRef.current = null;
+    }
+
+    // Cria novo cliente com as configurações atuais
+    const effectiveUrl = useMockServer ? 'mock' : serverUrl;
+    const client = createTournamentClient(effectiveUrl);
+    clientRef.current = client;
+
+    // Configura handlers
+    client.setEventHandlers({
+      onConnectionStatusChange: (status, error) => {
+        setConnectionStatus(status);
+        setConnectionError(error ?? null);
+        if (status === 'connected') {
+          addLog(useMockServer ? 'Modo de teste iniciado!' : 'Ligado ao servidor!', 'success');
+        } else if (status === 'error') {
+          addLog(`Erro de ligação: ${error}`, 'error');
+        } else if (status === 'disconnected') {
+          // Só volta ao ecrã de connect se não estiver já lá
+          addLog('Desligado do servidor.', 'warning');
+        }
+      },
+      onMessage: handleServerMessage,
+    });
 
     try {
-      await client.connect(serverUrl);
+      await client.connect(effectiveUrl);
       client.send({
         type: 'join_tournament',
         gameId: selectedGame,
@@ -216,18 +312,23 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     clientRef.current.send({
       type: 'submit_move',
       matchId: currentMatch.id,
-      gameNumber: currentMatch.currentGame,
+      gameNumber: currentGameNumber,
       move,
     });
   };
 
   const handleDisconnect = () => {
-    clientRef.current?.disconnect();
+    if (clientRef.current) {
+      clientRef.current.disconnect();
+      clientRef.current = null;
+    }
     setPhase('connect');
     setTournamentState(null);
     setCurrentMatch(null);
     setMyRole(null);
     setGameState(null);
+    setPlayerId(null);
+    setConnectionStatus('disconnected');
   };
 
   return (
@@ -242,6 +343,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                 <ConnectForm
                   serverUrl={serverUrl}
                   setServerUrl={setServerUrl}
+                  useMockServer={useMockServer}
+                  setUseMockServer={setUseMockServer}
                   playerName={playerName}
                   setPlayerName={setPlayerName}
                   classId={classId}
@@ -268,6 +371,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   isMyTurn={isMyTurn}
                   gameId={currentGameId}
                   gameState={gameState}
+                  currentGameNumber={currentGameNumber}
+                  matchScore={matchScore}
                   onReady={handleReadyForMatch}
                   onMove={handleMove}
                 />
@@ -304,6 +409,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 interface ConnectFormProps {
   serverUrl: string;
   setServerUrl: (url: string) => void;
+  useMockServer: boolean;
+  setUseMockServer: (use: boolean) => void;
   playerName: string;
   setPlayerName: (name: string) => void;
   classId: string;
@@ -317,6 +424,7 @@ interface ConnectFormProps {
 
 function ConnectForm({
   serverUrl, setServerUrl,
+  useMockServer, setUseMockServer,
   playerName, setPlayerName,
   classId, setClassId,
   selectedGame, setSelectedGame,
@@ -384,21 +492,61 @@ function ConnectForm({
           </p>
         </div>
 
-        <div>
-          <label className="block text-white/80 text-sm font-medium mb-2">
-            Endereço do servidor
-          </label>
-          <input
-            type="text"
-            value={serverUrl}
-            onChange={e => setServerUrl(e.target.value)}
-            placeholder="ws://192.168.1.100:8080"
-            className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-yellow-400/50 font-mono text-sm"
-            disabled={isConnecting}
-          />
-          <p className="text-white/50 text-xs mt-1">
-            No modo de teste, o servidor é simulado localmente.
-          </p>
+        {/* Toggle modo de teste vs servidor real */}
+        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-white/80 text-sm font-medium">
+              Modo de ligação
+            </label>
+            <button
+              type="button"
+              onClick={() => setUseMockServer(!useMockServer)}
+              disabled={isConnecting}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                useMockServer ? 'bg-blue-500' : 'bg-green-500'
+              } disabled:opacity-50`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  useMockServer ? 'translate-x-1' : 'translate-x-6'
+                }`}
+              />
+            </button>
+          </div>
+          
+          {useMockServer ? (
+            <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg p-3">
+              <p className="text-blue-200 text-sm">
+                <strong>Modo de teste</strong> - Jogas contra um bot simulado localmente. 
+                Ideal para treinar e testar a interface.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="bg-green-500/20 border border-green-400/30 rounded-lg p-3">
+                <p className="text-green-200 text-sm">
+                  <strong>Modo campeonato</strong> - Liga-te ao servidor do professor 
+                  para competir contra colegas em tempo real!
+                </p>
+              </div>
+              <div>
+                <label className="block text-white/60 text-xs font-medium mb-1">
+                  Endereço do servidor
+                </label>
+                <input
+                  type="text"
+                  value={serverUrl}
+                  onChange={e => setServerUrl(e.target.value)}
+                  placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-400/50 font-mono text-sm"
+                  disabled={isConnecting}
+                />
+                <p className="text-white/40 text-xs mt-1">
+                  O professor vai dar-te este endereço no dia do torneio.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
         {connectionError && (
@@ -409,7 +557,7 @@ function ConnectForm({
 
         <button
           onClick={onConnect}
-          disabled={isConnecting || !playerName.trim()}
+          disabled={isConnecting || !playerName.trim() || (!useMockServer && !serverUrl.trim())}
           className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
         >
           {isConnecting ? (
@@ -420,7 +568,7 @@ function ConnectForm({
           ) : (
             <>
               <span>🎮</span>
-              Entrar no Campeonato
+              {useMockServer ? 'Iniciar Treino' : 'Entrar no Campeonato'}
             </>
           )}
         </button>
@@ -494,14 +642,16 @@ interface MatchAreaProps {
   isMyTurn: boolean;
   gameId: GameId | null;
   gameState: GatosCaesState | DominorioState | null;
+  currentGameNumber: number;
+  matchScore: { player1Wins: number; player2Wins: number };
   onReady: () => void;
   onMove: (move: unknown) => void;
 }
 
-function MatchArea({ match, myRole, isMyTurn, gameId, gameState, onReady, onMove }: MatchAreaProps) {
+function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, onReady, onMove }: MatchAreaProps) {
   const opponent = myRole === 'player1' ? match.player2 : match.player1;
-  const myScore = myRole === 'player1' ? match.score.player1Wins : match.score.player2Wins;
-  const opponentScore = myRole === 'player1' ? match.score.player2Wins : match.score.player1Wins;
+  const myScore = myRole === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
+  const opponentScore = myRole === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
 
   // Converter myRole para o formato do jogo
   const gameMyRole = myRole === 'player1' ? 'jogador1' : 'jogador2';
@@ -522,7 +672,7 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, onReady, onMove
           <span className="text-red-400">{opponentScore}</span>
         </div>
         <p className="text-white/60 text-sm mt-1">
-          Melhor de {match.bestOf} • Jogo {match.currentGame}
+          Melhor de 3 • Jogo {currentGameNumber}
         </p>
       </div>
 

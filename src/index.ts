@@ -9,8 +9,9 @@ const server = serve({
     // Serve index.html for all routes (SPA)
     "/*": index,
   },
+  // Note: HMR is handled by `bun --hot` flag, not here
+  // Setting both causes conflicts and WebSocket errors
   development: process.env.NODE_ENV !== "production" && {
-    hmr: true,
     console: true,
   },
 });

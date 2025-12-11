@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
@@ -41,6 +41,13 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [tipoSelecao, setTipoSelecao] = useState<'propria' | 'neutra'>('propria');
+  
+  // Estado para pan/drag do tabuleiro
+  const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const boardContainerRef = useRef<HTMLDivElement>(null);
+  const boardDraggableRef = useRef<HTMLDivElement>(null);
 
   // Efeito para jogada do computador
   useEffect(() => {
@@ -150,6 +157,105 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
+  }, []);
+
+  // Handlers para pan/drag do tabuleiro
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Só permitir drag se não estiver clicando diretamente em uma célula
+    const target = e.target as SVGElement;
+    if (target.tagName === 'polygon' || target.closest('polygon')) {
+      return;
+    }
+    // Verificar se é clique no SVG ou no container
+    if (target.tagName === 'svg' || target.tagName === 'DIV') {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
+    }
+  }, [panOffset]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const deltaX = e.clientX - dragStart.x;
+    const deltaY = e.clientY - dragStart.y;
+    // Só aplicar pan se o movimento for significativo (evitar interferir com cliques)
+    if (Math.abs(deltaX) > 5 || Math.abs(deltaY) > 5) {
+      setPanOffset({
+        x: deltaX,
+        y: deltaY,
+      });
+    }
+  }, [isDragging, dragStart]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    // Só permitir drag se não estiver tocando diretamente em uma célula
+    const target = e.target as SVGElement;
+    if (target.tagName === 'polygon' || target.closest('polygon')) {
+      return;
+    }
+    if (e.touches.length === 1) {
+      setIsDragging(true);
+      setDragStart({ 
+        x: e.touches[0].clientX - panOffset.x, 
+        y: e.touches[0].clientY - panOffset.y 
+      });
+    }
+  }, [panOffset]);
+
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!isDragging || e.touches.length !== 1) return;
+    const target = e.target as SVGElement;
+    // Se estiver sobre uma célula, não fazer pan
+    if (target.tagName === 'polygon' || target.closest('polygon')) {
+      return;
+    }
+    e.preventDefault();
+    setPanOffset({
+      x: e.touches[0].clientX - dragStart.x,
+      y: e.touches[0].clientY - dragStart.y,
+    });
+  }, [isDragging, dragStart]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Adicionar listeners nativos para touch events com passive: false
+  useEffect(() => {
+    const draggable = boardDraggableRef.current;
+    if (!draggable) return;
+
+    const touchStartHandler = (e: TouchEvent) => {
+      handleTouchStart(e);
+    };
+
+    const touchMoveHandler = (e: TouchEvent) => {
+      handleTouchMove(e);
+    };
+
+    const touchEndHandler = () => {
+      handleTouchEnd();
+    };
+
+    // Adicionar listeners com passive: false para touchmove permitir preventDefault
+    draggable.addEventListener('touchstart', touchStartHandler, { passive: true });
+    draggable.addEventListener('touchmove', touchMoveHandler, { passive: false });
+    draggable.addEventListener('touchend', touchEndHandler, { passive: true });
+
+    return () => {
+      draggable.removeEventListener('touchstart', touchStartHandler);
+      draggable.removeEventListener('touchmove', touchMoveHandler);
+      draggable.removeEventListener('touchend', touchEndHandler);
+    };
+  }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
+
+  // Reset pan quando necessário
+  const resetPan = useCallback(() => {
+    setPanOffset({ x: 0, y: 0 });
   }, []);
 
   // Verificar se uma posição está selecionada na ação em curso
@@ -375,22 +481,60 @@ export function NexGame({ onVoltar }: NexGameProps) {
 
         {/* Tabuleiro Hexagonal em Losango */}
         <div className="game-container">
-          <div className="overflow-x-auto flex justify-center">
-            <div className="relative inline-block p-12">
-              {/* Indicadores de canto - fora do tabuleiro, nos cantos da área */}
-              {/* Pretas: superior-esquerdo e inferior-direito */}
-              <div className="absolute top-0 left-0 w-7 h-7 rounded-full bg-gray-800"></div>
-              <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-gray-800"></div>
-              {/* Brancas: superior-direito e inferior-esquerdo */}
-              <div className="absolute top-0 right-0 w-7 h-7 rounded-full bg-white border-2 border-gray-800"></div>
-              <div className="absolute bottom-0 left-0 w-7 h-7 rounded-full bg-white border-2 border-gray-800"></div>
-              
-              <svg 
-                width={dimensoes.width} 
-                height={dimensoes.height}
-                viewBox={`${-HEX_SIZE * 2} ${-dimensoes.centerY} ${dimensoes.width} ${dimensoes.height}`}
-                className="block"
+          <div className="relative">
+            {/* Botão para resetar pan (apenas visível quando há offset) */}
+            {(panOffset.x !== 0 || panOffset.y !== 0) && (
+              <button
+                onClick={resetPan}
+                className="absolute top-2 right-2 z-10 px-3 py-1 bg-blue-500 text-white text-xs rounded-lg shadow-md hover:bg-blue-600 transition-colors"
+                title="Reposicionar tabuleiro"
               >
+                ↺ Reposicionar
+              </button>
+            )}
+            
+            {/* Container com overflow e pan */}
+            <div 
+              ref={boardContainerRef}
+              className="overflow-auto"
+              style={{ 
+                maxHeight: '70vh',
+                cursor: isDragging ? 'grabbing' : 'default',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-x pan-y',
+                // Garantir que o scroll funciona em todos os dispositivos
+                overscrollBehavior: 'contain'
+              }}
+            >
+              <div 
+                ref={boardDraggableRef}
+                className="relative inline-block p-12"
+                style={{
+                  transform: panOffset.x !== 0 || panOffset.y !== 0 
+                    ? `translate(${panOffset.x}px, ${panOffset.y}px)` 
+                    : 'none',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease-out',
+                  cursor: isDragging ? 'grabbing' : 'grab',
+                }}
+                onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseUp={handleMouseUp}
+                onMouseLeave={handleMouseUp}
+              >
+                {/* Indicadores de canto - fora do tabuleiro, nos cantos da área */}
+                {/* Pretas: superior-esquerdo e inferior-direito */}
+                <div className="absolute top-0 left-0 w-7 h-7 rounded-full bg-gray-800 z-10"></div>
+                <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-gray-800 z-10"></div>
+                {/* Brancas: superior-direito e inferior-esquerdo */}
+                <div className="absolute top-0 right-0 w-7 h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
+                <div className="absolute bottom-0 left-0 w-7 h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
+                
+                <svg 
+                  width={dimensoes.width} 
+                  height={dimensoes.height}
+                  viewBox={`${-HEX_SIZE * 2} ${-dimensoes.centerY} ${dimensoes.width} ${dimensoes.height}`}
+                  className="block"
+                >
                 
                 {/* Hexágonos do tabuleiro */}
                 {Array.from({ length: LADO_TABULEIRO }, (_, row) => (
@@ -446,7 +590,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
                   })
                 ))}
                 
-              </svg>
+                </svg>
+              </div>
             </div>
           </div>
 
