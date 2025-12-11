@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "bun --hot src/index.ts",
     "start": "NODE_ENV=production bun src/index.ts",
-    "build": "bun run build.ts"
+    "build": "bun run build.ts",
+    "tournament": "bun run src/server/tournament-server.ts",
+    "tournament:dev": "bun --hot src/server/tournament-server.ts"
   },
   "dependencies": {
     "bun-plugin-tailwind": "^0.1.2",
