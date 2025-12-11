@@ -1,6 +1,8 @@
 /**
  * Protocolo de comunicação cliente ↔ servidor para o modo campeonato.
  * 
+ * Alinhado com CLIENT-INTEGRATION_NEW.md
+ * 
  * O campeonato usa dupla eliminação:
  * - Todos começam na Winners Bracket
  * - 1ª derrota → Losers Bracket
@@ -28,7 +30,9 @@ export const GAME_NAMES: Record<GameId, string> = {
 export interface Player {
   id: string;
   name: string;
-  classId?: string; // turma
+  classId?: string;
+  isOnline: boolean;
+  isBot?: boolean;
 }
 
 export type BracketType = 'winners' | 'losers';
@@ -48,30 +52,42 @@ export interface MatchScore {
   player2Wins: number;
 }
 
-export interface Match {
+/** Sumário de match para listagem (usado em tournament_state_update) */
+export interface MatchSummary {
   id: string;
   round: number;
   bracket: BracketType;
-  player1: Player | null;
-  player2: Player | null;
+  player1: { id: string; name: string } | null;
+  player2: { id: string; name: string } | null;
   score: MatchScore;
-  bestOf: number; // normalmente 3
-  currentGame: number; // 1, 2 ou 3
-  whoStartsCurrentGame: 'player1' | 'player2' | null;
   phase: MatchPhase;
   winnerId: string | null;
 }
 
-export interface TournamentState {
+/** Match completo (usado em match_assigned) */
+export interface Match {
   id: string;
+  round: number;
+  bracket: BracketType;
+  player1: { id: string; name: string } | null;
+  player2: { id: string; name: string } | null;
+  score: MatchScore;
+  phase: MatchPhase;
+  winnerId: string | null;
+}
+
+/** Estado do torneio conforme CLIENT-INTEGRATION_NEW */
+export interface TournamentState {
+  tournamentId: string;
   gameId: GameId;
   phase: TournamentPhase;
   players: Player[];
-  winnersMatches: Match[];
-  losersMatches: Match[];
-  grandFinal: Match | null;
-  grandFinalReset: Match | null; // se o da losers ganhar a grand final
+  winnersMatches: MatchSummary[];
+  losersMatches: MatchSummary[];
+  grandFinal: MatchSummary | null;
+  grandFinalReset: MatchSummary | null;
   championId: string | null;
+  championName: string | null;
 }
 
 // ============================================================================
@@ -83,6 +99,7 @@ export interface JoinTournamentMessage {
   gameId: GameId;
   playerName: string;
   classId?: string;
+  playerId?: string; // Para reconexão
 }
 
 export interface ReadyForMatchMessage {
@@ -115,18 +132,30 @@ export type ClientMessage =
 export interface WelcomeMessage {
   type: 'welcome';
   playerId: string;
+  playerName: string;
+  tournamentId: string;
   tournamentState: TournamentState;
 }
 
 export interface TournamentStateUpdateMessage {
   type: 'tournament_state_update';
-  tournamentState: TournamentState;
+  tournamentId: string;
+  gameId: GameId;
+  phase: TournamentPhase;
+  players: Player[];
+  winnersMatches: MatchSummary[];
+  losersMatches: MatchSummary[];
+  grandFinal: MatchSummary | null;
+  grandFinalReset: MatchSummary | null;
+  championId: string | null;
+  championName: string | null;
 }
 
 export interface MatchAssignedMessage {
   type: 'match_assigned';
   match: Match;
   yourRole: 'player1' | 'player2';
+  opponentName: string;
 }
 
 export interface GameStartMessage {
@@ -134,7 +163,8 @@ export interface GameStartMessage {
   matchId: string;
   gameNumber: number;
   youStart: boolean;
-  initialState: unknown; // estado inicial do jogo
+  initialState: unknown;
+  yourRole: 'player1' | 'player2';
 }
 
 export interface GameStateUpdateMessage {
@@ -144,30 +174,41 @@ export interface GameStateUpdateMessage {
   gameState: unknown;
   yourTurn: boolean;
   lastMove?: unknown;
+  lastMoveBy?: 'player1' | 'player2';
 }
 
 export interface GameEndMessage {
   type: 'game_end';
   matchId: string;
   gameNumber: number;
-  winnerId: string;
+  winnerId: string | null;
+  winnerRole: 'player1' | 'player2' | null;
+  isDraw: boolean;
   finalState: unknown;
+  matchScore: MatchScore;
 }
 
 export interface MatchEndMessage {
   type: 'match_end';
   matchId: string;
   winnerId: string;
+  winnerName: string;
   finalScore: MatchScore;
   youWon: boolean;
-  nextBracket: BracketType | 'eliminated' | 'champion';
+  nextMatchId?: string;
+  eliminatedFromTournament: boolean;
 }
 
 export interface TournamentEndMessage {
   type: 'tournament_end';
+  tournamentId: string;
   championId: string;
   championName: string;
-  finalStandings: Array<{ player: Player; position: number }>;
+  finalStandings: Array<{
+    rank: number;
+    playerId: string;
+    playerName: string;
+  }>;
 }
 
 export interface ErrorMessage {
@@ -193,3 +234,22 @@ export type ServerMessage =
   | ErrorMessage
   | InfoMessage;
 
+// ============================================================================
+// Helpers para converter entre formatos
+// ============================================================================
+
+/** Converte TournamentStateUpdateMessage em TournamentState */
+export function tournamentStateFromUpdate(msg: TournamentStateUpdateMessage): TournamentState {
+  return {
+    tournamentId: msg.tournamentId,
+    gameId: msg.gameId,
+    phase: msg.phase,
+    players: msg.players,
+    winnersMatches: msg.winnersMatches,
+    losersMatches: msg.losersMatches,
+    grandFinal: msg.grandFinal,
+    grandFinalReset: msg.grandFinalReset,
+    championId: msg.championId,
+    championName: msg.championName,
+  };
+}
