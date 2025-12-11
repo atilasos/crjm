@@ -45,13 +45,22 @@ export interface TournamentClient {
 
 /**
  * Cria um cliente de torneio.
- * Por agora retorna sempre o mock; quando tivermos servidor real,
- * podemos escolher baseado no URL ou configuração.
+ * 
+ * @param serverUrl - URL do servidor WebSocket. Se não for fornecido ou for vazio,
+ *                    usa o mock para testes locais.
+ * @returns Uma instância de TournamentClient (mock ou WebSocket real)
  */
-export function createTournamentClient(): TournamentClient {
-  // Importação dinâmica para evitar dependência circular
-  // Por agora usamos sempre o mock
-  const { TournamentClientMock } = require('./TournamentClientMock');
-  return new TournamentClientMock();
+export function createTournamentClient(serverUrl?: string): TournamentClient {
+  // Se não houver URL ou for a flag de mock, usa o mock
+  const useMock = !serverUrl || serverUrl === 'mock' || serverUrl === '';
+  
+  if (useMock) {
+    const { TournamentClientMock } = require('./TournamentClientMock');
+    return new TournamentClientMock();
+  }
+  
+  // Usa o cliente WebSocket real
+  const { TournamentWebSocketClient } = require('./TournamentWebSocketClient');
+  return new TournamentWebSocketClient();
 }
 

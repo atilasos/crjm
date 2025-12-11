@@ -2,6 +2,7 @@
  * Cliente mock para testar a UI de campeonato sem servidor real.
  * 
  * Usa a lógica REAL dos jogos para simular partidas.
+ * Alinhado com CLIENT-INTEGRATION_NEW.md
  */
 
 import type {
@@ -11,13 +12,24 @@ import type {
   TournamentState,
   Player,
   Match,
-  BracketType,
+  MatchSummary,
+  MatchScore,
+  WelcomeMessage,
+  TournamentStateUpdateMessage,
+  MatchAssignedMessage,
+  GameStartMessage,
+  GameStateUpdateMessage,
+  GameEndMessage,
+  MatchEndMessage,
+  TournamentEndMessage,
 } from './protocol';
 import type {
   TournamentClient,
   TournamentClientEvents,
   ConnectionStatus,
 } from './TournamentClient';
+
+import { toNetworkGameState } from './game-protocol';
 
 // Importar lógica dos jogos
 import { criarEstadoInicial as criarGatosCaes, colocarPeca as colocarGatosCaes, jogadaComputador as iaGatosCaes } from '../games/gatos-caes/logic';
@@ -45,12 +57,19 @@ function generateId(): string {
 
 type GameState = GatosCaesState | DominorioState;
 
+// Internal match tracking (includes game number etc.)
+interface InternalMatch extends Match {
+  currentGame: number;
+  bestOf: number;
+}
+
 export class TournamentClientMock implements TournamentClient {
   private _status: ConnectionStatus = 'disconnected';
   private _playerId: string | null = null;
+  private _playerName: string | null = null;
   private _tournamentState: TournamentState | null = null;
   private _events: Partial<TournamentClientEvents> = {};
-  private _currentMatch: Match | null = null;
+  private _currentMatch: InternalMatch | null = null;
   private _myRole: 'player1' | 'player2' | null = null;
   private _gameId: GameId | null = null;
 
@@ -92,6 +111,7 @@ export class TournamentClientMock implements TournamentClient {
   disconnect(): void {
     this._status = 'disconnected';
     this._playerId = null;
+    this._playerName = null;
     this._tournamentState = null;
     this._currentMatch = null;
     this._myRole = null;
@@ -135,12 +155,15 @@ export class TournamentClientMock implements TournamentClient {
 
   private async handleJoinTournament(gameId: GameId, playerName: string, classId?: string): Promise<void> {
     this._playerId = generateId();
+    this._playerName = playerName;
     this._gameId = gameId;
 
     const me: Player = {
       id: this._playerId,
       name: playerName,
       classId,
+      isOnline: true,
+      isBot: false,
     };
 
     // Cria torneio com um bot adversário
@@ -150,10 +173,13 @@ export class TournamentClientMock implements TournamentClient {
       id: generateId(),
       name: botName,
       classId: `${Math.floor(Math.random() * 4) + 5}º${String.fromCharCode(65 + Math.floor(Math.random() * 3))}`,
+      isOnline: true,
+      isBot: true,
     };
 
+    const tournamentId = generateId();
     this._tournamentState = {
-      id: generateId(),
+      tournamentId,
       gameId,
       phase: 'registration',
       players: [me, bot],
@@ -162,17 +188,22 @@ export class TournamentClientMock implements TournamentClient {
       grandFinal: null,
       grandFinalReset: null,
       championId: null,
+      championName: null,
     };
 
-    this.emit({
+    // Send welcome message (NEW protocol)
+    const welcomeMsg: WelcomeMessage = {
       type: 'welcome',
       playerId: this._playerId,
+      playerName: playerName,
+      tournamentId: tournamentId,
       tournamentState: this._tournamentState,
-    });
+    };
+    this.emit(welcomeMsg);
 
     this.emit({
       type: 'info',
-      message: `Inscrito no campeonato de ${gameId}! O teu adversário será ${botName}. A aguardar início...`,
+      message: `Inscrito no campeonato de ${gameId}! O teu adversário será ${botName} (Bot). A aguardar início...`,
     });
 
     // Inicia o campeonato automaticamente
@@ -189,28 +220,37 @@ export class TournamentClientMock implements TournamentClient {
     // Sorteia quem começa (quem é player1 no match)
     const euSouPlayer1 = Math.random() < 0.5;
 
-    const match: Match = {
+    const match: InternalMatch = {
       id: generateId(),
       round: 1,
       bracket: 'winners',
-      player1: euSouPlayer1 ? me : bot,
-      player2: euSouPlayer1 ? bot : me,
+      player1: euSouPlayer1 ? { id: me.id, name: me.name } : { id: bot.id, name: bot.name },
+      player2: euSouPlayer1 ? { id: bot.id, name: bot.name } : { id: me.id, name: me.name },
       score: { player1Wins: 0, player2Wins: 0 },
-      bestOf: 3,
-      currentGame: 1,
-      whoStartsCurrentGame: 'player1',
       phase: 'waiting',
       winnerId: null,
+      currentGame: 1,
+      bestOf: 3,
     };
 
-    this._tournamentState.winnersMatches = [match];
+    // Convert to MatchSummary for tournament state
+    const matchSummary: MatchSummary = {
+      id: match.id,
+      round: match.round,
+      bracket: match.bracket,
+      player1: match.player1,
+      player2: match.player2,
+      score: match.score,
+      phase: match.phase,
+      winnerId: match.winnerId,
+    };
+
+    this._tournamentState.winnersMatches = [matchSummary];
     this._currentMatch = match;
     this._myRole = euSouPlayer1 ? 'player1' : 'player2';
 
-    this.emit({
-      type: 'tournament_state_update',
-      tournamentState: this._tournamentState,
-    });
+    // Send tournament state update (NEW protocol - flat structure)
+    this.emitTournamentStateUpdate();
 
     this.emit({
       type: 'info',
@@ -219,13 +259,25 @@ export class TournamentClientMock implements TournamentClient {
 
     await this.delay(500);
 
-    this.emit({
-      type: 'match_assigned',
-      match,
-      yourRole: this._myRole,
-    });
-
+    // Send match assigned (NEW protocol - includes opponentName)
     const opponent = this._myRole === 'player1' ? match.player2 : match.player1;
+    const matchAssignedMsg: MatchAssignedMessage = {
+      type: 'match_assigned',
+      match: {
+        id: match.id,
+        round: match.round,
+        bracket: match.bracket,
+        player1: match.player1,
+        player2: match.player2,
+        score: match.score,
+        phase: match.phase,
+        winnerId: match.winnerId,
+      },
+      yourRole: this._myRole,
+      opponentName: opponent?.name ?? 'Desconhecido',
+    };
+    this.emit(matchAssignedMsg);
+
     this.emit({
       type: 'info',
       message: `⚔️ Confronto: Tu vs ${opponent?.name} (melhor de 3)`,
@@ -233,7 +285,7 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async handleReadyForMatch(matchId: string): Promise<void> {
-    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameId) {
+    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameId || !this._myRole) {
       this.emit({
         type: 'error',
         code: 'INVALID_MATCH',
@@ -249,26 +301,31 @@ export class TournamentClientMock implements TournamentClient {
 
     await this.delay(500);
 
-    // Cria estado real do jogo
+    // Cria estado real do jogo (formato local)
     this._gameState = this.createGameState(this._gameId);
     this._currentMatch.phase = 'playing';
 
     // Determina quem começa este jogo
     const gameNumber = this._currentMatch.currentGame;
     // Jogo 1: player1 começa, Jogo 2: player2 começa, Jogo 3: player1 começa
-    const whoStarts = gameNumber % 2 === 1 ? 'player1' : 'player2';
-    this._currentMatch.whoStartsCurrentGame = whoStarts;
+    const whoStarts: 'player1' | 'player2' = gameNumber % 2 === 1 ? 'player1' : 'player2';
     
     const youStart = whoStarts === this._myRole;
     this._iHaveToPlay = youStart;
 
-    this.emit({
+    // Converte para formato de rede antes de enviar para o cliente
+    const initialNetworkState = toNetworkGameState(this._gameId, this._gameState);
+
+    // Send game_start (NEW protocol - includes yourRole)
+    const gameStartMsg: GameStartMessage = {
       type: 'game_start',
       matchId: this._currentMatch.id,
       gameNumber,
       youStart,
-      initialState: this._gameState,
-    });
+      initialState: initialNetworkState,
+      yourRole: this._myRole,
+    };
+    this.emit(gameStartMsg);
 
     this.emit({
       type: 'info',
@@ -283,7 +340,7 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async handleSubmitMove(matchId: string, gameNumber: number, move: unknown): Promise<void> {
-    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameState || !this._gameId) {
+    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameState || !this._gameId || !this._myRole) {
       this.emit({
         type: 'error',
         code: 'INVALID_MATCH',
@@ -321,15 +378,20 @@ export class TournamentClientMock implements TournamentClient {
       return;
     }
 
-    // Envia atualização
-    this.emit({
+    // Converte estado local para formato de rede
+    const networkState = toNetworkGameState(this._gameId, this._gameState);
+
+    // Send game_state_update (NEW protocol - includes lastMoveBy)
+    const gameStateUpdateMsg: GameStateUpdateMessage = {
       type: 'game_state_update',
       matchId,
       gameNumber,
-      gameState: this._gameState,
+      gameState: networkState,
       yourTurn: false,
       lastMove: move,
-    });
+      lastMoveBy: this._myRole,
+    };
+    this.emit(gameStateUpdateMsg);
 
     // Bot joga
     await this.delay(800 + Math.random() * 1200);
@@ -337,7 +399,7 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async botPlay(): Promise<void> {
-    if (!this._gameState || !this._gameId || !this._currentMatch) return;
+    if (!this._gameState || !this._gameId || !this._currentMatch || !this._myRole) return;
 
     // Bot faz uma jogada usando a IA do jogo
     const newState = this.makeBotMove(this._gameId, this._gameState);
@@ -353,14 +415,20 @@ export class TournamentClientMock implements TournamentClient {
 
     this._iHaveToPlay = true;
 
-    // Envia atualização
-    this.emit({
+    // Converte estado local para formato de rede
+    const networkState = toNetworkGameState(this._gameId, this._gameState);
+
+    // Send game_state_update (NEW protocol)
+    const botRole: 'player1' | 'player2' = this._myRole === 'player1' ? 'player2' : 'player1';
+    const gameStateUpdateMsg: GameStateUpdateMessage = {
       type: 'game_state_update',
       matchId: this._currentMatch.id,
       gameNumber: this._currentMatch.currentGame,
-      gameState: this._gameState,
+      gameState: networkState,
       yourTurn: true,
-    });
+      lastMoveBy: botRole,
+    };
+    this.emit(gameStateUpdateMsg);
   }
 
   private async endCurrentGame(finalState: GameState): Promise<void> {
@@ -368,40 +436,51 @@ export class TournamentClientMock implements TournamentClient {
 
     // Determina quem ganhou
     const winner = this.getWinner(finalState);
-    const iWon = (winner === 'jogador1' && this._myRole === 'player1') ||
-                 (winner === 'jogador2' && this._myRole === 'player2');
-
-    const winnerId = iWon 
-      ? this._playerId 
-      : (this._myRole === 'player1' ? this._currentMatch.player2!.id : this._currentMatch.player1!.id);
-
-    // Atualiza score
-    if (iWon) {
-      if (this._myRole === 'player1') {
-        this._currentMatch.score.player1Wins++;
-      } else {
-        this._currentMatch.score.player2Wins++;
-      }
-    } else {
-      if (this._myRole === 'player1') {
-        this._currentMatch.score.player2Wins++;
-      } else {
-        this._currentMatch.score.player1Wins++;
-      }
+    const isDraw = winner === null && finalState.estado === 'empate';
+    
+    let iWon = false;
+    let winnerRole: 'player1' | 'player2' | null = null;
+    let winnerId: string | null = null;
+    
+    if (winner === 'jogador1') {
+      winnerRole = 'player1';
+      winnerId = this._currentMatch.player1!.id;
+      iWon = this._myRole === 'player1';
+    } else if (winner === 'jogador2') {
+      winnerRole = 'player2';
+      winnerId = this._currentMatch.player2!.id;
+      iWon = this._myRole === 'player2';
     }
 
-    this.emit({
+    // Atualiza score
+    if (winnerRole === 'player1') {
+      this._currentMatch.score.player1Wins++;
+    } else if (winnerRole === 'player2') {
+      this._currentMatch.score.player2Wins++;
+    }
+
+    // Converte estado final local para formato de rede
+    const finalNetworkState = this._gameId ? toNetworkGameState(this._gameId, finalState) : finalState;
+
+    // Send game_end (NEW protocol - includes winnerRole, isDraw, matchScore)
+    const gameEndMsg: GameEndMessage = {
       type: 'game_end',
       matchId: this._currentMatch.id,
       gameNumber: this._currentMatch.currentGame,
       winnerId,
-      finalState,
-    });
+      winnerRole,
+      isDraw,
+      finalState: finalNetworkState,
+      matchScore: { ...this._currentMatch.score },
+    };
+    this.emit(gameEndMsg);
 
     const { player1Wins, player2Wins } = this._currentMatch.score;
     this.emit({
       type: 'info',
-      message: `${iWon ? '🎉 Ganhaste' : '😔 Perdeste'} o jogo ${this._currentMatch.currentGame}! Resultado: ${player1Wins}-${player2Wins}`,
+      message: isDraw 
+        ? `🤝 Empate no jogo ${this._currentMatch.currentGame}! Resultado: ${player1Wins}-${player2Wins}`
+        : `${iWon ? '🎉 Ganhaste' : '😔 Perdeste'} o jogo ${this._currentMatch.currentGame}! Resultado: ${player1Wins}-${player2Wins}`,
     });
 
     // Verifica se o match acabou (melhor de 3)
@@ -428,7 +507,7 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async endCurrentMatch(): Promise<void> {
-    if (!this._currentMatch || !this._myRole || !this._playerId) return;
+    if (!this._currentMatch || !this._myRole || !this._playerId || !this._tournamentState) return;
 
     const { player1Wins, player2Wins } = this._currentMatch.score;
     const iWonMatch = (this._myRole === 'player1' && player1Wins > player2Wins) ||
@@ -437,20 +516,28 @@ export class TournamentClientMock implements TournamentClient {
     const winnerId = player1Wins > player2Wins 
       ? this._currentMatch.player1!.id 
       : this._currentMatch.player2!.id;
+    
+    const winnerName = player1Wins > player2Wins
+      ? this._currentMatch.player1!.name
+      : this._currentMatch.player2!.name;
 
     this._currentMatch.winnerId = winnerId;
     this._currentMatch.phase = 'finished';
 
-    const nextBracket: BracketType | 'eliminated' | 'champion' = iWonMatch ? 'champion' : 'eliminated';
+    // In this simple mock, losing means elimination
+    const eliminatedFromTournament = !iWonMatch;
 
-    this.emit({
+    // Send match_end (NEW protocol)
+    const matchEndMsg: MatchEndMessage = {
       type: 'match_end',
       matchId: this._currentMatch.id,
       winnerId,
+      winnerName,
       finalScore: this._currentMatch.score,
       youWon: iWonMatch,
-      nextBracket,
-    });
+      eliminatedFromTournament,
+    };
+    this.emit(matchEndMsg);
 
     if (iWonMatch) {
       this.emit({
@@ -467,19 +554,42 @@ export class TournamentClientMock implements TournamentClient {
     // Termina o torneio
     await this.delay(2000);
     
-    this._tournamentState!.phase = 'finished';
-    this._tournamentState!.championId = winnerId;
+    this._tournamentState.phase = 'finished';
+    this._tournamentState.championId = winnerId;
+    this._tournamentState.championName = winnerName;
 
-    const championName = iWonMatch ? 'Tu' : (
-      this._myRole === 'player1' ? this._currentMatch.player2?.name : this._currentMatch.player1?.name
-    );
+    // Update winners matches
+    const matchSummary: MatchSummary = {
+      id: this._currentMatch.id,
+      round: this._currentMatch.round,
+      bracket: this._currentMatch.bracket,
+      player1: this._currentMatch.player1,
+      player2: this._currentMatch.player2,
+      score: this._currentMatch.score,
+      phase: 'finished',
+      winnerId,
+    };
+    this._tournamentState.winnersMatches = [matchSummary];
 
-    this.emit({
+    // Send tournament_end (NEW protocol)
+    const loserId = winnerId === this._currentMatch.player1!.id 
+      ? this._currentMatch.player2!.id 
+      : this._currentMatch.player1!.id;
+    const loserName = winnerId === this._currentMatch.player1!.id
+      ? this._currentMatch.player2!.name
+      : this._currentMatch.player1!.name;
+
+    const tournamentEndMsg: TournamentEndMessage = {
       type: 'tournament_end',
+      tournamentId: this._tournamentState.tournamentId,
       championId: winnerId,
-      championName: championName || 'Desconhecido',
-      finalStandings: [],
-    });
+      championName: winnerName,
+      finalStandings: [
+        { rank: 1, playerId: winnerId, playerName: winnerName },
+        { rank: 2, playerId: loserId, playerName: loserName },
+      ],
+    };
+    this.emit(tournamentEndMsg);
   }
 
   private handleLeaveTournament(): void {
@@ -491,6 +601,29 @@ export class TournamentClientMock implements TournamentClient {
     this._currentMatch = null;
     this._myRole = null;
     this._gameState = null;
+  }
+
+  // ============================================================================
+  // Helpers
+  // ============================================================================
+
+  private emitTournamentStateUpdate(): void {
+    if (!this._tournamentState) return;
+
+    const msg: TournamentStateUpdateMessage = {
+      type: 'tournament_state_update',
+      tournamentId: this._tournamentState.tournamentId,
+      gameId: this._tournamentState.gameId,
+      phase: this._tournamentState.phase,
+      players: this._tournamentState.players,
+      winnersMatches: this._tournamentState.winnersMatches,
+      losersMatches: this._tournamentState.losersMatches,
+      grandFinal: this._tournamentState.grandFinal,
+      grandFinalReset: this._tournamentState.grandFinalReset,
+      championId: this._tournamentState.championId,
+      championName: this._tournamentState.championName,
+    };
+    this.emit(msg);
   }
 
   // ============================================================================
@@ -556,9 +689,6 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private emit(message: ServerMessage): void {
-    if (message.type === 'tournament_state_update') {
-      this._tournamentState = message.tournamentState;
-    }
     this._events.onMessage?.(message);
   }
 
@@ -566,4 +696,3 @@ export class TournamentClientMock implements TournamentClient {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
-
