@@ -19,6 +19,7 @@ Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do 
 
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
+- **Modo Campeonato**: Torneios online com sistema de dupla eliminação
 - Regras oficiais do CRJM
 - Interface em **Português de Portugal** (PT-PT)
 - Totalmente responsivo (funciona em computador e tablet)
@@ -64,6 +65,67 @@ bun run build
 ```
 
 Os ficheiros serão gerados na pasta `dist/`.
+
+## 🏆 Servidor de Torneios
+
+O projeto inclui um servidor de torneios que permite organizar campeonatos online com sistema de dupla eliminação.
+
+### Iniciar o Servidor
+
+```bash
+# Iniciar servidor de torneios
+bun run tournament
+
+# Modo desenvolvimento (com hot reload)
+bun run tournament:dev
+```
+
+O servidor estará disponível em `http://localhost:4000` com:
+- **WebSocket**: `ws://localhost:4000/ws` - Para ligações dos clientes
+- **Painel Admin**: `http://localhost:4000/admin` - Para gerir o torneio
+- **API HTTP**: `http://localhost:4000/api/*` - Endpoints de administração
+
+### Expor o Servidor Publicamente
+
+Para que os alunos se possam ligar ao servidor, precisas de expor o servidor local usando um túnel:
+
+#### Opção 1: ngrok (mais simples)
+
+```bash
+# Instalar ngrok: https://ngrok.com/download
+ngrok http 4000
+```
+
+Irá gerar um URL como `https://abc123.ngrok.io` que podes partilhar com os alunos.
+
+#### Opção 2: Cloudflare Tunnel (mais estável)
+
+```bash
+# Instalar cloudflared
+# macOS:
+brew install cloudflare/cloudflare/cloudflared
+
+# Outros: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+
+# Criar túnel
+cloudflared tunnel --url http://localhost:4000
+```
+
+### Configuração
+
+O servidor aceita variáveis de ambiente:
+
+```bash
+# Porta do servidor (default: 4000)
+PORT=4000 bun run tournament
+
+# Chave de administração (default: admin123)
+ADMIN_KEY=minha-chave-secreta bun run tournament
+```
+
+### Guia Completo
+
+Para um guia detalhado sobre como organizar um torneio, consulta o ficheiro [`TORNEIO.md`](./TORNEIO.md).
 
 ## 📦 Publicar no GitHub Pages
 
@@ -157,6 +219,18 @@ src/
 │       ├── logic.ts
 │       ├── logic.test.ts
 │       └── NexGame.tsx
+├── server/               # Servidor de torneios
+│   ├── tournament-server.ts  # Servidor WebSocket principal
+│   ├── tournament-engine.ts  # Motor de dupla eliminação
+│   ├── game-adapter.ts        # Adaptador para estados dos jogos
+│   └── admin-page.ts          # Interface de administração
+├── tournament/           # Cliente de torneios
+│   ├── TournamentClient.ts         # Interface do cliente
+│   ├── TournamentWebSocketClient.ts # Cliente WebSocket real
+│   ├── TournamentClientMock.ts     # Cliente mock para testes
+│   ├── protocol.ts                 # Protocolo de comunicação
+│   ├── game-protocol.ts            # Protocolo específico dos jogos
+│   └── GameBoards.tsx              # Componentes de tabuleiro online
 ├── types/                # Tipos TypeScript comuns
 ├── App.tsx               # Componente principal
 ├── frontend.tsx          # Entrada React
