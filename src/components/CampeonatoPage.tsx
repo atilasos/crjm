@@ -34,6 +34,47 @@ interface LogEntry {
   type: 'info' | 'success' | 'warning' | 'error';
 }
 
+// Normaliza o formato de TournamentState vindo do servidor/mocks:
+// - Suporta tanto o formato "novo" (CLIENT-INTEGRATION_NEW) como o formato antigo
+//   usado atualmente pelo servidor Bun (campo `id` em vez de `tournamentId`,
+//   players sem flags de online, etc.).
+function normalizeTournamentState(raw: any | null | undefined): TournamentState | null {
+  if (!raw) return null;
+
+  // Heurística: se já tiver `tournamentId` ou `championName`, assumimos formato novo
+  const isNewFormat = 'tournamentId' in raw || 'championName' in raw;
+  if (isNewFormat) {
+    return raw as TournamentState;
+  }
+
+  // Formato antigo: campos como `id`, sem `championName` e sem flags de online
+  const players = Array.isArray(raw.players)
+    ? raw.players.map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        classId: p.classId,
+        isOnline: true,
+        isBot: p.isBot ?? false,
+      }))
+    : [];
+
+  const championId: string | null = raw.championId ?? null;
+  const championPlayer = players.find(p => p.id === championId) ?? null;
+
+  return {
+    tournamentId: raw.id ?? raw.tournamentId ?? 'unknown',
+    gameId: raw.gameId as GameId,
+    phase: raw.phase ?? 'registration',
+    players,
+    winnersMatches: raw.winnersMatches ?? [],
+    losersMatches: raw.losersMatches ?? [],
+    grandFinal: raw.grandFinal ?? null,
+    grandFinalReset: raw.grandFinalReset ?? null,
+    championId,
+    championName: championPlayer ? championPlayer.name : null,
+  };
+}
+
 // URL do servidor de torneio via variável de ambiente ou default
 const DEFAULT_SERVER_URL = typeof import.meta !== 'undefined' 
   ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '') 
@@ -105,15 +146,37 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     switch (message.type) {
       case 'welcome':
         setPlayerId(message.playerId);
-        setTournamentState(message.tournamentState);
-        setCurrentGameId(message.tournamentState.gameId);
+        // Aceita tanto o formato antigo (message.tournamentState.id, ...) como o novo
+        {
+          const rawState = (message as any).tournamentState ?? null;
+          const normalized = normalizeTournamentState(rawState);
+          if (normalized) {
+            setTournamentState(normalized);
+            setCurrentGameId(normalized.gameId);
+          }
+        }
         setPhase('lobby');
         addLog('Inscrito no campeonato!', 'success');
         break;
 
       case 'tournament_state_update': {
-        // Novo protocolo: campos flat, usar helper para converter
-        const newState = tournamentStateFromUpdate(message as TournamentStateUpdateMessage);
+        // Pode vir em dois formatos:
+        // - Novo: campos flat (TournamentStateUpdateMessage)
+        // - Antigo: { type: 'tournament_state_update', tournamentState: {...} }
+        let newState: TournamentState | null = null;
+
+        const anyMsg = message as any;
+        if (anyMsg.tournamentState) {
+          // Formato antigo do servidor Bun
+          newState = normalizeTournamentState(anyMsg.tournamentState);
+        } else {
+          // Formato novo (mock / futuros servidores)
+          newState = tournamentStateFromUpdate(message as TournamentStateUpdateMessage);
+        }
+
+        if (!newState) {
+          break;
+        }
         setTournamentState(newState);
         break;
       }
