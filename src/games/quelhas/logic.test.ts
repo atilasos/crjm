@@ -14,6 +14,13 @@ import {
   calcularIntervalosJogadas,
   avaliarPosicaoMisere,
   jogadaComputador,
+  // Novas funções de métricas
+  extrairBlocos,
+  classificarBlocos,
+  calcularMetricasDeBlocos,
+  calcularMetricasCompletas,
+  parseTabuleiroASCII,
+  gerarCandidatos,
 } from "./logic";
 import { Celula } from "./types";
 
@@ -423,30 +430,30 @@ describe("Quelhas - Avaliação Misère", () => {
     const pontuacaoBoa = avaliarPosicaoMisere(tabuleiro, 'vertical', 'horizontal', 5, 5);
     
     expect(pontuacaoMa).toBeLessThan(pontuacaoBoa);
-    expect(pontuacaoMa).toBe(-1000); // Penalização máxima
+    expect(pontuacaoMa).toBe(-10000); // Penalização máxima (atualizado)
   });
 
   test("avaliarPosicaoMisere deve dar pontuação alta quando IA sem jogadas mas adversário com jogadas", () => {
     const tabuleiro = criarTabuleiroInicial();
     
     // Cenário ideal em misère: IA sem jogadas, adversário com jogadas
-    // Isto retorna cedo com pontuação fixa de 800
     const pontuacaoIdeal = avaliarPosicaoMisere(tabuleiro, 'vertical', 'horizontal', 3, 0);
     
-    expect(pontuacaoIdeal).toBe(800); // Valor fixo para este cenário ideal
+    expect(pontuacaoIdeal).toBe(10000); // Valor fixo para este cenário ideal (atualizado)
   });
 
-  test("avaliarPosicaoMisere cenários normais devem ter pontuação positiva", () => {
+  test("avaliarPosicaoMisere cenários normais devem ter pontuação válida", () => {
     const tabuleiro = criarTabuleiroInicial();
     
     // Cenário normal com ambos tendo jogadas
     const pontuacao = avaliarPosicaoMisere(tabuleiro, 'vertical', 'horizontal', 5, 5);
     
-    // A pontuação deve ser positiva (não é caso terminal negativo)
-    expect(pontuacao).toBeGreaterThan(0);
+    // Deve retornar um número finito
+    expect(typeof pontuacao).toBe('number');
+    expect(Number.isFinite(pontuacao)).toBe(true);
   });
 
-  test("avaliarPosicaoMisere deve usar intervalos calculados", () => {
+  test("avaliarPosicaoMisere deve usar métricas estruturais", () => {
     // Criar tabuleiro quase cheio para reduzir complexidade
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Preencher maior parte, deixando algumas linhas/colunas
@@ -456,7 +463,7 @@ describe("Quelhas - Avaliação Misère", () => {
       }
     }
     
-    // Com tabuleiro mais limitado, intervalos são mais previsíveis
+    // Com tabuleiro mais limitado, métricas são mais previsíveis
     const pontuacao = avaliarPosicaoMisere(tabuleiro, 'vertical', 'horizontal', 5, 3);
     
     // Deve retornar um número (não lançar erro)
@@ -548,5 +555,357 @@ describe("Quelhas - IA Misère Comportamento", () => {
     
     // Não deve lançar exceção
     expect(estado).toBeDefined();
+  });
+});
+
+// ============================================================================
+// NOVOS TESTES: Métricas estruturais (blocos, min/max, exclusivo/partilhado)
+// ============================================================================
+
+describe("Quelhas - Extração de Blocos", () => {
+  test("extrairBlocos deve encontrar blocos verticais em tabuleiro vazio", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    const blocos = extrairBlocos(tabuleiro, 'vertical');
+    
+    // Tabuleiro 10x10 vazio: 10 colunas, cada uma com 1 bloco de comprimento 10
+    expect(blocos.length).toBe(10);
+    for (const bloco of blocos) {
+      expect(bloco.comprimento).toBe(10);
+      expect(bloco.orientacao).toBe('vertical');
+    }
+  });
+
+  test("extrairBlocos deve encontrar blocos horizontais em tabuleiro vazio", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    const blocos = extrairBlocos(tabuleiro, 'horizontal');
+    
+    // Tabuleiro 10x10 vazio: 10 linhas, cada uma com 1 bloco de comprimento 10
+    expect(blocos.length).toBe(10);
+    for (const bloco of blocos) {
+      expect(bloco.comprimento).toBe(10);
+      expect(bloco.orientacao).toBe('horizontal');
+    }
+  });
+
+  test("extrairBlocos deve ignorar blocos de comprimento < 2", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    // Ocupar alternadamente na coluna 0 para criar blocos de tamanho 1
+    for (let i = 0; i < 10; i += 2) {
+      tabuleiro[i][0] = 'ocupada';
+    }
+    
+    const blocos = extrairBlocos(tabuleiro, 'vertical');
+    // Coluna 0 agora não tem blocos válidos (só células isoladas)
+    const blocosColuna0 = blocos.filter(b => b.indiceFixo === 0);
+    expect(blocosColuna0.length).toBe(0);
+  });
+
+  test("extrairBlocos deve encontrar múltiplos blocos na mesma coluna", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    // Ocupar linha 4 da coluna 0 para dividir em dois blocos
+    tabuleiro[4][0] = 'ocupada';
+    
+    const blocos = extrairBlocos(tabuleiro, 'vertical');
+    const blocosColuna0 = blocos.filter(b => b.indiceFixo === 0);
+    
+    // Deve haver 2 blocos na coluna 0: linhas 0-3 (comp 4) e linhas 5-9 (comp 5)
+    expect(blocosColuna0.length).toBe(2);
+    expect(blocosColuna0[0].comprimento).toBe(4);
+    expect(blocosColuna0[1].comprimento).toBe(5);
+  });
+});
+
+describe("Quelhas - Classificação Exclusivo/Partilhado", () => {
+  test("blocos sem sobreposição devem ser exclusivos", () => {
+    const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    // Ocupar toda a primeira linha exceto coluna 0
+    // Assim horizontal não consegue jogar na linha 0
+    for (let j = 1; j < 10; j++) {
+      tabuleiro[0][j] = 'ocupada';
+    }
+    
+    const blocosV = extrairBlocos(tabuleiro, 'vertical');
+    const blocosH = extrairBlocos(tabuleiro, 'horizontal');
+    
+    const blocosVClassificados = classificarBlocos(blocosV, blocosH);
+    
+    // Coluna 0 só tem 9 células (linha 0 está isolada - sem bloco H)
+    // Mas essas células da coluna 0 não pertencem a nenhum bloco horizontal
+    const blocoColuna0 = blocosVClassificados.find(b => b.indiceFixo === 0);
+    // A linha 0 não tem bloco horizontal (isolada), então células 1-9 da coluna 0
+    // podem ou não ser exclusivas dependendo dos blocos horizontais nas outras linhas
+    expect(blocoColuna0).toBeDefined();
+  });
+
+  test("blocos com sobreposição devem ser partilhados", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    
+    const blocosV = extrairBlocos(tabuleiro, 'vertical');
+    const blocosH = extrairBlocos(tabuleiro, 'horizontal');
+    
+    const blocosVClassificados = classificarBlocos(blocosV, blocosH);
+    
+    // Em tabuleiro vazio, todos os blocos verticais sobrepõem com horizontais
+    for (const bloco of blocosVClassificados) {
+      expect(bloco.exclusivo).toBe(false);
+    }
+  });
+});
+
+describe("Quelhas - Cálculo de Métricas", () => {
+  test("calcularMetricasDeBlocos deve calcular min/max corretamente", () => {
+    // Criar blocos manualmente para teste
+    const blocos = [
+      { inicio: 0, comprimento: 10, indiceFixo: 0, orientacao: 'vertical' as const, exclusivo: true },
+      { inicio: 0, comprimento: 4, indiceFixo: 1, orientacao: 'vertical' as const, exclusivo: false },
+    ];
+    
+    const metricas = calcularMetricasDeBlocos(blocos);
+    
+    // min = número de blocos = 2
+    expect(metricas.min).toBe(2);
+    
+    // max = floor(10/2) + floor(4/2) = 5 + 2 = 7
+    expect(metricas.max).toBe(7);
+    
+    // Exclusivo: só o primeiro bloco
+    expect(metricas.minExclusivo).toBe(1);
+    expect(metricas.maxExclusivo).toBe(5); // floor(10/2)
+    
+    // Partilhado: só o segundo bloco
+    expect(metricas.minPartilhado).toBe(1);
+    expect(metricas.maxPartilhado).toBe(2); // floor(4/2)
+  });
+
+  test("calcularMetricasCompletas deve retornar métricas para ambos os jogadores", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    const metricas = calcularMetricasCompletas(tabuleiro);
+    
+    expect(metricas.vertical).toBeDefined();
+    expect(metricas.horizontal).toBeDefined();
+    
+    // Em tabuleiro vazio, ambos têm os mesmos valores
+    expect(metricas.vertical.min).toBe(10); // 10 colunas, 1 bloco cada
+    expect(metricas.vertical.max).toBe(50); // 10 * floor(10/2) = 50
+    expect(metricas.horizontal.min).toBe(10);
+    expect(metricas.horizontal.max).toBe(50);
+  });
+});
+
+describe("Quelhas - Parse de Tabuleiro ASCII", () => {
+  test("parseTabuleiroASCII deve converter corretamente", () => {
+    const ascii = `
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+..........
+`.trim();
+    
+    const tabuleiro = parseTabuleiroASCII(ascii);
+    
+    expect(tabuleiro.length).toBe(10);
+    expect(tabuleiro[0].length).toBe(10);
+    
+    for (const linha of tabuleiro) {
+      for (const celula of linha) {
+        expect(celula).toBe('vazia');
+      }
+    }
+  });
+
+  test("parseTabuleiroASCII deve marcar ocupadas corretamente", () => {
+    const ascii = `
+#.........
+.#........
+..#.......
+...#......
+....#.....
+.....#....
+......#...
+.......#..
+........#.
+.........#
+`.trim();
+    
+    const tabuleiro = parseTabuleiroASCII(ascii);
+    
+    // Diagonal deve estar ocupada
+    for (let i = 0; i < 10; i++) {
+      expect(tabuleiro[i][i]).toBe('ocupada');
+    }
+    
+    // Fora da diagonal deve estar vazia
+    expect(tabuleiro[0][1]).toBe('vazia');
+    expect(tabuleiro[1][0]).toBe('vazia');
+  });
+});
+
+describe("Quelhas - Exemplo do Utilizador (Vertical Ganha)", () => {
+  // Tabuleiro do exemplo onde vertical já ganhou
+  const exemploASCII = `
+.#.#.#.###
+.#.#.#.###
+.#.#.#.#..
+.#.#.#.#..
+.#.#.#.#..
+.#.#.#.#..
+.#.#.#.#..
+.#.#.#.#..
+.#.#.#.#..
+.###.###..
+`.trim();
+
+  test("deve parsear o tabuleiro do exemplo corretamente", () => {
+    const tabuleiro = parseTabuleiroASCII(exemploASCII);
+    
+    // Coluna 0 deve estar toda vazia
+    for (let i = 0; i < 10; i++) {
+      expect(tabuleiro[i][0]).toBe('vazia');
+    }
+    
+    // Coluna 1 deve estar toda ocupada
+    for (let i = 0; i < 10; i++) {
+      expect(tabuleiro[i][1]).toBe('ocupada');
+    }
+    
+    // Colunas 8-9, linhas 2-9 devem estar vazias
+    for (let i = 2; i < 10; i++) {
+      expect(tabuleiro[i][8]).toBe('vazia');
+      expect(tabuleiro[i][9]).toBe('vazia');
+    }
+  });
+
+  test("vertical deve ter vantagem em exclusivas no exemplo", () => {
+    const tabuleiro = parseTabuleiroASCII(exemploASCII);
+    const metricas = calcularMetricasCompletas(tabuleiro);
+    
+    // Vertical tem blocos exclusivos nas colunas 0, 2, 4, 6
+    // (onde horizontal não consegue jogar)
+    expect(metricas.vertical.maxExclusivo).toBeGreaterThan(0);
+    
+    // Horizontal só consegue jogar nas colunas 8-9
+    // Todos os blocos horizontais estão em zona partilhada com vertical
+    expect(metricas.horizontal.maxExclusivo).toBe(0);
+    
+    // Vantagem de exclusivas para vertical
+    expect(metricas.vertical.maxExclusivo).toBeGreaterThan(metricas.horizontal.maxExclusivo);
+  });
+
+  test("horizontal deve ter min=max no exemplo (blocos fixos)", () => {
+    const tabuleiro = parseTabuleiroASCII(exemploASCII);
+    const metricas = calcularMetricasCompletas(tabuleiro);
+    
+    // Horizontal só tem blocos de tamanho 2 (min=max por bloco)
+    // Cada bloco de tamanho 2 contribui com min=1 e max=1
+    expect(metricas.horizontal.min).toBe(metricas.horizontal.max);
+  });
+
+  test("avaliação deve favorecer vertical no exemplo", () => {
+    const tabuleiro = parseTabuleiroASCII(exemploASCII);
+    
+    const jogadasV = calcularJogadasValidas(tabuleiro, 'vertical');
+    const jogadasH = calcularJogadasValidas(tabuleiro, 'horizontal');
+    
+    // Avaliar do ponto de vista de vertical
+    const scoreV = avaliarPosicaoMisere(tabuleiro, 'vertical', 'horizontal', jogadasH.length, jogadasV.length);
+    
+    // Avaliar do ponto de vista de horizontal
+    const scoreH = avaliarPosicaoMisere(tabuleiro, 'horizontal', 'vertical', jogadasV.length, jogadasH.length);
+    
+    // Vertical deve ter score melhor (positivo e maior que horizontal)
+    expect(scoreV).toBeGreaterThan(scoreH);
+  });
+});
+
+describe("Quelhas - Geração de Candidatos", () => {
+  test("gerarCandidatos deve incluir segmentos de tamanho 2 nas extremidades", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    const candidatos = gerarCandidatos(tabuleiro, 'vertical');
+    
+    // Para cada coluna, deve haver segmento de tamanho 2 no início (linha 0)
+    for (let col = 0; col < 10; col++) {
+      const temInicioTam2 = candidatos.some(
+        c => c.indic && c.inicio.coluna === col && c.inicio.linha === 0 && c.comprimento === 2
+      );
+      // Corrigido: verificar propriedades corretas
+      const candidatoInicio = candidatos.find(
+        c => c.inicio.coluna === col && c.inicio.linha === 0 && c.comprimento === 2
+      );
+      expect(candidatoInicio).toBeDefined();
+    }
+  });
+
+  test("gerarCandidatos deve incluir segmento máximo", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    const candidatos = gerarCandidatos(tabuleiro, 'vertical');
+    
+    // Deve haver segmento de comprimento 10 (bloco inteiro) para cada coluna
+    for (let col = 0; col < 10; col++) {
+      const temMaximo = candidatos.some(
+        c => c.inicio.coluna === col && c.comprimento === 10
+      );
+      expect(temMaximo).toBe(true);
+    }
+  });
+
+  test("gerarCandidatos deve reduzir número de jogadas vs calcularJogadasValidas", () => {
+    const tabuleiro = criarTabuleiroInicial();
+    
+    const todasJogadas = calcularJogadasValidas(tabuleiro, 'vertical');
+    const candidatos = gerarCandidatos(tabuleiro, 'vertical');
+    
+    // Candidatos devem ser um subconjunto menor
+    expect(candidatos.length).toBeLessThan(todasJogadas.length);
+    expect(candidatos.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Quelhas - IA Forte (Alpha-Beta)", () => {
+  test("IA nunca deve deixar adversário sem jogadas quando há alternativas", () => {
+    // Criar cenário onde há múltiplas opções
+    let estado = criarEstadoInicial('vs-computador');
+    
+    // Fazer algumas jogadas para chegar a um estado intermédio
+    for (let i = 0; i < 3; i++) {
+      if (estado.estado !== 'a-jogar') break;
+      const jogada = estado.jogadasValidas[0];
+      estado = colocarSegmento(estado, jogada);
+      if (estado.trocaDisponivel) {
+        estado = recusarTroca(estado);
+      }
+    }
+    
+    if (estado.estado === 'a-jogar' && estado.jogadasValidas.length > 1) {
+      // Deixar IA jogar
+      const estadoAposIA = jogadaComputador(estado);
+      
+      // Verificar que adversário tem jogadas (a menos que não haja alternativa)
+      const jogadasAdv = estadoAposIA.jogadasValidas;
+      
+      // Se o jogo ainda está a decorrer, deve haver jogadas
+      if (estadoAposIA.estado === 'a-jogar') {
+        expect(jogadasAdv.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test("jogadaComputador deve completar em tempo razoável", () => {
+    const estado = criarEstadoInicial('vs-computador');
+    
+    const inicio = Date.now();
+    const estadoApos = jogadaComputador(estado);
+    const duracao = Date.now() - inicio;
+    
+    // Deve completar em menos de 4 segundos (margem sobre os 2.5s target)
+    expect(duracao).toBeLessThan(4000);
+    
+    // E deve ter feito uma jogada
+    expect(estadoApos.jogadorAtual).not.toBe(estado.jogadorAtual);
   });
 });

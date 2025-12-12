@@ -4,6 +4,225 @@ import { GameMode, GameStatus, Player } from '../../types';
 const TAMANHO_TABULEIRO = 10;
 const COMPRIMENTO_MINIMO = 2;
 
+// ============================================================================
+// ESTRUTURAS PARA ANÁLISE ESTRATÉGICA (min/max, exclusivas/partilhadas)
+// ============================================================================
+
+/**
+ * Um bloco (run) é uma sequência máxima de células vazias consecutivas
+ * numa coluna (vertical) ou linha (horizontal).
+ */
+export interface Bloco {
+  inicio: number;        // Índice inicial (linha para vertical, coluna para horizontal)
+  comprimento: number;   // Número de células vazias consecutivas
+  indiceFixo: number;    // Coluna (para vertical) ou linha (para horizontal)
+  orientacao: Orientacao;
+  exclusivo: boolean;    // true se nenhuma célula pertence a blocos do adversário
+}
+
+/**
+ * Métricas estratégicas para um jogador.
+ */
+export interface MetricasJogador {
+  blocos: Bloco[];
+  min: number;           // Número mínimo de jogadas (= número de blocos com comprimento >= 2)
+  max: number;           // Número máximo de jogadas (= soma de floor(comprimento/2) por bloco)
+  minExclusivo: number;  // min considerando apenas blocos exclusivos
+  maxExclusivo: number;  // max considerando apenas blocos exclusivos
+  minPartilhado: number; // min considerando apenas blocos partilhados
+  maxPartilhado: number; // max considerando apenas blocos partilhados
+}
+
+/**
+ * Métricas completas para análise do estado do jogo.
+ */
+export interface MetricasCompletas {
+  vertical: MetricasJogador;
+  horizontal: MetricasJogador;
+}
+
+/**
+ * Extrai todos os blocos (runs) de células vazias para uma dada orientação.
+ */
+export function extrairBlocos(tabuleiro: Celula[][], orientacao: Orientacao): Bloco[] {
+  const blocos: Bloco[] = [];
+  
+  if (orientacao === 'vertical') {
+    // Varrer colunas
+    for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
+      let inicio = -1;
+      for (let linha = 0; linha <= TAMANHO_TABULEIRO; linha++) {
+        const vazia = linha < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        if (vazia && inicio === -1) {
+          inicio = linha;
+        } else if (!vazia && inicio !== -1) {
+          const comprimento = linha - inicio;
+          if (comprimento >= COMPRIMENTO_MINIMO) {
+            blocos.push({
+              inicio,
+              comprimento,
+              indiceFixo: coluna,
+              orientacao: 'vertical',
+              exclusivo: false, // será calculado depois
+            });
+          }
+          inicio = -1;
+        }
+      }
+    }
+  } else {
+    // Varrer linhas
+    for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
+      let inicio = -1;
+      for (let coluna = 0; coluna <= TAMANHO_TABULEIRO; coluna++) {
+        const vazia = coluna < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        if (vazia && inicio === -1) {
+          inicio = coluna;
+        } else if (!vazia && inicio !== -1) {
+          const comprimento = coluna - inicio;
+          if (comprimento >= COMPRIMENTO_MINIMO) {
+            blocos.push({
+              inicio,
+              comprimento,
+              indiceFixo: linha,
+              orientacao: 'horizontal',
+              exclusivo: false,
+            });
+          }
+          inicio = -1;
+        }
+      }
+    }
+  }
+  
+  return blocos;
+}
+
+/**
+ * Constrói uma máscara 10x10 indicando quais células fazem parte de
+ * pelo menos um bloco jogável do adversário.
+ */
+function construirMascaraJogavel(blocos: Bloco[]): boolean[][] {
+  const mascara: boolean[][] = Array(TAMANHO_TABULEIRO)
+    .fill(null)
+    .map(() => Array(TAMANHO_TABULEIRO).fill(false));
+  
+  for (const bloco of blocos) {
+    for (let i = 0; i < bloco.comprimento; i++) {
+      if (bloco.orientacao === 'vertical') {
+        mascara[bloco.inicio + i][bloco.indiceFixo] = true;
+      } else {
+        mascara[bloco.indiceFixo][bloco.inicio + i] = true;
+      }
+    }
+  }
+  
+  return mascara;
+}
+
+/**
+ * Classifica blocos como exclusivos ou partilhados.
+ * Um bloco é exclusivo se NENHUMA das suas células pertence a um bloco do adversário.
+ */
+export function classificarBlocos(
+  blocosMeus: Bloco[],
+  blocosAdversario: Bloco[]
+): Bloco[] {
+  const mascaraAdv = construirMascaraJogavel(blocosAdversario);
+  
+  return blocosMeus.map(bloco => {
+    let exclusivo = true;
+    for (let i = 0; i < bloco.comprimento && exclusivo; i++) {
+      let linha: number, coluna: number;
+      if (bloco.orientacao === 'vertical') {
+        linha = bloco.inicio + i;
+        coluna = bloco.indiceFixo;
+      } else {
+        linha = bloco.indiceFixo;
+        coluna = bloco.inicio + i;
+      }
+      if (mascaraAdv[linha][coluna]) {
+        exclusivo = false;
+      }
+    }
+    return { ...bloco, exclusivo };
+  });
+}
+
+/**
+ * Calcula métricas (min/max total e exclusivo/partilhado) a partir de blocos classificados.
+ */
+export function calcularMetricasDeBlocos(blocos: Bloco[]): MetricasJogador {
+  let min = 0, max = 0;
+  let minExclusivo = 0, maxExclusivo = 0;
+  let minPartilhado = 0, maxPartilhado = 0;
+  
+  for (const bloco of blocos) {
+    const contribuicaoMin = 1; // Cada bloco pode ser consumido em 1 jogada (segmento máximo)
+    const contribuicaoMax = Math.floor(bloco.comprimento / 2); // Máx jogadas de tamanho 2
+    
+    min += contribuicaoMin;
+    max += contribuicaoMax;
+    
+    if (bloco.exclusivo) {
+      minExclusivo += contribuicaoMin;
+      maxExclusivo += contribuicaoMax;
+    } else {
+      minPartilhado += contribuicaoMin;
+      maxPartilhado += contribuicaoMax;
+    }
+  }
+  
+  return {
+    blocos,
+    min,
+    max,
+    minExclusivo,
+    maxExclusivo,
+    minPartilhado,
+    maxPartilhado,
+  };
+}
+
+/**
+ * Calcula métricas completas para ambos os jogadores.
+ */
+export function calcularMetricasCompletas(tabuleiro: Celula[][]): MetricasCompletas {
+  // Extrair blocos brutos
+  const blocosVerticalBrutos = extrairBlocos(tabuleiro, 'vertical');
+  const blocosHorizontalBrutos = extrairBlocos(tabuleiro, 'horizontal');
+  
+  // Classificar como exclusivos/partilhados
+  const blocosVertical = classificarBlocos(blocosVerticalBrutos, blocosHorizontalBrutos);
+  const blocosHorizontal = classificarBlocos(blocosHorizontalBrutos, blocosVerticalBrutos);
+  
+  return {
+    vertical: calcularMetricasDeBlocos(blocosVertical),
+    horizontal: calcularMetricasDeBlocos(blocosHorizontal),
+  };
+}
+
+/**
+ * Converte um tabuleiro ASCII para formato interno.
+ * '.' = vazia, '#' = ocupada
+ */
+export function parseTabuleiroASCII(ascii: string): Celula[][] {
+  const linhas = ascii.trim().split('\n');
+  const tabuleiro: Celula[][] = [];
+  
+  for (let i = 0; i < TAMANHO_TABULEIRO; i++) {
+    const linha: Celula[] = [];
+    const linhaASCII = linhas[i] || '';
+    for (let j = 0; j < TAMANHO_TABULEIRO; j++) {
+      const char = linhaASCII[j] || '.';
+      linha.push(char === '#' ? 'ocupada' : 'vazia');
+    }
+    tabuleiro.push(linha);
+  }
+  
+  return tabuleiro;
+}
+
 // Criar tabuleiro inicial vazio
 export function criarTabuleiroInicial(): Celula[][] {
   return Array(TAMANHO_TABULEIRO)
@@ -315,115 +534,465 @@ export function recusarTroca(state: QuelhasState): QuelhasState {
   };
 }
 
-// IA decide se deve fazer a troca (baseado na avaliação da posição)
+/**
+ * IA decide se deve fazer a troca usando avaliação estrutural.
+ * 
+ * A decisão baseia-se em:
+ * 1. Comparar métricas (min/max, exclusivas) para cada orientação
+ * 2. Simular uma pesquisa curta para ambas opções
+ * 3. Escolher a opção que dá melhor posição
+ */
 export function decidirTrocaComputador(state: QuelhasState): boolean {
   if (!state.trocaDisponivel) return false;
   
-  // Avaliar a posição atual
-  // Se o jogador que fez a primeira jogada (vertical inicial) deixou uma posição boa,
-  // vale a pena trocar para ficar com essa posição
+  // Calcular métricas para o estado atual
+  const metricas = calcularMetricasCompletas(state.tabuleiro);
   
-  // Contar jogadas disponíveis para cada orientação
-  const jogadasVertical = calcularJogadasValidas(state.tabuleiro, 'vertical');
+  // Se NÃO trocar: IA fica com horizontal, adversário fica com vertical
+  // Se TROCAR: IA fica com vertical, adversário fica com horizontal
+  // (A troca consome o turno, então após trocar é a vez do adversário jogar)
+  
+  // Avaliar posição se NÃO trocar (IA = horizontal)
   const jogadasHorizontal = calcularJogadasValidas(state.tabuleiro, 'horizontal');
+  const jogadasVertical = calcularJogadasValidas(state.tabuleiro, 'vertical');
   
-  // Em misère, queremos ter MENOS opções de jogo no final
-  // Se vertical tem menos jogadas, pode ser melhor ficar com vertical
-  // A heurística simples: se a diferença é significativa, trocar
+  const scoreNaoTrocar = avaliarPosicaoMisere(
+    state.tabuleiro,
+    'horizontal', // IA fica horizontal
+    'vertical',   // Adversário fica vertical
+    jogadasVertical.length,
+    jogadasHorizontal.length
+  );
   
-  const diferencaJogadas = jogadasHorizontal.length - jogadasVertical.length;
+  // Avaliar posição se TROCAR (IA = vertical)
+  // Nota: após a troca, a vez passa para o adversário (que agora é horizontal)
+  const scoreTrocar = avaliarPosicaoMisere(
+    state.tabuleiro,
+    'vertical',   // IA fica vertical
+    'horizontal', // Adversário fica horizontal
+    jogadasHorizontal.length,
+    jogadasVertical.length
+  );
   
-  // Se horizontal tem mais jogadas que vertical (>= 5 de diferença), considerar trocar
-  // Isto porque em misère ter mais jogadas pode ser desvantajoso
-  // Adicionamos aleatoriedade para não ser previsível
-  const limiarTroca = 3 + Math.random() * 4; // Entre 3 e 7
+  // Análise adicional baseada em métricas estruturais
+  let bonusTrocar = 0;
+  let bonusNaoTrocar = 0;
   
-  return diferencaJogadas >= limiarTroca;
+  // Se vertical tem vantagem em exclusivas, trocar é bom
+  if (metricas.vertical.maxExclusivo > metricas.horizontal.maxExclusivo) {
+    bonusTrocar += (metricas.vertical.maxExclusivo - metricas.horizontal.maxExclusivo) * 30;
+  } else {
+    bonusNaoTrocar += (metricas.horizontal.maxExclusivo - metricas.vertical.maxExclusivo) * 30;
+  }
+  
+  // Se horizontal tem mais flexibilidade (max - min maior), é bom ficar com horizontal
+  const flexV = metricas.vertical.max - metricas.vertical.min;
+  const flexH = metricas.horizontal.max - metricas.horizontal.min;
+  bonusNaoTrocar += (flexH - flexV) * 10;
+  bonusTrocar += (flexV - flexH) * 10;
+  
+  // Em misère, preferimos a orientação com menos jogadas "obrigatórias" (min baixo)
+  // mas mais capacidade de "guardar" (max alto, especialmente exclusivas)
+  const ratioV = metricas.vertical.min > 0 ? metricas.vertical.maxExclusivo / metricas.vertical.min : 0;
+  const ratioH = metricas.horizontal.min > 0 ? metricas.horizontal.maxExclusivo / metricas.horizontal.min : 0;
+  
+  if (ratioV > ratioH) {
+    bonusTrocar += 50;
+  } else if (ratioH > ratioV) {
+    bonusNaoTrocar += 50;
+  }
+  
+  // Decisão final: comparar scores totais
+  const scoreFinalTrocar = scoreTrocar + bonusTrocar;
+  const scoreFinalNaoTrocar = scoreNaoTrocar + bonusNaoTrocar;
+  
+  // Trocar só se claramente melhor (margem de 20 pontos para evitar trocas marginais)
+  return scoreFinalTrocar > scoreFinalNaoTrocar + 20;
 }
 
-// IA do computador (misère)
-// Estratégia: tentar forçar o adversário a ser o último a jogar
-// Utiliza heurística baseada em intervalos min/max de jogadas futuras
+// ============================================================================
+// IA DO COMPUTADOR COM ALPHA-BETA + TRANSPOSITION TABLE
+// ============================================================================
+
+// Tempo máximo de pesquisa por jogada (ms)
+const TEMPO_MAXIMO_JOGADA = 2500; // ~2.5s para deixar margem
+
+// Cache para transposition table
+interface TTEntry {
+  depth: number;
+  score: number;
+  flag: 'exact' | 'lowerbound' | 'upperbound';
+  bestMove: Segmento | null;
+}
+
+// Transposition table global (limpa-se a cada jogada para não acumular memória)
+let transpositionTable: Map<string, TTEntry> = new Map();
+
+/**
+ * Gera uma chave única para o estado do tabuleiro + orientação do jogador atual.
+ */
+function gerarChaveTabuleiro(tabuleiro: Celula[][], orientacaoAtual: Orientacao): string {
+  let key = orientacaoAtual === 'vertical' ? 'V' : 'H';
+  for (let i = 0; i < TAMANHO_TABULEIRO; i++) {
+    let row = 0;
+    for (let j = 0; j < TAMANHO_TABULEIRO; j++) {
+      if (tabuleiro[i][j] === 'ocupada') {
+        row |= (1 << j);
+      }
+    }
+    key += row.toString(36);
+  }
+  return key;
+}
+
+/**
+ * Gera candidatos estratégicos a partir dos blocos (reduz branching factor).
+ * Em vez de todas as jogadas possíveis, gera:
+ * - Segmentos de tamanho 2 nas extremidades de cada bloco
+ * - Segmento que consome o bloco inteiro
+ * - Alguns tamanhos intermédios em posições chave
+ */
+export function gerarCandidatos(tabuleiro: Celula[][], orientacao: Orientacao): Segmento[] {
+  const blocos = extrairBlocos(tabuleiro, orientacao);
+  const candidatos: Segmento[] = [];
+  const vistos = new Set<string>();
+  
+  const adicionarSeNovo = (seg: Segmento) => {
+    const key = `${seg.inicio.linha},${seg.inicio.coluna},${seg.comprimento}`;
+    if (!vistos.has(key)) {
+      vistos.add(key);
+      candidatos.push(seg);
+    }
+  };
+  
+  for (const bloco of blocos) {
+    const { inicio, comprimento, indiceFixo, orientacao: ori } = bloco;
+    
+    // 1. Segmento mínimo (tamanho 2) no início do bloco
+    adicionarSeNovo({
+      inicio: ori === 'vertical' 
+        ? { linha: inicio, coluna: indiceFixo }
+        : { linha: indiceFixo, coluna: inicio },
+      comprimento: 2,
+      orientacao: ori,
+    });
+    
+    // 2. Segmento mínimo (tamanho 2) no fim do bloco
+    if (comprimento >= 4) {
+      adicionarSeNovo({
+        inicio: ori === 'vertical'
+          ? { linha: inicio + comprimento - 2, coluna: indiceFixo }
+          : { linha: indiceFixo, coluna: inicio + comprimento - 2 },
+        comprimento: 2,
+        orientacao: ori,
+      });
+    }
+    
+    // 3. Segmento que consome o bloco inteiro
+    adicionarSeNovo({
+      inicio: ori === 'vertical'
+        ? { linha: inicio, coluna: indiceFixo }
+        : { linha: indiceFixo, coluna: inicio },
+      comprimento,
+      orientacao: ori,
+    });
+    
+    // 4. Segmento de tamanho 3 se bloco >= 5 (meio termo)
+    if (comprimento >= 5) {
+      adicionarSeNovo({
+        inicio: ori === 'vertical'
+          ? { linha: inicio, coluna: indiceFixo }
+          : { linha: indiceFixo, coluna: inicio },
+        comprimento: 3,
+        orientacao: ori,
+      });
+    }
+    
+    // 5. Segmento central (tamanho 2) para blocos grandes
+    if (comprimento >= 6) {
+      const meio = Math.floor(comprimento / 2) - 1;
+      adicionarSeNovo({
+        inicio: ori === 'vertical'
+          ? { linha: inicio + meio, coluna: indiceFixo }
+          : { linha: indiceFixo, coluna: inicio + meio },
+        comprimento: 2,
+        orientacao: ori,
+      });
+    }
+  }
+  
+  return candidatos;
+}
+
+/**
+ * Ordena candidatos por qualidade estimada (move ordering para alpha-beta).
+ */
+function ordenarCandidatos(
+  candidatos: Segmento[],
+  tabuleiro: Celula[][],
+  minhaOrientacao: Orientacao,
+  orientacaoAdv: Orientacao,
+  ttBestMove: Segmento | null
+): Segmento[] {
+  const avaliados = candidatos.map(jogada => {
+    let prioridade = 0;
+    
+    // TT best move tem prioridade máxima
+    if (ttBestMove && 
+        jogada.inicio.linha === ttBestMove.inicio.linha &&
+        jogada.inicio.coluna === ttBestMove.inicio.coluna &&
+        jogada.comprimento === ttBestMove.comprimento) {
+      prioridade = 100000;
+    }
+    
+    // Simular jogada rapidamente
+    const novoTab = aplicarSegmentoTabuleiro(tabuleiro, jogada);
+    const jogadasAdv = calcularJogadasValidas(novoTab, orientacaoAdv);
+    
+    // Prioridade 1: Não deixar adversário sem jogadas (isso nos faz perder)
+    if (jogadasAdv.length === 0) {
+      prioridade -= 50000; // Muito mau
+    }
+    
+    // Prioridade 2: Preferir jogadas que deixam adversário com jogadas
+    prioridade += jogadasAdv.length * 10;
+    
+    // Prioridade 3: Preferir segmentos curtos (mais controlo)
+    prioridade -= jogada.comprimento * 5;
+    
+    // Prioridade 4: Avaliar métricas estruturais rapidamente
+    const metricas = calcularMetricasCompletas(novoTab);
+    const minha = minhaOrientacao === 'vertical' ? metricas.vertical : metricas.horizontal;
+    const adv = minhaOrientacao === 'vertical' ? metricas.horizontal : metricas.vertical;
+    
+    // Bónus por vantagem em exclusivas
+    prioridade += (minha.maxExclusivo - adv.maxExclusivo) * 20;
+    
+    return { jogada, prioridade };
+  });
+  
+  avaliados.sort((a, b) => b.prioridade - a.prioridade);
+  return avaliados.map(a => a.jogada);
+}
+
+/**
+ * Negamax com alpha-beta pruning e transposition table.
+ * Retorna pontuação do ponto de vista do jogador atual.
+ */
+function negamax(
+  tabuleiro: Celula[][],
+  orientacaoAtual: Orientacao,
+  orientacaoAdv: Orientacao,
+  depth: number,
+  alpha: number,
+  beta: number,
+  deadline: number
+): { score: number; bestMove: Segmento | null } {
+  // Verificar timeout
+  if (Date.now() > deadline) {
+    return { score: 0, bestMove: null };
+  }
+  
+  // Lookup na transposition table
+  const ttKey = gerarChaveTabuleiro(tabuleiro, orientacaoAtual);
+  const ttEntry = transpositionTable.get(ttKey);
+  
+  if (ttEntry && ttEntry.depth >= depth) {
+    if (ttEntry.flag === 'exact') {
+      return { score: ttEntry.score, bestMove: ttEntry.bestMove };
+    } else if (ttEntry.flag === 'lowerbound') {
+      alpha = Math.max(alpha, ttEntry.score);
+    } else if (ttEntry.flag === 'upperbound') {
+      beta = Math.min(beta, ttEntry.score);
+    }
+    if (alpha >= beta) {
+      return { score: ttEntry.score, bestMove: ttEntry.bestMove };
+    }
+  }
+  
+  // Gerar jogadas
+  const candidatos = depth <= 2 
+    ? calcularJogadasValidas(tabuleiro, orientacaoAtual) // Profundidade baixa: todas as jogadas
+    : gerarCandidatos(tabuleiro, orientacaoAtual); // Profundidade alta: só candidatos estratégicos
+  
+  // Caso terminal: sem jogadas
+  if (candidatos.length === 0) {
+    // Em misère, se não tenho jogadas, GANHO (adversário foi o último a jogar)
+    return { score: 10000 + depth, bestMove: null }; // Bónus por profundidade (ganhar mais cedo)
+  }
+  
+  // Profundidade 0: avaliar heuristicamente
+  if (depth === 0) {
+    const jogadasAdv = calcularJogadasValidas(tabuleiro, orientacaoAdv);
+    const score = avaliarPosicaoMisere(
+      tabuleiro,
+      orientacaoAtual,
+      orientacaoAdv,
+      jogadasAdv.length,
+      candidatos.length
+    );
+    return { score, bestMove: null };
+  }
+  
+  // Ordenar candidatos para melhor pruning
+  const candidatosOrdenados = ordenarCandidatos(
+    candidatos, 
+    tabuleiro, 
+    orientacaoAtual, 
+    orientacaoAdv,
+    ttEntry?.bestMove || null
+  );
+  
+  let bestScore = -Infinity;
+  let bestMove: Segmento | null = null;
+  let flag: 'exact' | 'lowerbound' | 'upperbound' = 'upperbound';
+  
+  for (const jogada of candidatosOrdenados) {
+    // Aplicar jogada
+    const novoTab = aplicarSegmentoTabuleiro(tabuleiro, jogada);
+    
+    // Verificar se adversário tem jogadas
+    const jogadasAdvApos = calcularJogadasValidas(novoTab, orientacaoAdv);
+    
+    let score: number;
+    if (jogadasAdvApos.length === 0) {
+      // PÉSSIMO em misère: adversário não tem jogadas = EU fui o último = EU PERCO
+      score = -10000 - depth;
+    } else {
+      // Recursão (negamax: negar o score do adversário)
+      const resultado = negamax(
+        novoTab,
+        orientacaoAdv,
+        orientacaoAtual,
+        depth - 1,
+        -beta,
+        -alpha,
+        deadline
+      );
+      score = -resultado.score;
+    }
+    
+    if (score > bestScore) {
+      bestScore = score;
+      bestMove = jogada;
+    }
+    
+    alpha = Math.max(alpha, score);
+    
+    if (alpha >= beta) {
+      flag = 'lowerbound';
+      break; // Beta cutoff
+    }
+    
+    // Verificar timeout
+    if (Date.now() > deadline) {
+      break;
+    }
+  }
+  
+  if (bestScore <= alpha) {
+    flag = 'upperbound';
+  } else if (bestScore >= beta) {
+    flag = 'lowerbound';
+  } else {
+    flag = 'exact';
+  }
+  
+  // Guardar na transposition table
+  transpositionTable.set(ttKey, {
+    depth,
+    score: bestScore,
+    flag,
+    bestMove,
+  });
+  
+  return { score: bestScore, bestMove };
+}
+
+/**
+ * Iterative deepening com time limit.
+ */
+function iterativeDeepening(
+  tabuleiro: Celula[][],
+  orientacaoIA: Orientacao,
+  orientacaoAdv: Orientacao,
+  tempoLimiteMs: number
+): Segmento | null {
+  const deadline = Date.now() + tempoLimiteMs;
+  
+  // Limpar transposition table
+  transpositionTable = new Map();
+  
+  let melhorJogada: Segmento | null = null;
+  let melhorScore = -Infinity;
+  
+  // Começar com profundidade baixa e ir aumentando
+  for (let depth = 1; depth <= 20; depth++) {
+    if (Date.now() > deadline) break;
+    
+    const resultado = negamax(
+      tabuleiro,
+      orientacaoIA,
+      orientacaoAdv,
+      depth,
+      -Infinity,
+      Infinity,
+      deadline
+    );
+    
+    // Se completou a pesquisa nesta profundidade, atualizar melhor jogada
+    if (resultado.bestMove && Date.now() <= deadline) {
+      melhorJogada = resultado.bestMove;
+      melhorScore = resultado.score;
+      
+      // Se encontrou vitória garantida, parar
+      if (melhorScore >= 9000) {
+        break;
+      }
+    }
+    
+    // Se está a demorar muito, parar
+    if (Date.now() > deadline - 100) {
+      break;
+    }
+  }
+  
+  return melhorJogada;
+}
+
+/**
+ * IA do computador (misère) - versão forte com alpha-beta search.
+ */
 export function jogadaComputador(state: QuelhasState): QuelhasState {
   const jogadas = state.jogadasValidas;
   if (jogadas.length === 0) return state;
 
-  // Obter orientações dos jogadores
   const minhaOrientacao = getOrientacaoJogador(state, state.jogadorAtual);
   const orientacaoAdversario = getOrientacaoJogador(
     state, 
     state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1'
   );
 
-  // Avaliar cada jogada
-  const jogadasAvaliadas = jogadas.map(jogada => {
-    // Simular a jogada
-    const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
-    for (let i = 0; i < jogada.comprimento; i++) {
-      if (jogada.orientacao === 'vertical') {
-        novoTabuleiro[jogada.inicio.linha + i][jogada.inicio.coluna] = 'ocupada';
-      } else {
-        novoTabuleiro[jogada.inicio.linha][jogada.inicio.coluna + i] = 'ocupada';
-      }
-    }
+  // Se só há uma jogada, jogar imediatamente
+  if (jogadas.length === 1) {
+    return colocarSegmento(state, jogadas[0]);
+  }
 
-    // Contar jogadas imediatas de cada lado após esta jogada
-    const jogadasAdversario = calcularJogadasValidas(novoTabuleiro, orientacaoAdversario);
-    const minhasJogadasFuturas = calcularJogadasValidas(novoTabuleiro, minhaOrientacao);
+  // Usar iterative deepening para encontrar a melhor jogada
+  const melhorJogada = iterativeDeepening(
+    state.tabuleiro,
+    minhaOrientacao,
+    orientacaoAdversario,
+    TEMPO_MAXIMO_JOGADA
+  );
 
-    // Usar nova heurística baseada em intervalos min/max
-    let pontuacao = avaliarPosicaoMisere(
-      novoTabuleiro,
-      minhaOrientacao,
-      orientacaoAdversario,
-      jogadasAdversario.length,
-      minhasJogadasFuturas.length
-    );
-
-    // Factores adicionais de controlo tático:
-    
-    // 1. Preferir segmentos mais curtos (dão mais controlo sobre o jogo)
-    pontuacao -= jogada.comprimento * 2;
-    
-    // 2. Preferir jogar em zonas mais preenchidas (força o adversário a regiões limitadas)
-    const densidadeLocal = calcularDensidadeLocal(novoTabuleiro, jogada);
-    pontuacao += densidadeLocal * 2;
-
-    // 3. Considerar se estamos perto do fim do jogo
-    const totalJogadasRestantes = minhasJogadasFuturas.length + jogadasAdversario.length;
-    if (totalJogadasRestantes <= 10) {
-      // Fase final: dar mais peso à diferença de jogadas
-      // Em misère, queremos ter menos jogadas que o adversário
-      pontuacao += (jogadasAdversario.length - minhasJogadasFuturas.length) * 5;
-      
-      // Se conseguimos deixar exatamente 1 jogada para o adversário e 0 para nós
-      if (minhasJogadasFuturas.length === 0 && jogadasAdversario.length === 1) {
-        pontuacao += 300; // Situação quase ideal em misère
-      }
-    }
-
-    // 4. Evitar deixar grandes blocos vazios que beneficiam o adversário
-    // Calcular fragmentação - preferir estados mais fragmentados para limitar adversário
-    if (totalJogadasRestantes > 10) {
-      // Analisar distribuição das jogadas do adversário
-      const colunasUsadas = new Set(jogadasAdversario.map(j => 
-        j.orientacao === 'vertical' ? j.inicio.coluna : j.inicio.linha
-      ));
-      const fragmentacao = colunasUsadas.size;
-      pontuacao += fragmentacao * 1.5; // Mais fragmentado = adversário tem menos flexibilidade
-    }
-
-    // Adicionar pequena aleatoriedade para não ser previsível
-    pontuacao += Math.random() * 3;
-
-    return { jogada, pontuacao };
-  });
-
-  // Ordenar por pontuação
-  jogadasAvaliadas.sort((a, b) => b.pontuacao - a.pontuacao);
-
-  // Escolher a melhor jogada
-  const melhorJogada = jogadasAvaliadas[0].jogada;
+  // Fallback: se por algum motivo não encontrou jogada, usar a primeira válida
+  if (!melhorJogada) {
+    // Fallback heurístico rápido
+    const candidatos = gerarCandidatos(state.tabuleiro, minhaOrientacao);
+    const jogadaFallback = candidatos.length > 0 ? candidatos[0] : jogadas[0];
+    return colocarSegmento(state, jogadaFallback);
+  }
 
   return colocarSegmento(state, melhorJogada);
 }
@@ -557,8 +1126,16 @@ export function calcularIntervalosJogadas(
   };
 }
 
-// Avaliar posição após uma jogada usando intervalos min/max
-// Retorna pontuação: maior = melhor para IA (em misère)
+/**
+ * Avaliação estratégica para misère usando métricas de blocos exclusivos/partilhados.
+ * 
+ * PRINCÍPIO CHAVE (do exemplo do utilizador):
+ * - Se eu tenho blocos exclusivos e o adversário não tem (ou tem poucos),
+ *   posso "guardar" jogadas exclusivas e forçar o adversário a jogar nas partilhadas.
+ * - Assim controlo o "tempo" e obrigo o adversário a ser o último a jogar.
+ * 
+ * @returns Pontuação: maior = melhor para IA (em misère)
+ */
 export function avaliarPosicaoMisere(
   tabuleiroAposJogada: Celula[][],
   orientacaoIA: Orientacao,
@@ -566,63 +1143,90 @@ export function avaliarPosicaoMisere(
   jogadasImediatasAdv: number,
   jogadasImediatasIA: number
 ): number {
-  // Em misère, queremos que o adversário seja o último a jogar
-  // Portanto: bom para IA ter poucas jogadas, adversário ter pelo menos 1
-
+  // Casos terminais imediatos
   if (jogadasImediatasAdv === 0) {
-    // Péssimo! Adversário não tem jogadas = IA foi o último a jogar = IA perde
-    return -1000;
+    // PÉSSIMO: Adversário não tem jogadas = IA foi o último a jogar = IA PERDE
+    return -10000;
   }
 
   if (jogadasImediatasIA === 0 && jogadasImediatasAdv > 0) {
-    // Excelente! IA não tem mais jogadas mas adversário tem = Adversário será último
-    return 800;
+    // EXCELENTE: IA não tem jogadas mas adversário tem = Adversário será último = IA GANHA
+    return 10000;
   }
 
-  // Calcular intervalos para análise mais profunda
-  const intervalos = calcularIntervalosJogadas(
-    tabuleiroAposJogada,
-    orientacaoIA,
-    orientacaoAdversario,
-    1
-  );
+  // Calcular métricas estruturais
+  const metricas = calcularMetricasCompletas(tabuleiroAposJogada);
+  const minha = orientacaoIA === 'vertical' ? metricas.vertical : metricas.horizontal;
+  const adv = orientacaoIA === 'vertical' ? metricas.horizontal : metricas.vertical;
 
   let pontuacao = 0;
 
-  // ESTRATÉGIA MISÈRE:
-  // 1. Preferir estados onde o mínimo de jogadas da IA é pequeno
-  //    (possibiitamos ficar sem jogadas)
-  pontuacao -= intervalos.minJogadasIA * 3;
+  // ========== ESTRATÉGIA MISÈRE COM EXCLUSIVAS/PARTILHADAS ==========
 
-  // 2. Preferir estados onde o adversário tem garantia de pelo menos 1 jogada
-  //    (ele será forçado a jogar)
-  if (intervalos.minJogadasAdversario > 0) {
-    pontuacao += intervalos.minJogadasAdversario * 5;
-  } else {
-    // Risco: existe cenário onde adversário fica sem jogadas (mau para nós)
-    pontuacao -= 50;
+  // 1. RESERVA EXCLUSIVA: Bónus enorme por ter blocos exclusivos que o adversário não tem
+  //    Isto dá "tempo" - posso forçar adversário a jogar nas partilhadas enquanto guardo as minhas
+  const vantagemExclusiva = minha.maxExclusivo - adv.maxExclusivo;
+  pontuacao += vantagemExclusiva * 50;
+
+  // 2. FIXIDEZ DO ADVERSÁRIO: Se adversário tem min ≈ max, ele não tem flexibilidade
+  //    Isto é BOM para nós - cada jogada dele é "obrigatória"
+  const flexibilidadeAdv = adv.max - adv.min;
+  const flexibilidadeIA = minha.max - minha.min;
+  pontuacao += (flexibilidadeIA - flexibilidadeAdv) * 15;
+
+  // 3. GARANTIA DE JOGADAS DO ADVERSÁRIO: Queremos que ele TENHA de jogar
+  //    Bónus se o mínimo de jogadas do adversário é > 0
+  if (adv.min > 0) {
+    pontuacao += adv.min * 30;
   }
 
-  // 3. Diferença entre máximo do adversário e mínimo da IA
-  //    Quanto maior esta diferença, mais provável que adversário jogue por último
-  pontuacao += (intervalos.maxJogadasAdversario - intervalos.minJogadasIA) * 4;
+  // 4. CONTROLO DE TEMPO: Se tenho mais jogadas exclusivas que o adversário tem total,
+  //    posso "acompanhar" cada jogada dele e ainda sobrar minhas exclusivas
+  if (minha.maxExclusivo >= adv.max && minha.maxExclusivo > 0) {
+    // Posição dominante: posso forçar adversário a esgotar primeiro
+    pontuacao += 200;
+    
+    // Bónus adicional pela margem de controlo
+    const margem = minha.maxExclusivo - adv.max;
+    pontuacao += margem * 25;
+  }
 
-  // 4. Penalizar estados onde IA tem muitas jogadas obrigatórias
-  //    (intervalos apertados = menos controlo)
-  const rangeIA = intervalos.maxJogadasIA - intervalos.minJogadasIA;
-  pontuacao += rangeIA * 2; // Mais range = mais controlo
-
-  // 5. Bónus se conseguimos forçar paridade favorável
-  //    Em jogos finais, queremos número ímpar de jogadas totais restantes
-  //    para o adversário (ele joga a última)
-  const totalMinRestante = intervalos.minJogadasIA + intervalos.minJogadasAdversario;
-  if (totalMinRestante <= 5 && totalMinRestante > 0) {
-    // Jogo está a acabar - verificar paridade
-    // Se minJogadasIA é 0 e minJogadasAdversario > 0, é ideal
-    if (intervalos.minJogadasIA === 0 && intervalos.minJogadasAdversario > 0) {
-      pontuacao += 200;
+  // 5. FASE FINAL: Quando poucas jogadas restam, calcular paridade exacta
+  const totalMin = minha.min + adv.min;
+  const totalMax = minha.max + adv.max;
+  
+  if (totalMax <= 10) {
+    // Estamos perto do fim - análise mais fina
+    
+    // Se adversário tem blocos só partilhados e eu tenho exclusivos,
+    // cada jogada dele nas partilhadas posso "responder" nas minhas exclusivas
+    if (adv.minExclusivo === 0 && minha.minExclusivo > 0) {
+      // Situação ideal: adversário só joga em zonas onde eu também posso jogar,
+      // mas eu tenho reservas onde só eu jogo
+      pontuacao += 150;
+    }
+    
+    // Paridade: Em misère, queremos que o adversário faça a última jogada
+    // Se total de jogadas restantes (assumindo ambos jogam minimamente) é tal que
+    // o adversário joga por último, é bom
+    // Nota: jogadas alternadas, IA joga agora, portanto se (advMin) é ímpar após nossa jogada...
+    // Simplificação: preferir estados onde advMin > minhaMin
+    if (adv.min > minha.min) {
+      pontuacao += (adv.min - minha.min) * 40;
     }
   }
+
+  // 6. PENALIZAR JOGADAS PRÓPRIAS DEMAIS (em misère, muitas jogadas = mau)
+  //    Mas só se não temos controlo via exclusivas
+  if (minha.maxExclusivo <= adv.max) {
+    pontuacao -= minha.min * 10;
+  }
+
+  // 7. PREFERIR FRAGMENTAÇÃO DO ADVERSÁRIO
+  //    Adversário com mais blocos pequenos (min alto, max baixo) tem menos flexibilidade
+  const eficienciaAdv = adv.min > 0 ? adv.max / adv.min : 0;
+  const eficienciaIA = minha.min > 0 ? minha.max / minha.min : 0;
+  pontuacao += (eficienciaIA - eficienciaAdv) * 10;
 
   return pontuacao;
 }
