@@ -251,6 +251,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           nomeJogador2={getNomeJogador('jogador2')}
           corJogador1={state.orientacaoJogador1 === 'vertical' ? 'bg-pink-500' : 'bg-cyan-500'}
           corJogador2={state.orientacaoJogador2 === 'vertical' ? 'bg-pink-500' : 'bg-cyan-500'}
+          humanPlayer={humanoEhJogador1 ? 'jogador1' : 'jogador2'}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
@@ -293,8 +294,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
               🔄 Regra de Troca
             </p>
             <p className="text-purple-700 text-xs mb-3 text-center">
-              O jogador Horizontal pode trocar de papel e ficar com a jogada que o Vertical acabou de fazer.
-              {state.modo === 'vs-computador' && ' (É a tua vez de decidir!)'}
+              Podes trocar de papel e ficar com a jogada que o Vertical acabou de fazer.
+              A troca consome a tua jogada — a seguir joga o adversário.
             </p>
             <div className="flex justify-center gap-3">
               <button
@@ -344,11 +345,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           {/* Legenda */}
           <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-3 bg-pink-500 rounded"></div>
+              <div className="w-3 h-6 bg-pink-500 rounded"></div>
               <span>Vertical</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-6 bg-cyan-500 rounded"></div>
+              <div className="w-6 h-3 bg-cyan-500 rounded"></div>
               <span>Horizontal</span>
             </div>
           </div>

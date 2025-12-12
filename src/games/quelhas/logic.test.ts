@@ -137,7 +137,7 @@ describe("Quelhas - Regra de Troca", () => {
     expect(estado.trocaEfetuada).toBe(false);
   });
 
-  test("trocarOrientacoes deve trocar as orientações dos jogadores", () => {
+  test("trocarOrientacoes deve trocar as orientações dos jogadores e passar o turno", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     
     // Jogada do jogador1 para ativar troca
@@ -147,24 +147,28 @@ describe("Quelhas - Regra de Troca", () => {
     expect(estado.orientacaoJogador1).toBe('vertical');
     expect(estado.orientacaoJogador2).toBe('horizontal');
     expect(estado.trocaDisponivel).toBe(true);
+    expect(estado.jogadorAtual).toBe('jogador2');
     
-    // Aplicar troca
+    // Aplicar troca (jogador2 anuncia troca, consome o turno)
     estado = trocarOrientacoes(estado);
     
     expect(estado.orientacaoJogador1).toBe('horizontal');
     expect(estado.orientacaoJogador2).toBe('vertical');
     expect(estado.trocaDisponivel).toBe(false);
     expect(estado.trocaEfetuada).toBe(true);
+    // A troca consome o turno: volta a ser a vez do jogador1
+    expect(estado.jogadorAtual).toBe('jogador1');
   });
 
-  test("trocarOrientacoes deve recalcular jogadas válidas", () => {
+  test("trocarOrientacoes deve recalcular jogadas válidas para o próximo jogador", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
     estado = colocarSegmento(estado, jogada1);
     
-    // Antes da troca: jogador2 tem jogadas horizontais
+    // Antes da troca: jogador2 (horizontal) tem jogadas horizontais
+    expect(estado.jogadorAtual).toBe('jogador2');
     for (const jogada of estado.jogadasValidas) {
       expect(jogada.orientacao).toBe('horizontal');
     }
@@ -172,7 +176,49 @@ describe("Quelhas - Regra de Troca", () => {
     // Aplicar troca
     estado = trocarOrientacoes(estado);
     
-    // Após troca: jogador2 agora tem orientação vertical, então jogadas verticais
+    // Após troca: turno passa para jogador1 que agora é horizontal
+    // As jogadas válidas devem ser horizontais (orientação do novo jogador atual)
+    expect(estado.jogadorAtual).toBe('jogador1');
+    expect(estado.orientacaoJogador1).toBe('horizontal');
+    for (const jogada of estado.jogadasValidas) {
+      expect(jogada.orientacao).toBe('horizontal');
+    }
+  });
+
+  test("sequência de turnos com troca: J1 vertical -> J2 troca -> J1 horizontal -> J2 vertical", () => {
+    let estado = criarEstadoInicial('dois-jogadores');
+    
+    // 1. J1 faz jogada vertical
+    expect(estado.jogadorAtual).toBe('jogador1');
+    expect(getOrientacaoJogador(estado, 'jogador1')).toBe('vertical');
+    const jogada1 = estado.jogadasValidas[0];
+    estado = colocarSegmento(estado, jogada1);
+    
+    // Após jogada de J1, é a vez de J2 e troca está disponível
+    expect(estado.jogadorAtual).toBe('jogador2');
+    expect(estado.trocaDisponivel).toBe(true);
+    
+    // 2. J2 (horizontal) anuncia troca - consome o turno
+    estado = trocarOrientacoes(estado);
+    
+    // Após troca: J1 agora é horizontal, J2 é vertical
+    // Turno volta para J1
+    expect(estado.jogadorAtual).toBe('jogador1');
+    expect(getOrientacaoJogador(estado, 'jogador1')).toBe('horizontal');
+    expect(getOrientacaoJogador(estado, 'jogador2')).toBe('vertical');
+    
+    // 3. J1 faz jogada horizontal
+    for (const jogada of estado.jogadasValidas) {
+      expect(jogada.orientacao).toBe('horizontal');
+    }
+    const jogada2 = estado.jogadasValidas[0];
+    estado = colocarSegmento(estado, jogada2);
+    
+    // Após jogada de J1, é a vez de J2
+    expect(estado.jogadorAtual).toBe('jogador2');
+    
+    // 4. J2 faz jogada vertical
+    expect(getOrientacaoJogador(estado, 'jogador2')).toBe('vertical');
     for (const jogada of estado.jogadasValidas) {
       expect(jogada.orientacao).toBe('vertical');
     }

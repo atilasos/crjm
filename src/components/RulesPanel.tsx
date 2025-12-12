@@ -31,9 +31,8 @@ export function RulesPanel({ titulo, regras }: RulesPanelProps) {
       {aberto && (
         <ul className="mt-4 space-y-3">
           {regras.map((regra, index) => (
-            <li key={index} className="flex items-start gap-2 text-gray-700">
-              <span className="text-indigo-500 font-bold mt-0.5">•</span>
-              <span>{regra}</span>
+            <li key={index} className="text-gray-700">
+              {regra}
             </li>
           ))}
         </ul>

@@ -274,6 +274,7 @@ export function criarSegmentoEntrePosicoes(
 }
 
 // Trocar orientações entre jogadores (regra de troca)
+// A troca consome o turno de quem a anuncia e passa a vez ao adversário
 export function trocarOrientacoes(state: QuelhasState): QuelhasState {
   if (!state.trocaDisponivel || state.estado !== 'a-jogar') {
     return state;
@@ -283,12 +284,16 @@ export function trocarOrientacoes(state: QuelhasState): QuelhasState {
   const novaOrientacaoJ1 = state.orientacaoJogador2;
   const novaOrientacaoJ2 = state.orientacaoJogador1;
   
-  // Recalcular jogadas válidas para o jogador atual com a nova orientação
-  const novaOrientacaoAtual = state.jogadorAtual === 'jogador1' ? novaOrientacaoJ1 : novaOrientacaoJ2;
-  const novasJogadasValidas = calcularJogadasValidas(state.tabuleiro, novaOrientacaoAtual);
+  // A troca consome o turno: passa a vez ao adversário
+  const novoJogadorAtual = state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1';
+  
+  // Recalcular jogadas válidas para o próximo jogador com a sua nova orientação
+  const orientacaoNovoJogador = novoJogadorAtual === 'jogador1' ? novaOrientacaoJ1 : novaOrientacaoJ2;
+  const novasJogadasValidas = calcularJogadasValidas(state.tabuleiro, orientacaoNovoJogador);
   
   return {
     ...state,
+    jogadorAtual: novoJogadorAtual,
     orientacaoJogador1: novaOrientacaoJ1,
     orientacaoJogador2: novaOrientacaoJ2,
     jogadasValidas: novasJogadasValidas,
