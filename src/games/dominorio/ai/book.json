@@ -1,0 +1,24 @@
+{
+  "description": "Dominório (Domineering 8x8) opening book. Keys are canonical board states, values are recommended moves.",
+  "format": {
+    "key": "occupiedLow:occupiedHigh:sideToMove (hex)",
+    "value": "anchor square (0-63)"
+  },
+  "entries": {
+    "0:0:0": [27, 35, 28, 36],
+    "0:0:1": [27, 35, 28, 36],
+    
+    "8000000:0:1": [27, 35, 28],
+    "10000000:0:1": [27, 35, 36],
+    "800000000:0:1": [27, 28, 35],
+    "1000000000:0:1": [27, 28, 36],
+    
+    "8000000:1000000:0": [19, 20, 43, 44],
+    "10000000:800000:0": [19, 20, 43, 44],
+    "800000000:100000:0": [11, 12, 51, 52],
+    "1000000000:80000:0": [11, 12, 51, 52]
+  },
+  "maxPly": 6
+}
+
+

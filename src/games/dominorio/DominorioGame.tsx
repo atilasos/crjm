@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
@@ -8,9 +8,14 @@ import {
   atualizarPreview,
   colocarDomino,
   getDominoPreview,
-  jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
+import { 
+  DominorioAIClient, 
+  type AIDifficulty, 
+  type AIMetrics,
+  INITIAL_METRICS 
+} from './ai';
 
 interface DominorioGameProps {
   onVoltar: () => void;
@@ -32,20 +37,59 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
+  const [difficulty, setDifficulty] = useState<AIDifficulty>('medium');
+  const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
+  const [aiReady, setAiReady] = useState(false);
+  
+  // AI client ref (persistent across renders)
+  const aiClientRef = useRef<DominorioAIClient | null>(null);
+  
+  // Initialize AI client
+  useEffect(() => {
+    const client = new DominorioAIClient({
+      onMetricsUpdate: setAiMetrics,
+      onReady: () => setAiReady(true),
+    });
+    aiClientRef.current = client;
+    
+    return () => {
+      client.terminate();
+    };
+  }, []);
 
-  // Efeito para jogada do computador
+  // Efeito para jogada do computador (usando AI Worker)
   useEffect(() => {
     if (
       state.modo === 'vs-computador' && 
       state.jogadorAtual !== humanPlayer && 
-      state.estado === 'a-jogar'
+      state.estado === 'a-jogar' &&
+      aiClientRef.current
     ) {
-      const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 800);
-      return () => clearTimeout(timer);
+      let cancelled = false;
+      
+      // Small delay for UX
+      const timer = setTimeout(async () => {
+        if (cancelled || !aiClientRef.current) return;
+        
+        try {
+          const move = await aiClientRef.current.getBestMove(state, difficulty);
+          
+          if (cancelled) return;
+          
+          if (move) {
+            setState(prev => colocarDomino(prev, move));
+          }
+        } catch (e) {
+          console.error('[DominorioGame] AI error:', e);
+        }
+      }, 200);
+      
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer]);
+  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer, difficulty, state]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -75,21 +119,34 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   }, [state, humanPlayer]);
 
   const novoJogo = useCallback(() => {
+    // Cancel any pending AI search
+    aiClientRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
+    setAiMetrics(INITIAL_METRICS);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
+    // Cancel any pending AI search
+    aiClientRef.current?.cancel();
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setHumanPlayer('jogador1'); // Reset ao trocar modo
+    setAiMetrics(INITIAL_METRICS);
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
+    // Cancel any pending AI search
+    aiClientRef.current?.cancel();
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
+    setAiMetrics(INITIAL_METRICS);
+  }, []);
+
+  const handleChangeDifficulty = useCallback((newDifficulty: AIDifficulty) => {
+    setDifficulty(newDifficulty);
   }, []);
 
   // Verificar se uma célula faz parte do preview
@@ -140,6 +197,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           onChangeHumanPlayer={handleChangeHumanPlayer}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
+          // AI props
+          difficulty={difficulty}
+          onChangeDifficulty={handleChangeDifficulty}
+          aiMetrics={aiMetrics}
+          aiReady={aiReady}
         />
 
         {/* Tabuleiro */}

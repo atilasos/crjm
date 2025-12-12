@@ -6,6 +6,12 @@ out
 dist
 *.tgz
 
+# WASM build artifacts
+src/games/dominorio/ai/wasm/pkg/*.js
+src/games/dominorio/ai/wasm/pkg/*.wasm
+src/games/dominorio/ai/wasm/pkg/*.d.ts
+wasm/dominorio_ai/target/
+
 # code coverage
 coverage
 *.lcov
@@ -32,3 +38,6 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Finder (MacOS) folder config
 .DS_Store
+
+# Cursor IDE
+.cursor/

@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import plugin from "bun-plugin-tailwind";
 import { existsSync } from "fs";
-import { rm } from "fs/promises";
+import { rm, mkdir, copyFile } from "fs/promises";
 import path from "path";
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
@@ -25,6 +25,7 @@ Common Options:
   --banner <text>          Add banner text to output
   --footer <text>          Add footer text to output
   --define <obj>           Define global constants (e.g. --define.VERSION=1.0.0)
+  --skip-wasm              Skip WASM compilation (use if Rust toolchain not installed)
   --help, -h               Show this help message
 
 Example:
@@ -47,8 +48,8 @@ const parseValue = (value: string): any => {
   return value;
 };
 
-function parseArgs(): Partial<Bun.BuildConfig> {
-  const config: Partial<Bun.BuildConfig> = {};
+function parseArgs(): Partial<Bun.BuildConfig> & { skipWasm?: boolean } {
+  const config: Partial<Bun.BuildConfig> & { skipWasm?: boolean } = {};
   const args = process.argv.slice(2);
 
   for (let i = 0; i < args.length; i++) {
@@ -105,10 +106,167 @@ const formatFileSize = (bytes: number): string => {
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 };
 
+// ============================================================================
+// WASM Build for Dominório AI
+// ============================================================================
+
+interface WasmBuildResult {
+  success: boolean;
+  message: string;
+}
+
+async function buildDominorioWasm(): Promise<WasmBuildResult> {
+  const wasmCratePath = path.join(process.cwd(), "wasm", "dominorio_ai");
+  const wasmOutputPath = path.join(process.cwd(), "src", "games", "dominorio", "ai", "wasm", "pkg");
+  
+  // Check if Cargo.toml exists
+  if (!existsSync(path.join(wasmCratePath, "Cargo.toml"))) {
+    return { 
+      success: false, 
+      message: "Rust crate not found at wasm/dominorio_ai/" 
+    };
+  }
+  
+  // Check if cargo is available
+  const cargoCheck = Bun.spawn(["which", "cargo"], { stdout: "pipe", stderr: "pipe" });
+  await cargoCheck.exited;
+  
+  if (cargoCheck.exitCode !== 0) {
+    return { 
+      success: false, 
+      message: "Cargo not found. Install Rust toolchain to compile WASM. AI will use TypeScript fallback." 
+    };
+  }
+  
+  // Check if wasm32 target is installed
+  const targetCheck = Bun.spawn(
+    ["rustup", "target", "list", "--installed"],
+    { stdout: "pipe", stderr: "pipe" }
+  );
+  const targetOutput = await new Response(targetCheck.stdout).text();
+  await targetCheck.exited;
+  
+  if (!targetOutput.includes("wasm32-unknown-unknown")) {
+    console.log("📦 Installing wasm32-unknown-unknown target...");
+    const installTarget = Bun.spawn(
+      ["rustup", "target", "add", "wasm32-unknown-unknown"],
+      { stdout: "inherit", stderr: "inherit" }
+    );
+    await installTarget.exited;
+    
+    if (installTarget.exitCode !== 0) {
+      return { 
+        success: false, 
+        message: "Failed to install wasm32-unknown-unknown target" 
+      };
+    }
+  }
+  
+  // Check if wasm-bindgen-cli is installed
+  const wbCheck = Bun.spawn(["which", "wasm-bindgen"], { stdout: "pipe", stderr: "pipe" });
+  await wbCheck.exited;
+  
+  if (wbCheck.exitCode !== 0) {
+    console.log("📦 Installing wasm-bindgen-cli...");
+    const installWb = Bun.spawn(
+      ["cargo", "install", "wasm-bindgen-cli"],
+      { stdout: "inherit", stderr: "inherit" }
+    );
+    await installWb.exited;
+    
+    if (installWb.exitCode !== 0) {
+      return { 
+        success: false, 
+        message: "Failed to install wasm-bindgen-cli" 
+      };
+    }
+  }
+  
+  // Build the WASM
+  console.log("🦀 Building Dominório AI WASM...");
+  const cargoBuild = Bun.spawn(
+    ["cargo", "build", "--release", "--target", "wasm32-unknown-unknown"],
+    { 
+      cwd: wasmCratePath,
+      stdout: "inherit", 
+      stderr: "inherit" 
+    }
+  );
+  await cargoBuild.exited;
+  
+  if (cargoBuild.exitCode !== 0) {
+    return { 
+      success: false, 
+      message: "Cargo build failed" 
+    };
+  }
+  
+  // Run wasm-bindgen
+  const wasmFile = path.join(wasmCratePath, "target", "wasm32-unknown-unknown", "release", "dominorio_ai.wasm");
+  
+  if (!existsSync(wasmFile)) {
+    return { 
+      success: false, 
+      message: "WASM file not found after build" 
+    };
+  }
+  
+  // Create output directory
+  await mkdir(wasmOutputPath, { recursive: true });
+  
+  console.log("🔗 Running wasm-bindgen...");
+  const wasmBindgen = Bun.spawn(
+    [
+      "wasm-bindgen",
+      wasmFile,
+      "--out-dir", wasmOutputPath,
+      "--target", "web",
+      "--omit-default-module-path"
+    ],
+    { 
+      stdout: "inherit", 
+      stderr: "inherit" 
+    }
+  );
+  await wasmBindgen.exited;
+  
+  if (wasmBindgen.exitCode !== 0) {
+    return { 
+      success: false, 
+      message: "wasm-bindgen failed" 
+    };
+  }
+  
+  return { 
+    success: true, 
+    message: "WASM built successfully" 
+  };
+}
+
+// ============================================================================
+// Main Build
+// ============================================================================
+
 console.log("\n🚀 Starting build process...\n");
 
 const cliConfig = parseArgs();
+const skipWasm = cliConfig.skipWasm || false;
+delete cliConfig.skipWasm;
+
 const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
+
+// Build WASM first (if not skipped)
+if (!skipWasm) {
+  const wasmResult = await buildDominorioWasm();
+  if (wasmResult.success) {
+    console.log(`✅ ${wasmResult.message}\n`);
+  } else {
+    console.log(`⚠️  ${wasmResult.message}\n`);
+    console.log("   Continuing with TypeScript fallback for AI...\n");
+  }
+} else {
+  console.log("⏭️  Skipping WASM build (--skip-wasm flag)\n");
+}
 
 if (existsSync(outdir)) {
   console.log(`🗑️ Cleaning previous build at ${outdir}`);

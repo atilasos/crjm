@@ -1,5 +1,18 @@
 import { Player, GameMode, GameStatus } from '../types';
 
+// AI-related types (optional, for games that support AI)
+export type AIDifficulty = 'easy' | 'medium' | 'hard';
+
+export interface AIMetrics {
+  isThinking: boolean;
+  lastDepth: number;
+  lastNodes: number;
+  lastTimeMs: number;
+  lastTTHitRate: number;
+  lastScore: number;
+  fromBook: boolean;
+}
+
 interface PlayerInfoProps {
   modo: GameMode;
   jogadorAtual: Player;
@@ -12,7 +25,24 @@ interface PlayerInfoProps {
   onChangeHumanPlayer?: (player: Player) => void; // Callback para mudar de lado
   onNovoJogo: () => void;
   onTrocarModo: () => void;
+  // AI-specific props (optional)
+  difficulty?: AIDifficulty;
+  onChangeDifficulty?: (difficulty: AIDifficulty) => void;
+  aiMetrics?: AIMetrics;
+  aiReady?: boolean;
 }
+
+const DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
+  easy: 'Fácil',
+  medium: 'Médio',
+  hard: 'Difícil',
+};
+
+const DIFFICULTY_COLORS: Record<AIDifficulty, string> = {
+  easy: 'bg-green-500',
+  medium: 'bg-yellow-500',
+  hard: 'bg-red-500',
+};
 
 export function PlayerInfo({
   modo,
@@ -26,8 +56,14 @@ export function PlayerInfo({
   onChangeHumanPlayer,
   onNovoJogo,
   onTrocarModo,
+  // AI props
+  difficulty,
+  onChangeDifficulty,
+  aiMetrics,
+  aiReady = true,
 }: PlayerInfoProps) {
   const jogoTerminado = estado !== 'a-jogar';
+  const hasAISupport = difficulty !== undefined && onChangeDifficulty !== undefined;
   
   // Em modo vs-computador, determinar nomes e ícones com base em quem é humano
   const getNomeJogador = (jogador: Player) => {
@@ -46,6 +82,13 @@ export function PlayerInfo({
       return jogador === humanPlayer ? '👤' : '🤖';
     }
     return '👤';
+  };
+
+  // Format number with K/M suffix
+  const formatNumber = (n: number): string => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toString();
   };
 
   return (
@@ -90,6 +133,28 @@ export function PlayerInfo({
         </div>
       )}
 
+      {/* Difficulty selector (only for games with AI support) */}
+      {modo === 'vs-computador' && hasAISupport && (
+        <div className="mb-4 pb-4 border-b border-gray-200">
+          <span className="text-sm font-medium text-gray-600 block mb-2">Dificuldade:</span>
+          <div className="flex gap-2">
+            {(['easy', 'medium', 'hard'] as AIDifficulty[]).map((level) => (
+              <button
+                key={level}
+                onClick={() => onChangeDifficulty(level)}
+                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                  difficulty === level
+                    ? `${DIFFICULTY_COLORS[level]} text-white shadow-md`
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {DIFFICULTY_LABELS[level]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Indicadores de jogador */}
       <div className="flex justify-around items-center gap-4 mb-4">
         <div
@@ -117,8 +182,44 @@ export function PlayerInfo({
       {!jogoTerminado && (
         <div className="text-center py-2 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
           <p className="text-gray-700">
-            Vez de: <span className="font-bold">{getNomeJogador(jogadorAtual)}</span>
+            {aiMetrics?.isThinking ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                A pensar...
+              </span>
+            ) : (
+              <>Vez de: <span className="font-bold">{getNomeJogador(jogadorAtual)}</span></>
+            )}
           </p>
+        </div>
+      )}
+
+      {/* AI Metrics (only show if AI has made moves) */}
+      {modo === 'vs-computador' && hasAISupport && aiMetrics && (aiMetrics.lastDepth > 0 || aiMetrics.fromBook) && (
+        <div className="mt-3 p-2 bg-gray-50 rounded-lg">
+          <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 justify-center">
+            {aiMetrics.fromBook ? (
+              <span className="text-indigo-600 font-medium">📖 Livro de aberturas</span>
+            ) : (
+              <>
+                <span title="Profundidade de pesquisa">🔍 {aiMetrics.lastDepth}</span>
+                <span title="Nós pesquisados">🌳 {formatNumber(aiMetrics.lastNodes)}</span>
+                <span title="Tempo de cálculo">{aiMetrics.lastTimeMs.toFixed(0)}ms</span>
+                {aiMetrics.lastTTHitRate > 0 && (
+                  <span title="Taxa de acerto da tabela de transposições">
+                    TT: {(aiMetrics.lastTTHitRate * 100).toFixed(0)}%
+                  </span>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* AI status indicator */}
+      {modo === 'vs-computador' && hasAISupport && !aiReady && (
+        <div className="mt-2 text-center text-xs text-amber-600">
+          ⏳ A carregar motor de IA...
         </div>
       )}
 
@@ -131,4 +232,3 @@ export function PlayerInfo({
     </div>
   );
 }
-
