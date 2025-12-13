@@ -10,11 +10,25 @@ import {
   getCasasVazias,
 } from "./logic";
 import { gerarPosicoesValidas, posToKey, TOTAL_CASAS, Celula } from "./types";
+import { buildIndexMaps } from "./ai/types";
 
 describe("Produto - Tabuleiro Hexagonal", () => {
   test("deve gerar 61 posições válidas para hexágono de lado 5", () => {
     const posicoes = gerarPosicoesValidas();
     expect(posicoes.length).toBe(61);
+  });
+
+  test("posições devem ser únicas e mapeáveis para índices [0..60]", () => {
+    const posicoes = gerarPosicoesValidas();
+    const keys = posicoes.map(posToKey);
+    expect(new Set(keys).size).toBe(61);
+
+    const { idxToPos, keyToIdx } = buildIndexMaps(gerarPosicoesValidas, posToKey);
+    expect(idxToPos.length).toBe(61);
+    expect(keyToIdx.size).toBe(61);
+    for (let i = 0; i < idxToPos.length; i++) {
+      expect(keyToIdx.get(posToKey(idxToPos[i]))).toBe(i);
+    }
   });
 
   test("tabuleiro inicial deve ter 61 casas vazias", () => {
@@ -271,4 +285,3 @@ describe("Produto - Fim de Jogo", () => {
     expect(['vitoria-jogador1', 'vitoria-jogador2', 'empate']).toContain(estado.estado);
   });
 });
-

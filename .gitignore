@@ -15,6 +15,10 @@ src/games/quelhas/ai/wasm/pkg/*.js
 src/games/quelhas/ai/wasm/pkg/*.wasm
 src/games/quelhas/ai/wasm/pkg/*.d.ts
 wasm/quelhas/target/
+src/games/produto/ai/wasm/pkg/*.js
+src/games/produto/ai/wasm/pkg/*.wasm
+src/games/produto/ai/wasm/pkg/*.d.ts
+wasm/produto_ai/target/
 
 # code coverage
 coverage

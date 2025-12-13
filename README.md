@@ -19,7 +19,7 @@ Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do 
 
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
-- **Modo Campeonato**: Torneios online com sistema de dupla eliminação
+- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (neste momento: **Gatos & Cães** e **Dominório**)
 - Regras oficiais do CRJM
 - Interface em **Português de Portugal** (PT-PT)
 - Totalmente responsivo (funciona em computador e tablet)
@@ -29,13 +29,14 @@ Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do 
 ### Pré-requisitos
 
 - [Bun](https://bun.sh/) instalado no sistema
+- *(Opcional, para compilar IA em WASM no build)* **Rust + cargo + rustup** e `wasm-bindgen` (o build tenta compilar e faz fallback para TypeScript se não estiver disponível)
 
 ### Instalação
 
 ```bash
 # Clonar o repositório
 git clone <url-do-repositorio>
-cd jogosmatematicos
+cd crjm
 
 # Instalar dependências
 bun install
@@ -50,11 +51,24 @@ bun run dev
 
 O site estará disponível em `http://localhost:3000`.
 
+Se precisares de mudar a porta:
+
+```bash
+PORT=3001 bun run dev
+```
+
 ### Testes
 
 ```bash
 # Executar testes unitários
 bun test
+```
+
+### Produção (servidor Bun)
+
+```bash
+# Servir a app com Bun (NODE_ENV=production)
+bun run start
 ```
 
 ### Build para produção
@@ -66,9 +80,17 @@ bun run build
 
 Os ficheiros serão gerados na pasta `dist/`.
 
+Notas sobre o build:
+- O `build.ts` tenta compilar WASM para algumas IAs (ex.: Dominório/Quelhas/Produto). Se não tiveres toolchain Rust, o build continua com fallback TypeScript.
+- Para desativar a parte de WASM: `bun run build -- --skip-wasm`
+
 ## 🏆 Servidor de Torneios
 
 O projeto inclui um servidor de torneios que permite organizar campeonatos online com sistema de dupla eliminação.
+
+Atualmente, o servidor (e a UI do modo campeonato) suportam **apenas**:
+- **Gatos & Cães**
+- **Dominório**
 
 ### Iniciar o Servidor
 
@@ -84,6 +106,7 @@ O servidor estará disponível em `http://localhost:4000` com:
 - **WebSocket**: `ws://localhost:4000/ws` - Para ligações dos clientes
 - **Painel Admin**: `http://localhost:4000/admin` - Para gerir o torneio
 - **API HTTP**: `http://localhost:4000/api/*` - Endpoints de administração
+  - `GET /health` - Health check rápido
 
 ### Expor o Servidor Publicamente
 
@@ -129,41 +152,17 @@ Para um guia detalhado sobre como organizar um torneio, consulta o ficheiro [`TO
 
 ## 📦 Publicar no GitHub Pages
 
-### Opção 1: Manualmente
+Este repositório já inclui um workflow em `.github/workflows/deploy.yml` que faz build e publica para GitHub Pages.
+
+### Opção 1: GitHub Actions (recomendado)
+
+1. Ativar GitHub Pages nas definições do repositório (Source: **GitHub Actions**)
+2. Fazer push para `main` (ou correr manualmente via `workflow_dispatch`)
+
+### Opção 2: Manualmente
 
 1. Executar `bun run build`
-2. Copiar o conteúdo da pasta `dist/` para o branch `gh-pages`
-3. Ativar GitHub Pages nas definições do repositório (source: `gh-pages`)
-
-### Opção 2: GitHub Actions
-
-Criar o ficheiro `.github/workflows/deploy.yml`:
-
-```yaml
-name: Deploy to GitHub Pages
-
-on:
-  push:
-    branches: [main]
-
-jobs:
-  build-and-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      
-      - run: bun install
-      - run: bun run build
-      
-      - uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-```
+2. Publicar a pasta `dist/` num hosting estático (GitHub Pages, Netlify, Cloudflare Pages, etc.)
 
 ## 📜 Regras dos Jogos
 
@@ -180,6 +179,7 @@ As regras completas de cada jogo estão disponíveis no site oficial do CRJM:
 ## 📁 Estrutura do Projeto
 
 ```
+build.ts                # Script de build (inclui passos de WASM + workers)
 src/
 ├── components/           # Componentes de UI reutilizáveis
 │   ├── GameCard.tsx
@@ -236,6 +236,7 @@ src/
 ├── frontend.tsx          # Entrada React
 ├── index.html            # HTML base
 └── index.css             # Estilos globais
+wasm/                   # Crates Rust para IA (WASM)
 ```
 
 ## 📝 Licença

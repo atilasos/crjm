@@ -369,6 +369,94 @@ async function buildQuelhasWasm(): Promise<WasmBuildResult> {
 }
 
 // ============================================================================
+// WASM Build for Produto AI
+// ============================================================================
+
+async function buildProdutoWasm(): Promise<WasmBuildResult> {
+  const wasmCratePath = path.join(process.cwd(), "wasm", "produto_ai");
+  const wasmOutputPath = path.join(process.cwd(), "src", "games", "produto", "ai", "wasm", "pkg");
+
+  if (!existsSync(path.join(wasmCratePath, "Cargo.toml"))) {
+    return { success: false, message: "Rust crate not found at wasm/produto_ai/" };
+  }
+
+  const cargoCheck = Bun.spawn(["which", "cargo"], { stdout: "pipe", stderr: "pipe" });
+  await cargoCheck.exited;
+  if (cargoCheck.exitCode !== 0) {
+    return {
+      success: false,
+      message: "Cargo not found. Install Rust toolchain to compile WASM. AI will use fallback.",
+    };
+  }
+
+  const targetCheck = Bun.spawn(["rustup", "target", "list", "--installed"], { stdout: "pipe", stderr: "pipe" });
+  const targetOutput = await new Response(targetCheck.stdout).text();
+  await targetCheck.exited;
+
+  if (!targetOutput.includes("wasm32-unknown-unknown")) {
+    console.log("📦 Installing wasm32-unknown-unknown target...");
+    const installTarget = Bun.spawn(["rustup", "target", "add", "wasm32-unknown-unknown"], {
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    await installTarget.exited;
+    if (installTarget.exitCode !== 0) {
+      return { success: false, message: "Failed to install wasm32-unknown-unknown target" };
+    }
+  }
+
+  const wbCheck = Bun.spawn(["which", "wasm-bindgen"], { stdout: "pipe", stderr: "pipe" });
+  await wbCheck.exited;
+  if (wbCheck.exitCode !== 0) {
+    console.log("📦 Installing wasm-bindgen-cli...");
+    const installWb = Bun.spawn(["cargo", "install", "wasm-bindgen-cli"], {
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    await installWb.exited;
+    if (installWb.exitCode !== 0) {
+      return { success: false, message: "Failed to install wasm-bindgen-cli" };
+    }
+  }
+
+  console.log("🦀 Building Produto AI WASM...");
+  const cargoBuild = Bun.spawn(["cargo", "build", "--release", "--target", "wasm32-unknown-unknown"], {
+    cwd: wasmCratePath,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  await cargoBuild.exited;
+  if (cargoBuild.exitCode !== 0) {
+    return { success: false, message: "Cargo build failed" };
+  }
+
+  const wasmFile = path.join(
+    wasmCratePath,
+    "target",
+    "wasm32-unknown-unknown",
+    "release",
+    "produto_ai.wasm"
+  );
+  if (!existsSync(wasmFile)) {
+    return { success: false, message: "WASM file not found after build" };
+  }
+
+  await mkdir(wasmOutputPath, { recursive: true });
+
+  console.log("🔗 Running wasm-bindgen (Produto)...");
+  const wasmBindgen = Bun.spawn(
+    ["wasm-bindgen", wasmFile, "--out-dir", wasmOutputPath, "--target", "web", "--omit-default-module-path"],
+    { stdout: "inherit", stderr: "inherit" }
+  );
+  await wasmBindgen.exited;
+  if (wasmBindgen.exitCode !== 0) {
+    return { success: false, message: "wasm-bindgen failed" };
+  }
+
+  return { success: true, message: "Produto WASM built successfully" };
+}
+
+// ============================================================================
 // Main Build
 // ============================================================================
 
@@ -382,7 +470,7 @@ const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
 
 // Build WASM first (if not skipped)
 if (!skipWasm) {
-  const wasmResults = [await buildDominorioWasm(), await buildQuelhasWasm()];
+  const wasmResults = [await buildDominorioWasm(), await buildQuelhasWasm(), await buildProdutoWasm()];
   for (const wasmResult of wasmResults) {
     if (wasmResult.success) {
       console.log(`✅ ${wasmResult.message}\n`);
@@ -451,4 +539,20 @@ try {
   );
 } catch (e) {
   console.log(`⚠️  Failed to build/copy Quelhas worker assets: ${e instanceof Error ? e.message : String(e)}\n`);
+}
+
+try {
+  const aiProdutoOut = path.join(outdir, "ai", "produto");
+  await mkdir(aiProdutoOut, { recursive: true });
+
+  // Build Produto worker bundle to dist/ai/produto/produto.worker.js
+  await buildWorker(path.join(process.cwd(), "src", "games", "produto", "ai", "produto.worker.ts"), aiProdutoOut);
+
+  // Copy WASM pkg to dist/ai/produto/wasm/pkg (worker imports "./wasm/pkg/...")
+  await copyDirIfExists(
+    path.join(process.cwd(), "src", "games", "produto", "ai", "wasm", "pkg"),
+    path.join(aiProdutoOut, "wasm", "pkg")
+  );
+} catch (e) {
+  console.log(`⚠️  Failed to build/copy Produto worker assets: ${e instanceof Error ? e.message : String(e)}\n`);
 }
