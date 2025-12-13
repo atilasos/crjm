@@ -15,11 +15,13 @@ import {
   // Boards
   GatosCaesBoard,
   DominorioBoard,
+  QuelhasBoard,
 } from '../tournament';
 
 // Tipos dos jogos
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
 import type { DominorioState, Domino } from '../games/dominorio/types';
+import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas/types';
 
 interface CampeonatoPageProps {
   onVoltar: () => void;
@@ -104,7 +106,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [matchScore, setMatchScore] = useState<{ player1Wins: number; player2Wins: number }>({ player1Wins: 0, player2Wins: 0 });
 
   // Estado do jogo atual
-  const [gameState, setGameState] = useState<GatosCaesState | DominorioState | null>(null);
+  const [gameState, setGameState] = useState<GatosCaesState | DominorioState | QuelhasState | null>(null);
 
   // Log de eventos
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -211,10 +213,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         const gameIdForConversion = currentGameIdRef.current || 'gatos-caes';
         try {
           const localInitialState = fromNetworkGameState(gameIdForConversion, message.initialState);
-          setGameState(localInitialState as GatosCaesState | DominorioState);
+          setGameState(localInitialState as GatosCaesState | DominorioState | QuelhasState);
         } catch {
           // Fallback: assume que já está no formato local
-          setGameState(message.initialState as GatosCaesState | DominorioState);
+          setGameState(message.initialState as GatosCaesState | DominorioState | QuelhasState);
         }
         addLog(
           `Jogo ${message.gameNumber} começou! ${message.youStart ? 'É a tua vez!' : 'Aguarda a jogada do adversário.'}`,
@@ -229,10 +231,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         const gameIdForUpdate = currentGameIdRef.current || 'gatos-caes';
         try {
           const localState = fromNetworkGameState(gameIdForUpdate, message.gameState);
-          setGameState(localState as GatosCaesState | DominorioState);
+          setGameState(localState as GatosCaesState | DominorioState | QuelhasState);
         } catch {
           // Fallback: assume que já está no formato local
-          setGameState(message.gameState as GatosCaesState | DominorioState);
+          setGameState(message.gameState as GatosCaesState | DominorioState | QuelhasState);
         }
         break;
       }
@@ -242,10 +244,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         const gameIdForEnd = currentGameIdRef.current || 'gatos-caes';
         try {
           const localFinalState = fromNetworkGameState(gameIdForEnd, message.finalState);
-          setGameState(localFinalState as GatosCaesState | DominorioState);
+          setGameState(localFinalState as GatosCaesState | DominorioState | QuelhasState);
         } catch {
           // Fallback: assume que já está no formato local
-          setGameState(message.finalState as GatosCaesState | DominorioState);
+          setGameState(message.finalState as GatosCaesState | DominorioState | QuelhasState);
         }
         // Novo protocolo inclui matchScore
         if (message.matchScore) {
@@ -494,8 +496,8 @@ function ConnectForm({
   connectionStatus, connectionError,
   onConnect,
 }: ConnectFormProps) {
-  // Por agora, só suportamos Gatos & Cães e Dominório
-  const games: GameId[] = ['gatos-caes', 'dominorio'];
+  // Jogos suportados no modo campeonato (servidor real + mock)
+  const games: GameId[] = ['gatos-caes', 'dominorio', 'quelhas'];
   const isConnecting = connectionStatus === 'connecting';
 
   return (
@@ -704,7 +706,7 @@ interface MatchAreaProps {
   myRole: 'player1' | 'player2' | null;
   isMyTurn: boolean;
   gameId: GameId | null;
-  gameState: GatosCaesState | DominorioState | null;
+  gameState: GatosCaesState | DominorioState | QuelhasState | null;
   currentGameNumber: number;
   matchScore: { player1Wins: number; player2Wins: number };
   onReady: () => void;
@@ -781,6 +783,16 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               isMyTurn={isMyTurn}
               myRole={gameMyRole as 'jogador1' | 'jogador2'}
               onMove={(domino: Domino) => onMove(domino)}
+            />
+          )}
+
+          {gameId === 'quelhas' && (
+            <QuelhasBoard
+              state={gameState as QuelhasState}
+              isMyTurn={isMyTurn}
+              myRole={gameMyRole as 'jogador1' | 'jogador2'}
+              onMove={(segmento: QuelhasSegmento) => onMove(segmento)}
+              onSwap={() => onMove({ swap: true })}
             />
           )}
         </div>
@@ -900,4 +912,3 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLog
     </div>
   );
 }
-
