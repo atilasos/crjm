@@ -300,6 +300,12 @@ function evaluateMisere(occ: Occ, sideToMove: 0 | 1): number {
   const my = myOrient === 0 ? mV : mH;
   const opp = myOrient === 0 ? mH : mV;
 
+  // Casos terminais misère (monotónicos): ocupar células nunca cria novas jogadas.
+  // - Se eu não tenho jogadas, eu ganho (não posso jogar).
+  // - Se o adversário não tem jogadas e eu tenho, eu sou forçado a jogar e perco (sou o último).
+  if (my.min === 0) return 100000;
+  if (opp.min === 0) return -100000;
+
   let score = 0;
 
   // Reserva exclusiva (tempo)
@@ -370,7 +376,7 @@ function rolloutWinForRoot(occAfterRoot: Occ, sideRoot: 0 | 1, rng: () => number
     const moves = generateMovesDynamic(occ, side);
     if (moves.length === 0) {
       // sem jogadas => side ganha (misère)
-      return side !== sideRoot;
+      return side === sideRoot;
     }
     const mv = moves[Math.floor(rng() * moves.length)]!;
     occ = applyMove(occ, mv);
@@ -739,3 +745,14 @@ export function searchBestMove(
     fromBook: false,
   };
 }
+
+// Exposto apenas para testes/debug.
+export const __internal = {
+  boardToOcc,
+  applyMove,
+  encMove,
+  decMove,
+  generateMovesDynamic,
+  evaluateMisere,
+  rolloutWinForRoot,
+};
