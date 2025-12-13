@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
@@ -8,7 +8,6 @@ import {
   colocarSegmento,
   atualizarPreview,
   getCelulasSegmento,
-  jogadaComputador,
   isPosicaoInicioValida,
   criarSegmentoEntrePosicoes,
   getOrientacaoJogador,
@@ -16,7 +15,8 @@ import {
   recusarTroca,
   decidirTrocaComputador,
 } from './logic';
-import { GameMode } from '../../types';
+import { GameMode, Player } from '../../types';
+import { QuelhasAIClient, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai';
 
 interface QuelhasGameProps {
   onVoltar: () => void;
@@ -40,33 +40,36 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [posicaoInicial, setPosicaoInicial] = useState<Posicao | null>(null);
-  const [humanoEhJogador1, setHumanoEhJogador1] = useState(true); // true = humano joga como Vertical (J1)
+  const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
+  const [difficulty, setDifficulty] = useState<AIDifficulty>('hard');
+  const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
+  const [aiReady, setAiReady] = useState(false);
+  const aiClientRef = useRef<QuelhasAIClient | null>(null);
+
+  // Inicializar cliente de IA (Worker) uma vez
+  useEffect(() => {
+    const client = new QuelhasAIClient({
+      onMetricsUpdate: setAiMetrics,
+      onReady: () => setAiReady(true),
+    });
+    aiClientRef.current = client;
+    return () => client.terminate();
+  }, []);
 
   // Verificar se é a vez do humano jogar
   const isVezDoHumano = useCallback(() => {
     if (state.modo === 'dois-jogadores') return true;
-    return humanoEhJogador1 ? state.jogadorAtual === 'jogador1' : state.jogadorAtual === 'jogador2';
-  }, [state.modo, state.jogadorAtual, humanoEhJogador1]);
-
-  // Verificar se a IA controla o jogador Horizontal (para decisão de troca)
-  const iaControlaHorizontal = useCallback(() => {
-    if (state.modo === 'dois-jogadores') return false;
-    // Se humano é jogador1, IA é jogador2. Se orientação de jogador2 é horizontal, IA controla horizontal.
-    // Se humano é jogador2, IA é jogador1. Se orientação de jogador1 é horizontal, IA controla horizontal.
-    if (humanoEhJogador1) {
-      return state.orientacaoJogador2 === 'horizontal';
-    } else {
-      return state.orientacaoJogador1 === 'horizontal';
-    }
-  }, [state.modo, state.orientacaoJogador1, state.orientacaoJogador2, humanoEhJogador1]);
+    return state.jogadorAtual === humanPlayer;
+  }, [state.modo, state.jogadorAtual, humanPlayer]);
 
   // Efeito para a IA decidir sobre a troca (se for ela a controlar o Horizontal)
   useEffect(() => {
+    if (state.modo !== 'vs-computador') return;
     if (
-      state.modo === 'vs-computador' &&
       state.trocaDisponivel &&
       state.estado === 'a-jogar' &&
-      iaControlaHorizontal()
+      state.jogadorAtual !== humanPlayer &&
+      getOrientacaoJogador(state, state.jogadorAtual) === 'horizontal'
     ) {
       const timer = setTimeout(() => {
         const deveTrocar = decidirTrocaComputador(state);
@@ -78,7 +81,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [state.trocaDisponivel, state.modo, state.estado, iaControlaHorizontal]);
+  }, [state.trocaDisponivel, state.modo, state.estado, state.jogadorAtual, state, humanPlayer]);
 
   // Efeito para jogada do computador
   useEffect(() => {
@@ -86,17 +89,31 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     if (state.estado !== 'a-jogar') return;
     if (state.trocaDisponivel) return; // Aguardar decisão de troca primeiro
     
-    const isVezDaIA = humanoEhJogador1 
-      ? state.jogadorAtual === 'jogador2' 
-      : state.jogadorAtual === 'jogador1';
+    const isVezDaIA = state.jogadorAtual !== humanPlayer;
     
-    if (isVezDaIA) {
-      const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 800);
-      return () => clearTimeout(timer);
+    if (isVezDaIA && aiClientRef.current) {
+      let cancelled = false;
+      const timer = setTimeout(async () => {
+        if (cancelled || !aiClientRef.current) return;
+
+        try {
+          const bestMove = await aiClientRef.current.getBestMove(state, difficulty);
+          if (cancelled) return;
+          if (bestMove) {
+            setState(prev => colocarSegmento(prev, bestMove));
+          }
+        } catch (e) {
+          console.error('[QuelhasGame] AI error:', e);
+        }
+      }, 200);
+
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+        aiClientRef.current?.cancel();
+      };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, state.trocaDisponivel, humanoEhJogador1]);
+  }, [state.jogadorAtual, state.modo, state.estado, state.trocaDisponivel, humanPlayer, difficulty, state]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -113,8 +130,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
     if (!isVezDoHumano()) return;
-    if (state.trocaDisponivel && state.modo === 'dois-jogadores') return; // Aguardar decisão de troca
-    if (state.trocaDisponivel && !iaControlaHorizontal()) return; // Humano horizontal deve decidir troca
+    if (state.trocaDisponivel) return; // Aguardar decisão de troca
     if (state.tabuleiro[pos.linha][pos.coluna] === 'ocupada') return;
 
     if (posicaoInicial === null) {
@@ -137,7 +153,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         }
       }
     }
-  }, [state, posicaoInicial, isVezDoHumano, iaControlaHorizontal]);
+  }, [state, posicaoInicial, isVezDoHumano]);
 
   const handleMouseEnter = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
@@ -157,24 +173,34 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   }, []);
 
   const novoJogo = useCallback(() => {
+    aiClientRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
     setPosicaoInicial(null);
+    setAiMetrics(INITIAL_METRICS);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
+    aiClientRef.current?.cancel();
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setPosicaoInicial(null);
+    setAiMetrics(INITIAL_METRICS);
   }, [state.modo]);
 
-  const escolherLado = useCallback((jogarComoVertical: boolean) => {
-    setHumanoEhJogador1(jogarComoVertical);
-    setState(criarEstadoInicial(state.modo));
+  const handleChangeHumanPlayer = useCallback((player: Player) => {
+    aiClientRef.current?.cancel();
+    setHumanPlayer(player);
+    setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
     setPosicaoInicial(null);
-  }, [state.modo]);
+    setAiMetrics(INITIAL_METRICS);
+  }, []);
+
+  const handleChangeDifficulty = useCallback((d: AIDifficulty) => {
+    setDifficulty(d);
+  }, []);
 
   const handleTroca = useCallback(() => {
     setState(prev => trocarOrientacoes(prev));
@@ -226,12 +252,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     return classes;
   };
 
-  // Verificar se o humano controla o horizontal (para mostrar UI de troca)
-  const humanoControlaHorizontal = state.modo === 'dois-jogadores' || !humanoEhJogador1;
-  const mostrarUiTroca = state.trocaDisponivel && 
-                         state.estado === 'a-jogar' && 
-                         humanoControlaHorizontal &&
-                         (state.modo === 'dois-jogadores' || !iaControlaHorizontal());
+  const mostrarUiTroca =
+    state.trocaDisponivel &&
+    state.estado === 'a-jogar' &&
+    getOrientacaoJogador(state, state.jogadorAtual) === 'horizontal' &&
+    (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer);
 
   // Determinar nomes dos jogadores baseado nas orientações atuais
   const getNomeJogador = (jogador: 'jogador1' | 'jogador2') => {
@@ -251,41 +276,15 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           nomeJogador2={getNomeJogador('jogador2')}
           corJogador1={state.orientacaoJogador1 === 'vertical' ? 'bg-pink-500' : 'bg-cyan-500'}
           corJogador2={state.orientacaoJogador2 === 'vertical' ? 'bg-pink-500' : 'bg-cyan-500'}
-          humanPlayer={humanoEhJogador1 ? 'jogador1' : 'jogador2'}
+          humanPlayer={humanPlayer}
+          onChangeHumanPlayer={handleChangeHumanPlayer}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
+          difficulty={difficulty}
+          onChangeDifficulty={handleChangeDifficulty}
+          aiMetrics={aiMetrics}
+          aiReady={aiReady}
         />
-
-        {/* Escolha de lado (apenas vs computador) */}
-        {state.modo === 'vs-computador' && state.primeiraJogada && !state.trocaDisponivel && (
-          <div className="bg-indigo-100 border-2 border-indigo-300 rounded-xl p-4">
-            <p className="text-indigo-800 font-semibold text-sm mb-3 text-center">
-              Escolhe o teu lado:
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => escolherLado(true)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                  humanoEhJogador1 
-                    ? 'bg-pink-500 text-white ring-2 ring-pink-300' 
-                    : 'bg-white text-pink-600 border border-pink-300 hover:bg-pink-50'
-                }`}
-              >
-                Vertical (começa)
-              </button>
-              <button
-                onClick={() => escolherLado(false)}
-                className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                  !humanoEhJogador1 
-                    ? 'bg-cyan-500 text-white ring-2 ring-cyan-300' 
-                    : 'bg-white text-cyan-600 border border-cyan-300 hover:bg-cyan-50'
-                }`}
-              >
-                Horizontal (2.º)
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* UI de decisão de troca */}
         {mostrarUiTroca && (
@@ -386,7 +385,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           modo={state.modo}
           nomeJogador1={getNomeJogador('jogador1')}
           nomeJogador2={getNomeJogador('jogador2')}
-          humanoEhJogador1={humanoEhJogador1}
+          humanoEhJogador1={humanPlayer === 'jogador1'}
           onFechar={() => setMostrarVencedor(false)}
           onNovoJogo={novoJogo}
         />

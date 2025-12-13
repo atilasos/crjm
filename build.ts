@@ -244,6 +244,106 @@ async function buildDominorioWasm(): Promise<WasmBuildResult> {
 }
 
 // ============================================================================
+// WASM Build for Quelhas AI
+// ============================================================================
+
+async function buildQuelhasWasm(): Promise<WasmBuildResult> {
+  const workspaceRoot = path.join(process.cwd(), "wasm", "quelhas");
+  const wasmCratePath = path.join(workspaceRoot, "quelhas-wasm");
+  const wasmOutputPath = path.join(process.cwd(), "src", "games", "quelhas", "ai", "wasm", "pkg");
+
+  if (!existsSync(path.join(wasmCratePath, "Cargo.toml"))) {
+    return {
+      success: false,
+      message: "Rust crate not found at wasm/quelhas/quelhas-wasm/",
+    };
+  }
+
+  const cargoCheck = Bun.spawn(["which", "cargo"], { stdout: "pipe", stderr: "pipe" });
+  await cargoCheck.exited;
+  if (cargoCheck.exitCode !== 0) {
+    return {
+      success: false,
+      message: "Cargo not found. Install Rust toolchain to compile WASM. AI will use TypeScript fallback.",
+    };
+  }
+
+  const targetCheck = Bun.spawn(["rustup", "target", "list", "--installed"], { stdout: "pipe", stderr: "pipe" });
+  const targetOutput = await new Response(targetCheck.stdout).text();
+  await targetCheck.exited;
+
+  if (!targetOutput.includes("wasm32-unknown-unknown")) {
+    console.log("📦 Installing wasm32-unknown-unknown target...");
+    const installTarget = Bun.spawn(["rustup", "target", "add", "wasm32-unknown-unknown"], {
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    await installTarget.exited;
+    if (installTarget.exitCode !== 0) {
+      return { success: false, message: "Failed to install wasm32-unknown-unknown target" };
+    }
+  }
+
+  const wbCheck = Bun.spawn(["which", "wasm-bindgen"], { stdout: "pipe", stderr: "pipe" });
+  await wbCheck.exited;
+  if (wbCheck.exitCode !== 0) {
+    console.log("📦 Installing wasm-bindgen-cli...");
+    const installWb = Bun.spawn(["cargo", "install", "wasm-bindgen-cli"], {
+      stdout: "inherit",
+      stderr: "inherit",
+    });
+    await installWb.exited;
+    if (installWb.exitCode !== 0) {
+      return { success: false, message: "Failed to install wasm-bindgen-cli" };
+    }
+  }
+
+  console.log("🦀 Building Quelhas AI WASM...");
+  const cargoBuild = Bun.spawn(["cargo", "build", "-p", "quelhas_wasm", "--release", "--target", "wasm32-unknown-unknown"], {
+    cwd: workspaceRoot,
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+  await cargoBuild.exited;
+  if (cargoBuild.exitCode !== 0) {
+    return { success: false, message: "Cargo build failed" };
+  }
+
+  const wasmFile = path.join(
+    workspaceRoot,
+    "target",
+    "wasm32-unknown-unknown",
+    "release",
+    "quelhas_wasm.wasm"
+  );
+  if (!existsSync(wasmFile)) {
+    return { success: false, message: "WASM file not found after build" };
+  }
+
+  await mkdir(wasmOutputPath, { recursive: true });
+
+  console.log("🔗 Running wasm-bindgen (Quelhas)...");
+  const wasmBindgen = Bun.spawn(
+    [
+      "wasm-bindgen",
+      wasmFile,
+      "--out-dir",
+      wasmOutputPath,
+      "--target",
+      "web",
+      "--omit-default-module-path",
+    ],
+    { stdout: "inherit", stderr: "inherit" }
+  );
+  await wasmBindgen.exited;
+  if (wasmBindgen.exitCode !== 0) {
+    return { success: false, message: "wasm-bindgen failed" };
+  }
+
+  return { success: true, message: "Quelhas WASM built successfully" };
+}
+
+// ============================================================================
 // Main Build
 // ============================================================================
 
@@ -257,12 +357,14 @@ const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
 
 // Build WASM first (if not skipped)
 if (!skipWasm) {
-  const wasmResult = await buildDominorioWasm();
-  if (wasmResult.success) {
-    console.log(`✅ ${wasmResult.message}\n`);
-  } else {
-    console.log(`⚠️  ${wasmResult.message}\n`);
-    console.log("   Continuing with TypeScript fallback for AI...\n");
+  const wasmResults = [await buildDominorioWasm(), await buildQuelhasWasm()];
+  for (const wasmResult of wasmResults) {
+    if (wasmResult.success) {
+      console.log(`✅ ${wasmResult.message}\n`);
+    } else {
+      console.log(`⚠️  ${wasmResult.message}\n`);
+      console.log("   Continuing with TypeScript fallback for AI...\n");
+    }
   }
 } else {
   console.log("⏭️  Skipping WASM build (--skip-wasm flag)\n");

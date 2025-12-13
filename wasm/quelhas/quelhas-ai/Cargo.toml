@@ -1,0 +1,12 @@
+[package]
+name = "quelhas-ai"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "quelhas_ai"
+path = "src/lib.rs"
+
+[dependencies]
+quelhas-core = { path = "../quelhas-core" }
+

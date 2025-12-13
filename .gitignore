@@ -11,6 +11,10 @@ src/games/dominorio/ai/wasm/pkg/*.js
 src/games/dominorio/ai/wasm/pkg/*.wasm
 src/games/dominorio/ai/wasm/pkg/*.d.ts
 wasm/dominorio_ai/target/
+src/games/quelhas/ai/wasm/pkg/*.js
+src/games/quelhas/ai/wasm/pkg/*.wasm
+src/games/quelhas/ai/wasm/pkg/*.d.ts
+wasm/quelhas/target/
 
 # code coverage
 coverage
