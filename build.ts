@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import plugin from "bun-plugin-tailwind";
 import { existsSync } from "fs";
-import { rm, mkdir, copyFile } from "fs/promises";
+import { rm, mkdir, copyFile, cp } from "fs/promises";
 import path from "path";
 
 if (process.argv.includes("--help") || process.argv.includes("-h")) {
@@ -105,6 +105,31 @@ const formatFileSize = (bytes: number): string => {
 
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 };
+
+// Copy directory recursively if exists
+async function copyDirIfExists(srcDir: string, destDir: string): Promise<void> {
+  if (!existsSync(srcDir)) return;
+  await mkdir(destDir, { recursive: true });
+  await cp(srcDir, destDir, { recursive: true, force: true });
+}
+
+// Build a standalone worker bundle (no splitting) for static hosting
+async function buildWorker(entry: string, outdir: string): Promise<void> {
+  const result = await Bun.build({
+    entrypoints: [entry],
+    outdir,
+    target: "browser",
+    format: "esm",
+    splitting: false,
+    minify: true,
+    sourcemap: "linked",
+  });
+
+  if (!result.success) {
+    const errors = result.logs?.filter(l => l.level === "error").map(l => l.message).join("\n");
+    throw new Error(errors || "Worker build failed");
+  }
+}
 
 // ============================================================================
 // WASM Build for Dominório AI
@@ -407,3 +432,23 @@ console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
 
 console.log(`\n✅ Build completed in ${buildTime}ms\n`);
+
+// ============================================================================
+// Extra outputs: AI workers + WASM pkg copies (for GitHub Pages)
+// ============================================================================
+
+try {
+  const aiQuelhasOut = path.join(outdir, "ai", "quelhas");
+  await mkdir(aiQuelhasOut, { recursive: true });
+
+  // Build Quelhas worker bundle to dist/ai/quelhas/quelhas.worker.js
+  await buildWorker(path.join(process.cwd(), "src", "games", "quelhas", "ai", "quelhas.worker.ts"), aiQuelhasOut);
+
+  // Copy WASM pkg to dist/ai/quelhas/wasm/pkg (worker imports "./wasm/pkg/...")
+  await copyDirIfExists(
+    path.join(process.cwd(), "src", "games", "quelhas", "ai", "wasm", "pkg"),
+    path.join(aiQuelhasOut, "wasm", "pkg")
+  );
+} catch (e) {
+  console.log(`⚠️  Failed to build/copy Quelhas worker assets: ${e instanceof Error ? e.message : String(e)}\n`);
+}

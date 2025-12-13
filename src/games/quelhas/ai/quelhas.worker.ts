@@ -85,9 +85,11 @@ async function init(): Promise<void> {
     console.warn('[QuelhasAI] WASM not available, using TypeScript fallback:', e);
     useWasm = false;
   }
-
-  post({ type: 'ready' });
 }
+
+// Signal ready imediatamente: o worker pode sempre responder via TS fallback,
+// e ativa WASM assim que estiver disponível.
+post({ type: 'ready' });
 
 self.onmessage = (event: MessageEvent<AIRequest>) => {
   const req = event.data;
@@ -166,5 +168,4 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
 
 init().catch(e => {
   console.error('[QuelhasAI] Initialization failed:', e);
-  post({ type: 'ready' });
 });
