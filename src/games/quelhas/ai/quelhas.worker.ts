@@ -75,14 +75,35 @@ function decodeMoveToSegmento(move: number, orientacaoIA: 'vertical' | 'horizont
 }
 
 async function init(): Promise<void> {
+  let wasmUrl: URL | null = null;
   try {
     const wasmModule = await import('./wasm/pkg/quelhas_wasm.js');
-    await wasmModule.default();
+    // wasm-bindgen foi gerado com `--omit-default-module-path`, por isso temos de
+    // indicar explicitamente onde está o .wasm.
+    wasmUrl = new URL('./wasm/pkg/quelhas_wasm_bg.wasm', import.meta.url);
+    await wasmModule.default(wasmUrl);
     wasmEngine = new wasmModule.QuelhasEngine(18);
     useWasm = true;
     console.log('[QuelhasAI] WASM engine initialized');
   } catch (e) {
     console.warn('[QuelhasAI] WASM not available, using TypeScript fallback:', e);
+    if (wasmUrl) {
+      try {
+        const resp = await fetch(wasmUrl);
+        const ct = resp.headers.get('content-type') ?? '';
+        const buf = new Uint8Array(await resp.arrayBuffer());
+        const magic = buf.length >= 4 ? Array.from(buf.slice(0, 4)).map(b => b.toString(16).padStart(2, '0')).join(' ') : '';
+        console.warn('[QuelhasAI] WASM diagnostics:', {
+          wasmUrl: wasmUrl.href,
+          ok: resp.ok,
+          status: resp.status,
+          contentType: ct,
+          magic,
+        });
+      } catch (diagErr) {
+        console.warn('[QuelhasAI] WASM diagnostics failed:', diagErr);
+      }
+    }
     useWasm = false;
   }
 }
