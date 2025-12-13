@@ -23,6 +23,7 @@ export class QuelhasAIClient {
   private pending = new Map<number, { resolve: (m: Segmento | null) => void; reject: (e: Error) => void }>();
   private currentMetrics: AIMetrics = { ...INITIAL_METRICS };
   private options: AIClientOptions;
+  private readyTimeout: ReturnType<typeof setTimeout> | null = null;
 
   constructor(options: AIClientOptions = {}) {
     this.options = options;
@@ -33,9 +34,15 @@ export class QuelhasAIClient {
     try {
       this.worker = new Worker(new URL('./quelhas.worker.ts', import.meta.url), { type: 'module' });
       this.worker.onmessage = (event: MessageEvent<AIResponse>) => this.onMessage(event.data);
-      this.worker.onerror = () => {
-        this.isReady = false;
-      };
+      this.worker.onerror = () => this.fallbackToInline('worker-error');
+
+      // Se o worker não enviar "ready" (ex.: asset não bundlado no GitHub Pages),
+      // fazer fallback para execução inline (como no Dominório).
+      this.readyTimeout = setTimeout(() => {
+        if (!this.isReady) {
+          this.fallbackToInline('ready-timeout');
+        }
+      }, 1500);
     } catch {
       // Fallback: sem worker (dev / ambiente limitado)
       this.worker = null;
@@ -44,8 +51,41 @@ export class QuelhasAIClient {
     }
   }
 
+  private fallbackToInline(reason: string): void {
+    if (this.readyTimeout) {
+      clearTimeout(this.readyTimeout);
+      this.readyTimeout = null;
+    }
+
+    // Se já estamos em fallback, não repetir
+    if (!this.worker) {
+      this.isReady = true;
+      this.options.onReady?.();
+      return;
+    }
+
+    try {
+      this.worker.terminate();
+    } catch {
+      // ignore
+    }
+    this.worker = null;
+    this.isReady = true;
+
+    // Limpar pendentes para não ficar preso em "A pensar..."
+    this.cancel();
+
+    // Opcional: manter log só em ambientes com consola
+    console.warn?.('[QuelhasAI] Falling back to inline engine:', reason);
+    this.options.onReady?.();
+  }
+
   private onMessage(msg: AIResponse): void {
     if (msg.type === 'ready') {
+      if (this.readyTimeout) {
+        clearTimeout(this.readyTimeout);
+        this.readyTimeout = null;
+      }
       this.isReady = true;
       this.options.onReady?.();
       return;
@@ -96,7 +136,8 @@ export class QuelhasAIClient {
 
     const preset = DIFFICULTY_PRESETS[difficulty];
 
-    if (!this.worker) {
+    // Se não temos worker (ou ainda não está pronto), fazer fallback inline.
+    if (!this.worker || !this.isReady) {
       const result = searchBestMove(state.tabuleiro, minhaOrientacao, preset);
       this.currentMetrics = {
         isThinking: false,
@@ -137,6 +178,10 @@ export class QuelhasAIClient {
   }
 
   terminate(): void {
+    if (this.readyTimeout) {
+      clearTimeout(this.readyTimeout);
+      this.readyTimeout = null;
+    }
     this.cancel();
     this.worker?.terminate();
     this.worker = null;
@@ -151,4 +196,3 @@ export class QuelhasAIClient {
     return this.currentMetrics;
   }
 }
-
