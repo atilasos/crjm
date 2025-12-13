@@ -65,6 +65,16 @@ pub fn evaluate_misere(occ: Occupancy, side_to_move: u8) -> i32 {
 
     let (my, opp) = if side_to_move == 0 { (m_v, m_h) } else { (m_h, m_v) };
 
+    // Casos terminais misère (monotónicos): ocupar células nunca cria novas jogadas.
+    // - Se eu não tenho jogadas, eu ganho (não posso jogar).
+    // - Se o adversário não tem jogadas e eu tenho, eu sou forçado a jogar e perco (sou o último).
+    if my.min == 0 {
+        return 100_000;
+    }
+    if opp.min == 0 {
+        return -100_000;
+    }
+
     let mut score = 0i32;
     score += (my.max_excl - opp.max_excl) * 50;
     score += ((my.max - my.min) - (opp.max - opp.min)) * 15;
@@ -110,4 +120,3 @@ pub fn cheap_move_score(occ: Occupancy, mv: u16, side_to_move: u8) -> i32 {
     // score aproximado: avaliação do nó filho do ponto de vista de quem joga agora (adversário)
     -evaluate_misere(child, opp)
 }
-
