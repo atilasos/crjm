@@ -103,6 +103,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
             setState(prev => colocarSegmento(prev, bestMove));
           }
         } catch (e) {
+          if (e instanceof Error && e.message === 'cancelled') return;
           console.error('[QuelhasGame] AI error:', e);
         }
       }, 200);
@@ -169,8 +170,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   }, [state, posicaoInicial, isVezDoHumano]);
 
   const handleMouseLeave = useCallback(() => {
+    if (state.estado !== 'a-jogar') return;
+    if (!isVezDoHumano()) return;
+    if (state.trocaDisponivel) return;
+    if (!state.segmentoPreview) return;
     setState(prev => ({ ...prev, segmentoPreview: null }));
-  }, []);
+  }, [state.estado, state.trocaDisponivel, state.segmentoPreview, isVezDoHumano]);
 
   const novoJogo = useCallback(() => {
     aiClientRef.current?.cancel();
