@@ -34,8 +34,17 @@ import { toNetworkGameState } from './game-protocol';
 // Importar lógica dos jogos
 import { criarEstadoInicial as criarGatosCaes, colocarPeca as colocarGatosCaes, jogadaComputador as iaGatosCaes } from '../games/gatos-caes/logic';
 import { criarEstadoInicial as criarDominorio, colocarDomino as colocarDominorio, jogadaComputador as iaDominorio } from '../games/dominorio/logic';
+import {
+  criarEstadoInicial as criarQuelhas,
+  colocarSegmento as colocarQuelhasSegmento,
+  isSegmentoValido as isSegmentoValidoQuelhas,
+  trocarOrientacoes as trocarOrientacoesQuelhas,
+  decidirTrocaComputador as decidirTrocaQuelhas,
+  jogadaComputador as iaQuelhas,
+} from '../games/quelhas/logic';
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
 import type { DominorioState, Domino } from '../games/dominorio/types';
+import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas/types';
 
 // Nomes fictícios para bots
 const BOT_NAMES = [
@@ -55,7 +64,7 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 10);
 }
 
-type GameState = GatosCaesState | DominorioState;
+type GameState = GatosCaesState | DominorioState | QuelhasState;
 
 // Internal match tracking (includes game number etc.)
 interface InternalMatch extends Match {
@@ -636,6 +645,8 @@ export class TournamentClientMock implements TournamentClient {
         return criarGatosCaes('dois-jogadores');
       case 'dominorio':
         return criarDominorio('dois-jogadores');
+      case 'quelhas':
+        return criarQuelhas('dois-jogadores');
       default:
         // Fallback para Gatos & Cães
         return criarGatosCaes('dois-jogadores');
@@ -659,6 +670,29 @@ export class TournamentClientMock implements TournamentClient {
           const domState = state as DominorioState;
           return colocarDominorio(domState, domino);
         }
+        case 'quelhas': {
+          const qState = state as QuelhasState;
+          const anyMove = move as any;
+          if (anyMove && typeof anyMove === 'object' && anyMove.swap === true) {
+            if (!qState.trocaDisponivel || qState.estado !== 'a-jogar') return null;
+            const next = trocarOrientacoesQuelhas(qState);
+            return next === qState ? null : next;
+          }
+
+          const segmento = move as QuelhasSegmento;
+          if (
+            !segmento ||
+            !segmento.inicio ||
+            typeof segmento.inicio.linha !== 'number' ||
+            typeof segmento.inicio.coluna !== 'number' ||
+            typeof segmento.comprimento !== 'number' ||
+            (segmento.orientacao !== 'vertical' && segmento.orientacao !== 'horizontal')
+          ) {
+            return null;
+          }
+          if (!isSegmentoValidoQuelhas(qState, segmento)) return null;
+          return colocarQuelhasSegmento(qState, segmento);
+        }
         default:
           return null;
       }
@@ -673,6 +707,13 @@ export class TournamentClientMock implements TournamentClient {
         return iaGatosCaes(state as GatosCaesState);
       case 'dominorio':
         return iaDominorio(state as DominorioState);
+      case 'quelhas': {
+        const qState = state as QuelhasState;
+        if (qState.trocaDisponivel && decidirTrocaQuelhas(qState)) {
+          return trocarOrientacoesQuelhas(qState);
+        }
+        return iaQuelhas(qState);
+      }
       default:
         return null;
     }

@@ -24,14 +24,21 @@ import {
 
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
 import type { DominorioState, Domino } from '../games/dominorio/types';
+import {
+  criarEstadoInicial as criarQuelhas,
+  colocarSegmento as colocarQuelhasSegmento,
+  isSegmentoValido as isSegmentoValidoQuelhas,
+  trocarOrientacoes as trocarOrientacoesQuelhas,
+} from '../games/quelhas/logic';
+import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas/types';
 
 // ============================================================================
 // Tipos
 // ============================================================================
 
-export type GameState = GatosCaesState | DominorioState;
+export type GameState = GatosCaesState | DominorioState | QuelhasState;
 
-export type GameMove = GatosCaesPosicao | Domino;
+export type GameMove = GatosCaesPosicao | Domino | QuelhasSegmento | { swap: true };
 
 export interface GameAdapter {
   createInitialState(): GameState;
@@ -143,12 +150,145 @@ const dominorioAdapter: GameAdapter = {
 };
 
 // ============================================================================
+// Adaptador para Quelhas
+// ============================================================================
+
+function parseQuelhasMove(move: unknown): { kind: 'swap' } | { kind: 'segmento'; segmento: QuelhasSegmento } | null {
+  if (!move || typeof move !== 'object') return null;
+  const anyMove = move as any;
+
+  // Regra de troca
+  if (anyMove.swap === true) {
+    const cells = anyMove.cells;
+    if (cells == null || (Array.isArray(cells) && cells.length === 0)) {
+      return { kind: 'swap' };
+    }
+    return null;
+  }
+
+  // Segmento no formato local
+  if (
+    anyMove.inicio &&
+    typeof anyMove.inicio.linha === 'number' &&
+    typeof anyMove.inicio.coluna === 'number' &&
+    typeof anyMove.comprimento === 'number' &&
+    (anyMove.orientacao === 'vertical' || anyMove.orientacao === 'horizontal')
+  ) {
+    return {
+      kind: 'segmento',
+      segmento: {
+        inicio: { linha: anyMove.inicio.linha, coluna: anyMove.inicio.coluna },
+        comprimento: anyMove.comprimento,
+        orientacao: anyMove.orientacao,
+      },
+    };
+  }
+
+  // Segmento no formato de rede: { cells: [{row,col}, ...] }
+  if (Array.isArray(anyMove.cells) && anyMove.cells.length >= 2) {
+    const cells = anyMove.cells as Array<{ row: unknown; col: unknown }>;
+    const parsed = cells
+      .map(c => ({ row: Number(c?.row), col: Number(c?.col) }))
+      .filter(c => Number.isFinite(c.row) && Number.isFinite(c.col));
+
+    if (parsed.length !== cells.length) return null;
+
+    const rows = new Set<number>(parsed.map(c => c.row));
+    const cols = new Set<number>(parsed.map(c => c.col));
+
+    let orientacao: 'vertical' | 'horizontal' | null = null;
+    if (rows.size === 1 && cols.size >= 2) orientacao = 'horizontal';
+    if (cols.size === 1 && rows.size >= 2) orientacao = 'vertical';
+    if (!orientacao) return null;
+
+    if (orientacao === 'horizontal') {
+      const linha = parsed[0].row;
+      const colunas = [...cols].sort((a, b) => a - b);
+      const colunaMin = colunas[0];
+      const colunaMax = colunas[colunas.length - 1];
+      const comprimento = colunaMax - colunaMin + 1;
+      if (comprimento !== parsed.length) return null;
+      const unique = new Set(parsed.map(c => `${c.row},${c.col}`));
+      if (unique.size !== parsed.length) return null;
+      for (let c = colunaMin; c <= colunaMax; c++) {
+        if (!unique.has(`${linha},${c}`)) return null;
+      }
+      return { kind: 'segmento', segmento: { inicio: { linha, coluna: colunaMin }, comprimento, orientacao } };
+    }
+
+    // vertical
+    const coluna = parsed[0].col;
+    const linhas = [...rows].sort((a, b) => a - b);
+    const linhaMin = linhas[0];
+    const linhaMax = linhas[linhas.length - 1];
+    const comprimento = linhaMax - linhaMin + 1;
+    if (comprimento !== parsed.length) return null;
+    const unique = new Set(parsed.map(c => `${c.row},${c.col}`));
+    if (unique.size !== parsed.length) return null;
+    for (let r = linhaMin; r <= linhaMax; r++) {
+      if (!unique.has(`${r},${coluna}`)) return null;
+    }
+    return { kind: 'segmento', segmento: { inicio: { linha: linhaMin, coluna }, comprimento, orientacao } };
+  }
+
+  return null;
+}
+
+const quelhasAdapter: GameAdapter = {
+  createInitialState(): QuelhasState {
+    return criarQuelhas('dois-jogadores');
+  },
+
+  applyMove(state: GameState, move: unknown): QuelhasState | null {
+    const qState = state as QuelhasState;
+    const parsed = parseQuelhasMove(move);
+    if (!parsed) return null;
+
+    if (parsed.kind === 'swap') {
+      const next = trocarOrientacoesQuelhas(qState);
+      return next === qState ? null : next;
+    }
+
+    const next = colocarQuelhasSegmento(qState, parsed.segmento);
+    return next === qState ? null : next;
+  },
+
+  isValidMove(state: GameState, move: unknown): boolean {
+    const qState = state as QuelhasState;
+    const parsed = parseQuelhasMove(move);
+    if (!parsed) return false;
+
+    if (parsed.kind === 'swap') {
+      return qState.estado === 'a-jogar' && qState.trocaDisponivel;
+    }
+
+    return isSegmentoValidoQuelhas(qState, parsed.segmento);
+  },
+
+  isGameOver(state: GameState): boolean {
+    return state.estado !== 'a-jogar';
+  },
+
+  getWinner(state: GameState): 'jogador1' | 'jogador2' | null {
+    const qState = state as QuelhasState;
+    if (qState.estado === 'vitoria-jogador1') return 'jogador1';
+    if (qState.estado === 'vitoria-jogador2') return 'jogador2';
+    return null;
+  },
+
+  getCurrentPlayer(state: GameState): 'jogador1' | 'jogador2' {
+    return state.jogadorAtual;
+  },
+};
+
+// ============================================================================
 // Mapa de adaptadores
 // ============================================================================
 
 const adapters: Partial<Record<GameId, GameAdapter>> = {
   'gatos-caes': gatosCaesAdapter,
   'dominorio': dominorioAdapter,
+  'quelhas': quelhasAdapter,
 };
 
 // ============================================================================

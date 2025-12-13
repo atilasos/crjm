@@ -255,7 +255,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
   return (
     <div className="space-y-4">
       {/* Botão de troca se disponível */}
-      {state.trocaDisponivel && isMyTurn && myRole === 'jogador2' && onSwap && (
+      {state.trocaDisponivel && isMyTurn && onSwap && (
         <div className="text-center">
           <button
             onClick={onSwap}
@@ -616,4 +616,3 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
     </div>
   );
 }
-

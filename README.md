@@ -19,7 +19,7 @@ Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do 
 
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
-- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (neste momento: **Gatos & Cães** e **Dominório**)
+- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (neste momento: **Gatos & Cães**, **Dominório** e **Quelhas**)
 - Regras oficiais do CRJM
 - Interface em **Português de Portugal** (PT-PT)
 - Totalmente responsivo (funciona em computador e tablet)
@@ -91,6 +91,7 @@ O projeto inclui um servidor de torneios que permite organizar campeonatos onlin
 Atualmente, o servidor (e a UI do modo campeonato) suportam **apenas**:
 - **Gatos & Cães**
 - **Dominório**
+- **Quelhas**
 
 ### Iniciar o Servidor
 
