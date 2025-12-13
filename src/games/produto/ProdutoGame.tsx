@@ -10,6 +10,9 @@ import {
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
+import { ProdutoAIClient, decodeMove } from './ai/ai-client';
+import type { AIDifficulty } from './ai/types';
+import { INITIAL_METRICS } from './ai/types';
 
 interface ProdutoGameProps {
   onVoltar: () => void;
@@ -33,6 +36,9 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [corSelecionada, setCorSelecionada] = useState<'preta' | 'branca'>('preta');
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
+  const [aiMetrics, setAiMetrics] = useState(() => ({ ...INITIAL_METRICS }));
+  const aiClientRef = useMemo(() => new ProdutoAIClient({ onMetricsUpdate: setAiMetrics }), []);
 
   // Gerar posições do tabuleiro uma vez
   const posicoes = useMemo(() => gerarPosicoesValidas(), []);
@@ -44,12 +50,43 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       state.jogadorAtual !== humanPlayer && 
       state.estado === 'a-jogar'
     ) {
+      let cancelled = false;
       const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 800);
-      return () => clearTimeout(timer);
+        aiClientRef
+          .getBestMove(state, aiDifficulty)
+          .then(move => {
+            if (cancelled) return;
+
+            if (!move) {
+              setState(prev => jogadaComputador(prev));
+              return;
+            }
+
+            const decoded = decodeMove(move, aiClientRef.idxToPos);
+            if (!decoded) {
+              setState(prev => jogadaComputador(prev));
+              return;
+            }
+
+            setState(prev => {
+              let st = colocarPeca(prev, decoded.pos1, decoded.cor1);
+              if (decoded.pos2 && decoded.cor2) {
+                st = colocarPeca(st, decoded.pos2, decoded.cor2);
+              }
+              return st;
+            });
+          })
+          .catch(() => {
+            if (cancelled) return;
+            setState(prev => jogadaComputador(prev));
+          });
+      }, 250);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer]);
+  }, [state, humanPlayer, aiDifficulty, aiClientRef]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -92,6 +129,10 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
   }, []);
+
+  useEffect(() => {
+    return () => aiClientRef.terminate();
+  }, [aiClientRef]);
 
   // Converter coordenadas axiais para posição no ecrã (pointy-top orientation)
   const hexToPixel = (q: number, r: number, size: number) => {
@@ -180,6 +221,30 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        {/* Configuração de IA (só no modo vs-computador) */}
+        {state.modo === 'vs-computador' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm font-medium text-blue-900">Dificuldade (IA)</label>
+              <select
+                className="text-sm rounded-lg border border-blue-200 bg-white px-2 py-1"
+                value={aiDifficulty}
+                onChange={e => setAiDifficulty(e.target.value as AIDifficulty)}
+              >
+                <option value="easy">Fácil</option>
+                <option value="medium">Médio</option>
+                <option value="hard">Difícil</option>
+                <option value="very-hard">Muito difícil</option>
+                <option value="max">Máximo</option>
+              </select>
+            </div>
+            <div className="text-xs text-blue-900/80 flex items-center justify-between">
+              <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
+              <span>{aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback'}</span>
+            </div>
+          </div>
+        )}
 
         {/* Painel de pontuação */}
         <div className="grid grid-cols-2 gap-4">
@@ -323,4 +388,3 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     </GameLayout>
   );
 }
-
