@@ -1,5 +1,6 @@
 import { QuelhasState, Celula, Posicao, Segmento, Orientacao } from './types';
 import { GameMode, GameStatus, Player } from '../../types';
+import { searchBestMove } from './ai/engine';
 
 const TAMANHO_TABULEIRO = 10;
 const COMPRIMENTO_MINIMO = 2;
@@ -628,6 +629,26 @@ interface TTEntry {
 // Transposition table global (limpa-se a cada jogada para não acumular memória)
 let transpositionTable: Map<string, TTEntry> = new Map();
 
+// Killer moves e history heuristic (limpos a cada jogada)
+let killerMoves: Array<[number | null, number | null]> = [];
+let historyHeuristic: Map<number, number> = new Map();
+
+function encodeMove(segmento: Segmento): number {
+  const pos = segmento.inicio.linha * TAMANHO_TABULEIRO + segmento.inicio.coluna; // 0..99
+  const orientBit = segmento.orientacao === 'vertical' ? 0 : 1;
+  return pos | (segmento.comprimento << 7) | (orientBit << 11);
+}
+
+function sameMove(a: Segmento | null, b: Segmento | null): boolean {
+  if (!a || !b) return false;
+  return (
+    a.inicio.linha === b.inicio.linha &&
+    a.inicio.coluna === b.inicio.coluna &&
+    a.comprimento === b.comprimento &&
+    a.orientacao === b.orientacao
+  );
+}
+
 /**
  * Gera uma chave única para o estado do tabuleiro + orientação do jogador atual.
  */
@@ -640,7 +661,8 @@ function gerarChaveTabuleiro(tabuleiro: Celula[][], orientacaoAtual: Orientacao)
         row |= (1 << j);
       }
     }
-    key += row.toString(36);
+    // padding fixo evita colisões por concatenação de dígitos variáveis
+    key += row.toString(36).padStart(2, '0');
   }
   return key;
 }
@@ -655,73 +677,292 @@ function gerarChaveTabuleiro(tabuleiro: Celula[][], orientacaoAtual: Orientacao)
 export function gerarCandidatos(tabuleiro: Celula[][], orientacao: Orientacao): Segmento[] {
   const blocos = extrairBlocos(tabuleiro, orientacao);
   const candidatos: Segmento[] = [];
-  const vistos = new Set<string>();
-  
+  const vistos = new Set<number>();
+
   const adicionarSeNovo = (seg: Segmento) => {
-    const key = `${seg.inicio.linha},${seg.inicio.coluna},${seg.comprimento}`;
-    if (!vistos.has(key)) {
-      vistos.add(key);
+    const id = encodeMove(seg);
+    if (!vistos.has(id)) {
+      vistos.add(id);
       candidatos.push(seg);
     }
   };
-  
+
+  const gerarTudoRun = (bloco: Bloco) => {
+    const { inicio, comprimento: L, indiceFixo, orientacao: ori } = bloco;
+    for (let k = COMPRIMENTO_MINIMO; k <= L; k++) {
+      for (let offset = 0; offset <= L - k; offset++) {
+        adicionarSeNovo({
+          inicio:
+            ori === 'vertical'
+              ? { linha: inicio + offset, coluna: indiceFixo }
+              : { linha: indiceFixo, coluna: inicio + offset },
+          comprimento: k,
+          orientacao: ori,
+        });
+      }
+    }
+  };
+
+  const splitScore = (L: number, offset: number, k: number): number => {
+    const left = offset;
+    const right = L - (offset + k);
+    const leftGood = left >= 2 ? 1 : 0;
+    const rightGood = right >= 2 ? 1 : 0;
+    const wasted = (left === 1 ? 1 : 0) + (right === 1 ? 1 : 0);
+    return 10 * (leftGood + rightGood) - 3 * wasted - Math.abs(left - right) * 0.2;
+  };
+
   for (const bloco of blocos) {
-    const { inicio, comprimento, indiceFixo, orientacao: ori } = bloco;
-    
-    // 1. Segmento mínimo (tamanho 2) no início do bloco
-    adicionarSeNovo({
-      inicio: ori === 'vertical' 
-        ? { linha: inicio, coluna: indiceFixo }
-        : { linha: indiceFixo, coluna: inicio },
-      comprimento: 2,
-      orientacao: ori,
-    });
-    
-    // 2. Segmento mínimo (tamanho 2) no fim do bloco
-    if (comprimento >= 4) {
+    const { inicio, comprimento: L, indiceFixo, orientacao: ori } = bloco;
+
+    // Runs pequenos: gerar tudo (preciso e ainda barato)
+    if (L <= 6) {
+      gerarTudoRun(bloco);
+      continue;
+    }
+
+    // Extremidades: k=2 e k=3 em ambas as pontas
+    for (const k of [2, 3]) {
+      if (k > L) continue;
       adicionarSeNovo({
-        inicio: ori === 'vertical'
-          ? { linha: inicio + comprimento - 2, coluna: indiceFixo }
-          : { linha: indiceFixo, coluna: inicio + comprimento - 2 },
-        comprimento: 2,
+        inicio:
+          ori === 'vertical'
+            ? { linha: inicio, coluna: indiceFixo }
+            : { linha: indiceFixo, coluna: inicio },
+        comprimento: k,
+        orientacao: ori,
+      });
+      adicionarSeNovo({
+        inicio:
+          ori === 'vertical'
+            ? { linha: inicio + (L - k), coluna: indiceFixo }
+            : { linha: indiceFixo, coluna: inicio + (L - k) },
+        comprimento: k,
         orientacao: ori,
       });
     }
-    
-    // 3. Segmento que consome o bloco inteiro
+
+    // Longos: k=L e k=L-1 (pos 0 e pos 1)
     adicionarSeNovo({
-      inicio: ori === 'vertical'
-        ? { linha: inicio, coluna: indiceFixo }
-        : { linha: indiceFixo, coluna: inicio },
-      comprimento,
-      orientacao: ori,
-    });
-    
-    // 4. Segmento de tamanho 3 se bloco >= 5 (meio termo)
-    if (comprimento >= 5) {
-      adicionarSeNovo({
-        inicio: ori === 'vertical'
+      inicio:
+        ori === 'vertical'
           ? { linha: inicio, coluna: indiceFixo }
           : { linha: indiceFixo, coluna: inicio },
-        comprimento: 3,
+      comprimento: L,
+      orientacao: ori,
+    });
+    if (L - 1 >= 2) {
+      adicionarSeNovo({
+        inicio:
+          ori === 'vertical'
+            ? { linha: inicio, coluna: indiceFixo }
+            : { linha: indiceFixo, coluna: inicio },
+        comprimento: L - 1,
+        orientacao: ori,
+      });
+      adicionarSeNovo({
+        inicio:
+          ori === 'vertical'
+            ? { linha: inicio + 1, coluna: indiceFixo }
+            : { linha: indiceFixo, coluna: inicio + 1 },
+        comprimento: L - 1,
         orientacao: ori,
       });
     }
-    
-    // 5. Segmento central (tamanho 2) para blocos grandes
-    if (comprimento >= 6) {
-      const meio = Math.floor(comprimento / 2) - 1;
+
+    // Split central: escolher (offset,k) em k∈{2,3,4}
+    let best: { score: number; offset: number; k: number } | null = null;
+    for (const k of [2, 3, 4]) {
+      if (k > L) continue;
+      const center = Math.floor((L - k) / 2);
+      const offsets = [center - 1, center, center + 1].filter(o => o >= 0 && o <= L - k);
+      for (const offset of offsets) {
+        const score = splitScore(L, offset, k);
+        if (!best || score > best.score) best = { score, offset, k };
+      }
+    }
+    if (best) {
       adicionarSeNovo({
-        inicio: ori === 'vertical'
-          ? { linha: inicio + meio, coluna: indiceFixo }
-          : { linha: indiceFixo, coluna: inicio + meio },
-        comprimento: 2,
+        inicio:
+          ori === 'vertical'
+            ? { linha: inicio + best.offset, coluna: indiceFixo }
+            : { linha: indiceFixo, coluna: inicio + best.offset },
+        comprimento: best.k,
         orientacao: ori,
       });
+    }
+
+    // Anti-mobilidade: amostrar posições (quartis + centro) para k=2..4
+    const samples = new Set<number>([
+      0,
+      Math.floor(L / 4),
+      Math.floor(L / 2),
+      Math.floor((3 * L) / 4),
+      L - 2,
+    ]);
+    for (const offset of samples) {
+      for (const k of [2, 3, 4]) {
+        if (k > L) continue;
+        if (offset < 0 || offset > L - k) continue;
+        adicionarSeNovo({
+          inicio:
+            ori === 'vertical'
+              ? { linha: inicio + offset, coluna: indiceFixo }
+              : { linha: indiceFixo, coluna: inicio + offset },
+          comprimento: k,
+          orientacao: ori,
+        });
+      }
     }
   }
-  
+
   return candidatos;
+}
+
+// ========================================================================
+// Monte Carlo (apenas para ordering na raiz) - determinístico por seed
+// ========================================================================
+
+function hashStringToU32(str: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return h >>> 0;
+}
+
+function makeRng(seed: number): () => number {
+  let x = seed | 0;
+  return () => {
+    // xorshift32
+    x ^= x << 13;
+    x ^= x >>> 17;
+    x ^= x << 5;
+    return (x >>> 0) / 0x100000000;
+  };
+}
+
+function cheapMoveScore(
+  tabuleiro: Celula[][],
+  jogada: Segmento,
+  minhaOrientacao: Orientacao,
+  orientacaoAdv: Orientacao
+): number {
+  const novoTab = aplicarSegmentoTabuleiro(tabuleiro, jogada);
+  const jogadasAdv = calcularJogadasValidas(novoTab, orientacaoAdv);
+
+  // Em misère, deixar o adversário sem jogadas é perder: muito mau.
+  if (jogadasAdv.length === 0) return -1e9;
+
+  const metricas = calcularMetricasCompletas(novoTab);
+  const minha = minhaOrientacao === 'vertical' ? metricas.vertical : metricas.horizontal;
+  const adv = minhaOrientacao === 'vertical' ? metricas.horizontal : metricas.vertical;
+
+  let score = 0;
+  score += Math.min(jogadasAdv.length, 80) * 4;
+  score += (minha.maxExclusivo - adv.maxExclusivo) * 15;
+  score += (minha.max - minha.min) * 3;
+  score -= jogada.comprimento * 4;
+  return score;
+}
+
+function rolloutWinForIA(
+  tabuleiroAfterMove: Celula[][],
+  orientacaoIA: Orientacao,
+  orientacaoAdv: Orientacao,
+  rng: () => number,
+  maxPlies: number = 120
+): boolean {
+  let tab = tabuleiroAfterMove;
+  let sideToMove: Orientacao = orientacaoAdv;
+  let iaTurn = false; // após jogada IA na raiz, é a vez do adversário
+
+  for (let ply = 0; ply < maxPlies; ply++) {
+    const movesAll = calcularJogadasValidas(tab, sideToMove);
+    if (movesAll.length === 0) {
+      // sem jogadas => sideToMove ganha (misère)
+      return iaTurn;
+    }
+
+    // Se houver demasiadas jogadas, usar subset dinâmico para acelerar playout
+    let moves = movesAll;
+    if (movesAll.length > 70) {
+      const subset = gerarCandidatos(tab, sideToMove);
+      if (subset.length > 0) moves = subset;
+    }
+
+    const idx = Math.floor(rng() * moves.length);
+    const mv = moves[idx]!;
+    tab = aplicarSegmentoTabuleiro(tab, mv);
+
+    sideToMove = sideToMove === orientacaoIA ? orientacaoAdv : orientacaoIA;
+    iaTurn = !iaTurn;
+  }
+
+  // Fallback por avaliação rápida se o playout não terminou
+  const myMoves = calcularJogadasValidas(tab, iaTurn ? orientacaoIA : orientacaoAdv).length;
+  const oppMoves = calcularJogadasValidas(tab, iaTurn ? orientacaoAdv : orientacaoIA).length;
+  const evalNow = avaliarPosicaoMisere(
+    tab,
+    iaTurn ? orientacaoIA : orientacaoAdv,
+    iaTurn ? orientacaoAdv : orientacaoIA,
+    oppMoves,
+    myMoves
+  );
+  return iaTurn ? evalNow >= 0 : evalNow < 0;
+}
+
+function monteCarloSeedHistoryRoot(
+  tabuleiro: Celula[][],
+  orientacaoIA: Orientacao,
+  orientacaoAdv: Orientacao,
+  timeBudgetMs: number,
+  deadline: number
+): void {
+  const mcBudget = Math.max(0, Math.floor(timeBudgetMs * 0.15));
+  if (mcBudget < 40) return;
+
+  const mcDeadline = Math.min(deadline, Date.now() + mcBudget);
+
+  const moves = gerarCandidatos(tabuleiro, orientacaoIA);
+  if (moves.length <= 3) return;
+
+  // Ordenação barata inicial
+  const scored = moves.map(m => ({ m, h: cheapMoveScore(tabuleiro, m, orientacaoIA, orientacaoAdv) }));
+  scored.sort((a, b) => b.h - a.h);
+
+  const topN = Math.min(scored.length, Math.max(6, Math.min(12, Math.floor(scored.length * 0.4))));
+  const top = scored.slice(0, topN);
+
+  const seed = hashStringToU32(gerarChaveTabuleiro(tabuleiro, orientacaoIA));
+  const rng = makeRng(seed);
+
+  const wins = new Array(topN).fill(0);
+  const sims = new Array(topN).fill(0);
+
+  while (Date.now() < mcDeadline) {
+    for (let i = 0; i < topN; i++) {
+      if (Date.now() >= mcDeadline) break;
+      const mv = top[i]!.m;
+      const tabAfter = aplicarSegmentoTabuleiro(tabuleiro, mv);
+      const win = rolloutWinForIA(tabAfter, orientacaoIA, orientacaoAdv, rng);
+      sims[i]++;
+      if (win) wins[i]++;
+    }
+  }
+
+  const ranked = top.map((t, i) => {
+    const rate = (wins[i]! + 1) / (sims[i]! + 2); // smoothing
+    return { m: t.m, score: 1000 * rate + 0.001 * t.h };
+  });
+  ranked.sort((a, b) => b.score - a.score);
+
+  // Seed do history para influenciar ordering da raiz
+  for (let i = 0; i < ranked.length; i++) {
+    const id = encodeMove(ranked[i]!.m);
+    historyHeuristic.set(id, (historyHeuristic.get(id) || 0) + (ranked.length - i) * 5000);
+  }
 }
 
 /**
@@ -732,41 +973,50 @@ function ordenarCandidatos(
   tabuleiro: Celula[][],
   minhaOrientacao: Orientacao,
   orientacaoAdv: Orientacao,
-  ttBestMove: Segmento | null
+  ttBestMove: Segmento | null,
+  depth: number
 ): Segmento[] {
   const avaliados = candidatos.map(jogada => {
     let prioridade = 0;
     
     // TT best move tem prioridade máxima
-    if (ttBestMove && 
-        jogada.inicio.linha === ttBestMove.inicio.linha &&
-        jogada.inicio.coluna === ttBestMove.inicio.coluna &&
-        jogada.comprimento === ttBestMove.comprimento) {
+    if (sameMove(ttBestMove, jogada)) {
       prioridade = 100000;
     }
-    
-    // Simular jogada rapidamente
-    const novoTab = aplicarSegmentoTabuleiro(tabuleiro, jogada);
-    const jogadasAdv = calcularJogadasValidas(novoTab, orientacaoAdv);
-    
-    // Prioridade 1: Não deixar adversário sem jogadas (isso nos faz perder)
-    if (jogadasAdv.length === 0) {
-      prioridade -= 50000; // Muito mau
+
+    const jogadaId = encodeMove(jogada);
+
+    // Killer moves (bons para cortes beta)
+    const killers = killerMoves[depth];
+    if (killers) {
+      if (killers[0] === jogadaId) prioridade += 80000;
+      else if (killers[1] === jogadaId) prioridade += 60000;
     }
-    
-    // Prioridade 2: Preferir jogadas que deixam adversário com jogadas
-    prioridade += jogadasAdv.length * 10;
+
+    // History heuristic
+    prioridade += (historyHeuristic.get(jogadaId) || 0);
     
     // Prioridade 3: Preferir segmentos curtos (mais controlo)
     prioridade -= jogada.comprimento * 5;
     
-    // Prioridade 4: Avaliar métricas estruturais rapidamente
-    const metricas = calcularMetricasCompletas(novoTab);
-    const minha = minhaOrientacao === 'vertical' ? metricas.vertical : metricas.horizontal;
-    const adv = minhaOrientacao === 'vertical' ? metricas.horizontal : metricas.vertical;
-    
-    // Bónus por vantagem em exclusivas
-    prioridade += (minha.maxExclusivo - adv.maxExclusivo) * 20;
+    // Profundidade alta: gastar um pouco mais em ordenação para pruning
+    if (depth >= 6) {
+      const novoTab = aplicarSegmentoTabuleiro(tabuleiro, jogada);
+      const jogadasAdv = calcularJogadasValidas(novoTab, orientacaoAdv);
+
+      // Em misère, deixar adversário sem jogadas é perder (muito mau)
+      if (jogadasAdv.length === 0) {
+        prioridade -= 50000;
+      } else {
+        prioridade += Math.min(jogadasAdv.length, 60) * 8;
+      }
+
+      // Métricas estruturais rápidas
+      const metricas = calcularMetricasCompletas(novoTab);
+      const minha = minhaOrientacao === 'vertical' ? metricas.vertical : metricas.horizontal;
+      const adv = minhaOrientacao === 'vertical' ? metricas.horizontal : metricas.vertical;
+      prioridade += (minha.maxExclusivo - adv.maxExclusivo) * 15;
+    }
     
     return { jogada, prioridade };
   });
@@ -810,12 +1060,15 @@ function negamax(
     }
   }
   
-  // Gerar jogadas
-  const candidatos = depth <= 2 
+  // Gerar jogadas (dinâmico para reduzir branching, mas sem errar terminais)
+  let candidatos = depth <= 2 
     ? calcularJogadasValidas(tabuleiro, orientacaoAtual) // Profundidade baixa: todas as jogadas
-    : gerarCandidatos(tabuleiro, orientacaoAtual); // Profundidade alta: só candidatos estratégicos
+    : gerarCandidatos(tabuleiro, orientacaoAtual); // Profundidade alta: subset estratégico
   
-  // Caso terminal: sem jogadas
+  // Caso terminal: confirmar com gerador completo (para evitar falsos terminais)
+  if (candidatos.length === 0 && depth > 2) {
+    candidatos = calcularJogadasValidas(tabuleiro, orientacaoAtual);
+  }
   if (candidatos.length === 0) {
     // Em misère, se não tenho jogadas, GANHO (adversário foi o último a jogar)
     return { score: 10000 + depth, bestMove: null }; // Bónus por profundidade (ganhar mais cedo)
@@ -840,26 +1093,23 @@ function negamax(
     tabuleiro, 
     orientacaoAtual, 
     orientacaoAdv,
-    ttEntry?.bestMove || null
+    ttEntry?.bestMove || null,
+    depth
   );
   
   let bestScore = -Infinity;
   let bestMove: Segmento | null = null;
+  const alphaOrig = alpha;
   let flag: 'exact' | 'lowerbound' | 'upperbound' = 'upperbound';
   
+  // PVS (Principal Variation Search): 1.º filho em janela total, restantes em janela nula
+  let isFirst = true;
   for (const jogada of candidatosOrdenados) {
     // Aplicar jogada
     const novoTab = aplicarSegmentoTabuleiro(tabuleiro, jogada);
     
-    // Verificar se adversário tem jogadas
-    const jogadasAdvApos = calcularJogadasValidas(novoTab, orientacaoAdv);
-    
     let score: number;
-    if (jogadasAdvApos.length === 0) {
-      // PÉSSIMO em misère: adversário não tem jogadas = EU fui o último = EU PERCO
-      score = -10000 - depth;
-    } else {
-      // Recursão (negamax: negar o score do adversário)
+    if (isFirst) {
       const resultado = negamax(
         novoTab,
         orientacaoAdv,
@@ -870,6 +1120,33 @@ function negamax(
         deadline
       );
       score = -resultado.score;
+      isFirst = false;
+    } else {
+      // Search com janela nula (fail-soft)
+      const resultadoNarrow = negamax(
+        novoTab,
+        orientacaoAdv,
+        orientacaoAtual,
+        depth - 1,
+        -alpha - 1,
+        -alpha,
+        deadline
+      );
+      score = -resultadoNarrow.score;
+
+      // Re-search se promissor
+      if (score > alpha && score < beta) {
+        const resultadoWide = negamax(
+          novoTab,
+          orientacaoAdv,
+          orientacaoAtual,
+          depth - 1,
+          -beta,
+          -alpha,
+          deadline
+        );
+        score = -resultadoWide.score;
+      }
     }
     
     if (score > bestScore) {
@@ -880,6 +1157,14 @@ function negamax(
     alpha = Math.max(alpha, score);
     
     if (alpha >= beta) {
+      // Atualizar killers/history (corte beta)
+      const id = encodeMove(jogada);
+      if (!killerMoves[depth]) killerMoves[depth] = [null, null];
+      const [k1, k2] = killerMoves[depth];
+      if (k1 !== id) killerMoves[depth] = [id, k1];
+      else if (k2 !== id) killerMoves[depth] = [k1, id];
+      historyHeuristic.set(id, (historyHeuristic.get(id) || 0) + depth * depth);
+
       flag = 'lowerbound';
       break; // Beta cutoff
     }
@@ -890,13 +1175,9 @@ function negamax(
     }
   }
   
-  if (bestScore <= alpha) {
-    flag = 'upperbound';
-  } else if (bestScore >= beta) {
-    flag = 'lowerbound';
-  } else {
-    flag = 'exact';
-  }
+  if (bestScore <= alphaOrig) flag = 'upperbound';
+  else if (bestScore >= beta) flag = 'lowerbound';
+  else flag = 'exact';
   
   // Guardar na transposition table
   transpositionTable.set(ttKey, {
@@ -922,23 +1203,32 @@ function iterativeDeepening(
   
   // Limpar transposition table
   transpositionTable = new Map();
+  killerMoves = [];
+  historyHeuristic = new Map();
+
+  // Monte Carlo ordering (apenas raiz) para melhorar ordering sem substituir αβ
+  monteCarloSeedHistoryRoot(tabuleiro, orientacaoIA, orientacaoAdv, tempoLimiteMs, deadline);
   
   let melhorJogada: Segmento | null = null;
   let melhorScore = -Infinity;
+  let window = 80; // janela de aspiração inicial
   
   // Começar com profundidade baixa e ir aumentando
   for (let depth = 1; depth <= 20; depth++) {
     if (Date.now() > deadline) break;
     
-    const resultado = negamax(
-      tabuleiro,
-      orientacaoIA,
-      orientacaoAdv,
-      depth,
-      -Infinity,
-      Infinity,
-      deadline
-    );
+    // Aspiration window após o 1.º resultado estável
+    const alpha = depth === 1 ? -Infinity : melhorScore - window;
+    const beta = depth === 1 ? Infinity : melhorScore + window;
+    let resultado = negamax(tabuleiro, orientacaoIA, orientacaoAdv, depth, alpha, beta, deadline);
+
+    // Falhou janela: re-pesquisar com janela total e alargar
+    if (Date.now() <= deadline && depth > 1 && (resultado.score <= alpha || resultado.score >= beta)) {
+      window = Math.min(800, window * 2);
+      resultado = negamax(tabuleiro, orientacaoIA, orientacaoAdv, depth, -Infinity, Infinity, deadline);
+    } else if (depth > 1) {
+      window = Math.max(40, Math.floor(window * 0.75));
+    }
     
     // Se completou a pesquisa nesta profundidade, atualizar melhor jogada
     if (resultado.bestMove && Date.now() <= deadline) {
@@ -960,6 +1250,22 @@ function iterativeDeepening(
   return melhorJogada;
 }
 
+export function escolherMelhorJogadaIA(
+  tabuleiro: Celula[][],
+  orientacaoIA: Orientacao,
+  orientacaoAdv: Orientacao,
+  tempoLimiteMs: number = TEMPO_MAXIMO_JOGADA
+): Segmento | null {
+  // Engine mais rápido (bitboard + TT persistente), inspirado no Dominório
+  const result = searchBestMove(tabuleiro, orientacaoIA, {
+    timeBudgetMs: tempoLimiteMs,
+    maxDepth: 18,
+    topN: 0,
+    scoreDelta: 0,
+  });
+  return result.bestMove;
+}
+
 /**
  * IA do computador (misère) - versão forte com alpha-beta search.
  */
@@ -978,12 +1284,10 @@ export function jogadaComputador(state: QuelhasState): QuelhasState {
     return colocarSegmento(state, jogadas[0]);
   }
 
-  // Usar iterative deepening para encontrar a melhor jogada
-  const melhorJogada = iterativeDeepening(
+  const melhorJogada = escolherMelhorJogadaIA(
     state.tabuleiro,
     minhaOrientacao,
-    orientacaoAdversario,
-    TEMPO_MAXIMO_JOGADA
+    orientacaoAdversario
   );
 
   // Fallback: se por algum motivo não encontrou jogada, usar a primeira válida
