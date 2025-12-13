@@ -12,6 +12,7 @@ import type { QuelhasState, Segmento, Posicao as QuelhasPosicao } from '../games
 import type { ProdutoState, Posicao as ProdutoPosicao, JogadaDupla } from '../games/produto/types';
 import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
 import type { NexState, Posicao as NexPosicao, Acao as NexAcao, AcaoColocacao, AcaoSubstituicao } from '../games/nex/types';
+import { calcularJogadasValidas as calcularJogadasValidasQuelhas } from '../games/quelhas/logic';
 
 // ============================================================================
 // GATOS & CÃES - Network Types
@@ -294,15 +295,24 @@ export function fromNetworkQuelhasState(
   const orientacaoJogador1 = net.swapped ? 'horizontal' : 'vertical';
   const orientacaoJogador2 = net.swapped ? 'vertical' : 'horizontal';
   
+  const jogadorAtual = net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2';
+  const estado: QuelhasState['estado'] =
+    net.winner === 'player1' ? 'vitoria-jogador1'
+    : net.winner === 'player2' ? 'vitoria-jogador2'
+    : 'a-jogar';
+
+  const orientacaoAtual = jogadorAtual === 'jogador1' ? orientacaoJogador1 : orientacaoJogador2;
+  const jogadasValidas = estado === 'a-jogar'
+    ? calcularJogadasValidasQuelhas(tabuleiro, orientacaoAtual)
+    : [];
+
   return {
     tabuleiro,
     modo,
-    jogadorAtual: net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2',
-    estado: net.winner === 'player1' ? 'vitoria-jogador1' 
-          : net.winner === 'player2' ? 'vitoria-jogador2' 
-          : 'a-jogar',
+    jogadorAtual,
+    estado,
     segmentoPreview: null,
-    jogadasValidas: [], // Should be calculated by game logic
+    jogadasValidas,
     primeiraJogada: net.moveCount === 0,
     orientacaoJogador1,
     orientacaoJogador2,
