@@ -52,7 +52,7 @@ export type AIRequest =
   | { type: 'cancel'; id: number };
 
 export type AIResponse =
-  | { type: 'ready' }
+  | { type: 'ready'; usedWasm: boolean }
   | {
       type: 'result';
       id: number;
@@ -81,4 +81,3 @@ export function packState(state: AtariGoState): AtariGoPackedState {
     toPlay: state.jogadorAtual === 'jogador1' ? 0 : 1,
   };
 }
-

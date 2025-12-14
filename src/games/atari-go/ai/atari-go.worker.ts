@@ -17,6 +17,7 @@ type WasmModule = {
 
 let wasm: WasmModule | null = null;
 let useWasm = false;
+let initDone = false;
 
 async function init(): Promise<void> {
   try {
@@ -31,6 +32,9 @@ async function init(): Promise<void> {
     console.warn('[AtariGoAI] WASM not available, using fallback:', e);
     wasm = null;
     useWasm = false;
+  } finally {
+    initDone = true;
+    post({ type: 'ready', usedWasm: useWasm });
   }
 }
 
@@ -71,11 +75,12 @@ function randomFallbackMove(req: Extract<AIRequest, { type: 'choose' }>): number
   return last ? posToIdx(last) : null;
 }
 
-post({ type: 'ready' });
+const initPromise = init().catch(e => {
+  console.error('[AtariGoAI] init failed:', e);
+});
 
-self.onmessage = (event: MessageEvent<AIRequest>) => {
-  const req = event.data;
-  if (req.type !== 'choose') return;
+async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promise<void> {
+  if (!initDone) await initPromise;
 
   const preset = DIFFICULTY_PRESETS[req.difficulty];
   const start = performance.now();
@@ -112,6 +117,10 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
       message: e instanceof Error ? e.message : String(e),
     });
   }
-};
+}
 
-init().catch(e => console.error('[AtariGoAI] init failed:', e));
+self.onmessage = (event: MessageEvent<AIRequest>) => {
+  const req = event.data;
+  if (req.type !== 'choose') return;
+  void handleChoose(req);
+};

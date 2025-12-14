@@ -26,14 +26,20 @@ export class AtariGoAIClient {
 
   private initWorker(): void {
     try {
-      this.worker = new Worker(new URL('./ai/atari-go/atari-go.worker.js', import.meta.url), { type: 'module' });
+      // Production (GitHub Pages build): worker bundle lives under `dist/ai/...`
+      try {
+        this.worker = new Worker(new URL('./ai/atari-go/atari-go.worker.js', import.meta.url), { type: 'module' });
+      } catch {
+        // Dev (`bun --hot src/index.ts`): load worker directly from source.
+        this.worker = new Worker(new URL('./atari-go.worker.ts', import.meta.url), { type: 'module' });
+      }
+
       this.worker.onmessage = (event: MessageEvent<AIResponse>) => this.onMessage(event.data);
       this.worker.onerror = () => this.fallbackToNoWorker('worker-error');
-      this.isReady = true;
-      this.options.onReady?.();
+      this.isReady = false; // becomes true on worker 'ready'
     } catch {
       this.worker = null;
-      this.isReady = true;
+      this.isReady = true; // allow UI to proceed with TS fallback
       this.options.onReady?.();
     }
   }
@@ -132,4 +138,3 @@ export class AtariGoAIClient {
     return this.currentMetrics;
   }
 }
-
