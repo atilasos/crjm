@@ -19,6 +19,11 @@ src/games/produto/ai/wasm/pkg/*.js
 src/games/produto/ai/wasm/pkg/*.wasm
 src/games/produto/ai/wasm/pkg/*.d.ts
 wasm/produto_ai/target/
+src/games/atari-go/ai/wasm/pkg/*.js
+src/games/atari-go/ai/wasm/pkg/*.wasm
+src/games/atari-go/ai/wasm/pkg/*.d.ts
+wasm/atari_go_ai/target/
+wasm/atari_go_ai/.tmp/
 
 # code coverage
 coverage

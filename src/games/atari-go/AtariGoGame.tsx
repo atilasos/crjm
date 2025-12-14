@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
@@ -10,6 +10,8 @@ import {
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
+import { AtariGoAIClient, idxToPos } from './ai/ai-client';
+import { INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
 
 interface AtariGoGameProps {
   onVoltar: () => void;
@@ -31,6 +33,16 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
+  const [aiMetrics, setAiMetrics] = useState<AIMetrics>({ ...INITIAL_METRICS });
+  const aiRef = useRef<AtariGoAIClient | null>(null);
+
+  useEffect(() => {
+    aiRef.current = new AtariGoAIClient({
+      onMetricsUpdate: m => setAiMetrics(m),
+    });
+    return () => aiRef.current?.terminate();
+  }, []);
 
   // Efeito para jogada do computador
   useEffect(() => {
@@ -39,12 +51,52 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       state.jogadorAtual !== humanPlayer && 
       state.estado === 'a-jogar'
     ) {
-      const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 600);
-      return () => clearTimeout(timer);
+      let cancelled = false;
+      const client = aiRef.current;
+
+      const run = async () => {
+        // Pequeno delay para UX (e para permitir UI atualizar)
+        await new Promise(r => setTimeout(r, 80));
+        if (cancelled) return;
+
+        try {
+          const mv = client ? await client.getBestMove(state, aiDifficulty) : null;
+          if (cancelled) return;
+
+          if (mv === null) {
+            // fallback TS local (IA básica)
+            setState(prev => jogadaComputador(prev));
+            return;
+          }
+
+          setState(prev => {
+            if (
+              prev.modo !== 'vs-computador' ||
+              prev.estado !== 'a-jogar' ||
+              prev.jogadorAtual === humanPlayer
+            ) {
+              return prev;
+            }
+            const pos = idxToPos(mv);
+            if (!isJogadaValida(prev, pos)) {
+              return jogadaComputador(prev);
+            }
+            return colocarPedra(prev, pos);
+          });
+        } catch {
+          if (cancelled) return;
+          setState(prev => jogadaComputador(prev));
+        }
+      };
+
+      void run();
+
+      return () => {
+        cancelled = true;
+        client?.cancel();
+      };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer]);
+  }, [state, humanPlayer, aiDifficulty]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -63,11 +115,13 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
   }, [state, humanPlayer]);
 
   const novoJogo = useCallback(() => {
+    aiRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
+    aiRef.current?.cancel();
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
@@ -75,6 +129,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
+    aiRef.current?.cancel();
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
@@ -205,6 +260,35 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           </p>
         </div>
 
+        {/* Configuração da IA */}
+        {state.modo === 'vs-computador' && (
+          <div className="bg-white rounded-xl border border-gray-200 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="text-sm text-gray-700">
+                Dificuldade IA:{' '}
+                <select
+                  className="ml-2 rounded-md border border-gray-300 px-2 py-1 text-sm"
+                  value={aiDifficulty}
+                  onChange={e => setAiDifficulty(e.target.value as AIDifficulty)}
+                >
+                  <option value="easy">Fácil</option>
+                  <option value="medium">Médio</option>
+                  <option value="hard">Difícil</option>
+                  <option value="very-hard">Muito difícil</option>
+                </select>
+              </label>
+
+              <div className="text-xs text-gray-500">
+                {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
+                {' • '}
+                {aiMetrics.usedWasm ? 'WASM' : 'TS fallback'}
+                {' • '}
+                {aiMetrics.lastTimeMs.toFixed(0)}ms
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Tabuleiro */}
         <div className="game-container">
           <div className="aspect-square max-w-md mx-auto">
@@ -271,4 +355,3 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     </GameLayout>
   );
 }
-
