@@ -6,6 +6,7 @@ import { NexState, Posicao, TipoAcao, LADO_TABULEIRO, posToKey } from './types';
 import { 
   criarEstadoInicial, 
   executarColocacao,
+  executarSubstituicao,
   executarSwap,
   recusarSwap,
   selecionarTipoAcao,
@@ -15,9 +16,11 @@ import {
   cancelarAcao,
   podeSubstituir,
   podeColocar,
+  getCorJogador,
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
+import { NexAIClient, type AIDifficulty, type AIMetrics, INITIAL_METRICS } from './ai';
 
 interface NexGameProps {
   onVoltar: () => void;
@@ -41,6 +44,10 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [tipoSelecao, setTipoSelecao] = useState<'propria' | 'neutra'>('propria');
+  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
+  const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
+  const [aiReady, setAiReady] = useState(false);
+  const aiClientRef = useRef<NexAIClient | null>(null);
   
   // Estado para pan/drag do tabuleiro
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -49,34 +56,87 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const boardContainerRef = useRef<HTMLDivElement>(null);
   const boardDraggableRef = useRef<HTMLDivElement>(null);
 
+  // Initialize AI client
+  useEffect(() => {
+    const client = new NexAIClient({
+      onMetricsUpdate: setAiMetrics,
+      onReady: () => setAiReady(true),
+    });
+    aiClientRef.current = client;
+    return () => client.terminate();
+  }, []);
+
+  const aplicarAcaoIA = useCallback((prev: NexState, action: any): NexState => {
+    if (!action || typeof action !== 'object') return jogadaComputador(prev);
+    if (action.type === 'swap') return executarSwap(prev);
+    if (action.type === 'recusar_swap') return recusarSwap(prev);
+    if (action.type === 'colocar') {
+      return executarColocacao(prev, { tipo: 'colocacao', posPropria: action.own, posNeutra: action.neutral });
+    }
+    if (action.type === 'substituir') {
+      return executarSubstituicao(prev, {
+        tipo: 'substituicao',
+        neutrasParaProprias: [action.n1, action.n2],
+        propriaParaNeutra: action.sacrifice,
+      });
+    }
+    return jogadaComputador(prev);
+  }, []);
+
   // Efeito para jogada do computador
   useEffect(() => {
     if (
       state.modo === 'vs-computador' && 
       state.jogadorAtual !== humanPlayer && 
       state.estado === 'a-jogar' &&
-      !state.swapDisponivel // Esperar decisão de swap
+      !state.swapDisponivel && // Esperar decisão de swap
+      aiClientRef.current
     ) {
-      const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 800);
-      return () => clearTimeout(timer);
+      let cancelled = false;
+      const timer = setTimeout(async () => {
+        if (cancelled || !aiClientRef.current) return;
+        try {
+          const action = await aiClientRef.current.getBestAction(state, aiDifficulty);
+          if (cancelled) return;
+          setState(prev => (action ? aplicarAcaoIA(prev, action) : jogadaComputador(prev)));
+        } catch (e) {
+          console.error('[NexGame] AI error:', e);
+          setState(prev => jogadaComputador(prev));
+        }
+      }, 350);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, state.swapDisponivel, humanPlayer]);
+  }, [state.jogadorAtual, state.modo, state.estado, state.swapDisponivel, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
 
   // Efeito para IA decidir swap
   useEffect(() => {
     if (
       state.modo === 'vs-computador' && 
       state.swapDisponivel &&
-      state.jogadorAtual !== humanPlayer
+      state.jogadorAtual !== humanPlayer &&
+      aiClientRef.current
     ) {
-      const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 1000);
-      return () => clearTimeout(timer);
+      let cancelled = false;
+      const timer = setTimeout(async () => {
+        if (cancelled || !aiClientRef.current) return;
+        try {
+          const action = await aiClientRef.current.getBestAction(state, aiDifficulty);
+          if (cancelled) return;
+          setState(prev => (action ? aplicarAcaoIA(prev, action) : jogadaComputador(prev)));
+        } catch (e) {
+          console.error('[NexGame] AI swap error:', e);
+          setState(prev => jogadaComputador(prev));
+        }
+      }, 300);
+      return () => {
+        cancelled = true;
+        clearTimeout(timer);
+      };
     }
-  }, [state.swapDisponivel, state.modo, state.jogadorAtual, humanPlayer]);
+  }, [state.swapDisponivel, state.modo, state.jogadorAtual, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -92,7 +152,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     
     const celula = state.tabuleiro[pos.x][pos.y];
     const acao = state.acaoEmCurso;
-    const corJogador = state.jogadorAtual === 'jogador1' ? 'preta' : 'branca';
+    const corJogador = getCorJogador(state, state.jogadorAtual);
     
     // Se não há tipo de ação selecionado, selecionar colocação por defeito
     if (acao.tipo === null) {
@@ -142,21 +202,27 @@ export function NexGame({ onVoltar }: NexGameProps) {
   }, []);
 
   const novoJogo = useCallback(() => {
+    aiClientRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
+    setAiMetrics(INITIAL_METRICS);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
+    aiClientRef.current?.cancel();
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setHumanPlayer('jogador1');
+    setAiMetrics(INITIAL_METRICS);
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
+    aiClientRef.current?.cancel();
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
+    setAiMetrics(INITIAL_METRICS);
   }, []);
 
   // Handlers para pan/drag do tabuleiro
@@ -320,7 +386,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
 
   const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
   const podeFazerColocacao = podeColocar(state.tabuleiro);
-  const podeFazerSubstituicao = podeSubstituir(state.tabuleiro, state.jogadorAtual);
+  const podeFazerSubstituicao = podeSubstituir(state.tabuleiro, state.jogadorAtual, state.swapEfetuado);
 
   // Determinar o que está em falta na ação
   const getInstrucaoAcao = () => {
@@ -347,15 +413,43 @@ export function NexGame({ onVoltar }: NexGameProps) {
           modo={state.modo}
           jogadorAtual={state.jogadorAtual}
           estado={state.estado}
-          nomeJogador1="Pretas (↖↘)"
-          nomeJogador2="Brancas (↗↙)"
-          corJogador1="bg-gray-900"
-          corJogador2="bg-gray-200"
+          nomeJogador1={state.swapEfetuado ? "Brancas (↗↙)" : "Pretas (↖↘)"}
+          nomeJogador2={state.swapEfetuado ? "Pretas (↖↘)" : "Brancas (↗↙)"}
+          corJogador1={state.swapEfetuado ? "bg-gray-200" : "bg-gray-900"}
+          corJogador2={state.swapEfetuado ? "bg-gray-900" : "bg-gray-200"}
           humanPlayer={humanPlayer}
           onChangeHumanPlayer={handleChangeHumanPlayer}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        {/* Configuração de IA (só no modo vs-computador) */}
+        {state.modo === 'vs-computador' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-sm font-medium text-blue-900">Dificuldade (IA)</label>
+              <select
+                className="text-sm rounded-lg border border-blue-200 bg-white px-2 py-1"
+                value={aiDifficulty}
+                onChange={e => {
+                  aiClientRef.current?.cancel();
+                  setAiDifficulty(e.target.value as AIDifficulty);
+                }}
+              >
+                <option value="easy">Fácil</option>
+                <option value="medium">Médio</option>
+                <option value="hard">Difícil</option>
+                <option value="master">Master</option>
+              </select>
+            </div>
+            <div className="text-xs text-blue-900/80 flex items-center justify-between">
+              <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
+              <span>
+                {aiReady ? (aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback') : 'A carregar…'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Swap disponível */}
         {state.swapDisponivel && isVezDoHumano && (
@@ -628,4 +722,3 @@ export function NexGame({ onVoltar }: NexGameProps) {
     </GameLayout>
   );
 }
-

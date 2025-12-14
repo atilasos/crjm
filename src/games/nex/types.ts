@@ -3,12 +3,13 @@ import { GameMode, Player, GameStatus } from '../../types';
 // Nex - Jogo de conexão com peças neutras
 // - Grelha hexagonal em formato de losango horizontal (11 casas de lado)
 // - Objetivo: criar caminho contínuo ligando as duas margens designadas
-//   - Preto: liga ↖ superior-esquerdo a inferior-direito ↘ (x=0 a x=10)
-//   - Branco: liga ↗ superior-direito a inferior-esquerdo ↙ (y=0 a y=10)
+//   - Preto: liga ↖ superior-esquerdo a inferior-direito ↘ (y=0 a y=10)
+//   - Branco: liga ↗ superior-direito a inferior-esquerdo ↙ (x=0 a x=10)
 // - Turno: escolher UMA das ações:
 //   1. Colocação: 1 peça própria + 1 peça neutra em casas vazias
 //   2. Substituição: trocar 2 neutras por próprias + 1 própria por neutra
 // - Regra da Torta (Swap): O 2.º jogador, no primeiro lance, pode trocar de cor
+//   (pie rule: troca a cor atribuída aos jogadores e consome esse turno)
 
 export type Celula = 'vazia' | 'preta' | 'branca' | 'neutra';
 
@@ -68,4 +69,3 @@ export function keyToPos(key: string): Posicao {
   const [x, y] = key.split(',').map(Number);
   return { x, y };
 }
-

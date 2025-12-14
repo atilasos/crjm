@@ -319,7 +319,7 @@ describe("Nex - Ação de Substituição", () => {
 });
 
 describe("Nex - Regra de Swap", () => {
-  test("swap deve trocar cores das peças", () => {
+  test("swap deve trocar cores dos jogadores", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     
     // Fazer primeira jogada
@@ -335,9 +335,34 @@ describe("Nex - Regra de Swap", () => {
     // Executar swap
     estado = executarSwap(estado);
     
-    expect(estado.tabuleiro[5][5]).toBe('branca'); // Trocou para branca
+    // Pie rule: o tabuleiro não muda; muda a cor atribuída aos jogadores e o turno é consumido
+    expect(estado.tabuleiro[5][5]).toBe('preta');
+    expect(estado.jogadorAtual).toBe('jogador1'); // swap consome o turno do jogador2
     expect(estado.swapDisponivel).toBe(false);
     expect(estado.swapEfetuado).toBe(true);
+  });
+
+  test("após swap, as cores dos jogadores ficam invertidas", () => {
+    let estado = criarEstadoInicial('dois-jogadores');
+
+    // Primeira jogada das Pretas (jogador1)
+    estado = executarColocacao(estado, {
+      tipo: 'colocacao',
+      posPropria: { x: 5, y: 5 },
+      posNeutra: { x: 6, y: 5 },
+    });
+
+    // Jogador2 escolhe swap (fica com as Pretas); passa o turno para o jogador1
+    estado = executarSwap(estado);
+
+    // Agora é a vez do jogador1, mas ele é "Brancas" (coloca branca)
+    estado = executarColocacao(estado, {
+      tipo: 'colocacao',
+      posPropria: { x: 0, y: 0 },
+      posNeutra: { x: 1, y: 0 },
+    });
+
+    expect(estado.tabuleiro[0][0]).toBe('branca');
   });
 
   test("recusar swap deve desativar opção", () => {
@@ -467,4 +492,3 @@ describe("Nex - Verificações Gerais", () => {
     expect(podeColocar(tabuleiro)).toBe(false);
   });
 });
-
