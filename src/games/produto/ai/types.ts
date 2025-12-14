@@ -56,7 +56,7 @@ export type AIRequest =
   | { type: 'cancel'; id: number };
 
 export type AIResponse =
-  | { type: 'ready' }
+  | { type: 'ready'; usedWasm: boolean }
   | {
       type: 'result';
       id: number;
@@ -115,4 +115,3 @@ export function packState(
     primeiraJogada: state.primeiraJogada,
   };
 }
-
