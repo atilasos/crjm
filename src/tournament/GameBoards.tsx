@@ -8,7 +8,7 @@
  * - São controlados pelo servidor/mock
  */
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 // ============================================================================
 // Gatos & Cães
@@ -205,6 +205,7 @@ export function DominorioBoard({ state, isMyTurn, myRole, onMove }: DominorioBoa
 // ============================================================================
 
 import type { QuelhasState, Segmento, Posicao as QuelhasPosicao } from '../games/quelhas/types';
+import { criarSegmentoEntrePosicoes } from '../games/quelhas/logic';
 export type { QuelhasState, Segmento, QuelhasPosicao };
 
 interface QuelhasBoardProps {
@@ -217,27 +218,44 @@ interface QuelhasBoardProps {
 
 export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: QuelhasBoardProps) {
   const minhaOrientacao = myRole === 'jogador1' ? state.orientacaoJogador1 : state.orientacaoJogador2;
+  const [inicioSelecao, setInicioSelecao] = useState<QuelhasPosicao | null>(null);
 
-  // Encontrar segmento válido que começa nesta posição
-  const getSegmentoInicio = (linha: number, coluna: number): Segmento | null => {
-    if (!isMyTurn) return null;
-    // Retorna o primeiro segmento válido que começa aqui (pode haver vários comprimentos)
-    return state.jogadasValidas.find(s => 
-      s.inicio.linha === linha && s.inicio.coluna === coluna
-    ) || null;
+  const isStartSelectable = (linha: number, coluna: number): boolean => {
+    if (!isMyTurn) return false;
+    return state.jogadasValidas.some(s =>
+      s.orientacao === minhaOrientacao && s.inicio.linha === linha && s.inicio.coluna === coluna
+    );
+  };
+
+  const getSegmentoForEnd = (linha: number, coluna: number): Segmento | null => {
+    if (!isMyTurn || !inicioSelecao) return null;
+    const segmento = criarSegmentoEntrePosicoes(
+      state,
+      { linha: inicioSelecao.linha, coluna: inicioSelecao.coluna },
+      { linha, coluna }
+    );
+    return segmento;
+  };
+
+  const isEndSelectable = (linha: number, coluna: number): boolean => {
+    if (!isMyTurn || !inicioSelecao) return false;
+    return getSegmentoForEnd(linha, coluna) !== null;
   };
 
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha][coluna];
-    const segmentoValido = getSegmentoInicio(linha, coluna);
+    const isInicio = !!inicioSelecao && inicioSelecao.linha === linha && inicioSelecao.coluna === coluna;
+    const startSelectable = isStartSelectable(linha, coluna);
+    const endSelectable = isEndSelectable(linha, coluna);
     
     let classes = 'aspect-square rounded-sm flex items-center justify-center transition-all duration-200 text-xs ';
     
     if (celula === 'vazia') {
       classes += 'bg-stone-200 ';
-      if (segmentoValido) {
-        classes += 'ring-2 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
-      }
+      if (isInicio) classes += 'ring-2 ring-sky-400 bg-sky-100 ';
+      if (!inicioSelecao && startSelectable) classes += 'ring-2 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
+      if (inicioSelecao && endSelectable) classes += 'ring-2 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
+      if (inicioSelecao && startSelectable && !isInicio && !endSelectable) classes += 'ring-2 ring-emerald-400/60 bg-emerald-50/70 cursor-pointer hover:bg-emerald-100 ';
     } else {
       classes += 'bg-stone-600 ';
     }
@@ -246,10 +264,42 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
   };
 
   const handleClick = (linha: number, coluna: number) => {
-    const segmento = getSegmentoInicio(linha, coluna);
-    if (segmento) {
-      onMove(segmento);
+    if (!isMyTurn) return;
+
+    // Se já há uma casa inicial selecionada
+    if (inicioSelecao) {
+      // Clicar na mesma casa cancela
+      if (inicioSelecao.linha === linha && inicioSelecao.coluna === coluna) {
+        setInicioSelecao(null);
+        return;
+      }
+
+      // Tentar formar um segmento completo (início -> fim)
+      const segmento = getSegmentoForEnd(linha, coluna);
+      if (segmento) {
+        onMove(segmento);
+        setInicioSelecao(null);
+        return;
+      }
+
+      // Permite re-selecionar um novo início
+      if (isStartSelectable(linha, coluna)) {
+        setInicioSelecao({ linha, coluna });
+      }
+      return;
     }
+
+    // Primeiro clique: selecionar início
+    if (isStartSelectable(linha, coluna)) {
+      setInicioSelecao({ linha, coluna });
+    }
+  };
+
+  const isCellEnabled = (linha: number, coluna: number): boolean => {
+    if (!isMyTurn) return false;
+    if (!inicioSelecao) return isStartSelectable(linha, coluna);
+    const isInicio = inicioSelecao.linha === linha && inicioSelecao.coluna === coluna;
+    return isInicio || isEndSelectable(linha, coluna) || isStartSelectable(linha, coluna);
   };
 
   return (
@@ -274,7 +324,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
                 key={`${linhaIdx}-${colunaIdx}`}
                 onClick={() => handleClick(linhaIdx, colunaIdx)}
                 className={getCelulaClasses(linhaIdx, colunaIdx)}
-                disabled={!getSegmentoInicio(linhaIdx, colunaIdx)}
+                disabled={!isCellEnabled(linhaIdx, colunaIdx)}
               />
             ))
           )}
