@@ -20,7 +20,8 @@ import {
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
-import { NexAIClient, type AIDifficulty, type AIMetrics, INITIAL_METRICS } from './ai';
+import { NexAIClient, type AIDifficulty, type AIMetrics, DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai';
+import { withTimeout } from '../../utils/withTimeout';
 
 interface NexGameProps {
   onVoltar: () => void;
@@ -93,20 +94,31 @@ export function NexGame({ onVoltar }: NexGameProps) {
       aiClientRef.current
     ) {
       let cancelled = false;
+      let finished = false;
+      const client = aiClientRef.current;
+      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
       const timer = setTimeout(async () => {
-        if (cancelled || !aiClientRef.current) return;
+        if (cancelled || !client) return;
         try {
-          const action = await aiClientRef.current.getBestAction(state, aiDifficulty);
+          const action = await withTimeout(
+            client.getBestAction(state, aiDifficulty),
+            maxWaitMs,
+            () => client.cancel()
+          );
           if (cancelled) return;
+          finished = true;
           setState(prev => (action ? aplicarAcaoIA(prev, action) : jogadaComputador(prev)));
         } catch (e) {
           console.error('[NexGame] AI error:', e);
+          if (cancelled) return;
+          finished = true;
           setState(prev => jogadaComputador(prev));
         }
       }, 350);
       return () => {
         cancelled = true;
         clearTimeout(timer);
+        if (!finished) client?.cancel();
       };
     }
   }, [state.jogadorAtual, state.modo, state.estado, state.swapDisponivel, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
@@ -120,20 +132,31 @@ export function NexGame({ onVoltar }: NexGameProps) {
       aiClientRef.current
     ) {
       let cancelled = false;
+      let finished = false;
+      const client = aiClientRef.current;
+      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
       const timer = setTimeout(async () => {
-        if (cancelled || !aiClientRef.current) return;
+        if (cancelled || !client) return;
         try {
-          const action = await aiClientRef.current.getBestAction(state, aiDifficulty);
+          const action = await withTimeout(
+            client.getBestAction(state, aiDifficulty),
+            maxWaitMs,
+            () => client.cancel()
+          );
           if (cancelled) return;
+          finished = true;
           setState(prev => (action ? aplicarAcaoIA(prev, action) : jogadaComputador(prev)));
         } catch (e) {
           console.error('[NexGame] AI swap error:', e);
+          if (cancelled) return;
+          finished = true;
           setState(prev => jogadaComputador(prev));
         }
       }, 300);
       return () => {
         cancelled = true;
         clearTimeout(timer);
+        if (!finished) client?.cancel();
       };
     }
   }, [state.swapDisponivel, state.modo, state.jogadorAtual, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
@@ -448,6 +471,16 @@ export function NexGame({ onVoltar }: NexGameProps) {
                 {aiReady ? (aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback') : 'A carregar…'}
               </span>
             </div>
+          </div>
+        )}
+
+        {/* Indicador de IA a decidir (evitar parecer bloqueado) */}
+        {state.modo === 'vs-computador' && state.estado === 'a-jogar' && !isVezDoHumano && (
+          <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-center">
+            <span className="flex items-center justify-center gap-2 text-indigo-700 font-medium text-sm">
+              <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+              {state.swapDisponivel ? 'IA a decidir sobre o swap…' : 'IA a pensar…'}
+            </span>
           </div>
         )}
 

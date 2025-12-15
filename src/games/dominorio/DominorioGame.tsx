@@ -8,14 +8,17 @@ import {
   atualizarPreview,
   colocarDomino,
   getDominoPreview,
+  jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
 import { 
   DominorioAIClient, 
   type AIDifficulty, 
   type AIMetrics,
+  DIFFICULTY_PRESETS,
   INITIAL_METRICS 
 } from './ai';
+import { withTimeout } from '../../utils/withTimeout';
 
 interface DominorioGameProps {
   onVoltar: () => void;
@@ -66,27 +69,38 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       aiClientRef.current
     ) {
       let cancelled = false;
+      let finished = false;
+      const client = aiClientRef.current;
+      const maxWaitMs = DIFFICULTY_PRESETS[difficulty].timeBudgetMs + 250;
       
       // Small delay for UX
       const timer = setTimeout(async () => {
-        if (cancelled || !aiClientRef.current) return;
+        if (cancelled || !client) return;
         
         try {
-          const move = await aiClientRef.current.getBestMove(state, difficulty);
+          const move = await withTimeout(
+            client.getBestMove(state, difficulty),
+            maxWaitMs,
+            () => client.cancel()
+          );
           
           if (cancelled) return;
           
-          if (move) {
-            setState(prev => colocarDomino(prev, move));
-          }
+          finished = true;
+          setState(prev => (move ? colocarDomino(prev, move) : jogadaComputador(prev)));
         } catch (e) {
+          if (e instanceof Error && e.message === 'cancelled') return;
           console.error('[DominorioGame] AI error:', e);
+          if (cancelled) return;
+          finished = true;
+          setState(prev => jogadaComputador(prev));
         }
       }, 200);
       
       return () => {
         cancelled = true;
         clearTimeout(timer);
+        if (!finished) client?.cancel();
       };
     }
   }, [state.jogadorAtual, state.modo, state.estado, humanPlayer, difficulty, state]);
@@ -181,6 +195,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     return classes;
   };
 
+  const isVezDaIA =
+    state.modo === 'vs-computador' &&
+    state.estado === 'a-jogar' &&
+    state.jogadorAtual !== humanPlayer;
+
   return (
     <GameLayout titulo="Dominório" regras={REGRAS} onVoltar={onVoltar}>
       <div className="space-y-4">
@@ -244,12 +263,19 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
             {state.estado === 'a-jogar' && (
-              <>
-                {state.jogadorAtual === 'jogador1' 
-                  ? 'Clica para colocar um dominó VERTICAL' 
-                  : 'Clica para colocar um dominó HORIZONTAL'}
-                {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
-              </>
+              isVezDaIA ? (
+                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                  IA a pensar…
+                </span>
+              ) : (
+                <>
+                  {state.jogadorAtual === 'jogador1' 
+                    ? 'Clica para colocar um dominó VERTICAL' 
+                    : 'Clica para colocar um dominó HORIZONTAL'}
+                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                </>
+              )
             )}
           </div>
         </div>

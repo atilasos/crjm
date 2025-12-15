@@ -16,7 +16,8 @@ import {
   decidirTrocaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
-import { QuelhasAIClient, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai';
+import { QuelhasAIClient, DIFFICULTY_PRESETS, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai';
+import { withTimeout } from '../../utils/withTimeout';
 
 interface QuelhasGameProps {
   onVoltar: () => void;
@@ -93,25 +94,40 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     
     if (isVezDaIA && aiClientRef.current) {
       let cancelled = false;
+      let finished = false;
+      const client = aiClientRef.current;
+      const maxWaitMs = DIFFICULTY_PRESETS[difficulty].timeBudgetMs + 250;
       const timer = setTimeout(async () => {
-        if (cancelled || !aiClientRef.current) return;
+        if (cancelled || !client) return;
 
         try {
-          const bestMove = await aiClientRef.current.getBestMove(state, difficulty);
+          const bestMove = await withTimeout(
+            client.getBestMove(state, difficulty),
+            maxWaitMs,
+            () => client.cancel()
+          );
           if (cancelled) return;
-          if (bestMove) {
-            setState(prev => colocarSegmento(prev, bestMove));
-          }
+          finished = true;
+          setState(prev => {
+            const mv = bestMove ?? prev.jogadasValidas[0] ?? null;
+            return mv ? colocarSegmento(prev, mv) : prev;
+          });
         } catch (e) {
           if (e instanceof Error && e.message === 'cancelled') return;
           console.error('[QuelhasGame] AI error:', e);
+          if (cancelled) return;
+          finished = true;
+          setState(prev => {
+            const mv = prev.jogadasValidas[0] ?? null;
+            return mv ? colocarSegmento(prev, mv) : prev;
+          });
         }
       }, 200);
 
       return () => {
         cancelled = true;
         clearTimeout(timer);
-        aiClientRef.current?.cancel();
+        if (!finished) client?.cancel();
       };
     }
   }, [state.jogadorAtual, state.modo, state.estado, state.trocaDisponivel, humanPlayer, difficulty, state]);
@@ -361,18 +377,25 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
             {state.estado === 'a-jogar' && !state.trocaDisponivel && (
-              <>
-                {posicaoInicial ? (
-                  <span className="text-indigo-600 font-medium">
-                    Clica na casa final do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
-                  </span>
-                ) : (
-                  <span>
-                    Clica na casa inicial do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
-                  </span>
-                )}
-                {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
-              </>
+              isVezDoHumano() ? (
+                <>
+                  {posicaoInicial ? (
+                    <span className="text-indigo-600 font-medium">
+                      Clica na casa final do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
+                    </span>
+                  ) : (
+                    <span>
+                      Clica na casa inicial do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
+                    </span>
+                  )}
+                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                </>
+              ) : (
+                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                  IA a pensar…
+                </span>
+              )
             )}
             {state.trocaDisponivel && !mostrarUiTroca && (
               <span className="text-purple-600 font-medium">

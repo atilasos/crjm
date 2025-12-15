@@ -35,10 +35,10 @@ export interface DifficultyPreset {
 }
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
-  easy: { timeMs: 40, level: 1 },
-  medium: { timeMs: 80, level: 2 },
-  hard: { timeMs: 180, level: 3 },
-  'very-hard': { timeMs: 450, level: 4 },
+  easy: { timeMs: 3000, level: 1 },
+  medium: { timeMs: 6000, level: 2 },
+  hard: { timeMs: 10000, level: 3 },
+  'very-hard': { timeMs: 15000, level: 4 },
 };
 
 export type AIRequest =

@@ -38,11 +38,11 @@ export interface DifficultyPreset {
 }
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
-  easy: { timeMs: 15, candidateK: 16, endgameEmptyN: 0 },
-  medium: { timeMs: 30, candidateK: 20, endgameEmptyN: 0 },
-  hard: { timeMs: 80, candidateK: 22, endgameEmptyN: 0 },
-  'very-hard': { timeMs: 200, candidateK: 24, endgameEmptyN: 6 },
-  max: { timeMs: 400, candidateK: 28, endgameEmptyN: 8 },
+  easy: { timeMs: 3000, candidateK: 16, endgameEmptyN: 0 },
+  medium: { timeMs: 6000, candidateK: 20, endgameEmptyN: 0 },
+  hard: { timeMs: 9000, candidateK: 22, endgameEmptyN: 0 },
+  'very-hard': { timeMs: 12000, candidateK: 24, endgameEmptyN: 6 },
+  max: { timeMs: 15000, candidateK: 28, endgameEmptyN: 8 },
 };
 
 export type AIRequest =

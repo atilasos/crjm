@@ -118,6 +118,6 @@ D) Muito difícil / Máximo (MCTS UCT):
 
 Critérios de aceitação
 - Correctness: regras e desempate exactos; jogadas sempre válidas.
-- Performance: nível Máximo responde em <= 2s no browser (máquina comum).
+- Performance: orçamento por nível (ex.: ~3s no Fácil até <= 15s no Máximo) no browser (máquina comum).
 - Qualidade: MCTS supera consistentemente minimax 2-ply em auto-play.
 - Integração: TypeScript chama WASM via Worker sem bloquear UI.

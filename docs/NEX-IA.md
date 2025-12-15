@@ -110,7 +110,7 @@ Nível 4 (master)
 - Opcional: no endgame (poucas casas vazias/neutras) ativar busca exata limitada, se couber no tempo.
 
 Performance e integração
-- Tempo alvo: 2-3 segundos por jogada em hardware típico de browser.
+- Tempo alvo: ~3s (easy) até ~15s (master) por jogada, dependendo do nível e hardware.
 - Executar num Web Worker; UI nunca bloqueia.
 - Determinismo controlado via seed para repetibilidade em testes.
 - Garantir que choose_move termina sempre dentro do budget, devolvendo melhor movimento conhecido até ao momento.

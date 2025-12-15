@@ -10,9 +10,9 @@ export interface DifficultyParams {
 }
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
-  easy: { timeBudgetMs: 250, maxDepth: 5, topN: 6, scoreDelta: 120 },
-  medium: { timeBudgetMs: 900, maxDepth: 9, topN: 3, scoreDelta: 60 },
-  hard: { timeBudgetMs: 2500, maxDepth: 18, topN: 0, scoreDelta: 0 },
+  easy: { timeBudgetMs: 3000, maxDepth: 5, topN: 6, scoreDelta: 120 },
+  medium: { timeBudgetMs: 8000, maxDepth: 9, topN: 3, scoreDelta: 60 },
+  hard: { timeBudgetMs: 15000, maxDepth: 18, topN: 0, scoreDelta: 0 },
 };
 
 export interface AIMetrics {

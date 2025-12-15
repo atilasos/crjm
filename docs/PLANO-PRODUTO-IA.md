@@ -119,7 +119,7 @@ Base: `docs/PRODUTO-IA.md`.
 - [ ] **Nível 5 (Máximo): MCTS intensivo + endgame exacto**
   - [ ] Se `empty_count <= endgame_empty_n`, trocar para minimax completo (resultado exacto).
   - DoD:
-    - [ ] Tempo médio por jogada no browser <= 2s (máquina comum) com preset “Máximo”.
+    - [ ] Tempo médio por jogada no browser <= 15s (máquina comum) com preset “Máximo”.
 
 ---
 
