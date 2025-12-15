@@ -118,6 +118,11 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     return classes;
   };
 
+  const isVezDaIA =
+    state.modo === 'vs-computador' &&
+    state.estado === 'a-jogar' &&
+    state.jogadorAtual !== humanPlayer;
+
   return (
     <GameLayout titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
       <div className="space-y-4">
@@ -181,16 +186,23 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
             {state.estado === 'a-jogar' && (
-              <>
-                {state.jogadorAtual === 'jogador1' 
-                  ? !state.primeiroGatoColocado 
-                    ? 'Coloca o primeiro Gato numa casa central (amarela)' 
-                    : 'Coloca um Gato (não pode ser adjacente a Cães)'
-                  : !state.primeiroCaoColocado
-                    ? 'Coloca o primeiro Cão fora das casas centrais'
-                    : 'Coloca um Cão (não pode ser adjacente a Gatos)'}
-                {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
-              </>
+              isVezDaIA ? (
+                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                  IA a pensar…
+                </span>
+              ) : (
+                <>
+                  {state.jogadorAtual === 'jogador1' 
+                    ? !state.primeiroGatoColocado 
+                      ? 'Coloca o primeiro Gato numa casa central (amarela)' 
+                      : 'Coloca um Gato (não pode ser adjacente a Cães)'
+                    : !state.primeiroCaoColocado
+                      ? 'Coloca o primeiro Cão fora das casas centrais'
+                      : 'Coloca um Cão (não pode ser adjacente a Gatos)'}
+                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                </>
+              )
             )}
           </div>
         </div>

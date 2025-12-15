@@ -39,10 +39,10 @@ export interface DifficultyPreset {
 }
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
-  easy: { timeMs: 250, level: 1 },
-  medium: { timeMs: 900, level: 2 },
-  hard: { timeMs: 1800, level: 3 },
-  master: { timeMs: 2600, level: 4 },
+  easy: { timeMs: 3000, level: 1 },
+  medium: { timeMs: 6000, level: 2 },
+  hard: { timeMs: 10000, level: 3 },
+  master: { timeMs: 15000, level: 4 },
 };
 
 export interface AIMetrics {
@@ -131,4 +131,3 @@ export function isValidAiAction(state: NexState, action: NexAiAction | null): ac
 
   return false;
 }
-

@@ -12,7 +12,8 @@ import {
 import { GameMode, Player } from '../../types';
 import { ProdutoAIClient, decodeMove } from './ai/ai-client';
 import type { AIDifficulty } from './ai/types';
-import { INITIAL_METRICS } from './ai/types';
+import { DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai/types';
+import { withTimeout } from '../../utils/withTimeout';
 
 interface ProdutoGameProps {
   onVoltar: () => void;
@@ -51,23 +52,32 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       state.estado === 'a-jogar'
     ) {
       let cancelled = false;
+      let finished = false;
+      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
       const timer = setTimeout(() => {
-        aiClientRef
-          .getBestMove(state, aiDifficulty)
-          .then(move => {
+        void (async () => {
+          try {
+            const move = await withTimeout(
+              aiClientRef.getBestMove(state, aiDifficulty),
+              maxWaitMs,
+              () => aiClientRef.cancel()
+            );
             if (cancelled) return;
 
             if (!move) {
+              finished = true;
               setState(prev => jogadaComputador(prev));
               return;
             }
 
             const decoded = decodeMove(move, aiClientRef.idxToPos);
             if (!decoded) {
+              finished = true;
               setState(prev => jogadaComputador(prev));
               return;
             }
 
+            finished = true;
             setState(prev => {
               let st = colocarPeca(prev, decoded.pos1, decoded.cor1);
               if (decoded.pos2 && decoded.cor2) {
@@ -75,15 +85,18 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
               }
               return st;
             });
-          })
-          .catch(() => {
+          } catch (e) {
             if (cancelled) return;
+            if (e instanceof Error && e.message === 'cancelled') return;
+            finished = true;
             setState(prev => jogadaComputador(prev));
-          });
+          }
+        })();
       }, 250);
       return () => {
         cancelled = true;
         clearTimeout(timer);
+        if (!finished) aiClientRef.cancel();
       };
     }
   }, [state, humanPlayer, aiDifficulty, aiClientRef]);
@@ -203,6 +216,11 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
   // Verificar quantas peças faltam na jogada atual
   const pecasFaltam = state.primeiraJogada ? 1 : (state.jogadaEmCurso.pos1 === null ? 2 : 1);
+
+  const isVezDaIA =
+    state.modo === 'vs-computador' &&
+    state.estado === 'a-jogar' &&
+    state.jogadorAtual !== humanPlayer;
 
   return (
     <GameLayout titulo="Produto" regras={REGRAS} onVoltar={onVoltar}>
@@ -356,13 +374,20 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
             {state.estado === 'a-jogar' && (
-              <>
-                {state.primeiraJogada 
-                  ? 'Pretas: coloca a primeira peça (apenas 1 nesta jogada)'
-                  : `${state.jogadorAtual === 'jogador1' ? 'Pretas' : 'Brancas'}: coloca ${pecasFaltam} peça${pecasFaltam > 1 ? 's' : ''}`
-                }
-                {' '}• Casas livres: {state.casasVazias.length}
-              </>
+              isVezDaIA ? (
+                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                  IA a pensar…
+                </span>
+              ) : (
+                <>
+                  {state.primeiraJogada 
+                    ? 'Pretas: coloca a primeira peça (apenas 1 nesta jogada)'
+                    : `${state.jogadorAtual === 'jogador1' ? 'Pretas' : 'Brancas'}: coloca ${pecasFaltam} peça${pecasFaltam > 1 ? 's' : ''}`
+                  }
+                  {' '}• Casas livres: {state.casasVazias.length}
+                </>
+              )
             )}
           </div>
 

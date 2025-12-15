@@ -11,7 +11,8 @@ import {
 } from './logic';
 import { GameMode, Player } from '../../types';
 import { AtariGoAIClient, idxToPos } from './ai/ai-client';
-import { INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
+import { DIFFICULTY_PRESETS, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
+import { withTimeout } from '../../utils/withTimeout';
 
 interface AtariGoGameProps {
   onVoltar: () => void;
@@ -53,6 +54,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     ) {
       let cancelled = false;
       const client = aiRef.current;
+      let finished = false;
+      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
 
       const run = async () => {
         // Pequeno delay para UX (e para permitir UI atualizar)
@@ -60,15 +63,19 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         if (cancelled) return;
 
         try {
-          const mv = client ? await client.getBestMove(state, aiDifficulty) : null;
+          const mv = client
+            ? await withTimeout(client.getBestMove(state, aiDifficulty), maxWaitMs, () => client.cancel())
+            : null;
           if (cancelled) return;
 
           if (mv === null) {
             // fallback TS local (IA básica)
+            finished = true;
             setState(prev => jogadaComputador(prev));
             return;
           }
 
+          finished = true;
           setState(prev => {
             if (
               prev.modo !== 'vs-computador' ||
@@ -85,6 +92,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           });
         } catch {
           if (cancelled) return;
+          finished = true;
           setState(prev => jogadaComputador(prev));
         }
       };
@@ -93,7 +101,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
       return () => {
         cancelled = true;
-        client?.cancel();
+        if (!finished) client?.cancel();
       };
     }
   }, [state, humanPlayer, aiDifficulty]);
@@ -235,6 +243,11 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     );
   };
 
+  const isVezDaIA =
+    state.modo === 'vs-computador' &&
+    state.estado === 'a-jogar' &&
+    state.jogadorAtual !== humanPlayer;
+
   return (
     <GameLayout titulo="Atari Go" regras={REGRAS} onVoltar={onVoltar}>
       <div className="space-y-4">
@@ -329,12 +342,19 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
             {state.estado === 'a-jogar' && (
-              <>
-                {state.jogadorAtual === 'jogador1' 
-                  ? 'Pretas: clica numa interseção para colocar uma pedra' 
-                  : 'Brancas: clica numa interseção para colocar uma pedra'}
-                {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
-              </>
+              isVezDaIA ? (
+                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
+                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                  IA a pensar…
+                </span>
+              ) : (
+                <>
+                  {state.jogadorAtual === 'jogador1' 
+                    ? 'Pretas: clica numa interseção para colocar uma pedra' 
+                    : 'Brancas: clica numa interseção para colocar uma pedra'}
+                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                </>
+              )
             )}
           </div>
         </div>
