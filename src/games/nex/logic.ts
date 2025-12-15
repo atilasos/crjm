@@ -61,9 +61,12 @@ function criarAcaoEmCursoVazia(): AcaoEmCurso {
   };
 }
 
-// Obter cor do jogador
-function getCorJogador(jogador: Player): 'preta' | 'branca' {
-  return jogador === 'jogador1' ? 'preta' : 'branca';
+// Obter cor do jogador (considerando swap/pie rule)
+export function getCorJogador(state: NexState, jogador: Player): 'preta' | 'branca' {
+  if (!state.swapEfetuado) {
+    return jogador === 'jogador1' ? 'preta' : 'branca';
+  }
+  return jogador === 'jogador1' ? 'branca' : 'preta';
 }
 
 // Verificar se jogador conectou as suas margens
@@ -134,7 +137,7 @@ export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca')
 
 // Executar ação de colocação
 export function executarColocacao(state: NexState, acao: AcaoColocacao): NexState {
-  const corJogador = getCorJogador(state.jogadorAtual);
+  const corJogador = getCorJogador(state, state.jogadorAtual);
   const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
   
   novoTabuleiro[acao.posPropria.x][acao.posPropria.y] = corJogador;
@@ -145,7 +148,7 @@ export function executarColocacao(state: NexState, acao: AcaoColocacao): NexStat
 
 // Executar ação de substituição
 export function executarSubstituicao(state: NexState, acao: AcaoSubstituicao): NexState {
-  const corJogador = getCorJogador(state.jogadorAtual);
+  const corJogador = getCorJogador(state, state.jogadorAtual);
   const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
   
   // 2 neutras viram próprias
@@ -160,7 +163,7 @@ export function executarSubstituicao(state: NexState, acao: AcaoSubstituicao): N
 
 // Finalizar turno após uma ação
 function finalizarTurno(state: NexState, novoTabuleiro: Celula[][]): NexState {
-  const corJogador = getCorJogador(state.jogadorAtual);
+  const corJogador = getCorJogador(state, state.jogadorAtual);
   
   // Verificar vitória
   let novoEstado: GameStatus = 'a-jogar';
@@ -187,21 +190,13 @@ function finalizarTurno(state: NexState, novoTabuleiro: Celula[][]): NexState {
 // Executar swap (trocar de cor)
 export function executarSwap(state: NexState): NexState {
   if (!state.swapDisponivel) return state;
-  
-  // Trocar cores de todas as peças no tabuleiro
-  const novoTabuleiro = state.tabuleiro.map(linha => 
-    linha.map(celula => {
-      if (celula === 'preta') return 'branca';
-      if (celula === 'branca') return 'preta';
-      return celula;
-    })
-  );
-  
-  // Trocar também o jogador atual (fica quem era antes)
-  // Na prática, o jogador 2 torna-se dono das peças pretas
+
+  // Regra da Torta (Pie rule): não altera o tabuleiro; troca as cores atribuídas aos jogadores
+  // e consome o turno do jogador que escolheu o swap.
+  const proximoJogador: Player = state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1';
   return {
     ...state,
-    tabuleiro: novoTabuleiro,
+    jogadorAtual: proximoJogador,
     swapDisponivel: false,
     swapEfetuado: true,
     acaoEmCurso: criarAcaoEmCursoVazia(),
@@ -317,8 +312,11 @@ export function cancelarAcao(state: NexState): NexState {
 }
 
 // Verificar se substituição é possível (existem 2+ neutras e 1+ próprias)
-export function podeSubstituir(tabuleiro: Celula[][], jogador: Player): boolean {
-  const corJogador = getCorJogador(jogador);
+export function podeSubstituir(tabuleiro: Celula[][], jogador: Player, swapEfetuado = false): boolean {
+  const corJogador =
+    !swapEfetuado
+      ? (jogador === 'jogador1' ? 'preta' : 'branca')
+      : (jogador === 'jogador1' ? 'branca' : 'preta');
   let numNeutras = 0;
   let numProprias = 0;
   
@@ -361,17 +359,19 @@ function calcularDistanciaMinima(tabuleiro: Celula[][], cor: 'preta' | 'branca')
   let isMargeFim: (pos: Posicao) => boolean;
   
   if (cor === 'preta') {
-    posicoesInicio = [];
-    for (let y = 0; y < LADO_TABULEIRO; y++) {
-      posicoesInicio.push({ x: 0, y });
-    }
-    isMargeFim = (pos) => pos.x === LADO_TABULEIRO - 1;
-  } else {
+    // Pretas: conecta y=0 (NW) a y=10 (SE)
     posicoesInicio = [];
     for (let x = 0; x < LADO_TABULEIRO; x++) {
       posicoesInicio.push({ x, y: 0 });
     }
     isMargeFim = (pos) => pos.y === LADO_TABULEIRO - 1;
+  } else {
+    // Brancas: conecta x=0 (SW) a x=10 (NE)
+    posicoesInicio = [];
+    for (let y = 0; y < LADO_TABULEIRO; y++) {
+      posicoesInicio.push({ x: 0, y });
+    }
+    isMargeFim = (pos) => pos.x === LADO_TABULEIRO - 1;
   }
   
   // Inicializar com posições de início
@@ -427,17 +427,17 @@ function calcularDistanciaMinima(tabuleiro: Celula[][], cor: 'preta' | 'branca')
 
 // IA do computador para Nex
 export function jogadaComputador(state: NexState): NexState {
-  const corJogador = getCorJogador(state.jogadorAtual);
+  const corJogador = getCorJogador(state, state.jogadorAtual);
   const corAdversario = corJogador === 'preta' ? 'branca' : 'preta';
   
   // Se swap disponível, decidir se deve fazer
   if (state.swapDisponivel) {
-    // Avaliar posição após swap
-    const distMinhaAtual = calcularDistanciaMinima(state.tabuleiro, corJogador);
-    const distAdvAtual = calcularDistanciaMinima(state.tabuleiro, corAdversario);
-    
-    // Se adversário está mais perto de vencer, fazer swap
-    if (distAdvAtual < distMinhaAtual - 1) {
+    // Pie rule: decidir se compensa trocar de cor (ficar com as Pretas)
+    const distComoEstou = calcularDistanciaMinima(state.tabuleiro, corJogador);
+    const distSeTrocar = calcularDistanciaMinima(state.tabuleiro, corAdversario);
+
+    // Se a cor alternativa está significativamente melhor, fazer swap
+    if (distSeTrocar + 1 < distComoEstou) {
       return executarSwap(state);
     }
     return recusarSwap(state);
@@ -522,7 +522,7 @@ export function jogadaComputador(state: NexState): NexState {
   }
   
   // Avaliar substituições (se disponível e melhor que colocação)
-  if (podeSubstituir(state.tabuleiro, state.jogadorAtual) && melhorPontuacao < 9000) {
+  if (podeSubstituir(state.tabuleiro, state.jogadorAtual, state.swapEfetuado) && melhorPontuacao < 9000) {
     const neutras: Posicao[] = [];
     const proprias: Posicao[] = [];
     
@@ -597,4 +597,3 @@ export function jogadaComputador(state: NexState): NexState {
 
 // Exportar para testes
 export { getVizinhos, dentroDoTabuleiro, calcularDistanciaMinima };
-

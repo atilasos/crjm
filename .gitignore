@@ -24,6 +24,10 @@ src/games/atari-go/ai/wasm/pkg/*.wasm
 src/games/atari-go/ai/wasm/pkg/*.d.ts
 wasm/atari_go_ai/target/
 wasm/atari_go_ai/.tmp/
+src/games/nex/ai/wasm/pkg/*.js
+src/games/nex/ai/wasm/pkg/*.wasm
+src/games/nex/ai/wasm/pkg/*.d.ts
+wasm/nex_ai/target/
 
 # code coverage
 coverage
@@ -54,3 +58,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 
 # Cursor IDE
 .cursor/
+
+# local cargo scratch dirs (dev only)
+target-nex/
+target-test/
