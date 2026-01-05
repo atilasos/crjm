@@ -775,10 +775,26 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const iWonLastGame = lastGameWinnerId === playerId;
   const isDraw = lastGameWinnerId === null && gameJustEnded;
 
-  // Determinar quem começa a próxima partida
+  // Determinar meu seat fixo no match (derivado do papel atual e número do jogo)
+  // Se jogo atual é ímpar (1, 3): seat = role (sem troca de papéis)
+  // Se jogo atual é par (2): seat = oposto do role (houve troca de papéis)
+  const currentRolesSwapped = currentGameNumber % 2 === 0;
+  const mySeatInMatch = currentRolesSwapped 
+    ? (myRole === 'player1' ? 'player2' : 'player1')
+    : myRole;
+
+  // Determinar quem começa a próxima partida (baseado em seats, não roles)
+  // Em jogos ímpares: seat player1 começa (é jogador1/Gatos)
+  // Em jogos pares: seat player2 começa (é jogador1/Gatos com papéis trocados)
   const nextGameNumber = currentGameNumber + 1;
-  const whoStartsNext: 'player1' | 'player2' = nextGameNumber % 2 === 1 ? 'player1' : 'player2';
-  const iStartNext = whoStartsNext === myRole;
+  const nextRolesSwapped = nextGameNumber % 2 === 0;
+  const seatWhoStartsNext: 'player1' | 'player2' = nextGameNumber % 2 === 1 ? 'player1' : 'player2';
+  const iStartNext = seatWhoStartsNext === mySeatInMatch;
+  
+  // Determinar qual papel terei no próximo jogo (para informar o utilizador)
+  const myNextRole = nextRolesSwapped
+    ? (mySeatInMatch === 'player1' ? 'player2' : 'player1')
+    : mySeatInMatch;
 
   // Verificar se o match vai continuar (ninguém chegou a 2 vitórias ainda)
   const maxWins = 2; // Melhor de 3
@@ -831,7 +847,21 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               <p className="text-white/60 text-sm">
                 Próxima partida: Jogo {nextGameNumber}
               </p>
-              <p className="text-white/80 text-sm font-medium">
+              <p className="text-white/80 text-sm font-medium mb-1">
+                {nextRolesSwapped 
+                  ? '🔄 Papéis trocados! ' 
+                  : ''}
+                {gameId === 'gatos-caes' && (
+                  <>Serás {myNextRole === 'player1' ? '🐱 Gatos' : '🐶 Cães'}</>
+                )}
+                {gameId === 'dominorio' && (
+                  <>Serás {myNextRole === 'player1' ? 'Jogador 1' : 'Jogador 2'}</>
+                )}
+                {gameId === 'quelhas' && (
+                  <>Serás {myNextRole === 'player1' ? 'Jogador 1' : 'Jogador 2'}</>
+                )}
+              </p>
+              <p className="text-white/70 text-sm">
                 {iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.'}
               </p>
             </div>

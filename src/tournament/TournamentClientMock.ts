@@ -82,6 +82,15 @@ export class TournamentClientMock implements TournamentClient {
   private _myRole: 'player1' | 'player2' | null = null;
   private _gameId: GameId | null = null;
 
+  // Seat fixo no match (player1 ou player2 - não muda)
+  // myRole pode mudar entre jogos quando os papéis trocam
+  private _mySeatInMatch: 'player1' | 'player2' | null = null;
+  
+  // Mapeamento do jogo atual: quem é jogador1/jogador2 no jogo
+  // Em jogos ímpares: player1 é jogador1, player2 é jogador2
+  // Em jogos pares: player2 é jogador1, player1 é jogador2 (papéis trocados)
+  private _gameRoleMapping: { jogador1: 'player1' | 'player2'; jogador2: 'player1' | 'player2' } | null = null;
+
   // Estado real do jogo em curso
   private _gameState: GameState | null = null;
   private _iHaveToPlay: boolean = false;
@@ -256,7 +265,10 @@ export class TournamentClientMock implements TournamentClient {
 
     this._tournamentState.winnersMatches = [matchSummary];
     this._currentMatch = match;
-    this._myRole = euSouPlayer1 ? 'player1' : 'player2';
+    // Seat fixo no match (não muda durante o match)
+    this._mySeatInMatch = euSouPlayer1 ? 'player1' : 'player2';
+    // Role inicial é o mesmo que o seat (jogo 1 não tem troca)
+    this._myRole = this._mySeatInMatch;
 
     // Send tournament state update (NEW protocol - flat structure)
     this.emitTournamentStateUpdate();
@@ -294,7 +306,7 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async handleReadyForMatch(matchId: string): Promise<void> {
-    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameId || !this._myRole) {
+    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameId || !this._mySeatInMatch) {
       this.emit({
         type: 'error',
         code: 'INVALID_MATCH',
@@ -310,16 +322,32 @@ export class TournamentClientMock implements TournamentClient {
 
     await this.delay(500);
 
+    // Determina o número do jogo atual
+    const gameNumber = this._currentMatch.currentGame;
+    
+    // Calcula o mapeamento de papéis para este jogo
+    // Em jogos ímpares (1, 3): papéis normais (seat = role)
+    // Em jogos pares (2): papéis trocados
+    const rolesSwapped = gameNumber % 2 === 0;
+    
+    if (rolesSwapped) {
+      // Papéis trocados: player1 do match joga como jogador2 (Cães), player2 joga como jogador1 (Gatos)
+      this._gameRoleMapping = { jogador1: 'player2', jogador2: 'player1' };
+      this._myRole = this._mySeatInMatch === 'player1' ? 'player2' : 'player1';
+    } else {
+      // Papéis normais: player1 do match joga como jogador1 (Gatos), player2 joga como jogador2 (Cães)
+      this._gameRoleMapping = { jogador1: 'player1', jogador2: 'player2' };
+      this._myRole = this._mySeatInMatch;
+    }
+
     // Cria estado real do jogo (formato local)
     this._gameState = this.createGameState(this._gameId);
     this._currentMatch.phase = 'playing';
 
-    // Determina quem começa este jogo
-    const gameNumber = this._currentMatch.currentGame;
-    // Jogo 1: player1 começa, Jogo 2: player2 começa, Jogo 3: player1 começa
-    const whoStarts: 'player1' | 'player2' = gameNumber % 2 === 1 ? 'player1' : 'player2';
-    
-    const youStart = whoStarts === this._myRole;
+    // Quem começa é sempre jogador1 do jogo (quem tem Gatos em Gatos & Cães)
+    // Que em jogos ímpares é player1 do match, e em jogos pares é player2 do match
+    const matchPlayerWhoStarts = this._gameRoleMapping.jogador1;
+    const youStart = matchPlayerWhoStarts === this._mySeatInMatch;
     this._iHaveToPlay = youStart;
 
     // Converte para formato de rede antes de enviar para o cliente
@@ -441,24 +469,33 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async endCurrentGame(finalState: GameState): Promise<void> {
-    if (!this._currentMatch || !this._myRole || !this._playerId) return;
+    if (!this._currentMatch || !this._myRole || !this._playerId || !this._gameRoleMapping || !this._mySeatInMatch) return;
 
-    // Determina quem ganhou
-    const winner = this.getWinner(finalState);
-    const isDraw = winner === null && finalState.estado === 'empate';
+    // Determina quem ganhou (jogador1 ou jogador2 no jogo)
+    const gameWinner = this.getWinner(finalState);
+    const isDraw = gameWinner === null && finalState.estado === 'empate';
     
     let iWon = false;
     let winnerRole: 'player1' | 'player2' | null = null;
     let winnerId: string | null = null;
     
-    if (winner === 'jogador1') {
-      winnerRole = 'player1';
-      winnerId = this._currentMatch.player1!.id;
-      iWon = this._myRole === 'player1';
-    } else if (winner === 'jogador2') {
-      winnerRole = 'player2';
-      winnerId = this._currentMatch.player2!.id;
-      iWon = this._myRole === 'player2';
+    // Usa o mapeamento de papéis para converter vencedor do jogo para vencedor do match
+    // gameWinner é 'jogador1' ou 'jogador2' (papel no jogo atual)
+    // Precisamos mapear para 'player1' ou 'player2' (seat no match)
+    if (gameWinner === 'jogador1') {
+      // Quem estava a jogar como jogador1 neste jogo?
+      winnerRole = this._gameRoleMapping.jogador1;
+      winnerId = winnerRole === 'player1' 
+        ? this._currentMatch.player1!.id 
+        : this._currentMatch.player2!.id;
+      iWon = this._mySeatInMatch === winnerRole;
+    } else if (gameWinner === 'jogador2') {
+      // Quem estava a jogar como jogador2 neste jogo?
+      winnerRole = this._gameRoleMapping.jogador2;
+      winnerId = winnerRole === 'player1' 
+        ? this._currentMatch.player1!.id 
+        : this._currentMatch.player2!.id;
+      iWon = this._mySeatInMatch === winnerRole;
     }
 
     // Atualiza score
