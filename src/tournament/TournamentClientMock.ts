@@ -711,6 +711,14 @@ export class TournamentClientMock implements TournamentClient {
         case 'dominorio': {
           const domino = move as Domino;
           const domState = state as DominorioState;
+          // Verifica se o dominó é uma jogada válida
+          const isValid = domState.jogadasValidas.some(d => 
+            d.pos1.linha === domino.pos1.linha && 
+            d.pos1.coluna === domino.pos1.coluna &&
+            d.pos2.linha === domino.pos2.linha && 
+            d.pos2.coluna === domino.pos2.coluna
+          );
+          if (!isValid) return null;
           return colocarDominorio(domState, domino);
         }
         case 'quelhas': {
