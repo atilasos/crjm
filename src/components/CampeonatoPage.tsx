@@ -764,16 +764,8 @@ interface MatchAreaProps {
 }
 
 function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, onMove, onNextGame }: MatchAreaProps) {
-  const opponent = myRole === 'player1' ? match.player2 : match.player1;
-  const myScore = myRole === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
-  const opponentScore = myRole === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
-
   // Converter myRole para o formato do jogo
   const gameMyRole = myRole === 'player1' ? 'jogador1' : 'jogador2';
-
-  // Determinar se eu ganhei a última partida
-  const iWonLastGame = lastGameWinnerId === playerId;
-  const isDraw = lastGameWinnerId === null && gameJustEnded;
 
   // Determinar meu seat fixo no match (derivado do papel atual e número do jogo)
   // Se jogo atual é ímpar (1, 3): seat = role (sem troca de papéis)
@@ -782,6 +774,16 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const mySeatInMatch = currentRolesSwapped 
     ? (myRole === 'player1' ? 'player2' : 'player1')
     : myRole;
+
+  // IMPORTANTE: O score é baseado no SEAT, não no role do jogo atual!
+  // player1Wins/player2Wins referem-se a vitórias do seat, não do papel no jogo
+  const opponent = mySeatInMatch === 'player1' ? match.player2 : match.player1;
+  const myScore = mySeatInMatch === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
+  const opponentScore = mySeatInMatch === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
+
+  // Determinar se eu ganhei a última partida
+  const iWonLastGame = lastGameWinnerId === playerId;
+  const isDraw = lastGameWinnerId === null && gameJustEnded;
 
   // Determinar quem começa a próxima partida (baseado em seats, não roles)
   // Em jogos ímpares: seat player1 começa (é jogador1/Gatos)

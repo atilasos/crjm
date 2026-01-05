@@ -436,7 +436,9 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async botPlay(): Promise<void> {
-    if (!this._gameState || !this._gameId || !this._currentMatch || !this._myRole) return;
+    if (!this._gameState || !this._gameId || !this._currentMatch || !this._myRole) {
+      return;
+    }
 
     // Bot faz uma jogada usando a IA do jogo
     const newState = this.makeBotMove(this._gameId, this._gameState);
@@ -469,7 +471,9 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async endCurrentGame(finalState: GameState): Promise<void> {
-    if (!this._currentMatch || !this._myRole || !this._playerId || !this._gameRoleMapping || !this._mySeatInMatch) return;
+    if (!this._currentMatch || !this._myRole || !this._playerId || !this._gameRoleMapping || !this._mySeatInMatch) {
+      return;
+    }
 
     // Determina quem ganhou (jogador1 ou jogador2 no jogo)
     const gameWinner = this.getWinner(finalState);
