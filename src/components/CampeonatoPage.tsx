@@ -105,6 +105,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [currentGameNumber, setCurrentGameNumber] = useState(1);
   const [matchScore, setMatchScore] = useState<{ player1Wins: number; player2Wins: number }>({ player1Wins: 0, player2Wins: 0 });
 
+  // Estado para anúncio de fim de partida individual
+  const [gameJustEnded, setGameJustEnded] = useState(false);
+  const [lastGameWinnerId, setLastGameWinnerId] = useState<string | null>(null);
+  const [lastGameWinnerRole, setLastGameWinnerRole] = useState<'player1' | 'player2' | null>(null);
+
   // Estado do jogo atual
   const [gameState, setGameState] = useState<GatosCaesState | DominorioState | QuelhasState | null>(null);
 
@@ -196,6 +201,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'game_start': {
         setIsMyTurn(message.youStart);
         setCurrentGameNumber(message.gameNumber);
+        // Reset do estado de fim de partida
+        setGameJustEnded(false);
+        setLastGameWinnerId(null);
+        setLastGameWinnerRole(null);
         // Atualiza myRole se fornecido (novo protocolo)
         if (message.yourRole) {
           setMyRole(message.yourRole);
@@ -253,6 +262,22 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         if (message.matchScore) {
           setMatchScore(message.matchScore);
         }
+        
+        // Ativar estado de anúncio de fim de partida
+        setGameJustEnded(true);
+        setLastGameWinnerId(message.winnerId);
+        setLastGameWinnerRole(message.winnerRole);
+        
+        // Atualizar fase do match para waiting (preparar próxima partida)
+        setCurrentMatch(prev =>
+          prev
+            ? {
+                ...prev,
+                phase: 'waiting',
+              }
+            : prev
+        );
+        
         addLog(`Jogo ${message.gameNumber} terminou!`, 'info');
         break;
       }
@@ -263,6 +288,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         setGameState(null);
         setCurrentGameNumber(1);
         setMatchScore({ player1Wins: 0, player2Wins: 0 });
+        setGameJustEnded(false);
+        setLastGameWinnerId(null);
+        setLastGameWinnerRole(null);
         if (message.youWon) {
           addLog(`🎉 Ganhaste o confronto! ${message.finalScore.player1Wins}-${message.finalScore.player2Wins}`, 'success');
         } else {
@@ -382,6 +410,15 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     });
   };
 
+  const handleNextGame = () => {
+    // Limpa o estado de fim de partida e inicia a próxima
+    setGameJustEnded(false);
+    setLastGameWinnerId(null);
+    setLastGameWinnerRole(null);
+    // Chama ready_for_match para iniciar a próxima partida
+    handleReadyForMatch();
+  };
+
   const handleDisconnect = () => {
     if (clientRef.current) {
       clientRef.current.disconnect();
@@ -394,6 +431,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     setGameState(null);
     setPlayerId(null);
     setConnectionStatus('disconnected');
+    setGameJustEnded(false);
+    setLastGameWinnerId(null);
+    setLastGameWinnerRole(null);
   };
 
   return (
@@ -438,8 +478,13 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   gameState={gameState}
                   currentGameNumber={currentGameNumber}
                   matchScore={matchScore}
+                  gameJustEnded={gameJustEnded}
+                  lastGameWinnerId={lastGameWinnerId}
+                  lastGameWinnerRole={lastGameWinnerRole}
+                  playerId={playerId}
                   onReady={handleReadyForMatch}
                   onMove={handleMove}
+                  onNextGame={handleNextGame}
                 />
               )}
 
@@ -709,17 +754,35 @@ interface MatchAreaProps {
   gameState: GatosCaesState | DominorioState | QuelhasState | null;
   currentGameNumber: number;
   matchScore: { player1Wins: number; player2Wins: number };
+  gameJustEnded: boolean;
+  lastGameWinnerId: string | null;
+  lastGameWinnerRole: 'player1' | 'player2' | null;
+  playerId: string | null;
   onReady: () => void;
   onMove: (move: unknown) => void;
+  onNextGame: () => void;
 }
 
-function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, onReady, onMove }: MatchAreaProps) {
+function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, onMove, onNextGame }: MatchAreaProps) {
   const opponent = myRole === 'player1' ? match.player2 : match.player1;
   const myScore = myRole === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
   const opponentScore = myRole === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
 
   // Converter myRole para o formato do jogo
   const gameMyRole = myRole === 'player1' ? 'jogador1' : 'jogador2';
+
+  // Determinar se eu ganhei a última partida
+  const iWonLastGame = lastGameWinnerId === playerId;
+  const isDraw = lastGameWinnerId === null && gameJustEnded;
+
+  // Determinar quem começa a próxima partida
+  const nextGameNumber = currentGameNumber + 1;
+  const whoStartsNext: 'player1' | 'player2' = nextGameNumber % 2 === 1 ? 'player1' : 'player2';
+  const iStartNext = whoStartsNext === myRole;
+
+  // Verificar se o match vai continuar (ninguém chegou a 2 vitórias ainda)
+  const maxWins = 2; // Melhor de 3
+  const matchContinues = myScore < maxWins && opponentScore < maxWins;
 
   return (
     <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
@@ -741,8 +804,49 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
         </p>
       </div>
 
-      {/* Área de jogo */}
-      {match.phase === 'waiting' && (
+      {/* Anúncio de fim de partida individual */}
+      {gameJustEnded && matchContinues && (
+        <div className="text-center py-8">
+          <div className={`inline-block p-6 rounded-2xl ${
+            iWonLastGame 
+              ? 'bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/50' 
+              : isDraw
+                ? 'bg-gradient-to-br from-gray-500/30 to-slate-500/30 border border-gray-400/50'
+                : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-400/50'
+          }`}>
+            <div className="text-6xl mb-3">
+              {iWonLastGame ? '🎉' : isDraw ? '🤝' : '😔'}
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">
+              {iWonLastGame 
+                ? 'Ganhaste esta partida!' 
+                : isDraw 
+                  ? 'Empate!' 
+                  : 'Perdeste esta partida...'}
+            </h3>
+            <p className="text-white/70 mb-4">
+              Resultado do match: <span className="font-bold text-green-400">{myScore}</span> - <span className="font-bold text-red-400">{opponentScore}</span>
+            </p>
+            <div className="bg-white/10 rounded-lg p-3 mb-4">
+              <p className="text-white/60 text-sm">
+                Próxima partida: Jogo {nextGameNumber}
+              </p>
+              <p className="text-white/80 text-sm font-medium">
+                {iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.'}
+              </p>
+            </div>
+            <button
+              onClick={onNextGame}
+              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            >
+              ▶️ Próxima Partida
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Área de jogo - fase waiting (antes de começar) */}
+      {match.phase === 'waiting' && !gameJustEnded && (
         <div className="text-center py-8">
           <p className="text-white/80 mb-4">Estás pronto para começar?</p>
           <button

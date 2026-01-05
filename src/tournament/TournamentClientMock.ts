@@ -498,20 +498,22 @@ export class TournamentClientMock implements TournamentClient {
       await this.delay(1500);
       await this.endCurrentMatch();
     } else {
-      // Próximo jogo
+      // Próximo jogo - prepara mas NÃO auto-inicia
+      // O utilizador terá que clicar "Próxima Partida" na UI
       this._currentMatch.currentGame++;
       this._currentMatch.phase = 'waiting';
 
-      await this.delay(1500);
+      await this.delay(500);
+
+      // Indica quem irá começar a próxima partida
+      const nextGameNumber = this._currentMatch.currentGame;
+      const whoStartsNext: 'player1' | 'player2' = nextGameNumber % 2 === 1 ? 'player1' : 'player2';
+      const youStartNext = whoStartsNext === this._myRole;
 
       this.emit({
         type: 'info',
-        message: `Prepara-te para o jogo ${this._currentMatch.currentGame}!`,
+        message: `Prepara-te para o jogo ${nextGameNumber}! ${youStartNext ? 'Tu irás começar.' : 'O adversário irá começar.'}`,
       });
-
-      // Auto-inicia
-      await this.delay(1000);
-      await this.handleReadyForMatch(this._currentMatch.id);
     }
   }
 
