@@ -249,6 +249,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       }
 
       case 'game_end': {
+        // DEBUG: Log the received message
+        console.log('[DEBUG CLIENT] game_end received:', JSON.stringify(message));
+        console.log('[DEBUG CLIENT] matchScore in message:', message.matchScore);
+        
         // Converte estado de rede para local se necessário
         const gameIdForEnd = currentGameIdRef.current || 'gatos-caes';
         try {
@@ -260,7 +264,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         }
         // Novo protocolo inclui matchScore
         if (message.matchScore) {
+          console.log('[DEBUG CLIENT] Setting matchScore to:', message.matchScore);
           setMatchScore(message.matchScore);
+        } else {
+          console.log('[DEBUG CLIENT] WARNING: matchScore is missing from message!');
         }
         
         // Ativar estado de anúncio de fim de partida
@@ -780,6 +787,9 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const opponent = mySeatInMatch === 'player1' ? match.player2 : match.player1;
   const myScore = mySeatInMatch === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
   const opponentScore = mySeatInMatch === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
+  
+  // DEBUG: Log score values
+  console.log('[DEBUG RENDER] matchScore:', matchScore, 'mySeatInMatch:', mySeatInMatch, 'myScore:', myScore, 'opponentScore:', opponentScore);
 
   // Determinar se eu ganhei a última partida
   const iWonLastGame = lastGameWinnerId === playerId;

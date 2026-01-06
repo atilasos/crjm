@@ -436,25 +436,52 @@ function handleSubmitMove(
   // Verificar se o jogo acabou
   if (isGameFinished(tournament.gameId, newState)) {
     const winner = getGameWinner(tournament.gameId, newState);
-    const winnerId = winner === 'jogador1' ? match.player1!.id : match.player2!.id;
+    
+    // CORREÇÃO: Mapear jogador1/jogador2 (papel no jogo) para player1/player2 (seat no match)
+    // whoStartsCurrentGame indica qual seat está a jogar como jogador1 neste jogo
+    // Jogo 1: player1 = jogador1, Jogo 2: player2 = jogador1, Jogo 3: player1 = jogador1
+    const isPlayer1AsJogador1 = match.whoStartsCurrentGame === 'player1';
+    const winnerId = winner === 'jogador1'
+      ? (isPlayer1AsJogador1 ? match.player1!.id : match.player2!.id)
+      : (isPlayer1AsJogador1 ? match.player2!.id : match.player1!.id);
+    
+    // Determinar o winnerRole (seat) para enviar aos clientes
+    const winnerRole: 'player1' | 'player2' = winnerId === match.player1!.id ? 'player1' : 'player2';
 
     // Terminar o jogo
     const { matchEnded, matchWinnerId } = endGame(match, winnerId);
+    
+    // Obter o nome do vencedor corretamente
+    const winnerName = winnerId === match.player1!.id ? match.player1?.name : match.player2?.name;
 
     log({
       type: 'game',
       tournamentId: tournament.id,
       matchId: match.id,
-      message: `Jogo ${gameNumber} terminou. Vencedor: ${winner === 'jogador1' ? match.player1?.name : match.player2?.name}`,
+      message: `Jogo ${gameNumber} terminou. Vencedor: ${winnerName}`,
     });
 
-    // Notificar fim do jogo
+    // DEBUG: Log the score being sent
+    console.log('[DEBUG] Score após endGame:', JSON.stringify(match.score));
+
+    // Criar cópia do score para enviar (evitar problemas de referência)
+    const scoreToSend = { 
+      player1Wins: match.score.player1Wins, 
+      player2Wins: match.score.player2Wins 
+    };
+    
+    console.log('[DEBUG] Score a enviar:', JSON.stringify(scoreToSend));
+
+    // Notificar fim do jogo com campos completos
     sendToPlayer(match.player1!.id, {
       type: 'game_end',
       matchId,
       gameNumber,
       winnerId,
+      winnerRole,
+      isDraw: false,
       finalState: newState,
+      matchScore: scoreToSend,
     });
 
     sendToPlayer(match.player2!.id, {
@@ -462,7 +489,10 @@ function handleSubmitMove(
       matchId,
       gameNumber,
       winnerId,
+      winnerRole,
+      isDraw: false,
       finalState: newState,
+      matchScore: scoreToSend,
     });
 
     // Se o match terminou
