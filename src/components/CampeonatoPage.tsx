@@ -16,12 +16,18 @@ import {
   GatosCaesBoard,
   DominorioBoard,
   QuelhasBoard,
+  ProdutoBoard,
+  AtariGoBoard,
+  NexBoard,
 } from '../tournament';
 
 // Tipos dos jogos
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
 import type { DominorioState, Domino } from '../games/dominorio/types';
 import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas/types';
+import type { ProdutoState, JogadaDupla } from '../games/produto/types';
+import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
+import type { NexState, Acao as NexAcao } from '../games/nex/types';
 
 interface CampeonatoPageProps {
   onVoltar: () => void;
@@ -52,12 +58,12 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
   // Formato antigo: campos como `id`, sem `championName` e sem flags de online
   const players = Array.isArray(raw.players)
     ? raw.players.map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        classId: p.classId,
-        isOnline: true,
-        isBot: p.isBot ?? false,
-      }))
+      id: p.id,
+      name: p.name,
+      classId: p.classId,
+      isOnline: true,
+      isBot: p.isBot ?? false,
+    }))
     : [];
 
   const championId: string | null = raw.championId ?? null;
@@ -78,8 +84,8 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
 }
 
 // URL do servidor de torneio via variável de ambiente ou default
-const DEFAULT_SERVER_URL = typeof import.meta !== 'undefined' 
-  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '') 
+const DEFAULT_SERVER_URL = typeof import.meta !== 'undefined'
+  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '')
   : '';
 
 export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
@@ -100,7 +106,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [isMyTurn, setIsMyTurn] = useState(false);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [currentGameId, setCurrentGameId] = useState<GameId | null>(null);
-  
+
   // Estado do jogo dentro do match (novo protocolo não inclui isto no Match)
   const [currentGameNumber, setCurrentGameNumber] = useState(1);
   const [matchScore, setMatchScore] = useState<{ player1Wins: number; player2Wins: number }>({ player1Wins: 0, player2Wins: 0 });
@@ -111,7 +117,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [lastGameWinnerRole, setLastGameWinnerRole] = useState<'player1' | 'player2' | null>(null);
 
   // Estado do jogo atual
-  const [gameState, setGameState] = useState<GatosCaesState | DominorioState | QuelhasState | null>(null);
+  const [gameState, setGameState] = useState<
+    GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState | null
+  >(null);
 
   // Log de eventos
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -120,7 +128,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Cliente de torneio
   const clientRef = useRef<TournamentClient | null>(null);
-  
+
   // Refs para handlers - evita recriar o cliente quando o estado muda
   const playerIdRef = useRef<string | null>(null);
   const currentGameIdRef = useRef<GameId | null>(null);
@@ -213,19 +221,19 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         setCurrentMatch(prev =>
           prev
             ? {
-                ...prev,
-                phase: 'playing',
-              }
+              ...prev,
+              phase: 'playing',
+            }
             : prev
         );
         // Converte estado de rede para local se necessário
         const gameIdForConversion = currentGameIdRef.current || 'gatos-caes';
         try {
           const localInitialState = fromNetworkGameState(gameIdForConversion, message.initialState);
-          setGameState(localInitialState as GatosCaesState | DominorioState | QuelhasState);
+          setGameState(localInitialState as any);
         } catch {
           // Fallback: assume que já está no formato local
-          setGameState(message.initialState as GatosCaesState | DominorioState | QuelhasState);
+          setGameState(message.initialState as any);
         }
         addLog(
           `Jogo ${message.gameNumber} começou! ${message.youStart ? 'É a tua vez!' : 'Aguarda a jogada do adversário.'}`,
@@ -240,10 +248,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         const gameIdForUpdate = currentGameIdRef.current || 'gatos-caes';
         try {
           const localState = fromNetworkGameState(gameIdForUpdate, message.gameState);
-          setGameState(localState as GatosCaesState | DominorioState | QuelhasState);
+          setGameState(localState as any);
         } catch {
           // Fallback: assume que já está no formato local
-          setGameState(message.gameState as GatosCaesState | DominorioState | QuelhasState);
+          setGameState(message.gameState as any);
         }
         break;
       }
@@ -252,15 +260,15 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         // DEBUG: Log the received message
         console.log('[DEBUG CLIENT] game_end received:', JSON.stringify(message));
         console.log('[DEBUG CLIENT] matchScore in message:', message.matchScore);
-        
+
         // Converte estado de rede para local se necessário
         const gameIdForEnd = currentGameIdRef.current || 'gatos-caes';
         try {
           const localFinalState = fromNetworkGameState(gameIdForEnd, message.finalState);
-          setGameState(localFinalState as GatosCaesState | DominorioState | QuelhasState);
+          setGameState(localFinalState as any);
         } catch {
           // Fallback: assume que já está no formato local
-          setGameState(message.finalState as GatosCaesState | DominorioState | QuelhasState);
+          setGameState(message.finalState as any);
         }
         // Novo protocolo inclui matchScore
         if (message.matchScore) {
@@ -269,22 +277,22 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         } else {
           console.log('[DEBUG CLIENT] WARNING: matchScore is missing from message!');
         }
-        
+
         // Ativar estado de anúncio de fim de partida
         setGameJustEnded(true);
         setLastGameWinnerId(message.winnerId);
         setLastGameWinnerRole(message.winnerRole);
-        
+
         // Atualizar fase do match para waiting (preparar próxima partida)
         setCurrentMatch(prev =>
           prev
             ? {
-                ...prev,
-                phase: 'waiting',
-              }
+              ...prev,
+              phase: 'waiting',
+            }
             : prev
         );
-        
+
         addLog(`Jogo ${message.gameNumber} terminou!`, 'info');
         break;
       }
@@ -318,8 +326,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         const currentPlayerId = playerIdRef.current;
         const isChampion = message.championId === currentPlayerId;
         addLog(
-          isChampion 
-            ? '🏆 PARABÉNS! És o CAMPEÃO!' 
+          isChampion
+            ? '🏆 PARABÉNS! És o CAMPEÃO!'
             : `O campeonato terminou. Campeão: ${message.championName}`,
           isChampion ? 'success' : 'info'
         );
@@ -505,8 +513,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
             </div>
 
             <div className="lg:col-span-1">
-              <EventLog 
-                logs={logs} 
+              <EventLog
+                logs={logs}
                 logsEndRef={logsEndRef}
                 connectionStatus={connectionStatus}
                 onDisconnect={phase !== 'connect' ? handleDisconnect : undefined}
@@ -549,7 +557,7 @@ function ConnectForm({
   onConnect,
 }: ConnectFormProps) {
   // Jogos suportados no modo campeonato (servidor real + mock)
-  const games: GameId[] = ['gatos-caes', 'dominorio', 'quelhas'];
+  const games: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
   const isConnecting = connectionStatus === 'connecting';
 
   return (
@@ -619,22 +627,20 @@ function ConnectForm({
               type="button"
               onClick={() => setUseMockServer(!useMockServer)}
               disabled={isConnecting}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                useMockServer ? 'bg-blue-500' : 'bg-green-500'
-              } disabled:opacity-50`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useMockServer ? 'bg-blue-500' : 'bg-green-500'
+                } disabled:opacity-50`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  useMockServer ? 'translate-x-1' : 'translate-x-6'
-                }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useMockServer ? 'translate-x-1' : 'translate-x-6'
+                  }`}
               />
             </button>
           </div>
-          
+
           {useMockServer ? (
             <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg p-3">
               <p className="text-blue-200 text-sm">
-                <strong>Modo de teste</strong> - Jogas contra um bot simulado localmente. 
+                <strong>Modo de teste</strong> - Jogas contra um bot simulado localmente.
                 Ideal para treinar e testar a interface.
               </p>
             </div>
@@ -642,7 +648,7 @@ function ConnectForm({
             <div className="space-y-3">
               <div className="bg-green-500/20 border border-green-400/30 rounded-lg p-3">
                 <p className="text-green-200 text-sm">
-                  <strong>Modo campeonato</strong> - Liga-te ao servidor do professor 
+                  <strong>Modo campeonato</strong> - Liga-te ao servidor do professor
                   para competir contra colegas em tempo real!
                 </p>
               </div>
@@ -707,11 +713,10 @@ function TournamentLobby({ tournamentState, playerId }: TournamentLobbyProps) {
           <span>🏟️</span>
           {GAME_NAMES[tournamentState.gameId]}
         </h2>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-          tournamentState.phase === 'registration' 
-            ? 'bg-blue-500/30 text-blue-200' 
-            : 'bg-green-500/30 text-green-200'
-        }`}>
+        <span className={`px-3 py-1 rounded-full text-sm font-medium ${tournamentState.phase === 'registration'
+          ? 'bg-blue-500/30 text-blue-200'
+          : 'bg-green-500/30 text-green-200'
+          }`}>
           {tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer'}
         </span>
       </div>
@@ -724,11 +729,10 @@ function TournamentLobby({ tournamentState, playerId }: TournamentLobbyProps) {
           {tournamentState.players.map(player => (
             <div
               key={player.id}
-              className={`px-3 py-2 rounded-lg text-sm ${
-                player.id === playerId
-                  ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-400/50'
-                  : 'bg-white/10 text-white/80'
-              }`}
+              className={`px-3 py-2 rounded-lg text-sm ${player.id === playerId
+                ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-400/50'
+                : 'bg-white/10 text-white/80'
+                }`}
             >
               <span className="font-medium">{player.name}</span>
               {player.classId && (
@@ -758,7 +762,7 @@ interface MatchAreaProps {
   myRole: 'player1' | 'player2' | null;
   isMyTurn: boolean;
   gameId: GameId | null;
-  gameState: GatosCaesState | DominorioState | QuelhasState | null;
+  gameState: any;
   currentGameNumber: number;
   matchScore: { player1Wins: number; player2Wins: number };
   gameJustEnded: boolean;
@@ -774,12 +778,12 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   // IMPORTANTE: myRole é o SEAT fixo no match (player1 ou player2), definido em match_assigned
   // O seat NUNCA muda durante o match. O que muda é apenas quem joga como Gatos/Cães.
   const mySeatInMatch = myRole;
-  
+
   // Determinar se os papéis (Gatos/Cães) estão trocados no jogo atual
   // Jogos ímpares (1, 3): player1 seat = jogador1 (Gatos), player2 seat = jogador2 (Cães)
   // Jogos pares (2): player1 seat = jogador2 (Cães), player2 seat = jogador1 (Gatos)
   const currentRolesSwapped = currentGameNumber % 2 === 0;
-  
+
   // Meu papel no JOGO atual (quem jogo como: jogador1=Gatos ou jogador2=Cães)
   const gameMyRole = currentRolesSwapped
     ? (mySeatInMatch === 'player1' ? 'jogador2' : 'jogador1')
@@ -789,7 +793,7 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const opponent = mySeatInMatch === 'player1' ? match.player2 : match.player1;
   const myScore = mySeatInMatch === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
   const opponentScore = mySeatInMatch === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
-  
+
   // DEBUG: Log score values
   console.log('[DEBUG RENDER] matchScore:', matchScore, 'mySeatInMatch:', mySeatInMatch, 'myScore:', myScore, 'opponentScore:', opponentScore, 'gameMyRole:', gameMyRole);
 
@@ -800,13 +804,13 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   // Próximo jogo
   const nextGameNumber = currentGameNumber + 1;
   const nextRolesSwapped = nextGameNumber % 2 === 0;
-  
+
   // Quem começa o próximo jogo (quem joga como jogador1/Gatos)
   // Jogos ímpares: seat player1 começa como Gatos
   // Jogos pares: seat player2 começa como Gatos
   const seatWhoStartsNext: 'player1' | 'player2' = nextGameNumber % 2 === 1 ? 'player1' : 'player2';
   const iStartNext = seatWhoStartsNext === mySeatInMatch;
-  
+
   // Determinar que peça jogarei no próximo jogo (Gatos ou Cães)
   // Se nextRolesSwapped: player1 seat = Cães, player2 seat = Gatos
   // Se !nextRolesSwapped: player1 seat = Gatos, player2 seat = Cães
@@ -841,21 +845,20 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
       {/* Anúncio de fim de partida individual */}
       {gameJustEnded && matchContinues && (
         <div className="text-center py-8">
-          <div className={`inline-block p-6 rounded-2xl ${
-            iWonLastGame 
-              ? 'bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/50' 
-              : isDraw
-                ? 'bg-gradient-to-br from-gray-500/30 to-slate-500/30 border border-gray-400/50'
-                : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-400/50'
-          }`}>
+          <div className={`inline-block p-6 rounded-2xl ${iWonLastGame
+            ? 'bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/50'
+            : isDraw
+              ? 'bg-gradient-to-br from-gray-500/30 to-slate-500/30 border border-gray-400/50'
+              : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-400/50'
+            }`}>
             <div className="text-6xl mb-3">
               {iWonLastGame ? '🎉' : isDraw ? '🤝' : '😔'}
             </div>
             <h3 className="text-2xl font-bold text-white mb-2">
-              {iWonLastGame 
-                ? 'Ganhaste esta partida!' 
-                : isDraw 
-                  ? 'Empate!' 
+              {iWonLastGame
+                ? 'Ganhaste esta partida!'
+                : isDraw
+                  ? 'Empate!'
                   : 'Perdeste esta partida...'}
             </h3>
             <p className="text-white/70 mb-4">
@@ -866,8 +869,8 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                 Próxima partida: Jogo {nextGameNumber}
               </p>
               <p className="text-white/80 text-sm font-medium mb-1">
-                {nextRolesSwapped 
-                  ? '🔄 Papéis trocados! ' 
+                {nextRolesSwapped
+                  ? '🔄 Papéis trocados! '
                   : ''}
                 {gameId === 'gatos-caes' && (
                   <>Serás {iPlayGatosNext ? '🐱 Gatos' : '🐶 Cães'}</>
@@ -877,6 +880,15 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                 )}
                 {gameId === 'quelhas' && (
                   <>Serás {iStartNext ? '▯ Vertical' : '▬ Horizontal'}</>
+                )}
+                {gameId === 'produto' && (
+                  <>Serás {iStartNext ? '🔴 Vermelho' : '🔵 Azul'}</>
+                )}
+                {gameId === 'atari-go' && (
+                  <>Serás {iStartNext ? '⚫ Pretas' : '⚪ Brancas'}</>
+                )}
+                {gameId === 'nex' && (
+                  <>Serás {iStartNext ? '⚫ Pretas' : '⚪ Brancas'}</>
                 )}
               </p>
               <p className="text-white/70 text-sm">
@@ -910,11 +922,10 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
         <div className="py-4">
           {/* Indicador de vez */}
           <div className="text-center mb-4">
-            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${
-              isMyTurn 
-                ? 'bg-green-500/30 text-green-200 animate-pulse' 
-                : 'bg-gray-500/30 text-gray-300'
-            }`}>
+            <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${isMyTurn
+              ? 'bg-green-500/30 text-green-200 animate-pulse'
+              : 'bg-gray-500/30 text-gray-300'
+              }`}>
               {isMyTurn ? '👆 É a tua vez!' : '⏳ A aguardar adversário...'}
             </span>
           </div>
@@ -945,6 +956,33 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               myRole={gameMyRole as 'jogador1' | 'jogador2'}
               onMove={(segmento: QuelhasSegmento) => onMove(segmento)}
               onSwap={() => onMove({ swap: true })}
+            />
+          )}
+
+          {gameId === 'produto' && (
+            <ProdutoBoard
+              state={gameState as ProdutoState}
+              isMyTurn={isMyTurn}
+              myRole={gameMyRole as 'jogador1' | 'jogador2'}
+              onMove={(pos: any) => onMove(pos)}
+            />
+          )}
+
+          {gameId === 'atari-go' && (
+            <AtariGoBoard
+              state={gameState as AtariGoState}
+              isMyTurn={isMyTurn}
+              myRole={gameMyRole as 'jogador1' | 'jogador2'}
+              onMove={(pos: AtariGoPosicao) => onMove(pos)}
+            />
+          )}
+
+          {gameId === 'nex' && (
+            <NexBoard
+              state={gameState as NexState}
+              isMyTurn={isMyTurn}
+              myRole={gameMyRole as 'jogador1' | 'jogador2'}
+              onMove={(acao: any) => onMove(acao)}
             />
           )}
         </div>
