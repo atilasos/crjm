@@ -771,42 +771,48 @@ interface MatchAreaProps {
 }
 
 function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, onMove, onNextGame }: MatchAreaProps) {
-  // Converter myRole para o formato do jogo
-  const gameMyRole = myRole === 'player1' ? 'jogador1' : 'jogador2';
-
-  // Determinar meu seat fixo no match (derivado do papel atual e número do jogo)
-  // Se jogo atual é ímpar (1, 3): seat = role (sem troca de papéis)
-  // Se jogo atual é par (2): seat = oposto do role (houve troca de papéis)
+  // IMPORTANTE: myRole é o SEAT fixo no match (player1 ou player2), definido em match_assigned
+  // O seat NUNCA muda durante o match. O que muda é apenas quem joga como Gatos/Cães.
+  const mySeatInMatch = myRole;
+  
+  // Determinar se os papéis (Gatos/Cães) estão trocados no jogo atual
+  // Jogos ímpares (1, 3): player1 seat = jogador1 (Gatos), player2 seat = jogador2 (Cães)
+  // Jogos pares (2): player1 seat = jogador2 (Cães), player2 seat = jogador1 (Gatos)
   const currentRolesSwapped = currentGameNumber % 2 === 0;
-  const mySeatInMatch = currentRolesSwapped 
-    ? (myRole === 'player1' ? 'player2' : 'player1')
-    : myRole;
+  
+  // Meu papel no JOGO atual (quem jogo como: jogador1=Gatos ou jogador2=Cães)
+  const gameMyRole = currentRolesSwapped
+    ? (mySeatInMatch === 'player1' ? 'jogador2' : 'jogador1')
+    : (mySeatInMatch === 'player1' ? 'jogador1' : 'jogador2');
 
-  // IMPORTANTE: O score é baseado no SEAT, não no role do jogo atual!
-  // player1Wins/player2Wins referem-se a vitórias do seat, não do papel no jogo
+  // Score é baseado no SEAT (fixo), não no papel do jogo
   const opponent = mySeatInMatch === 'player1' ? match.player2 : match.player1;
   const myScore = mySeatInMatch === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
   const opponentScore = mySeatInMatch === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
   
   // DEBUG: Log score values
-  console.log('[DEBUG RENDER] matchScore:', matchScore, 'mySeatInMatch:', mySeatInMatch, 'myScore:', myScore, 'opponentScore:', opponentScore);
+  console.log('[DEBUG RENDER] matchScore:', matchScore, 'mySeatInMatch:', mySeatInMatch, 'myScore:', myScore, 'opponentScore:', opponentScore, 'gameMyRole:', gameMyRole);
 
   // Determinar se eu ganhei a última partida
   const iWonLastGame = lastGameWinnerId === playerId;
   const isDraw = lastGameWinnerId === null && gameJustEnded;
 
-  // Determinar quem começa a próxima partida (baseado em seats, não roles)
-  // Em jogos ímpares: seat player1 começa (é jogador1/Gatos)
-  // Em jogos pares: seat player2 começa (é jogador1/Gatos com papéis trocados)
+  // Próximo jogo
   const nextGameNumber = currentGameNumber + 1;
   const nextRolesSwapped = nextGameNumber % 2 === 0;
+  
+  // Quem começa o próximo jogo (quem joga como jogador1/Gatos)
+  // Jogos ímpares: seat player1 começa como Gatos
+  // Jogos pares: seat player2 começa como Gatos
   const seatWhoStartsNext: 'player1' | 'player2' = nextGameNumber % 2 === 1 ? 'player1' : 'player2';
   const iStartNext = seatWhoStartsNext === mySeatInMatch;
   
-  // Determinar qual papel terei no próximo jogo (para informar o utilizador)
-  const myNextRole = nextRolesSwapped
-    ? (mySeatInMatch === 'player1' ? 'player2' : 'player1')
-    : mySeatInMatch;
+  // Determinar que peça jogarei no próximo jogo (Gatos ou Cães)
+  // Se nextRolesSwapped: player1 seat = Cães, player2 seat = Gatos
+  // Se !nextRolesSwapped: player1 seat = Gatos, player2 seat = Cães
+  const iPlayGatosNext = nextRolesSwapped
+    ? mySeatInMatch === 'player2'
+    : mySeatInMatch === 'player1';
 
   // Verificar se o match vai continuar (ninguém chegou a 2 vitórias ainda)
   const maxWins = 2; // Melhor de 3
@@ -864,13 +870,13 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                   ? '🔄 Papéis trocados! ' 
                   : ''}
                 {gameId === 'gatos-caes' && (
-                  <>Serás {myNextRole === 'player1' ? '🐱 Gatos' : '🐶 Cães'}</>
+                  <>Serás {iPlayGatosNext ? '🐱 Gatos' : '🐶 Cães'}</>
                 )}
                 {gameId === 'dominorio' && (
-                  <>Serás {myNextRole === 'player1' ? 'Jogador 1' : 'Jogador 2'}</>
+                  <>Serás {iStartNext ? '▯ Vertical' : '▬ Horizontal'}</>
                 )}
                 {gameId === 'quelhas' && (
-                  <>Serás {myNextRole === 'player1' ? 'Jogador 1' : 'Jogador 2'}</>
+                  <>Serás {iStartNext ? '▯ Vertical' : '▬ Horizontal'}</>
                 )}
               </p>
               <p className="text-white/70 text-sm">
