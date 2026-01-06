@@ -1,4 +1,4 @@
-import { GameMode, Player, GameStatus } from '../../types';
+import type { GameMode, Player, GameStatus } from '../../types';
 
 // Produto - Jogo matemático de otimização de grupos
 // - Tabuleiro hexagonal com 5 casas de lado (61 casas total)
@@ -40,7 +40,7 @@ export interface JogadaDupla {
 }
 
 export interface ProdutoState {
-  tabuleiro: Map<string, Celula>; // Chave: "q,r"
+  tabuleiro: Record<string, Celula>; // Chave: "q,r"
   modo: GameMode;
   jogadorAtual: Player; // jogador1 = Pretas, jogador2 = Brancas
   estado: GameStatus;
@@ -61,7 +61,7 @@ export const LADO_TABULEIRO = 5;
 export function gerarPosicoesValidas(): Posicao[] {
   const posicoes: Posicao[] = [];
   const n = LADO_TABULEIRO - 1; // 4 para lado 5
-  
+
   for (let q = -n; q <= n; q++) {
     for (let r = -n; r <= n; r++) {
       // Verificar se está dentro do hexágono
@@ -70,7 +70,7 @@ export function gerarPosicoesValidas(): Posicao[] {
       }
     }
   }
-  
+
   return posicoes;
 }
 
