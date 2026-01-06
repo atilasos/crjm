@@ -29,7 +29,7 @@ interface GatosCaesBoardProps {
 
 export function GatosCaesBoard({ state, isMyTurn, myRole, onMove }: GatosCaesBoardProps) {
   const { CASAS_CENTRAIS } = require('../games/gatos-caes/types');
-  
+
   const isCasaCentral = (linha: number, coluna: number): boolean => {
     return CASAS_CENTRAIS.some((c: GatosCaesPosicao) => c.linha === linha && c.coluna === coluna);
   };
@@ -40,12 +40,12 @@ export function GatosCaesBoard({ state, isMyTurn, myRole, onMove }: GatosCaesBoa
   };
 
   const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+    const celula = state.tabuleiro[linha]?.[coluna];
     const central = isCasaCentral(linha, coluna);
     const jogadaValida = isJogadaValida(linha, coluna);
-    
+
     let classes = 'aspect-square rounded-md flex items-center justify-center transition-all duration-200 text-3xl md:text-4xl ';
-    
+
     if (central && celula === 'vazia') {
       classes += 'bg-amber-200 ';
     } else if (celula === 'vazia') {
@@ -53,13 +53,13 @@ export function GatosCaesBoard({ state, isMyTurn, myRole, onMove }: GatosCaesBoa
     } else {
       classes += 'bg-gray-50 ';
     }
-    
+
     if (jogadaValida) {
       classes += 'ring-3 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
     } else if (celula === 'vazia') {
       classes += 'cursor-not-allowed opacity-70 ';
     }
-    
+
     return classes;
   };
 
@@ -129,17 +129,17 @@ export function DominorioBoard({ state, isMyTurn, myRole, onMove }: DominorioBoa
   // Encontrar dominó válido que começa nesta posição
   const getDominoInicio = (linha: number, coluna: number): Domino | null => {
     if (!isMyTurn) return null;
-    return state.jogadasValidas.find(d => 
+    return state.jogadasValidas.find(d =>
       d.pos1.linha === linha && d.pos1.coluna === coluna
     ) || null;
   };
 
   const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+    const celula = state.tabuleiro[linha]?.[coluna];
     const dominoValido = getDominoInicio(linha, coluna);
-    
+
     let classes = 'aspect-square rounded-sm flex items-center justify-center transition-all duration-200 ';
-    
+
     if (celula === 'vazia') {
       classes += 'bg-amber-100 ';
       if (dominoValido) {
@@ -150,7 +150,7 @@ export function DominorioBoard({ state, isMyTurn, myRole, onMove }: DominorioBoa
     } else {
       classes += 'bg-orange-400 ';
     }
-    
+
     return classes;
   };
 
@@ -243,13 +243,13 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
   };
 
   const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+    const celula = state.tabuleiro[linha]?.[coluna];
     const isInicio = !!inicioSelecao && inicioSelecao.linha === linha && inicioSelecao.coluna === coluna;
     const startSelectable = isStartSelectable(linha, coluna);
     const endSelectable = isEndSelectable(linha, coluna);
-    
+
     let classes = 'aspect-square rounded-sm flex items-center justify-center transition-all duration-200 text-xs ';
-    
+
     if (celula === 'vazia') {
       classes += 'bg-stone-200 ';
       if (isInicio) classes += 'ring-2 ring-sky-400 bg-sky-100 ';
@@ -259,7 +259,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
     } else {
       classes += 'bg-stone-600 ';
     }
-    
+
     return classes;
   };
 
@@ -371,9 +371,43 @@ interface ProdutoBoardProps {
 }
 
 export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardProps) {
+  const [corSelecao, setCorSelecao] = useState<'preta' | 'branca' | null>(null);
+
   const isJogadaValida = (q: number, r: number): boolean => {
     if (!isMyTurn) return false;
-    return state.jogadasValidas.some(j => j.q === q && j.r === r);
+    return state.casasVazias.some(j => j.q === q && j.r === r);
+  };
+
+  const getCelulaClasses = (q: number, r: number): string => {
+    const celula = state.tabuleiro[`${q},${r}`] || 'vazia';
+    const isPecaEmCurso = state.jogadaEmCurso.pos1?.q === q && state.jogadaEmCurso.pos1?.r === r;
+    const jogadaValida = isJogadaValida(q, r);
+
+    let classes = 'w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-200 text-lg ';
+
+    if (celula === 'vazia' && !isPecaEmCurso) {
+      classes += 'bg-stone-300 ';
+      if (jogadaValida) {
+        classes += 'ring-2 ring-green-400 bg-green-200 cursor-pointer hover:bg-green-300 ';
+      }
+    } else if (celula === 'preta' || (isPecaEmCurso && state.jogadaEmCurso.cor1 === 'preta')) {
+      classes += 'bg-red-500 shadow-md ';
+    } else if (celula === 'branca' || (isPecaEmCurso && state.jogadaEmCurso.cor1 === 'branca')) {
+      classes += 'bg-blue-500 shadow-md ';
+    }
+
+    return classes;
+  };
+
+  const handleCellClick = (q: number, r: number) => {
+    if (!isJogadaValida(q, r)) return;
+
+    // Se ainda não escolheu cor, mostrar um pequeno seletor ou usar cor padrão
+    // No modo campeonato, o Produto permite colocar QUALQUER cor.
+    // Para simplificar a UI de torneio, se não houver cor selecionada, 
+    // assumimos que o jogador quer colocar a sua própria cor primeiro.
+    const cor = corSelecao || (myRole === 'jogador1' ? 'preta' : 'branca');
+    onMove({ q, r, cor } as any);
   };
 
   // Gerar coordenadas do tabuleiro hexagonal
@@ -390,36 +424,9 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
     return coords;
   }, []);
 
-  const getCelulaContent = (q: number, r: number): string => {
-    const celula = state.tabuleiro.get(`${q},${r}`);
-    if (celula === 'jogador1') return '🔴';
-    if (celula === 'jogador2') return '🔵';
-    return '';
-  };
-
-  const getCelulaClasses = (q: number, r: number): string => {
-    const celula = state.tabuleiro.get(`${q},${r}`);
-    const jogadaValida = isJogadaValida(q, r);
-    
-    let classes = 'w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-200 text-lg ';
-    
-    if (celula === 'vazia') {
-      classes += 'bg-stone-300 ';
-      if (jogadaValida) {
-        classes += 'ring-2 ring-green-400 bg-green-200 cursor-pointer hover:bg-green-300 ';
-      }
-    } else if (celula === 'jogador1') {
-      classes += 'bg-red-500 ';
-    } else if (celula === 'jogador2') {
-      classes += 'bg-blue-500 ';
-    }
-    
-    return classes;
-  };
-
   // Converter coordenadas hex para pixel (layout pointy-top)
   const hexToPixel = (q: number, r: number) => {
-    const size = 20;
+    const size = 25;
     const x = size * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
     const y = size * (3 / 2 * r);
     return { x: x + 200, y: y + 200 }; // offset para centrar
@@ -427,29 +434,48 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
 
   return (
     <div className="space-y-4">
-      <div className="relative w-full max-w-md mx-auto" style={{ height: '400px' }}>
+      <div className="text-center mb-2">
+        <label className="text-white/70 text-sm mb-2 block">Escolhe a cor da peça a colocar:</label>
+        <div className="flex justify-center gap-4">
+          <button
+            onClick={() => setCorSelecao('preta')}
+            className={`px-4 py-2 rounded-lg border flex items-center gap-2 transition-all ${corSelecao === 'preta' || (!corSelecao && myRole === 'jogador1') ? 'bg-red-500/40 border-red-400 ring-2 ring-red-400' : 'bg-white/5 border-white/20'}`}
+          >
+            🔴 Preta
+          </button>
+          <button
+            onClick={() => setCorSelecao('branca')}
+            className={`px-4 py-2 rounded-lg border flex items-center gap-2 transition-all ${corSelecao === 'branca' || (!corSelecao && myRole === 'jogador2') ? 'bg-blue-500/40 border-blue-400 ring-2 ring-blue-400' : 'bg-white/5 border-white/20'}`}
+          >
+            🔵 Branca
+          </button>
+        </div>
+      </div>
+
+      <div className="relative w-full max-w-md mx-auto h-[350px]">
         <svg viewBox="0 0 400 400" className="w-full h-full">
           {hexCoords.map(({ q, r }) => {
             const { x, y } = hexToPixel(q, r);
-            const celula = state.tabuleiro.get(`${q},${r}`);
+            const celula = state.tabuleiro[`${q},${r}`] || 'vazia';
+            const isPecaEmCurso = state.jogadaEmCurso.pos1?.q === q && state.jogadaEmCurso.pos1?.r === r;
             const jogadaValida = isJogadaValida(q, r);
-            
+
             let fill = '#d6d3d1'; // stone-300
-            if (celula === 'jogador1') fill = '#ef4444'; // red-500
-            else if (celula === 'jogador2') fill = '#3b82f6'; // blue-500
+            if (celula === 'preta' || (isPecaEmCurso && state.jogadaEmCurso.cor1 === 'preta')) fill = '#ef4444'; // red-500
+            else if (celula === 'branca' || (isPecaEmCurso && state.jogadaEmCurso.cor1 === 'branca')) fill = '#3b82f6'; // blue-500
             else if (jogadaValida) fill = '#86efac'; // green-300
-            
+
             return (
               <g key={`${q},${r}`}>
                 <circle
                   cx={x}
                   cy={y}
-                  r={18}
+                  r={20}
                   fill={fill}
                   stroke={jogadaValida ? '#22c55e' : '#a8a29e'}
                   strokeWidth={jogadaValida ? 3 : 1}
-                  className={jogadaValida ? 'cursor-pointer' : ''}
-                  onClick={() => jogadaValida && onMove({ q, r })}
+                  className={jogadaValida ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}
+                  onClick={() => handleCellClick(q, r)}
                 />
               </g>
             );
@@ -462,17 +488,21 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
         <div className="flex justify-center gap-6">
           <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${myRole === 'jogador1' ? 'bg-red-500/30 ring-2 ring-red-400' : ''}`}>
             <span className="text-xl">🔴</span>
-            <span>Pontos: {state.pontosJogador1}</span>
+            <span>Pontos: {state.pontuacaoPretas.produto}</span>
             {myRole === 'jogador1' && <span className="text-xs">(tu)</span>}
           </div>
           <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${myRole === 'jogador2' ? 'bg-blue-500/30 ring-2 ring-blue-400' : ''}`}>
             <span className="text-xl">🔵</span>
-            <span>Pontos: {state.pontosJogador2}</span>
+            <span>Pontos: {state.pontuacaoBrancas.produto}</span>
             {myRole === 'jogador2' && <span className="text-xs">(tu)</span>}
           </div>
         </div>
         <div className="text-xs text-white/50">
-          {isMyTurn ? `É a tua vez! (${state.jogadasValidas.length} jogadas disponíveis)` : 'A aguardar adversário...'}
+          {isMyTurn
+            ? (state.jogadaEmCurso.pos1
+              ? 'Coloca a segunda peça'
+              : `É a tua vez! (${state.casasVazias.length} casas disponíveis)`)
+            : 'A aguardar adversário...'}
         </div>
       </div>
     </div>
@@ -502,15 +532,15 @@ export function AtariGoBoard({ state, isMyTurn, myRole, onMove }: AtariGoBoardPr
   };
 
   const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+    const celula = state.tabuleiro[linha]?.[coluna];
     const jogadaValida = isJogadaValida(linha, coluna);
-    
+
     let classes = 'aspect-square flex items-center justify-center transition-all duration-200 ';
-    
+
     if (jogadaValida) {
       classes += 'cursor-pointer ';
     }
-    
+
     return classes;
   };
 
@@ -543,10 +573,10 @@ export function AtariGoBoard({ state, isMyTurn, myRole, onMove }: AtariGoBoardPr
                     className={getCelulaClasses(linhaIdx, colunaIdx)}
                     disabled={!jogadaValida}
                   >
-                    {celula === 'preto' && (
+                    {celula === 'preta' && (
                       <div className="w-[90%] h-[90%] rounded-full bg-gray-900 shadow-lg" />
                     )}
-                    {celula === 'branco' && (
+                    {celula === 'branca' && (
                       <div className="w-[90%] h-[90%] rounded-full bg-white shadow-lg border border-gray-300" />
                     )}
                     {celula === 'vazia' && jogadaValida && (
@@ -600,68 +630,161 @@ interface NexBoardProps {
 }
 
 export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
-  const tamanho = state.tabuleiro.length;
+  const [tipoAcao, setTipoAcao] = useState<'colocacao' | 'substituicao' | null>('colocacao');
+  const [selecao, setSelecao] = useState<{
+    posPropria?: NexPosicao;
+    posNeutra?: NexPosicao;
+    neutrasParaProprias: NexPosicao[];
+    propriaParaNeutra?: NexPosicao;
+  }>({ neutrasParaProprias: [] });
 
-  const isJogadaValida = (linha: number, coluna: number): boolean => {
-    if (!isMyTurn) return false;
-    return state.jogadasValidas.some(j => j.linha === linha && j.coluna === coluna);
+  const corJogador = myRole === 'jogador1' ? 'preta' : 'branca';
+
+  const handleCellClick = (x: number, y: number) => {
+    if (!isMyTurn) return;
+
+    const celula = state.tabuleiro[x][y];
+
+    if (tipoAcao === 'colocacao') {
+      if (celula !== 'vazia') return;
+
+      if (!selecao.posPropria) {
+        setSelecao({ ...selecao, posPropria: { x, y } });
+      } else if (!selecao.posNeutra && (selecao.posPropria.x !== x || selecao.posPropria.y !== y)) {
+        onMove({
+          tipo: 'colocacao',
+          posPropria: selecao.posPropria,
+          posNeutra: { x, y }
+        } as any);
+        setSelecao({ neutrasParaProprias: [] });
+      }
+    } else if (tipoAcao === 'substituicao') {
+      if (selecao.neutrasParaProprias.length < 2) {
+        if (celula !== 'neutra') return;
+        if (selecao.neutrasParaProprias.some(p => p.x === x && p.y === y)) return;
+        setSelecao({ ...selecao, neutrasParaProprias: [...selecao.neutrasParaProprias, { x, y }] });
+      } else {
+        if (celula !== corJogador) return;
+        onMove({
+          tipo: 'substituicao',
+          neutrasParaProprias: selecao.neutrasParaProprias as [NexPosicao, NexPosicao],
+          propriaParaNeutra: { x, y }
+        } as any);
+        setSelecao({ neutrasParaProprias: [] });
+      }
+    }
+  };
+
+  // Coordenadas para o losango
+  const hexCoords = useMemo(() => {
+    const coords: NexPosicao[] = [];
+    for (let x = 0; x < 11; x++) {
+      for (let y = 0; y < 11; y++) {
+        coords.push({ x, y });
+      }
+    }
+    return coords;
+  }, []);
+
+  // Projeção isométrica para o losango horizontal
+  const getHexPos = (x: number, y: number) => {
+    const size = 18;
+    // Ajuste para caber no SVG 400x400
+    const xPos = 200 + (x - y) * size * 0.866;
+    const yPos = 50 + (x + y) * size * 0.75;
+    return { x: xPos, y: yPos };
   };
 
   return (
     <div className="space-y-4">
-      <div className="max-w-md mx-auto">
-        {/* Tabuleiro hexagonal representado como grid deslocado */}
-        <div className="flex flex-col items-center gap-1 p-4 bg-stone-700 rounded-xl">
-          {state.tabuleiro.map((linha, linhaIdx) => (
-            <div 
-              key={linhaIdx} 
-              className="flex gap-1"
-              style={{ marginLeft: `${linhaIdx * 12}px` }}
-            >
-              {linha.map((celula, colunaIdx) => {
-                const jogadaValida = isJogadaValida(linhaIdx, colunaIdx);
-                let bgColor = 'bg-stone-400';
-                if (celula === 'jogador1') bgColor = 'bg-red-500';
-                else if (celula === 'jogador2') bgColor = 'bg-blue-500';
-                else if (celula === 'neutro') bgColor = 'bg-gray-500';
-                else if (jogadaValida) bgColor = 'bg-green-300';
-
-                return (
-                  <button
-                    key={colunaIdx}
-                    onClick={() => jogadaValida && onMove({ linha: linhaIdx, coluna: colunaIdx })}
-                    className={`w-6 h-6 md:w-8 md:h-8 rounded-full ${bgColor} transition-all ${
-                      jogadaValida ? 'ring-2 ring-green-400 cursor-pointer hover:bg-green-400' : ''
-                    }`}
-                    disabled={!jogadaValida}
-                  />
-                );
-              })}
-            </div>
-          ))}
-        </div>
+      {/* Seletor de Ação */}
+      <div className="flex flex-wrap justify-center gap-2">
+        <button
+          onClick={() => { setTipoAcao('colocacao'); setSelecao({ neutrasParaProprias: [] }); }}
+          className={`px-3 py-1.5 rounded-lg text-sm transition-all ${tipoAcao === 'colocacao' ? 'bg-red-500 text-white ring-2 ring-red-400' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
+        >
+          Colocação (1 Própria + 1 Neutra)
+        </button>
+        <button
+          onClick={() => { setTipoAcao('substituicao'); setSelecao({ neutrasParaProprias: [] }); }}
+          className={`px-3 py-1.5 rounded-lg text-sm transition-all ${tipoAcao === 'substituicao' ? 'bg-blue-500 text-white ring-2 ring-blue-400' : 'bg-white/5 text-white/70 hover:bg-white/10'}`}
+        >
+          Substituição (2 Neutras-&gt;P, 1 P-&gt;Neutra)
+        </button>
+        {state.swapDisponivel && (
+          <button
+            onClick={() => onMove({ type: 'nex_swap' } as any)}
+            className="px-3 py-1.5 rounded-lg text-sm bg-purple-500 text-white hover:bg-purple-600 transition-all"
+          >
+            Regra da Torta (Swap)
+          </button>
+        )}
       </div>
 
-      {/* Legenda */}
-      <div className="flex flex-col items-center gap-2 text-sm text-white/70">
-        <div className="flex justify-center gap-6">
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${myRole === 'jogador1' ? 'bg-red-500/30 ring-2 ring-red-400' : ''}`}>
-            <div className="w-4 h-4 rounded-full bg-red-500" />
-            <span>Vermelho (↕️)</span>
-            {myRole === 'jogador1' && <span className="text-xs">(tu)</span>}
-          </div>
-          <div className={`flex items-center gap-2 px-3 py-1 rounded-full ${myRole === 'jogador2' ? 'bg-blue-500/30 ring-2 ring-blue-400' : ''}`}>
-            <div className="w-4 h-4 rounded-full bg-blue-500" />
-            <span>Azul (↔️)</span>
-            {myRole === 'jogador2' && <span className="text-xs">(tu)</span>}
-          </div>
-        </div>
-        <div className="text-xs text-white/50">
-          Liga as tuas margens opostas para ganhar!
-        </div>
-        <div className="text-xs text-white/50">
-          {isMyTurn ? `É a tua vez! (${state.jogadasValidas.length} jogadas disponíveis)` : 'A aguardar adversário...'}
-        </div>
+      {/* Tabuleiro SVG Rhombus */}
+      <div className="relative w-full max-w-md mx-auto aspect-square">
+        <svg viewBox="0 0 400 350" className="w-full h-full">
+          {/* Bordas do tabuleiro (indicadores de vitória) */}
+          <path d="M 200 40 L 370 190 L 200 340 L 30 190 Z" fill="none" stroke="#444" strokeWidth="2" strokeDasharray="4 2" />
+
+          {hexCoords.map(({ x, y }) => {
+            const pos = getHexPos(x, y);
+            const celula = state.tabuleiro[x][y];
+
+            let fill = '#d6d3d1'; // vazia
+            if (celula === 'preta') fill = '#ef4444';
+            else if (celula === 'branca') fill = '#3b82f6';
+            else if (celula === 'neutra') fill = '#78716c'; // stone-600
+
+            // Destaque de seleção
+            const isSelected = (tipoAcao === 'colocacao' && (selecao.posPropria?.x === x && selecao.posPropria?.y === y)) ||
+              (tipoAcao === 'substituicao' && selecao.neutrasParaProprias.some(p => p.x === x && p.y === y));
+
+            return (
+              <g key={`${x},${y}`} onClick={() => handleCellClick(x, y)} className="cursor-pointer">
+                <circle
+                  cx={pos.x}
+                  cy={pos.y}
+                  r={isSelected ? 10 : 8}
+                  fill={fill}
+                  className="transition-all duration-300"
+                  stroke={isSelected ? '#fff' : 'none'}
+                  strokeWidth="2"
+                />
+              </g>
+            );
+          })}
+
+          {/* Indicadores de direção de vitória */}
+          <text x="200" y="25" textAnchor="middle" fill="#ef4444" fontSize="10" fontWeight="bold">Vermelho (↕ Vertical)</text>
+          <text x="200" y="340" textAnchor="middle" fill="#ef4444" fontSize="10" fontWeight="bold">Vermelho (↕ Vertical)</text>
+          <text x="15" y="190" textAnchor="middle" fill="#3b82f6" fontSize="10" fontWeight="bold" transform="rotate(-90 15 190)">Azul (↔ Horizontal)</text>
+          <text x="385" y="190" textAnchor="middle" fill="#3b82f6" fontSize="10" fontWeight="bold" transform="rotate(90 385 190)">Azul (↔ Horizontal)</text>
+        </svg>
+      </div>
+
+      {/* Status da Ação */}
+      <div className="bg-white/5 p-3 rounded-lg text-center text-sm">
+        {tipoAcao === 'colocacao' && (
+          <p className="text-white/80">
+            {!selecao.posPropria ? 'Seleciona uma casa para a TUA peça' : 'Agora seleciona uma casa para a peça NEUTRA'}
+          </p>
+        )}
+        {tipoAcao === 'substituicao' && (
+          <p className="text-white/80">
+            {selecao.neutrasParaProprias.length < 2
+              ? `Seleciona 2 peças neutras para substituir (${selecao.neutrasParaProprias.length}/2)`
+              : 'Seleciona UMA peça tua para tornar neutra'}
+          </p>
+        )}
+        {selecao.posPropria && (
+          <button
+            onClick={() => setSelecao({ neutrasParaProprias: [] })}
+            className="mt-2 text-xs text-red-400 hover:underline"
+          >
+            Cancelar seleção
+          </button>
+        )}
       </div>
     </div>
   );
