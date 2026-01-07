@@ -8,7 +8,7 @@ function post(msg: AIResponse) {
 }
 
 type WasmModule = {
-  default: (wasmUrl: URL) => Promise<void>;
+  default: (opts: { module_or_path: URL | string }) => Promise<void>;
   init: (seed: number) => void;
   set_position: (board: Uint8Array, toPlay: number) => void;
   best_move: (timeMs: number, level: number) => number;
@@ -23,7 +23,7 @@ async function init(): Promise<void> {
   try {
     const wasmModule = (await import('./wasm/pkg/atari_go_ai.js')) as WasmModule;
     const wasmUrl = new URL('./wasm/pkg/atari_go_ai_bg.wasm', import.meta.url);
-    await wasmModule.default(wasmUrl);
+    await wasmModule.default({ module_or_path: wasmUrl });
     wasmModule.init((Date.now() >>> 0) as number);
     wasm = wasmModule;
     useWasm = true;
