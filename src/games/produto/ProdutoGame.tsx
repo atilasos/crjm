@@ -3,8 +3,8 @@ import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { ProdutoState, Posicao, gerarPosicoesValidas, posToKey, LADO_TABULEIRO } from './types';
-import { 
-  criarEstadoInicial, 
+import {
+  criarEstadoInicial,
   colocarPeca,
   cancelarJogadaEmCurso,
   jogadaComputador,
@@ -31,7 +31,7 @@ const REGRAS = [
 ];
 
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
-  const [state, setState] = useState<ProdutoState>(() => 
+  const [state, setState] = useState<ProdutoState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
@@ -47,8 +47,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   // Efeito para jogada do computador
   useEffect(() => {
     if (
-      state.modo === 'vs-computador' && 
-      state.jogadorAtual !== humanPlayer && 
+      state.modo === 'vs-computador' &&
+      state.jogadorAtual !== humanPlayer &&
       state.estado === 'a-jogar'
     ) {
       let cancelled = false;
@@ -116,7 +116,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
-    if (state.tabuleiro.get(posToKey(pos)) !== 'vazia') return;
+    if (state.tabuleiro[posToKey(pos)] !== 'vazia') return;
 
     setState(prev => colocarPeca(prev, pos, corSelecionada));
   }, [state, humanPlayer, corSelecionada]);
@@ -158,7 +158,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const boundingBox = useMemo(() => {
     const size = 28; // Tamanho base do hexágono
     let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-    
+
     for (const pos of posicoes) {
       const { x, y } = hexToPixel(pos.q, pos.r, size);
       minX = Math.min(minX, x - size);
@@ -166,7 +166,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       minY = Math.min(minY, y - size);
       maxY = Math.max(maxY, y + size);
     }
-    
+
     return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY };
   }, [posicoes]);
 
@@ -175,21 +175,21 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     const size = 28;
     const { x, y } = hexToPixel(pos.q, pos.r, size);
     const key = posToKey(pos);
-    const celula = state.tabuleiro.get(key);
+    const celula = state.tabuleiro[key];
     const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
-    const isPrimeiraJogadaEmCurso = state.jogadaEmCurso.pos1 !== null && 
+    const isPrimeiraJogadaEmCurso = state.jogadaEmCurso.pos1 !== null &&
       state.jogadaEmCurso.pos1.q === pos.q && state.jogadaEmCurso.pos1.r === pos.r;
-    
+
     // Pontos do hexágono (pointy-top: vértice no topo)
     const pontos = [];
     for (let i = 0; i < 6; i++) {
       const angle = Math.PI / 180 * (60 * i - 90); // -90 para começar do topo
       pontos.push(`${x + size * Math.cos(angle) - boundingBox.minX},${y + size * Math.sin(angle) - boundingBox.minY}`);
     }
-    
+
     const isVazia = celula === 'vazia';
     const podeCelula = isVazia && state.estado === 'a-jogar' && isVezDoHumano;
-    
+
     return (
       <g key={key} onClick={() => podeCelula && handleCellClick(pos)} style={{ cursor: podeCelula ? 'pointer' : 'default' }}>
         <polygon
@@ -289,54 +289,52 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
         </div>
 
         {/* Seletor de cor (só se não é primeira jogada) */}
-        {!state.primeiraJogada && state.estado === 'a-jogar' && 
-         (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer) && (
-          <div className="bg-purple-100 border-2 border-purple-400 rounded-xl p-3">
-            <p className="text-purple-800 text-sm mb-2 text-center font-medium">
-              Cor da peça a colocar ({pecasFaltam} peça{pecasFaltam > 1 ? 's' : ''} restante{pecasFaltam > 1 ? 's' : ''}):
-            </p>
-            <div className="flex justify-center gap-3">
-              <button
-                onClick={() => setCorSelecionada('preta')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                  corSelecionada === 'preta'
-                    ? 'bg-gray-900 text-white ring-2 ring-purple-400'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="w-4 h-4 rounded-full bg-gray-900 border border-gray-600"></div>
-                Preta
-              </button>
-              <button
-                onClick={() => setCorSelecionada('branca')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${
-                  corSelecionada === 'branca'
-                    ? 'bg-indigo-50 text-gray-900 ring-2 ring-purple-400 border border-indigo-300'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-200 border-2 border-indigo-400"></div>
-                Branca
-              </button>
-            </div>
-            {state.jogadaEmCurso.pos1 !== null && (
-              <div className="mt-2 flex justify-center">
+        {!state.primeiraJogada && state.estado === 'a-jogar' &&
+          (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer) && (
+            <div className="bg-purple-100 border-2 border-purple-400 rounded-xl p-3">
+              <p className="text-purple-800 text-sm mb-2 text-center font-medium">
+                Cor da peça a colocar ({pecasFaltam} peça{pecasFaltam > 1 ? 's' : ''} restante{pecasFaltam > 1 ? 's' : ''}):
+              </p>
+              <div className="flex justify-center gap-3">
                 <button
-                  onClick={handleCancelar}
-                  className="text-sm text-red-600 hover:text-red-800 underline"
+                  onClick={() => setCorSelecionada('preta')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${corSelecionada === 'preta'
+                      ? 'bg-gray-900 text-white ring-2 ring-purple-400'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
                 >
-                  Cancelar primeira peça
+                  <div className="w-4 h-4 rounded-full bg-gray-900 border border-gray-600"></div>
+                  Preta
+                </button>
+                <button
+                  onClick={() => setCorSelecionada('branca')}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${corSelecionada === 'branca'
+                      ? 'bg-indigo-50 text-gray-900 ring-2 ring-purple-400 border border-indigo-300'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                >
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-200 border-2 border-indigo-400"></div>
+                  Branca
                 </button>
               </div>
-            )}
-          </div>
-        )}
+              {state.jogadaEmCurso.pos1 !== null && (
+                <div className="mt-2 flex justify-center">
+                  <button
+                    onClick={handleCancelar}
+                    className="text-sm text-red-600 hover:text-red-800 underline"
+                  >
+                    Cancelar primeira peça
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
         {/* Tabuleiro hexagonal */}
         <div className="game-container">
           <div className="flex justify-center">
-            <svg 
-              width={Math.min(boundingBox.width + 20, 400)} 
+            <svg
+              width={Math.min(boundingBox.width + 20, 400)}
               height={Math.min(boundingBox.height + 20, 400)}
               viewBox={`-10 -10 ${boundingBox.width + 20} ${boundingBox.height + 20}`}
               className="max-w-full"
@@ -352,7 +350,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                   <stop offset="100%" stopColor="#c7d2fe" />
                 </linearGradient>
                 <filter id="shadowBranca" x="-50%" y="-50%" width="200%" height="200%">
-                  <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#6366f1" floodOpacity="0.4"/>
+                  <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#6366f1" floodOpacity="0.4" />
                 </filter>
               </defs>
               {posicoes.map(pos => renderHex(pos))}
@@ -381,7 +379,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 </span>
               ) : (
                 <>
-                  {state.primeiraJogada 
+                  {state.primeiraJogada
                     ? 'Pretas: coloca a primeira peça (apenas 1 nesta jogada)'
                     : `${state.jogadorAtual === 'jogador1' ? 'Pretas' : 'Brancas'}: coloca ${pecasFaltam} peça${pecasFaltam > 1 ? 's' : ''}`
                   }
