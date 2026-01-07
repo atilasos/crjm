@@ -2,7 +2,9 @@
 
 Site de treino para o **Campeonato Regional de Jogos Matemáticos da Madeira** (CRJM).
 
-Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do **1.º Ciclo ao Secundário**:
+Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do **1.º Ciclo ao Secundário**.
+
+![Homepage](docs/screenshots/homepage.png)
 
 ### Jogos disponíveis
 
@@ -15,7 +17,66 @@ Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do 
 | ⚫⚪ **Atari Go** | 3.º, Sec. | Variante simplificada do Go. A primeira captura vence o jogo! |
 | 🔗 **Nex** | Sec. | Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário! |
 
-## 🎮 Funcionalidades
+## Exemplos dos Jogos
+
+<table>
+<tr>
+<td width="50%">
+
+**Gatos & Cães** (1.º Ciclo)
+
+![Gatos & Cães](docs/screenshots/gatos-caes.png)
+
+</td>
+<td width="50%">
+
+**Dominório** (1.º, 2.º Ciclo)
+
+![Dominório](docs/screenshots/dominorio.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Quelhas** (1.º-3.º Ciclo) - MISÈRE
+
+![Quelhas](docs/screenshots/quelhas.png)
+
+</td>
+<td width="50%">
+
+**Produto** (2.º Ciclo - Secundário)
+
+![Produto](docs/screenshots/produto.png)
+
+</td>
+</tr>
+<tr>
+<td width="50%">
+
+**Atari Go** (3.º Ciclo - Secundário)
+
+![Atari Go](docs/screenshots/atari-go.png)
+
+</td>
+<td width="50%">
+
+**Nex** (Secundário)
+
+![Nex](docs/screenshots/nex.png)
+
+</td>
+</tr>
+</table>
+
+## Modo Campeonato
+
+Sistema de torneios online com dupla eliminação para competições escolares.
+
+![Modo Campeonato](docs/screenshots/campeonato.png)
+
+## Funcionalidades
 
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
