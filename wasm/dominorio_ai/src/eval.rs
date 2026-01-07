@@ -13,7 +13,7 @@ pub const MATE_SCORE: i32 = 29000;
 pub fn evaluate(occupied: u64, side: Side) -> i32 {
     let my_moves = count_moves(occupied, side) as i32;
     let opp_moves = count_moves(occupied, side.opposite()) as i32;
-    
+
     // Terminal check
     if my_moves == 0 {
         return -MATE_SCORE;
@@ -21,19 +21,124 @@ pub fn evaluate(occupied: u64, side: Side) -> i32 {
     if opp_moves == 0 {
         return MATE_SCORE;
     }
-    
+
     // Mobility difference (opponent weighted more heavily)
     let mobility = my_moves * 10 - opp_moves * 15;
-    
+
     // Safe moves (guaranteed available moves in runs)
     let my_safe = count_safe_moves(occupied, side) as i32;
     let opp_safe = count_safe_moves(occupied, side.opposite()) as i32;
     let safe = my_safe * 20 - opp_safe * 25;
-    
+
     // Control bonus (penalize leaving opponent with corridors)
-    let corridor_penalty = count_corridors(occupied, side.opposite()) as i32 * 10;
-    
-    mobility + safe - corridor_penalty
+    let my_corridors = count_corridors(occupied, side) as i32;
+    let opp_corridors = count_corridors(occupied, side.opposite()) as i32;
+    let corridor_score = my_corridors * 12 - opp_corridors * 15;
+
+    // Exclusive territory (2-cell runs in my orientation that opponent can't use)
+    let my_exclusive = count_exclusive_territory(occupied, side) as i32;
+    let opp_exclusive = count_exclusive_territory(occupied, side.opposite()) as i32;
+    let exclusive_score = my_exclusive * 30 - opp_exclusive * 35;
+
+    // Tempo/parity: in endgame, odd mobility difference matters
+    let total_empty = (64 - occupied.count_ones()) as i32;
+    let parity_bonus = if total_empty < 24 {
+        // Late game: having more moves when few remain is crucial
+        let move_diff = my_moves - opp_moves;
+        if move_diff > 0 && (my_moves % 2 == 1) {
+            15 // Odd moves left means we have tempo control
+        } else if move_diff < 0 && (opp_moves % 2 == 1) {
+            -15
+        } else {
+            0
+        }
+    } else {
+        0
+    };
+
+    mobility + safe + corridor_score + exclusive_score + parity_bonus
+}
+
+/// Count exclusive territory (2-cell runs that can only be used by one side)
+/// These are guaranteed safe placements in closed-off areas
+fn count_exclusive_territory(occupied: u64, side: Side) -> u32 {
+    let mut exclusive = 0;
+
+    match side {
+        Side::Vertical => {
+            // Look for columns with exactly 2 consecutive empty cells
+            // that are bounded by occupied or edges
+            for col in 0..8 {
+                let mut run_start: Option<u32> = None;
+                for row in 0..=8 {
+                    let is_empty = if row < 8 {
+                        let bit = 1u64 << (row * 8 + col);
+                        occupied & bit == 0
+                    } else {
+                        false
+                    };
+
+                    if is_empty {
+                        if run_start.is_none() {
+                            run_start = Some(row);
+                        }
+                    } else if let Some(start) = run_start {
+                        let run_len = row - start;
+                        if run_len == 2 {
+                            // Check if horizontally blocked (exclusive for vertical)
+                            let r1 = start;
+                            let r2 = start + 1;
+                            let blocked1 = (col == 0 || (occupied & (1u64 << (r1 * 8 + col - 1))) != 0)
+                                && (col == 7 || (occupied & (1u64 << (r1 * 8 + col + 1))) != 0);
+                            let blocked2 = (col == 0 || (occupied & (1u64 << (r2 * 8 + col - 1))) != 0)
+                                && (col == 7 || (occupied & (1u64 << (r2 * 8 + col + 1))) != 0);
+                            if blocked1 && blocked2 {
+                                exclusive += 1;
+                            }
+                        }
+                        run_start = None;
+                    }
+                }
+            }
+        }
+        Side::Horizontal => {
+            // Look for rows with exactly 2 consecutive empty cells
+            for row in 0..8 {
+                let mut run_start: Option<u32> = None;
+                for col in 0..=8 {
+                    let is_empty = if col < 8 {
+                        let bit = 1u64 << (row * 8 + col);
+                        occupied & bit == 0
+                    } else {
+                        false
+                    };
+
+                    if is_empty {
+                        if run_start.is_none() {
+                            run_start = Some(col);
+                        }
+                    } else if let Some(start) = run_start {
+                        let run_len = col - start;
+                        if run_len == 2 {
+                            // Check if vertically blocked (exclusive for horizontal)
+                            let c1 = start;
+                            let c2 = start + 1;
+                            let blocked1 = (row == 0 || (occupied & (1u64 << ((row - 1) * 8 + c1))) != 0)
+                                && (row == 7 || (occupied & (1u64 << ((row + 1) * 8 + c1))) != 0);
+                            let blocked2 = (row == 0 || (occupied & (1u64 << ((row - 1) * 8 + c2))) != 0)
+                                && (row == 7 || (occupied & (1u64 << ((row + 1) * 8 + c2))) != 0);
+                            if blocked1 && blocked2 {
+                                exclusive += 1;
+                            }
+                        }
+                        run_start = None;
+                    }
+                }
+            }
+        }
+    }
+
+    exclusive
 }
 
 /// Count "safe" moves - runs of 2+ empty squares in orientation
