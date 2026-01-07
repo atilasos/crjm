@@ -408,10 +408,14 @@ export function processMatchResult(
   }
 
   // Verifica se é hora da grand final
+  // IMPORTANTE: Só cria grand final quando TODOS os matches terminaram
+  // e há exatamente 1 jogador em cada bracket
   if (
     tournament.winnersWaiting.length === 1 &&
     tournament.losersWaiting.length === 1 &&
-    !tournament.grandFinal
+    !tournament.grandFinal &&
+    allWinnersMatchesFinished &&
+    allLosersMatchesFinished
   ) {
     createGrandFinal(tournament);
     if (tournament.grandFinal) {
