@@ -303,8 +303,27 @@ wasm/                   # Crates Rust para IA (WASM)
 
 ## 📝 Licença
 
-Este projeto foi criado para fins educativos.
+Este projeto está licenciado para **uso educativo gratuito**.
+
+**Uso permitido:**
+- ✅ Escolas e instituições de ensino
+- ✅ Professores e educadores
+- ✅ Alunos para treino e competições
+- ✅ Campeonatos escolares de jogos matemáticos
+
+**Uso proibido:**
+- ❌ Venda ou comercialização
+- ❌ Utilização comercial
+
+Consulta o ficheiro [LICENSE](./LICENSE) para os termos completos.
+
+## 🔗 Links
+
+- **Código fonte**: [github.com/atilasos/crjm](https://github.com/atilasos/crjm)
+- **Regras oficiais CRJM**: [projetosdre.madeira.gov.pt/crjmram](https://projetosdre.madeira.gov.pt/crjmram/jogos/)
 
 ---
 
 🎓 Bom treino e boa sorte no campeonato!
+
+<sub>Desenvolvido com ❤️ para o Campeonato Regional de Jogos Matemáticos da Madeira • [GitHub](https://github.com/atilasos/crjm)</sub>

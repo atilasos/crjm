@@ -86,15 +86,22 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
   };
 }
 
+// Servidores de torneio predefinidos
+const PRESET_SERVERS = [
+  { label: 'CRJM MacBook Pro', url: 'wss://crjm-macbookpro.infantinho.xyz' },
+  { label: 'CIDH', url: 'wss://cidh.infantinho.xyz' },
+  { label: 'Servidor personalizado...', url: 'custom' },
+];
+
 // URL do servidor de torneio via variável de ambiente ou default
 const DEFAULT_SERVER_URL = typeof import.meta !== 'undefined'
-  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '')
-  : '';
+  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || PRESET_SERVERS[0].url)
+  : PRESET_SERVERS[0].url;
 
 export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   // Estado de conexão
   const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
-  const [useMockServer, setUseMockServer] = useState(!DEFAULT_SERVER_URL);
+  const [useMockServer, setUseMockServer] = useState(false); // Default to real server with preset
   const [playerName, setPlayerName] = useState('');
   const [classId, setClassId] = useState('');
   const [selectedGame, setSelectedGame] = useState<GameId>('gatos-caes');
@@ -684,18 +691,38 @@ function ConnectForm({
               </div>
               <div>
                 <label className="block text-white/60 text-xs font-medium mb-1">
-                  Endereço do servidor
+                  Servidor do torneio
                 </label>
-                <input
-                  type="text"
-                  value={serverUrl}
-                  onChange={e => setServerUrl(e.target.value)}
-                  placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
-                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-400/50 font-mono text-sm"
+                <select
+                  value={PRESET_SERVERS.find(s => s.url === serverUrl)?.url || 'custom'}
+                  onChange={e => {
+                    const selected = e.target.value;
+                    if (selected !== 'custom') {
+                      setServerUrl(selected);
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50 text-sm mb-2"
                   disabled={isConnecting}
-                />
+                >
+                  {PRESET_SERVERS.map(server => (
+                    <option key={server.url} value={server.url} className="bg-gray-800">
+                      {server.label}
+                    </option>
+                  ))}
+                </select>
+                {/* Show custom URL input if 'custom' is selected or URL doesn't match presets */}
+                {(!PRESET_SERVERS.find(s => s.url === serverUrl) || serverUrl === 'custom' || PRESET_SERVERS.find(s => s.url === serverUrl)?.url === 'custom') && (
+                  <input
+                    type="text"
+                    value={serverUrl === 'custom' ? '' : serverUrl}
+                    onChange={e => setServerUrl(e.target.value)}
+                    placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
+                    className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-400/50 font-mono text-sm"
+                    disabled={isConnecting}
+                  />
+                )}
                 <p className="text-white/40 text-xs mt-1">
-                  O professor vai dar-te este endereço no dia do torneio.
+                  Escolhe o servidor ou introduz um endereço personalizado.
                 </p>
               </div>
             </div>
@@ -710,7 +737,7 @@ function ConnectForm({
 
         <button
           onClick={onConnect}
-          disabled={isConnecting || !playerName.trim() || (!useMockServer && !serverUrl.trim())}
+          disabled={isConnecting || !playerName.trim() || (!useMockServer && (!serverUrl.trim() || serverUrl === 'custom'))}
           className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
         >
           {isConnecting ? (
