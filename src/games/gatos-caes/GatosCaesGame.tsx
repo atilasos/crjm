@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
@@ -45,12 +45,15 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   }, []);
 
   // Efeito para jogada do computador
+  // Using a ref to track if AI is already computing to avoid race conditions
+  const aiComputingRef = useRef(false);
+
   useEffect(() => {
     const shouldPlayAI =
       state.modo === 'vs-computador' &&
       state.jogadorAtual !== humanPlayer &&
       state.estado === 'a-jogar' &&
-      !aiThinking;
+      !aiComputingRef.current;
 
     console.log('[GatosCaes] AI check:', {
       shouldPlayAI,
@@ -58,12 +61,13 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       jogadorAtual: state.jogadorAtual,
       humanPlayer,
       estado: state.estado,
-      aiThinking,
+      aiComputing: aiComputingRef.current,
       jogadasValidas: state.jogadasValidas.length,
     });
 
     if (shouldPlayAI) {
       let cancelled = false;
+      aiComputingRef.current = true;
       setAiThinking(true);
 
       const makeAIMove = async () => {
@@ -95,6 +99,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           console.error('[GatosCaes] AI computation error:', error);
         } finally {
           if (!cancelled) {
+            aiComputingRef.current = false;
             setAiThinking(false);
           }
         }
@@ -106,10 +111,11 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
         console.log('[GatosCaes] Cleanup - cancelling AI');
         cancelled = true;
         cancelComputation();
+        aiComputingRef.current = false;
         setAiThinking(false);
       };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer, aiThinking, difficulty, state]);
+  }, [state, humanPlayer, difficulty]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
