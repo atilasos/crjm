@@ -46,12 +46,23 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
   // Efeito para jogada do computador
   useEffect(() => {
-    if (
+    const shouldPlayAI =
       state.modo === 'vs-computador' &&
       state.jogadorAtual !== humanPlayer &&
       state.estado === 'a-jogar' &&
-      !aiThinking
-    ) {
+      !aiThinking;
+
+    console.log('[GatosCaes] AI check:', {
+      shouldPlayAI,
+      modo: state.modo,
+      jogadorAtual: state.jogadorAtual,
+      humanPlayer,
+      estado: state.estado,
+      aiThinking,
+      jogadasValidas: state.jogadasValidas.length,
+    });
+
+    if (shouldPlayAI) {
       let cancelled = false;
       setAiThinking(true);
 
@@ -59,18 +70,29 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
         // Small delay for better UX
         await new Promise(resolve => setTimeout(resolve, 300));
 
-        if (cancelled) return;
+        if (cancelled) {
+          console.log('[GatosCaes] AI cancelled before compute');
+          return;
+        }
 
         try {
-          const { move } = await computeMove(state, difficulty);
+          console.log('[GatosCaes] Calling computeMove...');
+          const { move, stats } = await computeMove(state, difficulty);
+          console.log('[GatosCaes] computeMove returned:', { move, stats });
 
-          if (cancelled) return;
+          if (cancelled) {
+            console.log('[GatosCaes] AI cancelled after compute');
+            return;
+          }
 
           if (move) {
+            console.log('[GatosCaes] Applying AI move:', move);
             setState(prev => colocarPeca(prev, move));
+          } else {
+            console.log('[GatosCaes] AI returned null move - no valid moves?');
           }
         } catch (error) {
-          console.error('AI computation error:', error);
+          console.error('[GatosCaes] AI computation error:', error);
         } finally {
           if (!cancelled) {
             setAiThinking(false);
@@ -81,6 +103,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       makeAIMove();
 
       return () => {
+        console.log('[GatosCaes] Cleanup - cancelling AI');
         cancelled = true;
         cancelComputation();
         setAiThinking(false);

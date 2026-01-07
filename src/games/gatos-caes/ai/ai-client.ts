@@ -29,11 +29,23 @@ export async function computeMove(
   state: GatosCaesState,
   difficulty: number = 3
 ): Promise<{ move: Posicao | null; stats: SearchStats }> {
+  console.log('[GatosCaesAI] computeMove called', {
+    jogadorAtual: state.jogadorAtual,
+    estado: state.estado,
+    difficulty,
+  });
+
   // Small yield to prevent UI blocking
   await new Promise(resolve => setTimeout(resolve, 0));
 
   // Run computation directly
-  return computeBestMove(state, difficulty);
+  const result = computeBestMove(state, difficulty);
+  console.log('[GatosCaesAI] computeMove result', {
+    move: result.move,
+    nodes: result.stats.nodes,
+    depth: result.stats.depth,
+  });
+  return result;
 }
 
 /**
