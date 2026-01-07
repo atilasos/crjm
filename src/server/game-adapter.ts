@@ -235,10 +235,15 @@ function parseQuelhasMove(move: unknown): { kind: 'swap' } | { kind: 'segmento';
     if (!orientacao) return null;
 
     if (orientacao === 'horizontal') {
-      const linha = parsed[0].row;
+      const rowArr = [...rows];
+      const linha = rowArr[0];
+      if (typeof linha !== 'number') return null;
+
       const colunas = [...cols].sort((a, b) => a - b);
       const colunaMin = colunas[0];
       const colunaMax = colunas[colunas.length - 1];
+      if (typeof colunaMin !== 'number' || typeof colunaMax !== 'number') return null;
+
       const comprimento = colunaMax - colunaMin + 1;
       if (comprimento !== parsed.length) return null;
       const unique = new Set(parsed.map(c => `${c.row},${c.col}`));
@@ -250,10 +255,15 @@ function parseQuelhasMove(move: unknown): { kind: 'swap' } | { kind: 'segmento';
     }
 
     // vertical
-    const coluna = parsed[0].col;
+    const colArr = [...cols];
+    const coluna = colArr[0];
+    if (typeof coluna !== 'number') return null;
+
     const linhas = [...rows].sort((a, b) => a - b);
     const linhaMin = linhas[0];
     const linhaMax = linhas[linhas.length - 1];
+    if (typeof linhaMin !== 'number' || typeof linhaMax !== 'number') return null;
+
     const comprimento = linhaMax - linhaMin + 1;
     if (comprimento !== parsed.length) return null;
     const unique = new Set(parsed.map(c => `${c.row},${c.col}`));
@@ -318,33 +328,109 @@ const quelhasAdapter: GameAdapter = {
 // Adaptador para Produto
 // ============================================================================
 
+// ============================================================================
+// Adaptador para Produto
+// ============================================================================
+
+function parseProdutoMove(move: unknown, state: ProdutoState): Array<{ pos: ProdutoPosicao; cor: 'preta' | 'branca' }> | null {
+  if (!move || typeof move !== 'object') return null;
+  const anyMove = move as any;
+
+  // 1. Formato local: { pos: { q, r }, cor } ou { q, r, cor }
+  let pPos = anyMove.pos || (typeof anyMove.q === 'number' && typeof anyMove.r === 'number' ? { q: anyMove.q, r: anyMove.r } : null);
+  let pCor = anyMove.cor;
+
+  if (pPos && pCor) {
+    if (pCor === 'preta' || pCor === 'branca') {
+      return [{ pos: pPos, cor: pCor }];
+    }
+  }
+
+  // 2. Formato de rede: { placements: [{ coord, color }, ...] }
+  if (Array.isArray(anyMove.placements)) {
+    const placements = anyMove.placements;
+    // Se estivermos a enviar placements peça a peça do cliente, ou a jogada completa
+    const result: Array<{ pos: ProdutoPosicao; cor: 'preta' | 'branca' }> = [];
+
+    for (const p of placements) {
+      if (p && p.coord && p.color) {
+        result.push({
+          pos: { q: p.coord.q, r: p.coord.r },
+          cor: p.color === 'black' ? 'preta' : 'branca'
+        });
+      }
+    }
+
+    if (result.length > 0) {
+      // Se houver múltiplas peças, mas o state já tem uma em curso, 
+      // talvez queiramos apenas as que faltam? 
+      // No servidor, o mais seguro é:
+      // - Se a primeira peça do placements já é igual à pos1 em curso, ignoramos a primeira.
+      if (state.jogadaEmCurso.pos1 && result.length >= 2) {
+        const p1 = result[0];
+        const s1 = state.jogadaEmCurso.pos1;
+        if (p1 && p1.pos.q === s1.q && p1.pos.r === s1.r && result[1]) {
+          return [result[1]]; // Só aplica a segunda
+        }
+      }
+      return result;
+    }
+  }
+
+  return null;
+}
+
 const produtoAdapter: GameAdapter = {
   createInitialState(): ProdutoState {
     return criarProduto('dois-jogadores');
   },
 
   applyMove(state: GameState, move: unknown): ProdutoState | null {
-    const pState = state as ProdutoState;
-    const pMove = move as { pos: ProdutoPosicao; cor: 'preta' | 'branca' };
+    let pState = state as ProdutoState;
+    const parsed = parseProdutoMove(move, pState);
 
-    if (!this.isValidMove(pState, pMove)) {
+    if (!parsed) return null;
+
+    if (!this.isValidMove(pState, move)) {
       return null;
     }
 
-    return colocarProdutoPeca(pState, pMove.pos, pMove.cor);
+    // Aplicar cada peça
+    let currentState = pState;
+    for (const item of parsed) {
+      currentState = colocarProdutoPeca(currentState, item.pos, item.cor);
+    }
+    return currentState;
   },
 
   isValidMove(state: GameState, move: unknown): boolean {
     const pState = state as ProdutoState;
-    const pMove = move as { pos: ProdutoPosicao; cor: 'preta' | 'branca' };
+    const parsed = parseProdutoMove(move, pState);
 
-    if (!pMove || !pMove.pos || !pMove.cor) return false;
-    if (typeof pMove.pos.q !== 'number' || typeof pMove.pos.r !== 'number') return false;
-    if (pMove.cor !== 'preta' && pMove.cor !== 'branca') return false;
+    if (!parsed) return false;
 
-    // Verificar se casa está vazia
-    const key = `${pMove.pos.q},${pMove.pos.r}`;
-    return pState.tabuleiro[key] === 'vazia';
+    let tempState = pState;
+    for (const item of parsed) {
+      if (!item.pos || typeof item.pos.q !== 'number' || typeof item.pos.r !== 'number') return false;
+      if (item.cor !== 'preta' && item.cor !== 'branca') return false;
+
+      // Na primeira jogada do jogo, a peça tem de ser da cor do jogador
+      if (pState.primeiraJogada) {
+        const corEsperada = pState.jogadorAtual === 'jogador1' ? 'preta' : 'branca';
+        if (item.cor !== corEsperada) return false;
+      }
+
+      const key = `${item.pos.q},${item.pos.r}`;
+      if (tempState.tabuleiro[key] !== 'vazia') return false;
+      // ... rest of the loop
+      if (tempState.jogadaEmCurso.pos1) {
+        const p1 = tempState.jogadaEmCurso.pos1;
+        if (p1.q === item.pos.q && p1.r === item.pos.r) return false;
+      }
+      tempState = colocarProdutoPeca(tempState, item.pos, item.cor);
+    }
+
+    return true;
   },
 
   isGameOver(state: GameState): boolean {
@@ -366,6 +452,28 @@ const produtoAdapter: GameAdapter = {
 // Adaptador para Atari Go
 // ============================================================================
 
+// ============================================================================
+// Adaptador para Atari Go
+// ============================================================================
+
+function parseAtariGoMove(move: unknown): AtariGoPosicao | null {
+  if (!move || typeof move !== 'object') return null;
+  const anyMove = move as any;
+
+  // 1. Formato local: { linha, coluna }
+  if (typeof anyMove.linha === 'number' && typeof anyMove.coluna === 'number') {
+    return { linha: anyMove.linha, coluna: anyMove.coluna };
+  }
+
+  // 2. Formato de rede: { row, col, pass? }
+  if (typeof anyMove.row === 'number' && typeof anyMove.col === 'number') {
+    // Nota: pass não é suportado no logic.ts atual de Atari Go mas o protocolo prevê
+    return { linha: anyMove.row, coluna: anyMove.col };
+  }
+
+  return null;
+}
+
 const atariGoAdapter: GameAdapter = {
   createInitialState(): AtariGoState {
     return criarAtariGo('dois-jogadores');
@@ -373,24 +481,22 @@ const atariGoAdapter: GameAdapter = {
 
   applyMove(state: GameState, move: unknown): AtariGoState | null {
     const agState = state as AtariGoState;
-    const pos = move as AtariGoPosicao;
+    const parsed = parseAtariGoMove(move);
 
-    if (!this.isValidMove(agState, pos)) {
+    if (!parsed || !this.isValidMove(agState, move)) {
       return null;
     }
 
-    return colocarAtariGoPedra(agState, pos);
+    return colocarAtariGoPedra(agState, parsed);
   },
 
   isValidMove(state: GameState, move: unknown): boolean {
     const agState = state as AtariGoState;
-    const pos = move as AtariGoPosicao;
+    const parsed = parseAtariGoMove(move);
 
-    if (!pos || typeof pos.linha !== 'number' || typeof pos.coluna !== 'number') {
-      return false;
-    }
+    if (!parsed) return false;
 
-    return isJogadaValidaAtariGo(agState, pos);
+    return isJogadaValidaAtariGo(agState, parsed);
   },
 
   isGameOver(state: GameState): boolean {
@@ -412,6 +518,47 @@ const atariGoAdapter: GameAdapter = {
 // Adaptador para Nex
 // ============================================================================
 
+// ============================================================================
+// Adaptador para Nex
+// ============================================================================
+
+function parseNexMove(move: unknown): NexAcao | { type: 'nex_swap' | 'swap' } | null {
+  if (!move || typeof move !== 'object') return null;
+  const anyMove = move as any;
+
+  // 1. Formato local: { tipo: 'colocacao' | 'substituicao', ... } ou { type: 'nex_swap' }
+  if (anyMove.tipo === 'colocacao' || anyMove.tipo === 'substituicao') {
+    return anyMove as NexAcao;
+  }
+  if (anyMove.tipo === 'swap' || anyMove.type === 'nex_swap' || anyMove.type === 'swap') {
+    return { type: 'swap' };
+  }
+
+  // 2. Formato de rede: { type: 'place' | 'convert' | 'swap', ... }
+  if (anyMove.type === 'place') {
+    if (!anyMove.ownPiece || !anyMove.neutralPiece) return null;
+    return {
+      tipo: 'colocacao',
+      posPropria: { x: anyMove.ownPiece.row, y: anyMove.ownPiece.col },
+      posNeutra: { x: anyMove.neutralPiece.row, y: anyMove.neutralPiece.col }
+    };
+  }
+
+  if (anyMove.type === 'convert') {
+    if (!Array.isArray(anyMove.neutralsToConvert) || anyMove.neutralsToConvert.length !== 2 || !anyMove.ownToNeutral) return null;
+    return {
+      tipo: 'substituicao',
+      neutrasParaProprias: [
+        { x: anyMove.neutralsToConvert[0].row, y: anyMove.neutralsToConvert[0].col },
+        { x: anyMove.neutralsToConvert[1].row, y: anyMove.neutralsToConvert[1].col }
+      ],
+      propriaParaNeutra: { x: anyMove.ownToNeutral.row, y: anyMove.ownToNeutral.col }
+    };
+  }
+
+  return null;
+}
+
 const nexAdapter: GameAdapter = {
   createInitialState(): NexState {
     return criarNex('dois-jogadores');
@@ -419,17 +566,21 @@ const nexAdapter: GameAdapter = {
 
   applyMove(state: GameState, move: unknown): NexState | null {
     const nState = state as NexState;
+    const parsed = parseNexMove(move);
+
+    if (!parsed) return null;
 
     // Tratamento de Swap
-    if (move && typeof move === 'object' && (move as any).type === 'nex_swap') {
+    if ('type' in parsed && parsed.type === 'swap') {
       if (!nState.swapDisponivel) return null;
       return executarNexSwap(nState);
     }
 
-    // Tratamento de Ação Completa ou Ação em Curso
-    const nMove = move as NexAcao;
-    if (nMove.tipo === 'colocacao' || nMove.tipo === 'substituicao') {
-      const tempState = { ...nState, acaoEmCurso: nMove as any };
+    // Tratamento de Ação
+    const nAcao = parsed as NexAcao;
+    if (nAcao.tipo === 'colocacao' || nAcao.tipo === 'substituicao') {
+      if (!this.isValidMove(nState, move)) return null;
+      const tempState = { ...nState, acaoEmCurso: nAcao as any };
       return executarNexAcao(tempState);
     }
 
@@ -438,12 +589,15 @@ const nexAdapter: GameAdapter = {
 
   isValidMove(state: GameState, move: unknown): boolean {
     const nState = state as NexState;
+    const parsed = parseNexMove(move);
 
-    if (move && typeof move === 'object' && (move as any).type === 'nex_swap') {
+    if (!parsed) return false;
+
+    if ('type' in parsed && parsed.type === 'swap') {
       return nState.swapDisponivel;
     }
 
-    const nMove = move as NexAcao;
+    const nMove = parsed as NexAcao;
     if (nMove.tipo === 'colocacao') {
       const posP = nMove.posPropria;
       const posN = nMove.posNeutra;

@@ -41,6 +41,7 @@ import {
   isGameFinished,
   getGameWinner,
   isGameSupported,
+  getCurrentGamePlayer,
 } from './game-adapter';
 import { getAdminPageHtml } from './admin-page';
 
@@ -80,12 +81,12 @@ const eventLog: LogEntry[] = [];
 function log(entry: Omit<LogEntry, 'timestamp'>): void {
   const fullEntry = { ...entry, timestamp: new Date() };
   eventLog.push(fullEntry);
-  
+
   // Manter só os últimos 1000 eventos
   if (eventLog.length > 1000) {
     eventLog.shift();
   }
-  
+
   console.log(`[${fullEntry.type.toUpperCase()}] ${fullEntry.message}`);
 }
 
@@ -124,7 +125,7 @@ function broadcastTournamentState(tournament: Tournament): void {
   const state = toTournamentState(tournament);
   broadcastToTournament(tournament, {
     type: 'tournament_state_update',
-    tournamentState: state,
+    ...state,
   });
 }
 
@@ -150,7 +151,7 @@ function handleJoinTournament(
 
   // Obter ou criar torneio para este jogo
   let tournament = tournaments.get(gameId);
-  
+
   if (!tournament) {
     tournament = createTournament(gameId);
     tournaments.set(gameId, tournament);
@@ -174,7 +175,7 @@ function handleJoinTournament(
   // Adicionar jogador
   const socketId = `${Date.now()}-${Math.random()}`;
   const player = addPlayer(tournament, playerName, classId, socketId);
-  
+
   if (!player) {
     sendToSocket(socket, {
       type: 'error',
@@ -199,6 +200,8 @@ function handleJoinTournament(
   sendToSocket(socket, {
     type: 'welcome',
     playerId: player.id,
+    playerName: player.name,
+    tournamentId: tournament.id,
     tournamentState: toTournamentState(tournament),
   });
 
@@ -292,13 +295,14 @@ function handleReadyForMatch(
 
     // Notificar ambos os jogadores
     const p1Start = updatedMatch.whoStartsCurrentGame === 'player1';
-    
+
     sendToPlayer(match.player1!.id, {
       type: 'game_start',
       matchId,
       gameNumber: updatedMatch.currentGame,
       youStart: p1Start,
       initialState: gameState,
+      yourRole: 'player1',
     });
 
     sendToPlayer(match.player2!.id, {
@@ -307,6 +311,7 @@ function handleReadyForMatch(
       gameNumber: updatedMatch.currentGame,
       youStart: !p1Start,
       initialState: gameState,
+      yourRole: 'player2',
     });
 
     broadcastTournamentState(tournament);
@@ -422,8 +427,15 @@ function handleSubmitMove(
     return;
   }
 
+  // Determinar quem é o próximo jogador baseado na lógica do jogo
+  const nextJogador = getCurrentGamePlayer(tournament.gameId, newState as any);
+  const isP1Jogador1 = match.whoStartsCurrentGame === 'player1';
+  const nextTurn: 'player1' | 'player2' = nextJogador === 'jogador1'
+    ? (isP1Jogador1 ? 'player1' : 'player2')
+    : (isP1Jogador1 ? 'player2' : 'player1');
+
   // Registar a jogada
-  recordMove(match, playerId, move, newState);
+  recordMove(match, playerId, move, newState, nextTurn);
 
   log({
     type: 'game',
@@ -436,7 +448,7 @@ function handleSubmitMove(
   // Verificar se o jogo acabou
   if (isGameFinished(tournament.gameId, newState)) {
     const winner = getGameWinner(tournament.gameId, newState);
-    
+
     // CORREÇÃO: Mapear jogador1/jogador2 (papel no jogo) para player1/player2 (seat no match)
     // whoStartsCurrentGame indica qual seat está a jogar como jogador1 neste jogo
     // Jogo 1: player1 = jogador1, Jogo 2: player2 = jogador1, Jogo 3: player1 = jogador1
@@ -444,13 +456,13 @@ function handleSubmitMove(
     const winnerId = winner === 'jogador1'
       ? (isPlayer1AsJogador1 ? match.player1!.id : match.player2!.id)
       : (isPlayer1AsJogador1 ? match.player2!.id : match.player1!.id);
-    
+
     // Determinar o winnerRole (seat) para enviar aos clientes
     const winnerRole: 'player1' | 'player2' = winnerId === match.player1!.id ? 'player1' : 'player2';
 
     // Terminar o jogo
     const { matchEnded, matchWinnerId } = endGame(match, winnerId);
-    
+
     // Obter o nome do vencedor corretamente
     const winnerName = winnerId === match.player1!.id ? match.player1?.name : match.player2?.name;
 
@@ -465,11 +477,11 @@ function handleSubmitMove(
     console.log('[DEBUG] Score após endGame:', JSON.stringify(match.score));
 
     // Criar cópia do score para enviar (evitar problemas de referência)
-    const scoreToSend = { 
-      player1Wins: match.score.player1Wins, 
-      player2Wins: match.score.player2Wins 
+    const scoreToSend = {
+      player1Wins: match.score.player1Wins,
+      player2Wins: match.score.player2Wins
     };
-    
+
     console.log('[DEBUG] Score a enviar:', JSON.stringify(scoreToSend));
 
     // Notificar fim do jogo com campos completos
@@ -501,7 +513,7 @@ function handleSubmitMove(
     } else {
       // Match continua, aguardar ready para próximo jogo
       broadcastTournamentState(tournament);
-      
+
       sendToPlayer(match.player1!.id, {
         type: 'info',
         message: `Prepara-te para o jogo ${match.currentGame}!`,
@@ -555,7 +567,7 @@ function handleMatchEnd(
   const result = processMatchResult(tournament, match.id, winnerId);
 
   // Determinar próximo bracket para cada jogador
-  const winnerNextBracket = result.isTournamentEnd ? 'champion' : 
+  const winnerNextBracket = result.isTournamentEnd ? 'champion' :
     (match.bracket === 'winners' ? 'winners' : 'losers');
   const loserNextBracket = loser.losses >= 2 ? 'eliminated' : 'losers';
 
@@ -564,18 +576,22 @@ function handleMatchEnd(
     type: 'match_end',
     matchId: match.id,
     winnerId,
+    winnerName: winner.name,
     finalScore: match.score,
     youWon: true,
     nextBracket: winnerNextBracket,
+    eliminatedFromTournament: false,
   });
 
   sendToPlayer(loserId, {
     type: 'match_end',
     matchId: match.id,
     winnerId,
+    winnerName: winner.name,
     finalScore: match.score,
     youWon: false,
     nextBracket: loserNextBracket,
+    eliminatedFromTournament: loserNextBracket === 'eliminated',
   });
 
   // Se o torneio terminou
@@ -588,11 +604,13 @@ function handleMatchEnd(
 
     broadcastToTournament(tournament, {
       type: 'tournament_end',
+      tournamentId: tournament.id,
       championId: winnerId,
       championName: winner.name,
       finalStandings: tournament.players.map((p, i) => ({
-        player: { id: p.id, name: p.name, classId: p.classId },
-        position: p.id === winnerId ? 1 : (p.losses < 2 ? 2 : tournament.players.length - i),
+        rank: p.id === winnerId ? 1 : (p.losses < 2 ? 2 : Math.min(3, 1 + p.losses)),
+        playerId: p.id,
+        playerName: p.name,
       })),
     });
   } else {
@@ -601,39 +619,17 @@ function handleMatchEnd(
       if (newMatch.player1) {
         sendToPlayer(newMatch.player1.id, {
           type: 'match_assigned',
-          match: {
-            id: newMatch.id,
-            round: newMatch.round,
-            bracket: newMatch.bracket,
-            player1: newMatch.player1,
-            player2: newMatch.player2,
-            score: newMatch.score,
-            bestOf: newMatch.bestOf,
-            currentGame: newMatch.currentGame,
-            whoStartsCurrentGame: newMatch.whoStartsCurrentGame,
-            phase: newMatch.phase,
-            winnerId: newMatch.winnerId,
-          },
+          match: newMatch,
           yourRole: 'player1',
+          opponentName: newMatch.player2?.name || 'A aguardar adversário...',
         });
       }
       if (newMatch.player2) {
         sendToPlayer(newMatch.player2.id, {
           type: 'match_assigned',
-          match: {
-            id: newMatch.id,
-            round: newMatch.round,
-            bracket: newMatch.bracket,
-            player1: newMatch.player1,
-            player2: newMatch.player2,
-            score: newMatch.score,
-            bestOf: newMatch.bestOf,
-            currentGame: newMatch.currentGame,
-            whoStartsCurrentGame: newMatch.whoStartsCurrentGame,
-            phase: newMatch.phase,
-            winnerId: newMatch.winnerId,
-          },
+          match: newMatch,
           yourRole: 'player2',
+          opponentName: newMatch.player1?.name || 'A aguardar adversário...',
         });
       }
     }
@@ -750,7 +746,7 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
 
 function handleClose(socket: ServerWebSocket<ClientData>): void {
   const playerId = socket.data.playerId;
-  
+
   if (playerId) {
     // Encontrar torneio e marcar jogador como desconectado
     for (const tournament of tournaments.values()) {
@@ -788,7 +784,7 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
 
 function handleHttpRequest(req: Request): Response {
   const url = new URL(req.url);
-  
+
   // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -855,7 +851,7 @@ function handleHttpRequest(req: Request): Response {
 
     const gameId = url.pathname.split('/')[3] as GameId;
     const tournament = tournaments.get(gameId);
-    
+
     if (!tournament) {
       return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
     }
@@ -885,42 +881,22 @@ function handleHttpRequest(req: Request): Response {
     // Enviar match assignments para os primeiros matches
     const allMatches = [...tournament.winnersMatches, ...tournament.losersMatches];
     for (const match of allMatches) {
-      if (match.player1) {
-        sendToPlayer(match.player1.id, {
+      const p1 = match.player1;
+      const p2 = match.player2;
+      if (p1) {
+        sendToPlayer(p1.id, {
           type: 'match_assigned',
-          match: {
-            id: match.id,
-            round: match.round,
-            bracket: match.bracket,
-            player1: match.player1,
-            player2: match.player2,
-            score: match.score,
-            bestOf: match.bestOf,
-            currentGame: match.currentGame,
-            whoStartsCurrentGame: match.whoStartsCurrentGame,
-            phase: match.phase,
-            winnerId: match.winnerId,
-          },
+          match: match,
           yourRole: 'player1',
+          opponentName: p2?.name || 'A aguardar adversário...',
         });
       }
-      if (match.player2) {
-        sendToPlayer(match.player2.id, {
+      if (p2) {
+        sendToPlayer(p2.id, {
           type: 'match_assigned',
-          match: {
-            id: match.id,
-            round: match.round,
-            bracket: match.bracket,
-            player1: match.player1,
-            player2: match.player2,
-            score: match.score,
-            bestOf: match.bestOf,
-            currentGame: match.currentGame,
-            whoStartsCurrentGame: match.whoStartsCurrentGame,
-            phase: match.phase,
-            winnerId: match.winnerId,
-          },
+          match: match,
           yourRole: 'player2',
+          opponentName: p1?.name || 'A aguardar adversário...',
         });
       }
     }
@@ -979,7 +955,7 @@ const server = Bun.serve<ClientData>({
   port: PORT,
   fetch(req, server) {
     const url = new URL(req.url);
-    
+
     // Upgrade para WebSocket se for /ws
     if (url.pathname === '/ws') {
       const upgraded = server.upgrade(req, {
@@ -988,14 +964,14 @@ const server = Bun.serve<ClientData>({
           tournamentId: null,
         },
       });
-      
+
       if (upgraded) {
         return undefined;
       }
-      
+
       return new Response('WebSocket upgrade failed', { status: 500 });
     }
-    
+
     // Caso contrário, tratar como HTTP
     return handleHttpRequest(req);
   },

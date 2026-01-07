@@ -19,6 +19,9 @@ import {
   ProdutoBoard,
   AtariGoBoard,
   NexBoard,
+  toNetworkProdutoMove,
+  toNetworkAtariGoMove,
+  toNetworkNexMove,
 } from '../tournament';
 
 // Tipos dos jogos
@@ -417,11 +420,38 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   const handleMove = (move: unknown) => {
     if (!currentMatch || !clientRef.current || !isMyTurn) return;
+
+    // Converter para formato de rede se necessário
+    let networkMove = move;
+    if (currentGameId === 'produto' && move) {
+      // No ProdutoBoard do CampeonatoPage, o move pode ser pos1 ou pos2
+      // Mas o toNetworkProdutoMove espera a jogada completa (JogadaDupla).
+      // Se move tiver q e r ou pos {q, r} (formato local do ProdutoBoard), 
+      // mandamos no formato de rede esperado pelo servidor.
+
+      const anyMove = move as any;
+      const pPos = anyMove.pos || (typeof anyMove.q === 'number' && typeof anyMove.r === 'number' ? { q: anyMove.q, r: anyMove.r } : null);
+      const pCor = anyMove.cor;
+
+      if (pPos && pCor) {
+        networkMove = {
+          placements: [{
+            coord: { q: pPos.q, r: pPos.r },
+            color: pCor === 'preta' ? 'black' : 'white'
+          }]
+        };
+      }
+    } else if (currentGameId === 'atari-go' && move) {
+      networkMove = toNetworkAtariGoMove(move as AtariGoPosicao);
+    } else if (currentGameId === 'nex' && move) {
+      networkMove = toNetworkNexMove(move as NexAcao);
+    }
+
     clientRef.current.send({
       type: 'submit_move',
       matchId: currentMatch.id,
       gameNumber: currentGameNumber,
-      move,
+      move: networkMove,
     });
   };
 

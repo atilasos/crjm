@@ -47,24 +47,24 @@ export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
 
 export type AIRequest =
   | {
-      type: 'choose';
-      id: number;
-      state: ProdutoPackedState;
-      difficulty: AIDifficulty;
-      seed?: number;
-    }
+    type: 'choose';
+    id: number;
+    state: ProdutoPackedState;
+    difficulty: AIDifficulty;
+    seed?: number;
+  }
   | { type: 'cancel'; id: number };
 
 export type AIResponse =
   | { type: 'ready'; usedWasm: boolean }
   | {
-      type: 'result';
-      id: number;
-      move: ProdutoPackedMove | null;
-      elapsedMs: number;
-      usedWasm: boolean;
-      explain?: string;
-    }
+    type: 'result';
+    id: number;
+    move: ProdutoPackedMove | null;
+    elapsedMs: number;
+    usedWasm: boolean;
+    explain?: string;
+  }
   | { type: 'error'; id: number; message: string };
 
 export interface IndexMaps {
@@ -90,7 +90,7 @@ export function packState(
   let whiteLo = 0;
   let whiteHi = 0;
 
-  for (const [key, cell] of state.tabuleiro.entries()) {
+  for (const [key, cell] of Object.entries(state.tabuleiro)) {
     if (cell === 'vazia') continue;
     const idx = keyToIdx.get(key);
     if (idx === undefined) continue;

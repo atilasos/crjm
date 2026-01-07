@@ -37,7 +37,7 @@ export interface Player {
 
 export type BracketType = 'winners' | 'losers';
 
-export type TournamentPhase = 
+export type TournamentPhase =
   | 'registration'  // inscrições abertas
   | 'running'       // campeonato a decorrer
   | 'finished';     // campeonato terminado
@@ -72,6 +72,9 @@ export interface Match {
   player1: { id: string; name: string } | null;
   player2: { id: string; name: string } | null;
   score: MatchScore;
+  bestOf: number;
+  currentGame: number;
+  whoStartsCurrentGame: 'player1' | 'player2';
   phase: MatchPhase;
   winnerId: string | null;
 }
@@ -196,6 +199,7 @@ export interface MatchEndMessage {
   finalScore: MatchScore;
   youWon: boolean;
   nextMatchId?: string;
+  nextBracket?: 'winners' | 'losers' | 'champion' | 'eliminated';
   eliminatedFromTournament: boolean;
 }
 

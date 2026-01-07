@@ -42,9 +42,30 @@ import {
   decidirTrocaComputador as decidirTrocaQuelhas,
   jogadaComputador as iaQuelhas,
 } from '../games/quelhas/logic';
+import {
+  criarEstadoInicial as criarProduto,
+  colocarPeca as colocarProdutoPeca,
+  jogadaComputador as iaProduto,
+} from '../games/produto/logic';
+import {
+  criarEstadoInicial as criarAtariGo,
+  colocarPedra as colocarAtariGoPedra,
+  isJogadaValida as isJogadaValidaAtariGo,
+  jogadaComputador as iaAtariGo,
+} from '../games/atari-go/logic';
+import {
+  criarEstadoInicial as criarNex,
+  executarAcao as executarNexAcao,
+  executarSwap as executarNexSwap,
+  jogadaComputador as iaNex,
+} from '../games/nex/logic';
+
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
 import type { DominorioState, Domino } from '../games/dominorio/types';
 import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas/types';
+import type { ProdutoState, Posicao as ProdutoPosicao } from '../games/produto/types';
+import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
+import type { NexState, Acao as NexAcao } from '../games/nex/types';
 
 // Nomes fictícios para bots
 const BOT_NAMES = [
@@ -64,7 +85,7 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 10);
 }
 
-type GameState = GatosCaesState | DominorioState | QuelhasState;
+type GameState = GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
 
 // Internal match tracking (includes game number etc.)
 interface InternalMatch extends Match {
@@ -85,7 +106,7 @@ export class TournamentClientMock implements TournamentClient {
   // Seat fixo no match (player1 ou player2 - não muda)
   // myRole pode mudar entre jogos quando os papéis trocam
   private _mySeatInMatch: 'player1' | 'player2' | null = null;
-  
+
   // Mapeamento do jogo atual: quem é jogador1/jogador2 no jogo
   // Em jogos ímpares: player1 é jogador1, player2 é jogador2
   // Em jogos pares: player2 é jogador1, player1 é jogador2 (papéis trocados)
@@ -324,12 +345,12 @@ export class TournamentClientMock implements TournamentClient {
 
     // Determina o número do jogo atual
     const gameNumber = this._currentMatch.currentGame;
-    
+
     // Calcula o mapeamento de papéis para este jogo
     // Em jogos ímpares (1, 3): papéis normais (seat = role)
     // Em jogos pares (2): papéis trocados
     const rolesSwapped = gameNumber % 2 === 0;
-    
+
     if (rolesSwapped) {
       // Papéis trocados: player1 do match joga como jogador2 (Cães), player2 joga como jogador1 (Gatos)
       this._gameRoleMapping = { jogador1: 'player2', jogador2: 'player1' };
@@ -360,7 +381,7 @@ export class TournamentClientMock implements TournamentClient {
       gameNumber,
       youStart,
       initialState: initialNetworkState,
-      yourRole: this._myRole,
+      yourRole: this._mySeatInMatch,
     };
     this.emit(gameStartMsg);
 
@@ -426,7 +447,7 @@ export class TournamentClientMock implements TournamentClient {
       gameState: networkState,
       yourTurn: false,
       lastMove: move,
-      lastMoveBy: this._myRole,
+      lastMoveBy: this._mySeatInMatch,
     };
     this.emit(gameStateUpdateMsg);
 
@@ -458,14 +479,13 @@ export class TournamentClientMock implements TournamentClient {
     const networkState = toNetworkGameState(this._gameId, this._gameState);
 
     // Send game_state_update (NEW protocol)
-    const botRole: 'player1' | 'player2' = this._myRole === 'player1' ? 'player2' : 'player1';
     const gameStateUpdateMsg: GameStateUpdateMessage = {
       type: 'game_state_update',
       matchId: this._currentMatch.id,
       gameNumber: this._currentMatch.currentGame,
       gameState: networkState,
       yourTurn: true,
-      lastMoveBy: botRole,
+      lastMoveBy: this._mySeatInMatch === 'player1' ? 'player2' : 'player1',
     };
     this.emit(gameStateUpdateMsg);
   }
@@ -478,26 +498,26 @@ export class TournamentClientMock implements TournamentClient {
     // Determina quem ganhou (jogador1 ou jogador2 no jogo)
     const gameWinner = this.getWinner(finalState);
     const isDraw = gameWinner === null && finalState.estado === 'empate';
-    
+
     let iWon = false;
     let winnerRole: 'player1' | 'player2' | null = null;
     let winnerId: string | null = null;
-    
+
     // Usa o mapeamento de papéis para converter vencedor do jogo para vencedor do match
     // gameWinner é 'jogador1' ou 'jogador2' (papel no jogo atual)
     // Precisamos mapear para 'player1' ou 'player2' (seat no match)
     if (gameWinner === 'jogador1') {
       // Quem estava a jogar como jogador1 neste jogo?
       winnerRole = this._gameRoleMapping.jogador1;
-      winnerId = winnerRole === 'player1' 
-        ? this._currentMatch.player1!.id 
+      winnerId = winnerRole === 'player1'
+        ? this._currentMatch.player1!.id
         : this._currentMatch.player2!.id;
       iWon = this._mySeatInMatch === winnerRole;
     } else if (gameWinner === 'jogador2') {
       // Quem estava a jogar como jogador2 neste jogo?
       winnerRole = this._gameRoleMapping.jogador2;
-      winnerId = winnerRole === 'player1' 
-        ? this._currentMatch.player1!.id 
+      winnerId = winnerRole === 'player1'
+        ? this._currentMatch.player1!.id
         : this._currentMatch.player2!.id;
       iWon = this._mySeatInMatch === winnerRole;
     }
@@ -528,7 +548,7 @@ export class TournamentClientMock implements TournamentClient {
     const { player1Wins, player2Wins } = this._currentMatch.score;
     this.emit({
       type: 'info',
-      message: isDraw 
+      message: isDraw
         ? `🤝 Empate no jogo ${this._currentMatch.currentGame}! Resultado: ${player1Wins}-${player2Wins}`
         : `${iWon ? '🎉 Ganhaste' : '😔 Perdeste'} o jogo ${this._currentMatch.currentGame}! Resultado: ${player1Wins}-${player2Wins}`,
     });
@@ -563,12 +583,12 @@ export class TournamentClientMock implements TournamentClient {
 
     const { player1Wins, player2Wins } = this._currentMatch.score;
     const iWonMatch = (this._myRole === 'player1' && player1Wins > player2Wins) ||
-                      (this._myRole === 'player2' && player2Wins > player1Wins);
+      (this._myRole === 'player2' && player2Wins > player1Wins);
 
-    const winnerId = player1Wins > player2Wins 
-      ? this._currentMatch.player1!.id 
+    const winnerId = player1Wins > player2Wins
+      ? this._currentMatch.player1!.id
       : this._currentMatch.player2!.id;
-    
+
     const winnerName = player1Wins > player2Wins
       ? this._currentMatch.player1!.name
       : this._currentMatch.player2!.name;
@@ -605,7 +625,7 @@ export class TournamentClientMock implements TournamentClient {
 
     // Termina o torneio
     await this.delay(2000);
-    
+
     this._tournamentState.phase = 'finished';
     this._tournamentState.championId = winnerId;
     this._tournamentState.championName = winnerName;
@@ -624,8 +644,8 @@ export class TournamentClientMock implements TournamentClient {
     this._tournamentState.winnersMatches = [matchSummary];
 
     // Send tournament_end (NEW protocol)
-    const loserId = winnerId === this._currentMatch.player1!.id 
-      ? this._currentMatch.player2!.id 
+    const loserId = winnerId === this._currentMatch.player1!.id
+      ? this._currentMatch.player2!.id
       : this._currentMatch.player1!.id;
     const loserName = winnerId === this._currentMatch.player1!.id
       ? this._currentMatch.player2!.name
@@ -690,6 +710,12 @@ export class TournamentClientMock implements TournamentClient {
         return criarDominorio('dois-jogadores');
       case 'quelhas':
         return criarQuelhas('dois-jogadores');
+      case 'produto':
+        return criarProduto('dois-jogadores');
+      case 'atari-go':
+        return criarAtariGo('dois-jogadores');
+      case 'nex':
+        return criarNex('dois-jogadores');
       default:
         // Fallback para Gatos & Cães
         return criarGatosCaes('dois-jogadores');
@@ -712,10 +738,10 @@ export class TournamentClientMock implements TournamentClient {
           const domino = move as Domino;
           const domState = state as DominorioState;
           // Verifica se o dominó é uma jogada válida
-          const isValid = domState.jogadasValidas.some(d => 
-            d.pos1.linha === domino.pos1.linha && 
+          const isValid = domState.jogadasValidas.some(d =>
+            d.pos1.linha === domino.pos1.linha &&
             d.pos1.coluna === domino.pos1.coluna &&
-            d.pos2.linha === domino.pos2.linha && 
+            d.pos2.linha === domino.pos2.linha &&
             d.pos2.coluna === domino.pos2.coluna
           );
           if (!isValid) return null;
@@ -744,6 +770,32 @@ export class TournamentClientMock implements TournamentClient {
           if (!isSegmentoValidoQuelhas(qState, segmento)) return null;
           return colocarQuelhasSegmento(qState, segmento);
         }
+        case 'produto': {
+          const pState = state as ProdutoState;
+          const anyMove = move as any;
+          const pPos = anyMove?.pos || { q: anyMove?.q, r: anyMove?.r };
+          const pCor = anyMove?.cor;
+          if (!pPos || typeof pPos.q !== 'number' || typeof pPos.r !== 'number') return null;
+          if (pCor !== 'preta' && pCor !== 'branca') return null;
+          if (pState.tabuleiro[`${pPos.q},${pPos.r}`] !== 'vazia') return null;
+          return colocarProdutoPeca(pState, pPos, pCor);
+        }
+        case 'atari-go': {
+          const agState = state as AtariGoState;
+          const pos = move as AtariGoPosicao;
+          if (!isJogadaValidaAtariGo(agState, pos)) return null;
+          return colocarAtariGoPedra(agState, pos);
+        }
+        case 'nex': {
+          const nState = state as NexState;
+          const nMove = move as any;
+          if (nMove?.type === 'nex_swap') {
+            if (!nState.swapDisponivel) return null;
+            return executarNexSwap(nState);
+          }
+          const tempState = { ...nState, acaoEmCurso: nMove as any };
+          return executarNexAcao(tempState);
+        }
         default:
           return null;
       }
@@ -765,6 +817,12 @@ export class TournamentClientMock implements TournamentClient {
         }
         return iaQuelhas(qState);
       }
+      case 'produto':
+        return iaProduto(state as ProdutoState);
+      case 'atari-go':
+        return iaAtariGo(state as AtariGoState);
+      case 'nex':
+        return iaNex(state as NexState);
       default:
         return null;
     }
