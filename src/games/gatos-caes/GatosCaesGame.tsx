@@ -3,13 +3,13 @@ import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { GatosCaesState, Posicao, CASAS_CENTRAIS } from './types';
-import { 
-  criarEstadoInicial, 
+import {
+  criarEstadoInicial,
   colocarPeca,
   isJogadaValida,
-  jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
+import { initAI, computeMove, cancelComputation, terminateAI } from './ai';
 
 interface GatosCaesGameProps {
   onVoltar: () => void;
@@ -27,25 +27,66 @@ const REGRAS = [
 ];
 
 export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
-  const [state, setState] = useState<GatosCaesState>(() => 
+  const [state, setState] = useState<GatosCaesState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
+  const [difficulty, setDifficulty] = useState(3);
+  const [aiThinking, setAiThinking] = useState(false);
+
+  // Initialize AI on mount
+  useEffect(() => {
+    initAI();
+    return () => {
+      cancelComputation();
+      terminateAI();
+    };
+  }, []);
 
   // Efeito para jogada do computador
   useEffect(() => {
     if (
-      state.modo === 'vs-computador' && 
-      state.jogadorAtual !== humanPlayer && 
-      state.estado === 'a-jogar'
+      state.modo === 'vs-computador' &&
+      state.jogadorAtual !== humanPlayer &&
+      state.estado === 'a-jogar' &&
+      !aiThinking
     ) {
-      const timer = setTimeout(() => {
-        setState(prev => jogadaComputador(prev));
-      }, 800);
-      return () => clearTimeout(timer);
+      let cancelled = false;
+      setAiThinking(true);
+
+      const makeAIMove = async () => {
+        // Small delay for better UX
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        if (cancelled) return;
+
+        try {
+          const { move } = await computeMove(state, difficulty);
+
+          if (cancelled) return;
+
+          if (move) {
+            setState(prev => colocarPeca(prev, move));
+          }
+        } catch (error) {
+          console.error('AI computation error:', error);
+        } finally {
+          if (!cancelled) {
+            setAiThinking(false);
+          }
+        }
+      };
+
+      makeAIMove();
+
+      return () => {
+        cancelled = true;
+        cancelComputation();
+        setAiThinking(false);
+      };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer]);
+  }, [state.jogadorAtual, state.modo, state.estado, humanPlayer, aiThinking, difficulty, state]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -121,7 +162,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   const isVezDaIA =
     state.modo === 'vs-computador' &&
     state.estado === 'a-jogar' &&
-    state.jogadorAtual !== humanPlayer;
+    (state.jogadorAtual !== humanPlayer || aiThinking);
 
   return (
     <GameLayout titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
@@ -140,6 +181,36 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        {/* Difficulty selector (only in vs computer mode) */}
+        {state.modo === 'vs-computador' && (
+          <div className="flex items-center justify-center gap-3 text-sm">
+            <span className="text-gray-600">Dificuldade:</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((level) => (
+                <button
+                  key={level}
+                  onClick={() => setDifficulty(level)}
+                  disabled={aiThinking}
+                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
+                    difficulty === level
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  } ${aiThinking ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+            <span className="text-xs text-gray-500">
+              {difficulty === 1 && '(Fácil)'}
+              {difficulty === 2 && '(Normal)'}
+              {difficulty === 3 && '(Difícil)'}
+              {difficulty === 4 && '(Muito Difícil)'}
+              {difficulty === 5 && '(Mestre)'}
+            </span>
+          </div>
+        )}
 
         {/* Tabuleiro */}
         <div className="game-container">
