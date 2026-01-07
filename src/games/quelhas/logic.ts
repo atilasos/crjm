@@ -1463,74 +1463,96 @@ export function avaliarPosicaoMisere(
   const minha = orientacaoIA === 'vertical' ? metricas.vertical : metricas.horizontal;
   const adv = orientacaoIA === 'vertical' ? metricas.horizontal : metricas.vertical;
 
+  // ========== ANÁLISE DE PARIDADE MISÈRE ==========
+  //
+  // Em misère com jogadas alternadas:
+  // - Quem faz a última jogada PERDE
+  // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
+  // - O objetivo é forçar o adversário a fazer a última jogada
+  //
+  // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
+  // do total de jogadas para forçar o adversário a ser o último.
+
+  const minhaFlex = minha.max - minha.min;   // Quantas jogadas extra posso escolher fazer
+  const advFlex = adv.max - adv.min;         // Quantas jogadas extra o adversário pode fazer
+
   let pontuacao = 0;
 
-  // ========== ESTRATÉGIA MISÈRE COM EXCLUSIVAS/PARTILHADAS ==========
-
-  // 1. RESERVA EXCLUSIVA: Bónus enorme por ter blocos exclusivos que o adversário não tem
-  //    Isto dá "tempo" - posso forçar adversário a jogar nas partilhadas enquanto guardo as minhas
-  const vantagemExclusiva = minha.maxExclusivo - adv.maxExclusivo;
-  pontuacao += vantagemExclusiva * 50;
-
-  // 2. FIXIDEZ DO ADVERSÁRIO: Se adversário tem min ≈ max, ele não tem flexibilidade
-  //    Isto é BOM para nós - cada jogada dele é "obrigatória"
-  const flexibilidadeAdv = adv.max - adv.min;
-  const flexibilidadeIA = minha.max - minha.min;
-  pontuacao += (flexibilidadeIA - flexibilidadeAdv) * 15;
-
-  // 3. GARANTIA DE JOGADAS DO ADVERSÁRIO: Queremos que ele TENHA de jogar
-  //    Bónus se o mínimo de jogadas do adversário é > 0
-  if (adv.min > 0) {
-    pontuacao += adv.min * 30;
-  }
-
-  // 4. CONTROLO DE TEMPO: Se tenho mais jogadas exclusivas que o adversário tem total,
-  //    posso "acompanhar" cada jogada dele e ainda sobrar minhas exclusivas
+  // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
   if (minha.maxExclusivo >= adv.max && minha.maxExclusivo > 0) {
-    // Posição dominante: posso forçar adversário a esgotar primeiro
-    pontuacao += 200;
-    
-    // Bónus adicional pela margem de controlo
-    const margem = minha.maxExclusivo - adv.max;
-    pontuacao += margem * 25;
+    // Posição dominante: posso acompanhar todas as jogadas do adversário
+    // O adversário não tem como evitar ser o último
+    const controlo = minha.maxExclusivo - adv.max;
+    pontuacao += 8000 + controlo * 500;
+  }
+  // Se o adversário tem este controlo sobre mim
+  else if (adv.maxExclusivo >= minha.max && adv.maxExclusivo > 0) {
+    const controloAdv = adv.maxExclusivo - minha.max;
+    pontuacao -= 8000 + controloAdv * 500;
   }
 
-  // 5. FASE FINAL: Quando poucas jogadas restam, calcular paridade exacta
-  const totalMin = minha.min + adv.min;
+  // 2. ANÁLISE DE PARIDADE PARA ENDGAME
+  // Quando restam poucas jogadas, calcular paridade exata
   const totalMax = minha.max + adv.max;
-  
-  if (totalMax <= 10) {
-    // Estamos perto do fim - análise mais fina
-    
-    // Se adversário tem blocos só partilhados e eu tenho exclusivos,
-    // cada jogada dele nas partilhadas posso "responder" nas minhas exclusivas
-    if (adv.minExclusivo === 0 && minha.minExclusivo > 0) {
-      // Situação ideal: adversário só joga em zonas onde eu também posso jogar,
-      // mas eu tenho reservas onde só eu jogo
-      pontuacao += 150;
+  const totalMin = minha.min + adv.min;
+
+  if (totalMax <= 20) {
+    // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
+    // se o total for PAR, o adversário faz a última = EU GANHO
+    // se o total for ÍMPAR, eu faço a última = EU PERCO
+
+    // Se posso escolher qualquer paridade e adversário não pode compensar
+    if (minhaFlex > advFlex) {
+      // Eu controlo a paridade - posição vantajosa
+      pontuacao += 3000 + (minhaFlex - advFlex) * 200;
+    } else if (advFlex > minhaFlex) {
+      // Adversário controla a paridade
+      pontuacao -= 3000 + (advFlex - minhaFlex) * 200;
+    } else {
+      // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
+      // Se totalMin é ímpar e nenhum tem flexibilidade extra, eu perco
+      if (minhaFlex === 0 && advFlex === 0) {
+        if (totalMin % 2 === 1) {
+          pontuacao -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
+        } else {
+          pontuacao += 2000; // Total par = adversário faz última = ganho
+        }
+      }
     }
-    
-    // Paridade: Em misère, queremos que o adversário faça a última jogada
-    // Se total de jogadas restantes (assumindo ambos jogam minimamente) é tal que
-    // o adversário joga por último, é bom
-    // Nota: jogadas alternadas, IA joga agora, portanto se (advMin) é ímpar após nossa jogada...
-    // Simplificação: preferir estados onde advMin > minhaMin
+
+    // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
+    // Se adversário tem mais jogadas mínimas, ele será forçado a jogar mais
     if (adv.min > minha.min) {
-      pontuacao += (adv.min - minha.min) * 40;
+      pontuacao += (adv.min - minha.min) * 400;
+    } else if (minha.min > adv.min) {
+      pontuacao -= (minha.min - adv.min) * 400;
+    }
+
+    // 4. ZONAS EXCLUSIVAS COMO RESERVA
+    // Ter exclusivas quando adversário não tem é enorme vantagem
+    if (minha.minExclusivo > 0 && adv.minExclusivo === 0) {
+      pontuacao += 2500;
+    } else if (adv.minExclusivo > 0 && minha.minExclusivo === 0) {
+      pontuacao -= 2500;
     }
   }
 
-  // 6. PENALIZAR JOGADAS PRÓPRIAS DEMAIS (em misère, muitas jogadas = mau)
-  //    Mas só se não temos controlo via exclusivas
-  if (minha.maxExclusivo <= adv.max) {
-    pontuacao -= minha.min * 10;
-  }
+  // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
+  // Reserva exclusiva como "banco de tempo"
+  pontuacao += (minha.maxExclusivo - adv.maxExclusivo) * 80;
 
-  // 7. PREFERIR FRAGMENTAÇÃO DO ADVERSÁRIO
-  //    Adversário com mais blocos pequenos (min alto, max baixo) tem menos flexibilidade
+  // Flexibilidade é valiosa em misère
+  pontuacao += (minhaFlex - advFlex) * 60;
+
+  // Eficiência dos blocos (blocos maiores = mais opções)
   const eficienciaAdv = adv.min > 0 ? adv.max / adv.min : 0;
   const eficienciaIA = minha.min > 0 ? minha.max / minha.min : 0;
-  pontuacao += (eficienciaIA - eficienciaAdv) * 10;
+  pontuacao += Math.floor((eficienciaIA - eficienciaAdv) * 30);
+
+  // Penalizar ter muitas jogadas forçadas sem controlo
+  if (minha.maxExclusivo < adv.max) {
+    pontuacao -= minha.min * 20;
+  }
 
   return pontuacao;
 }

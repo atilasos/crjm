@@ -65,9 +65,9 @@ pub fn evaluate_misere(occ: Occupancy, side_to_move: u8) -> i32 {
 
     let (my, opp) = if side_to_move == 0 { (m_v, m_h) } else { (m_h, m_v) };
 
-    // Casos terminais misère (monotónicos): ocupar células nunca cria novas jogadas.
+    // Casos terminais misère:
     // - Se eu não tenho jogadas, eu ganho (não posso jogar).
-    // - Se o adversário não tem jogadas e eu tenho, eu sou forçado a jogar e perco (sou o último).
+    // - Se o adversário não tem jogadas e eu tenho, sou forçado a jogar = perco.
     if my.min == 0 {
         return 100_000;
     }
@@ -75,37 +75,92 @@ pub fn evaluate_misere(occ: Occupancy, side_to_move: u8) -> i32 {
         return -100_000;
     }
 
+    // ========== ANÁLISE DE PARIDADE MISÈRE ==========
+    //
+    // Em misère com jogadas alternadas:
+    // - Quem faz a última jogada PERDE
+    // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
+    // - O objetivo é forçar o adversário a fazer a última jogada
+    //
+    // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
+    // do total de jogadas para forçar o adversário a ser o último.
+
+    let my_flex = my.max - my.min;   // Quantas jogadas extra posso escolher fazer
+    let opp_flex = opp.max - opp.min; // Quantas jogadas extra o adversário pode fazer
+
     let mut score = 0i32;
-    score += (my.max_excl - opp.max_excl) * 50;
-    score += ((my.max - my.min) - (opp.max - opp.min)) * 15;
-    if opp.min > 0 {
-        score += opp.min * 30;
-    }
+
+    // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
     if my.max_excl >= opp.max && my.max_excl > 0 {
-        score += 200;
-        score += (my.max_excl - opp.max) * 25;
+        // Posição dominante: posso acompanhar todas as jogadas do adversário
+        let controlo = my.max_excl - opp.max;
+        score += 8000 + controlo * 500;
+    }
+    // Se o adversário tem este controlo sobre mim
+    else if opp.max_excl >= my.max && opp.max_excl > 0 {
+        let controlo_adv = opp.max_excl - my.max;
+        score -= 8000 + controlo_adv * 500;
     }
 
+    // 2. ANÁLISE DE PARIDADE PARA ENDGAME
     let total_max = my.max + opp.max;
-    if total_max <= 10 {
-        if opp.min_excl == 0 && my.min_excl > 0 {
-            score += 150;
+    let total_min = my.min + opp.min;
+
+    if total_max <= 20 {
+        // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
+        // se o total for PAR, o adversário faz a última = EU GANHO
+        // se o total for ÍMPAR, eu faço a última = EU PERCO
+
+        // Se posso escolher qualquer paridade e adversário não pode compensar
+        if my_flex > opp_flex {
+            // Eu controlo a paridade - posição vantajosa
+            score += 3000 + (my_flex - opp_flex) * 200;
+        } else if opp_flex > my_flex {
+            // Adversário controla a paridade
+            score -= 3000 + (opp_flex - my_flex) * 200;
+        } else {
+            // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
+            if my_flex == 0 && opp_flex == 0 {
+                if total_min % 2 == 1 {
+                    score -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
+                } else {
+                    score += 2000; // Total par = adversário faz última = ganho
+                }
+            }
         }
+
+        // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
         if opp.min > my.min {
-            score += (opp.min - my.min) * 40;
+            score += (opp.min - my.min) * 400;
+        } else if my.min > opp.min {
+            score -= (my.min - opp.min) * 400;
+        }
+
+        // 4. ZONAS EXCLUSIVAS COMO RESERVA
+        if my.min_excl > 0 && opp.min_excl == 0 {
+            score += 2500;
+        } else if opp.min_excl > 0 && my.min_excl == 0 {
+            score -= 2500;
         }
     }
 
-    if my.max_excl <= opp.max {
-        score -= my.min * 10;
-    }
+    // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
+    // Reserva exclusiva como "banco de tempo"
+    score += (my.max_excl - opp.max_excl) * 80;
 
+    // Flexibilidade é valiosa em misère
+    score += (my_flex - opp_flex) * 60;
+
+    // Eficiência dos blocos (blocos maiores = mais opções)
     let eff_opp = if opp.min > 0 { (opp.max as f64) / (opp.min as f64) } else { 0.0 };
     let eff_my = if my.min > 0 { (my.max as f64) / (my.min as f64) } else { 0.0 };
-    score += ((eff_my - eff_opp) * 10.0) as i32;
+    score += ((eff_my - eff_opp) * 30.0) as i32;
 
-    // pequena penalização por jogadas demasiado longas no imediato (mais controlo)
-    // (usado indiretamente no ordering em TS; aqui só influencia folhas)
+    // Penalizar ter muitas jogadas forçadas sem controlo
+    if my.max_excl < opp.max {
+        score -= my.min * 20;
+    }
+
     score
 }
 

@@ -300,41 +300,114 @@ function evaluateMisere(occ: Occ, sideToMove: 0 | 1): number {
   const my = myOrient === 0 ? mV : mH;
   const opp = myOrient === 0 ? mH : mV;
 
-  // Casos terminais misère (monotónicos): ocupar células nunca cria novas jogadas.
+  // Casos terminais misère:
   // - Se eu não tenho jogadas, eu ganho (não posso jogar).
-  // - Se o adversário não tem jogadas e eu tenho, eu sou forçado a jogar e perco (sou o último).
+  // - Se o adversário não tem jogadas e eu tenho, sou forçado a jogar = perco.
   if (my.min === 0) return 100000;
   if (opp.min === 0) return -100000;
 
+  // ========== ANÁLISE DE PARIDADE MISÈRE ==========
+  //
+  // Em misère com jogadas alternadas:
+  // - Quem faz a última jogada PERDE
+  // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
+  // - O objetivo é forçar o adversário a fazer a última jogada
+  //
+  // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
+  // do total de jogadas para forçar o adversário a ser o último.
+
+  const myFlex = my.max - my.min;   // Quantas jogadas extra posso escolher fazer
+  const oppFlex = opp.max - opp.min; // Quantas jogadas extra o adversário pode fazer
+
+  // Análise de controlo baseada em zonas exclusivas:
+  // - Blocos exclusivos são "reservas de tempo" - só eu posso jogar lá
+  // - Se maxExcl >= opp.max: posso sempre "responder" a qualquer jogada do adversário
+  //   usando minhas exclusivas, forçando-o a esgotar primeiro
+
   let score = 0;
 
-  // Reserva exclusiva (tempo)
-  score += (my.maxExcl - opp.maxExcl) * 50;
-
-  // Flexibilidade (max-min)
-  score += ((my.max - my.min) - (opp.max - opp.min)) * 15;
-
-  // Queremos que o adversário tenha de jogar
-  if (opp.min > 0) score += opp.min * 30;
-
-  // Controlo de tempo
+  // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
   if (my.maxExcl >= opp.max && my.maxExcl > 0) {
-    score += 200;
-    score += (my.maxExcl - opp.max) * 25;
+    // Posição dominante: posso acompanhar todas as jogadas do adversário
+    // O adversário não tem como evitar ser o último
+    const controlo = my.maxExcl - opp.max;
+    score += 8000 + controlo * 500;
+  }
+  // Se o adversário tem este controlo sobre mim
+  else if (opp.maxExcl >= my.max && opp.maxExcl > 0) {
+    const controloAdv = opp.maxExcl - my.max;
+    score -= 8000 + controloAdv * 500;
   }
 
+  // 2. ANÁLISE DE PARIDADE PARA ENDGAME
+  // Quando restam poucas jogadas, calcular paridade exata
   const totalMax = my.max + opp.max;
-  if (totalMax <= 10) {
-    if (opp.minExcl === 0 && my.minExcl > 0) score += 150;
-    if (opp.min > my.min) score += (opp.min - my.min) * 40;
+  const totalMin = my.min + opp.min;
+
+  if (totalMax <= 20) {
+    // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
+    // se o total for PAR, o adversário faz a última = EU GANHO
+    // se o total for ÍMPAR, eu faço a última = EU PERCO
+
+    // Com flexibilidade, posso escolher o total dentro de [totalMin, totalMax]
+    // Se tenho mais flexibilidade, posso escolher a paridade a meu favor
+
+    // Verificar se posso forçar paridade favorável
+    const canForceEven = myFlex > 0 && (totalMin % 2 === 0 || my.max - 1 >= my.min);
+    const canForceOdd = myFlex > 0 && (totalMin % 2 === 1 || my.max - 1 >= my.min);
+
+    // Se posso escolher qualquer paridade e adversário não pode compensar
+    if (myFlex > oppFlex) {
+      // Eu controlo a paridade - posição vantajosa
+      score += 3000 + (myFlex - oppFlex) * 200;
+    } else if (oppFlex > myFlex) {
+      // Adversário controla a paridade
+      score -= 3000 + (oppFlex - myFlex) * 200;
+    } else {
+      // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
+      // Se totalMin é ímpar e nenhum tem flexibilidade extra, eu perco
+      if (myFlex === 0 && oppFlex === 0) {
+        if (totalMin % 2 === 1) {
+          score -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
+        } else {
+          score += 2000; // Total par = adversário faz última = ganho
+        }
+      }
+    }
+
+    // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
+    // Se adversário tem mais jogadas mínimas, ele será forçado a jogar mais
+    if (opp.min > my.min) {
+      score += (opp.min - my.min) * 400;
+    } else if (my.min > opp.min) {
+      score -= (my.min - opp.min) * 400;
+    }
+
+    // 4. ZONAS EXCLUSIVAS COMO RESERVA
+    // Ter exclusivas quando adversário não tem é enorme vantagem
+    if (my.minExcl > 0 && opp.minExcl === 0) {
+      score += 2500;
+    } else if (opp.minExcl > 0 && my.minExcl === 0) {
+      score -= 2500;
+    }
   }
 
-  // Penalizar demasiadas obrigações sem controlo
-  if (my.maxExcl <= opp.max) score -= my.min * 10;
+  // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
+  // Reserva exclusiva como "banco de tempo"
+  score += (my.maxExcl - opp.maxExcl) * 80;
 
+  // Flexibilidade é valiosa em misère
+  score += (myFlex - oppFlex) * 60;
+
+  // Eficiência dos blocos (blocos maiores = mais opções)
   const effOpp = opp.min > 0 ? opp.max / opp.min : 0;
   const effMy = my.min > 0 ? my.max / my.min : 0;
-  score += (effMy - effOpp) * 10;
+  score += Math.floor((effMy - effOpp) * 30);
+
+  // Penalizar ter muitas jogadas forçadas sem controlo
+  if (my.maxExcl < opp.max) {
+    score -= my.min * 20;
+  }
 
   return score;
 }
