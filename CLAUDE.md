@@ -298,3 +298,27 @@ cargo install wasm-bindgen-cli
 2. Use `bun run dev` for hot reload during development
 3. WASM builds only work in production mode
 4. Tournament server logs to console with timestamps
+
+## Screenshots
+
+The project includes Playwright for automated screenshot capture:
+
+```bash
+# Capture from live site (GitHub Pages)
+bun run screenshots
+
+# Capture from local dev server
+bun run screenshots:local
+```
+
+Screenshots are saved to `docs/screenshots/` and include:
+- `homepage.png` - Main game selection page
+- `gatos-caes.png` - Gatos & Cães game board
+- `dominorio.png` - Dominório game board
+- `quelhas.png` - Quelhas game board
+- `produto.png` - Produto hexagonal board
+- `atari-go.png` - Atari Go board
+- `nex.png` - Nex connection game
+- `campeonato.png` - Tournament mode interface
+
+The capture script is at `scripts/capture-screenshots.ts`.
