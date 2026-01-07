@@ -6,7 +6,7 @@ function post(msg: AIResponse) {
 }
 
 type WasmModule = {
-  default: (wasmUrl: URL) => Promise<void>;
+  default: (opts: { module_or_path: URL | string }) => Promise<void>;
   init_ai: (seed: number) => void;
   choose_move: (state: any, cfg: any) => any;
   explain_last: () => string;
@@ -20,7 +20,7 @@ async function init(): Promise<void> {
   try {
     const wasmModule = (await import('./wasm/pkg/produto_ai.js')) as WasmModule;
     const wasmUrl = new URL('./wasm/pkg/produto_ai_bg.wasm', import.meta.url);
-    await wasmModule.default(wasmUrl);
+    await wasmModule.default({ module_or_path: wasmUrl });
     wasmModule.init_ai((Date.now() >>> 0) as number);
     wasm = wasmModule;
     useWasm = true;

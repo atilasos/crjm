@@ -81,7 +81,8 @@ async function init(): Promise<void> {
     // wasm-bindgen foi gerado com `--omit-default-module-path`, por isso temos de
     // indicar explicitamente onde está o .wasm.
     wasmUrl = new URL('./wasm/pkg/quelhas_wasm_bg.wasm', import.meta.url);
-    await wasmModule.default(wasmUrl);
+    // Use new wasm-bindgen init syntax (object parameter instead of URL directly)
+    await wasmModule.default({ module_or_path: wasmUrl });
     wasmEngine = new wasmModule.QuelhasEngine(18);
     useWasm = true;
     console.log('[QuelhasAI] WASM engine initialized');

@@ -1,66 +1,24 @@
 /**
  * AI Client for Gatos & Cães
  *
- * Provides a simple interface to the AI engine, handling worker communication.
+ * Provides a simple interface to the AI engine.
+ * Uses direct/inline computation (no Web Worker) for better compatibility
+ * across different bundlers and environments.
  */
 
 import type { GatosCaesState, Posicao } from '../types';
-import type { WorkerRequest, WorkerResponse, SearchStats } from './types';
+import type { SearchStats } from './types';
+import { computeBestMove } from './engine';
 
-// Fallback: run engine directly if worker fails
-import { computeBestMove as computeBestMoveDirect } from './engine';
-
-let worker: Worker | null = null;
-let workerReady = false;
-let requestId = 0;
-let pendingResolve: ((result: { move: Posicao | null; stats: SearchStats }) => void) | null = null;
+let isReady = false;
 
 /**
- * Initialize the AI worker
+ * Initialize the AI (no-op, always ready)
  */
 export function initAI(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    try {
-      // Try to create worker
-      worker = new Worker(
-        new URL('./gatos-caes.worker.ts', import.meta.url),
-        { type: 'module' }
-      );
-
-      worker.onmessage = (event) => {
-        const data = event.data;
-
-        if (data.type === 'ready') {
-          workerReady = true;
-          resolve();
-          return;
-        }
-
-        if (data.type === 'move_result' && pendingResolve) {
-          const response = data as WorkerResponse;
-          pendingResolve({ move: response.move, stats: response.stats });
-          pendingResolve = null;
-        }
-      };
-
-      worker.onerror = (error) => {
-        console.error('AI worker error:', error);
-        worker = null;
-        workerReady = false;
-        resolve(); // Still resolve, will fall back to sync
-      };
-
-      // Timeout for worker initialization
-      setTimeout(() => {
-        if (!workerReady) {
-          console.warn('AI worker timeout, using fallback');
-          resolve();
-        }
-      }, 3000);
-    } catch (error) {
-      console.warn('Failed to create AI worker, using fallback:', error);
-      resolve();
-    }
+  return new Promise((resolve) => {
+    isReady = true;
+    resolve();
   });
 }
 
@@ -71,61 +29,30 @@ export async function computeMove(
   state: GatosCaesState,
   difficulty: number = 3
 ): Promise<{ move: Posicao | null; stats: SearchStats }> {
-  // Use worker if available
-  if (worker && workerReady) {
-    return new Promise((resolve) => {
-      pendingResolve = resolve;
-      const id = ++requestId;
+  // Small yield to prevent UI blocking
+  await new Promise(resolve => setTimeout(resolve, 0));
 
-      const request: WorkerRequest = {
-        type: 'compute_move',
-        state,
-        difficulty,
-        requestId: id,
-      };
-
-      worker!.postMessage(request);
-
-      // Timeout fallback
-      setTimeout(() => {
-        if (pendingResolve === resolve) {
-          console.warn('Worker timeout, using fallback');
-          pendingResolve = null;
-          const result = computeBestMoveDirect(state, difficulty);
-          resolve(result);
-        }
-      }, 30000); // 30 second timeout
-    });
-  }
-
-  // Fallback: run synchronously
-  return computeBestMoveDirect(state, difficulty);
+  // Run computation directly
+  return computeBestMove(state, difficulty);
 }
 
 /**
- * Cancel ongoing computation
+ * Cancel ongoing computation (no-op for inline computation)
  */
 export function cancelComputation(): void {
-  if (worker && workerReady) {
-    worker.postMessage({ type: 'cancel' });
-  }
-  pendingResolve = null;
+  // No-op - inline computation can't be cancelled
 }
 
 /**
- * Terminate the AI worker
+ * Terminate the AI (no-op)
  */
 export function terminateAI(): void {
-  if (worker) {
-    worker.terminate();
-    worker = null;
-    workerReady = false;
-  }
+  isReady = false;
 }
 
 /**
  * Check if AI is ready
  */
 export function isAIReady(): boolean {
-  return workerReady || true; // Always ready with fallback
+  return isReady;
 }
