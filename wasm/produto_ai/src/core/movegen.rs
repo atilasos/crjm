@@ -7,7 +7,7 @@ pub enum Stone {
     White = 1,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Move {
     pub pos_a: u8,
     pub color_a: Stone,

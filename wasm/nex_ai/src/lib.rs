@@ -247,22 +247,122 @@ fn eval_advantage(board: &[u8; NN], my_color: u8) -> i32 {
 
     let my_d = dist_min(board, my_color, 2);
     let opp_d = dist_min(board, opp, 2);
-    let base = (opp_d as i32 - my_d as i32) * 120;
+    let base = (opp_d as i32 - my_d as i32) * 150; // Increased from 120
 
-    // Mild centrality signal: prefer owning center-ish cells (helps opening).
+    // Threat detection: opponent close to winning is very bad
+    let threat_penalty = match opp_d {
+        0 => -10000, // Opponent has won (shouldn't reach here)
+        1 => -3000,  // Opponent 1 move away from winning
+        2 => -1200,  // Opponent 2 moves from winning
+        3 => -400,   // Opponent 3 moves from winning
+        _ => 0,
+    };
+
+    // Our threat bonus: we're close to winning
+    let threat_bonus = match my_d {
+        0 => 10000,  // We've won
+        1 => 2500,   // We're 1 move away
+        2 => 1000,   // We're 2 moves away
+        3 => 300,    // We're 3 moves away
+        _ => 0,
+    };
+
+    // Centrality signal: prefer owning center-ish cells (helps opening).
     let mut central = 0i32;
+    let mut my_pieces = 0i32;
     for idx in 0..NN {
         let v = board[idx];
         if v != my_color {
             continue;
         }
+        my_pieces += 1;
         let x = (idx / N) as i32;
         let y = (idx % N) as i32;
         let dx = (x - 5).abs();
         let dy = (y - 5).abs();
-        central -= (dx + dy) as i32;
+        central -= (dx + dy) * 3; // Increased from 1
     }
-    base + central
+
+    // Piece count tiebreaker (slight bonus for more pieces)
+    let piece_bonus = my_pieces * 2;
+
+    base + central + threat_penalty + threat_bonus + piece_bonus
+}
+
+/// Negamax with alpha-beta pruning for variable depth
+fn negamax(
+    board: &mut [u8; NN],
+    my_color: u8,
+    depth: u8,
+    mut alpha: i32,
+    beta: i32,
+    level: u8,
+    deadline: f64,
+    nodes: &mut u32,
+) -> i32 {
+    *nodes += 1;
+
+    // Check time limit
+    if Date::now() >= deadline {
+        return alpha;
+    }
+
+    // Terminal check
+    if has_win(board, my_color) {
+        return 50_000 + (depth as i32) * 100; // Prefer winning sooner
+    }
+    let opp = if my_color == BLACK { WHITE } else { BLACK };
+    if has_win(board, opp) {
+        return -50_000 - (depth as i32) * 100; // Avoid losing sooner
+    }
+
+    // Leaf node
+    if depth == 0 {
+        return eval_advantage(board, my_color);
+    }
+
+    let moves = gen_moves(board, my_color, level);
+    if moves.is_empty() {
+        return eval_advantage(board, my_color);
+    }
+
+    let mut best_score = i32::MIN / 2;
+
+    for mv in moves {
+        // Make move
+        match mv {
+            Action::Place { own, neutral } => make_place(board, my_color, own, neutral),
+            Action::Substitute { n1, n2, sac } => make_sub(board, my_color, n1, n2, sac),
+            _ => continue,
+        }
+
+        // Recurse (negamax: negate score, swap alpha/beta)
+        let score = -negamax(board, opp, depth - 1, -beta, -alpha, level, deadline, nodes);
+
+        // Unmake move
+        match mv {
+            Action::Place { own, neutral } => unmake_place(board, own, neutral),
+            Action::Substitute { n1, n2, sac } => unmake_sub(board, my_color, n1, n2, sac),
+            _ => {}
+        }
+
+        if score > best_score {
+            best_score = score;
+        }
+        if score > alpha {
+            alpha = score;
+        }
+        if alpha >= beta {
+            break; // Beta cutoff
+        }
+
+        // Time check
+        if Date::now() >= deadline {
+            break;
+        }
+    }
+
+    best_score
 }
 
 #[derive(Clone, Copy)]
@@ -514,136 +614,134 @@ fn search_best(board: &mut [u8; NN], my_color: u8, level: u8, ms_budget: u32, rn
         }
     }
 
-    let mut moves = gen_moves(board, my_color, level);
+    let moves = gen_moves(board, my_color, level);
     if moves.is_empty() {
         return None;
     }
 
-    // Easy/Medium: 1-ply
-    if level <= 2 {
-        let mut scored: Vec<(i32, Action)> = Vec::with_capacity(moves.len());
-        let mut best_score = i32::MIN;
-        for &mv in &moves {
-            if Date::now() >= deadline {
-                break;
-            }
-            let mut tmp = *board;
-            match mv {
-                Action::Place { own, neutral } => make_place(&mut tmp, my_color, own, neutral),
-                Action::Substitute { n1, n2, sac } => make_sub(&mut tmp, my_color, n1, n2, sac),
-                _ => {}
-            }
-            let score = eval_advantage(&tmp, my_color);
-            if score > best_score {
-                best_score = score;
-            }
-            scored.push((score, mv));
-        }
-        scored.sort_by(|a, b| b.0.cmp(&a.0));
-        if scored.is_empty() {
-            return Some(moves[0]);
-        }
+    // Determine search depth based on level:
+    // Level 1 (Easy): 1-ply with randomization
+    // Level 2 (Medium): 2-ply search
+    // Level 3 (Hard): 3-ply with iterative deepening
+    // Level 4 (Master): 4-ply with iterative deepening
+    let max_depth: u8 = match level {
+        1 => 1,
+        2 => 2,
+        3 => 3,
+        _ => 4,
+    };
 
-        if level == 1 {
-            // Randomize among near-best to make "easy" less robotic.
-            let delta = 350;
-            let top_score = scored[0].0;
-            let mut k = 0usize;
-            while k < scored.len() && (top_score - scored[k].0) <= delta && k < 5 {
-                k += 1;
-            }
-            let pick = rng.gen_range(k.max(1));
-            return Some(scored[pick].1);
-        }
+    let opp = if my_color == BLACK { WHITE } else { BLACK };
 
-        return Some(scored[0].1);
+    // Pre-score moves for ordering
+    let mut scored: Vec<(i32, Action)> = Vec::with_capacity(moves.len());
+    for &mv in &moves {
+        let mut tmp = *board;
+        match mv {
+            Action::Place { own, neutral } => make_place(&mut tmp, my_color, own, neutral),
+            Action::Substitute { n1, n2, sac } => make_sub(&mut tmp, my_color, n1, n2, sac),
+            _ => continue,
+        }
+        let score = eval_advantage(&tmp, my_color);
+        scored.push((score, mv));
+    }
+    scored.sort_by(|a, b| b.0.cmp(&a.0));
+
+    if scored.is_empty() {
+        return Some(moves[0]);
     }
 
-    // Hard/Master: 2-ply negamax αβ (deadline-aware)
-    let opp = if my_color == BLACK { WHITE } else { BLACK };
-    let mut best = moves[0];
-    let mut best_score = i32::MIN;
-    let mut alpha = i32::MIN / 4;
-    let beta = i32::MAX / 4;
-
-    // Root move ordering: prefer higher static eval.
-    moves.sort_by(|a, b| {
-        let mut ta = *board;
-        let mut tb = *board;
-        match *a {
-            Action::Place { own, neutral } => make_place(&mut ta, my_color, own, neutral),
-            Action::Substitute { n1, n2, sac } => make_sub(&mut ta, my_color, n1, n2, sac),
-            _ => {}
+    // Easy mode: 1-ply with randomization among near-best moves
+    if level == 1 {
+        let delta = 350;
+        let top_score = scored[0].0;
+        let mut k = 0usize;
+        while k < scored.len() && (top_score - scored[k].0) <= delta && k < 5 {
+            k += 1;
         }
-        match *b {
-            Action::Place { own, neutral } => make_place(&mut tb, my_color, own, neutral),
-            Action::Substitute { n1, n2, sac } => make_sub(&mut tb, my_color, n1, n2, sac),
-            _ => {}
-        }
-        eval_advantage(&tb, my_color).cmp(&eval_advantage(&ta, my_color))
-    });
+        let pick = rng.gen_range(k.max(1));
+        return Some(scored[pick].1);
+    }
 
-    for &mv in &moves {
+    // Medium/Hard/Master: Iterative deepening with negamax
+    let mut best = scored[0].1;
+    let mut ordered_moves: Vec<Action> = scored.into_iter().map(|(_, mv)| mv).collect();
+
+    // Iterative deepening: start from depth 1 and increase
+    for depth in 1..=max_depth {
         if Date::now() >= deadline {
             break;
         }
-        match mv {
-            Action::Place { own, neutral } => make_place(board, my_color, own, neutral),
-            Action::Substitute { n1, n2, sac } => make_sub(board, my_color, n1, n2, sac),
-            _ => {}
-        }
-        if has_win(board, my_color) {
-            // Unmake and return immediate.
+
+        let mut depth_best = ordered_moves[0];
+        let mut depth_best_score = i32::MIN / 2;
+        let mut alpha = i32::MIN / 4;
+        let beta = i32::MAX / 4;
+        let mut nodes = 0u32;
+
+        for &mv in &ordered_moves {
+            if Date::now() >= deadline {
+                break;
+            }
+
+            // Make move
+            match mv {
+                Action::Place { own, neutral } => make_place(board, my_color, own, neutral),
+                Action::Substitute { n1, n2, sac } => make_sub(board, my_color, n1, n2, sac),
+                _ => continue,
+            }
+
+            // Immediate win check
+            if has_win(board, my_color) {
+                match mv {
+                    Action::Place { own, neutral } => unmake_place(board, own, neutral),
+                    Action::Substitute { n1, n2, sac } => unmake_sub(board, my_color, n1, n2, sac),
+                    _ => {}
+                }
+                return Some(mv);
+            }
+
+            // Search deeper
+            let score = if depth == 1 {
+                eval_advantage(board, my_color)
+            } else {
+                -negamax(board, opp, depth - 1, -beta, -alpha, level, deadline, &mut nodes)
+            };
+
+            // Unmake move
             match mv {
                 Action::Place { own, neutral } => unmake_place(board, own, neutral),
                 Action::Substitute { n1, n2, sac } => unmake_sub(board, my_color, n1, n2, sac),
                 _ => {}
             }
-            return Some(mv);
-        }
 
-        // Opponent reply (1-ply best response).
-        let opp_moves = gen_moves(board, opp, 2);
-        let mut worst_for_us = i32::MAX;
-        for &omv in &opp_moves {
-            if Date::now() >= deadline {
-                break;
+            if score > depth_best_score {
+                depth_best_score = score;
+                depth_best = mv;
             }
-            match omv {
-                Action::Place { own, neutral } => make_place(board, opp, own, neutral),
-                Action::Substitute { n1, n2, sac } => make_sub(board, opp, n1, n2, sac),
-                _ => {}
+            if score > alpha {
+                alpha = score;
             }
-            let s = eval_advantage(board, my_color);
-            if s < worst_for_us {
-                worst_for_us = s;
-            }
-            match omv {
-                Action::Place { own, neutral } => unmake_place(board, own, neutral),
-                Action::Substitute { n1, n2, sac } => unmake_sub(board, opp, n1, n2, sac),
-                _ => {}
-            }
-            if worst_for_us <= alpha {
+            if alpha >= beta {
                 break;
             }
         }
-        let score = worst_for_us;
 
-        match mv {
-            Action::Place { own, neutral } => unmake_place(board, own, neutral),
-            Action::Substitute { n1, n2, sac } => unmake_sub(board, my_color, n1, n2, sac),
-            _ => {}
-        }
+        // Only update best if we completed this depth in time
+        if Date::now() < deadline {
+            best = depth_best;
 
-        if score > best_score {
-            best_score = score;
-            best = mv;
-        }
-        if score > alpha {
-            alpha = score;
-        }
-        if alpha >= beta {
-            break;
+            // Move best to front for next iteration (improves pruning)
+            if let Some(pos) = ordered_moves.iter().position(|m| {
+                match (m, &depth_best) {
+                    (Action::Place { own: o1, neutral: n1 }, Action::Place { own: o2, neutral: n2 }) => o1 == o2 && n1 == n2,
+                    (Action::Substitute { n1: a1, n2: b1, sac: s1 }, Action::Substitute { n1: a2, n2: b2, sac: s2 }) => a1 == a2 && b1 == b2 && s1 == s2,
+                    _ => false,
+                }
+            }) {
+                ordered_moves.remove(pos);
+                ordered_moves.insert(0, depth_best);
+            }
         }
     }
 
