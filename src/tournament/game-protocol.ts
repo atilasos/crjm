@@ -582,8 +582,8 @@ export interface NetworkNexState {
 }
 
 // Conversões Nex
-export function toNetworkNexMove(move: NexAcao | { tipo: 'swap' }): NetworkNexMove {
-  if (move.tipo === 'swap') {
+export function toNetworkNexMove(move: any): NetworkNexMove {
+  if (move.tipo === 'swap' || move.type === 'nex_swap' || move.type === 'swap') {
     return { type: 'swap' };
   }
 
