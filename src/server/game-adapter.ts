@@ -10,14 +10,14 @@
 import type { GameId } from '../tournament/protocol';
 
 // Importar lógica dos jogos
-import { 
-  criarEstadoInicial as criarGatosCaes, 
+import {
+  criarEstadoInicial as criarGatosCaes,
   colocarPeca as colocarGatosCaes,
   isJogadaValida as isJogadaValidaGatosCaes,
 } from '../games/gatos-caes/logic';
 
-import { 
-  criarEstadoInicial as criarDominorio, 
+import {
+  criarEstadoInicial as criarDominorio,
   colocarDomino as colocarDominorio,
   isJogadaValida as isJogadaValidaDominorio,
 } from '../games/dominorio/logic';
@@ -32,13 +32,46 @@ import {
 } from '../games/quelhas/logic';
 import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas/types';
 
+import {
+  criarEstadoInicial as criarProduto,
+  colocarPeca as colocarProdutoPeca,
+  getCasasVazias as getProdutoVazias,
+} from '../games/produto/logic';
+import type { ProdutoState, Posicao as ProdutoPosicao } from '../games/produto/types';
+
+import {
+  criarEstadoInicial as criarAtariGo,
+  colocarPedra as colocarAtariGoPedra,
+  isJogadaValida as isJogadaValidaAtariGo,
+} from '../games/atari-go/logic';
+import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
+
+import {
+  criarEstadoInicial as criarNex,
+  executarAcao as executarNexAcao,
+  executarSwap as executarNexSwap,
+  converterAcaoEmCurso as converterNexAcaoEmCurso,
+  isAcaoCompleta as isNexAcaoCompleta,
+  getCorJogador as getNexCorJogador,
+} from '../games/nex/logic';
+import type { NexState, Acao as NexAcao, AcaoEmCurso as NexAcaoEmCurso } from '../games/nex/types';
+
 // ============================================================================
 // Tipos
 // ============================================================================
 
-export type GameState = GatosCaesState | DominorioState | QuelhasState;
+export type GameState = GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
 
-export type GameMove = GatosCaesPosicao | Domino | QuelhasSegmento | { swap: true };
+export type GameMove =
+  | GatosCaesPosicao
+  | Domino
+  | QuelhasSegmento
+  | { swap: true }
+  | { pos: ProdutoPosicao; cor: 'preta' | 'branca' }
+  | AtariGoPosicao
+  | NexAcao
+  | { type: 'nex_swap' }
+  | NexAcaoEmCurso;
 
 export interface GameAdapter {
   createInitialState(): GameState;
@@ -282,13 +315,194 @@ const quelhasAdapter: GameAdapter = {
 };
 
 // ============================================================================
+// Adaptador para Produto
+// ============================================================================
+
+const produtoAdapter: GameAdapter = {
+  createInitialState(): ProdutoState {
+    return criarProduto('dois-jogadores');
+  },
+
+  applyMove(state: GameState, move: unknown): ProdutoState | null {
+    const pState = state as ProdutoState;
+    const pMove = move as { pos: ProdutoPosicao; cor: 'preta' | 'branca' };
+
+    if (!this.isValidMove(pState, pMove)) {
+      return null;
+    }
+
+    return colocarProdutoPeca(pState, pMove.pos, pMove.cor);
+  },
+
+  isValidMove(state: GameState, move: unknown): boolean {
+    const pState = state as ProdutoState;
+    const pMove = move as { pos: ProdutoPosicao; cor: 'preta' | 'branca' };
+
+    if (!pMove || !pMove.pos || !pMove.cor) return false;
+    if (typeof pMove.pos.q !== 'number' || typeof pMove.pos.r !== 'number') return false;
+    if (pMove.cor !== 'preta' && pMove.cor !== 'branca') return false;
+
+    // Verificar se casa está vazia
+    const key = `${pMove.pos.q},${pMove.pos.r}`;
+    return pState.tabuleiro[key] === 'vazia';
+  },
+
+  isGameOver(state: GameState): boolean {
+    return state.estado !== 'a-jogar';
+  },
+
+  getWinner(state: GameState): 'jogador1' | 'jogador2' | null {
+    if (state.estado === 'vitoria-jogador1') return 'jogador1';
+    if (state.estado === 'vitoria-jogador2') return 'jogador2';
+    return null;
+  },
+
+  getCurrentPlayer(state: GameState): 'jogador1' | 'jogador2' {
+    return state.jogadorAtual;
+  },
+};
+
+// ============================================================================
+// Adaptador para Atari Go
+// ============================================================================
+
+const atariGoAdapter: GameAdapter = {
+  createInitialState(): AtariGoState {
+    return criarAtariGo('dois-jogadores');
+  },
+
+  applyMove(state: GameState, move: unknown): AtariGoState | null {
+    const agState = state as AtariGoState;
+    const pos = move as AtariGoPosicao;
+
+    if (!this.isValidMove(agState, pos)) {
+      return null;
+    }
+
+    return colocarAtariGoPedra(agState, pos);
+  },
+
+  isValidMove(state: GameState, move: unknown): boolean {
+    const agState = state as AtariGoState;
+    const pos = move as AtariGoPosicao;
+
+    if (!pos || typeof pos.linha !== 'number' || typeof pos.coluna !== 'number') {
+      return false;
+    }
+
+    return isJogadaValidaAtariGo(agState, pos);
+  },
+
+  isGameOver(state: GameState): boolean {
+    return state.estado !== 'a-jogar';
+  },
+
+  getWinner(state: GameState): 'jogador1' | 'jogador2' | null {
+    if (state.estado === 'vitoria-jogador1') return 'jogador1';
+    if (state.estado === 'vitoria-jogador2') return 'jogador2';
+    return null;
+  },
+
+  getCurrentPlayer(state: GameState): 'jogador1' | 'jogador2' {
+    return state.jogadorAtual;
+  },
+};
+
+// ============================================================================
+// Adaptador para Nex
+// ============================================================================
+
+const nexAdapter: GameAdapter = {
+  createInitialState(): NexState {
+    return criarNex('dois-jogadores');
+  },
+
+  applyMove(state: GameState, move: unknown): NexState | null {
+    const nState = state as NexState;
+
+    // Tratamento de Swap
+    if (move && typeof move === 'object' && (move as any).type === 'nex_swap') {
+      if (!nState.swapDisponivel) return null;
+      return executarNexSwap(nState);
+    }
+
+    // Tratamento de Ação Completa ou Ação em Curso
+    const nMove = move as NexAcao;
+    if (nMove.tipo === 'colocacao' || nMove.tipo === 'substituicao') {
+      const tempState = { ...nState, acaoEmCurso: nMove as any };
+      return executarNexAcao(tempState);
+    }
+
+    return null;
+  },
+
+  isValidMove(state: GameState, move: unknown): boolean {
+    const nState = state as NexState;
+
+    if (move && typeof move === 'object' && (move as any).type === 'nex_swap') {
+      return nState.swapDisponivel;
+    }
+
+    const nMove = move as NexAcao;
+    if (nMove.tipo === 'colocacao') {
+      const posP = nMove.posPropria;
+      const posN = nMove.posNeutra;
+      if (!posP || !posN) return false;
+      const rowP = nState.tabuleiro[posP.x];
+      const rowN = nState.tabuleiro[posN.x];
+      if (!rowP || !rowN) return false;
+
+      return rowP[posP.y] === 'vazia' &&
+        rowN[posN.y] === 'vazia' &&
+        (posP.x !== posN.x || posP.y !== posN.y);
+    }
+
+    if (nMove.tipo === 'substituicao') {
+      const n2p = nMove.neutrasParaProprias;
+      const p2n = nMove.propriaParaNeutra;
+      if (!n2p || n2p.length !== 2 || !p2n) return false;
+
+      const corJogador = getNexCorJogador(nState, nState.jogadorAtual);
+      const row0 = nState.tabuleiro[n2p[0].x];
+      const row1 = nState.tabuleiro[n2p[1].x];
+      const rowP2N = nState.tabuleiro[p2n.x];
+
+      if (!row0 || !row1 || !rowP2N) return false;
+
+      return row0[n2p[0].y] === 'neutra' &&
+        row1[n2p[1].y] === 'neutra' &&
+        rowP2N[p2n.y] === corJogador;
+    }
+
+    return false;
+  },
+
+  isGameOver(state: GameState): boolean {
+    return state.estado !== 'a-jogar';
+  },
+
+  getWinner(state: GameState): 'jogador1' | 'jogador2' | null {
+    if (state.estado === 'vitoria-jogador1') return 'jogador1';
+    if (state.estado === 'vitoria-jogador2') return 'jogador2';
+    return null;
+  },
+
+  getCurrentPlayer(state: GameState): 'jogador1' | 'jogador2' {
+    return state.jogadorAtual;
+  },
+};
+
+// ============================================================================
 // Mapa de adaptadores
 // ============================================================================
 
-const adapters: Partial<Record<GameId, GameAdapter>> = {
+const adapters: Record<GameId, GameAdapter> = {
   'gatos-caes': gatosCaesAdapter,
   'dominorio': dominorioAdapter,
   'quelhas': quelhasAdapter,
+  'produto': produtoAdapter,
+  'atari-go': atariGoAdapter,
+  'nex': nexAdapter,
 };
 
 // ============================================================================
@@ -318,8 +532,8 @@ export function createGameState(gameId: GameId): GameState | null {
 }
 
 export function applyGameMove(
-  gameId: GameId, 
-  state: GameState, 
+  gameId: GameId,
+  state: GameState,
   move: unknown
 ): GameState | null {
   const adapter = getGameAdapter(gameId);
@@ -328,8 +542,8 @@ export function applyGameMove(
 }
 
 export function isValidGameMove(
-  gameId: GameId, 
-  state: GameState, 
+  gameId: GameId,
+  state: GameState,
   move: unknown
 ): boolean {
   const adapter = getGameAdapter(gameId);
@@ -344,7 +558,7 @@ export function isGameFinished(gameId: GameId, state: GameState): boolean {
 }
 
 export function getGameWinner(
-  gameId: GameId, 
+  gameId: GameId,
   state: GameState
 ): 'jogador1' | 'jogador2' | null {
   const adapter = getGameAdapter(gameId);
@@ -353,7 +567,7 @@ export function getGameWinner(
 }
 
 export function getCurrentGamePlayer(
-  gameId: GameId, 
+  gameId: GameId,
   state: GameState
 ): 'jogador1' | 'jogador2' {
   const adapter = getGameAdapter(gameId);

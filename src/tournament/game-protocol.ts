@@ -13,6 +13,7 @@ import type { ProdutoState, Posicao as ProdutoPosicao, JogadaDupla } from '../ga
 import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
 import type { NexState, Posicao as NexPosicao, Acao as NexAcao, AcaoColocacao, AcaoSubstituicao } from '../games/nex/types';
 import { calcularJogadasValidas as calcularJogadasValidasQuelhas } from '../games/quelhas/logic';
+import { calcularPontuacao as calcularPontuacaoProduto } from '../games/produto/logic';
 
 // ============================================================================
 // GATOS & CÃES - Network Types
@@ -51,16 +52,16 @@ export function toNetworkGatosCaesState(state: GatosCaesState): NetworkGatosCaes
     'gato': 'cat',
     'cao': 'dog',
   };
-  
+
   return {
     board: state.tabuleiro.map(row => row.map(c => celulaMap[c])),
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
     catCount: state.totalGatos,
     dogCount: state.totalCaes,
     lastMove: state.jogadasValidas.length > 0 ? null : null, // Not tracked in local state
-    winner: state.estado === 'vitoria-jogador1' ? 'player1' 
-          : state.estado === 'vitoria-jogador2' ? 'player2' 
-          : null,
+    winner: state.estado === 'vitoria-jogador1' ? 'player1'
+      : state.estado === 'vitoria-jogador2' ? 'player2'
+        : null,
     isFirstCatPlaced: state.primeiroGatoColocado,
     isFirstDogPlaced: state.primeiroCaoColocado,
   };
@@ -76,7 +77,7 @@ export function fromNetworkGatosCaesState(
     'dog': 'cao',
   };
   const tabuleiro = net.board.map(row => row.map(c => celulaMap[c]));
-  
+
   // Calculate jogadasValidas based on board state
   const jogadasValidas: GatosCaesPosicao[] = [];
   // (simplified - the real validation should use game logic)
@@ -87,14 +88,14 @@ export function fromNetworkGatosCaesState(
       }
     }
   }
-  
+
   return {
     tabuleiro,
     modo,
     jogadorAtual: net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2',
-    estado: net.winner === 'player1' ? 'vitoria-jogador1' 
-          : net.winner === 'player2' ? 'vitoria-jogador2' 
-          : 'a-jogar',
+    estado: net.winner === 'player1' ? 'vitoria-jogador1'
+      : net.winner === 'player2' ? 'vitoria-jogador2'
+        : 'a-jogar',
     jogadasValidas,
     primeiroGatoColocado: net.isFirstCatPlaced,
     primeiroCaoColocado: net.isFirstDogPlaced,
@@ -144,22 +145,22 @@ export function fromNetworkDominorioMove(move: NetworkDominorioMove): Domino {
 }
 
 export function toNetworkDominorioState(state: DominorioState): NetworkDominorioState {
-  const board: NetworkDominorioCelula[][] = state.tabuleiro.map(row => 
+  const board: NetworkDominorioCelula[][] = state.tabuleiro.map(row =>
     row.map(c => {
       if (c === 'vazia') return null;
       return c === 'ocupada-vertical' ? 'player1' : 'player2';
     })
   );
-  
+
   return {
     board,
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
-    lastMove: state.dominosColocados.length > 0 
+    lastMove: state.dominosColocados.length > 0
       ? toNetworkDominorioMove(state.dominosColocados[state.dominosColocados.length - 1])
       : null,
-    winner: state.estado === 'vitoria-jogador1' ? 'player1' 
-          : state.estado === 'vitoria-jogador2' ? 'player2' 
-          : null,
+    winner: state.estado === 'vitoria-jogador1' ? 'player1'
+      : state.estado === 'vitoria-jogador2' ? 'player2'
+        : null,
     movesCount: state.dominosColocados.length,
   };
 }
@@ -169,17 +170,17 @@ export function fromNetworkDominorioState(
   modo: 'vs-computador' | 'dois-jogadores' = 'dois-jogadores'
 ): DominorioState {
   type LocalCelula = 'vazia' | 'ocupada-vertical' | 'ocupada-horizontal';
-  const tabuleiro: LocalCelula[][] = net.board.map(row => 
+  const tabuleiro: LocalCelula[][] = net.board.map(row =>
     row.map(c => {
       if (c === null) return 'vazia';
       return c === 'player1' ? 'ocupada-vertical' : 'ocupada-horizontal';
     })
   );
-  
+
   // Calculate jogadasValidas (simplified)
   const jogadasValidas: Domino[] = [];
   const orientacao = net.currentPlayer === 'player1' ? 'vertical' : 'horizontal';
-  
+
   for (let linha = 0; linha < tabuleiro.length; linha++) {
     for (let coluna = 0; coluna < tabuleiro[linha].length; coluna++) {
       if (tabuleiro[linha][coluna] === 'vazia') {
@@ -200,14 +201,14 @@ export function fromNetworkDominorioState(
       }
     }
   }
-  
+
   return {
     tabuleiro,
     modo,
     jogadorAtual: net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2',
-    estado: net.winner === 'player1' ? 'vitoria-jogador1' 
-          : net.winner === 'player2' ? 'vitoria-jogador2' 
-          : 'a-jogar',
+    estado: net.winner === 'player1' ? 'vitoria-jogador1'
+      : net.winner === 'player2' ? 'vitoria-jogador2'
+        : 'a-jogar',
     dominoPreview: null,
     jogadasValidas,
     dominosColocados: [], // Not tracked in network state
@@ -253,11 +254,11 @@ export function fromNetworkQuelhasMove(move: NetworkQuelhasMove): { segmento: Se
   if (move.cells.length === 0) {
     throw new Error('Invalid Quelhas move: no cells');
   }
-  
+
   const first = move.cells[0];
   const last = move.cells[move.cells.length - 1];
   const isVertical = first.col === last.col;
-  
+
   return {
     segmento: {
       inicio: { linha: first.row, coluna: first.col },
@@ -273,9 +274,9 @@ export function toNetworkQuelhasState(state: QuelhasState): NetworkQuelhasState 
     board: state.tabuleiro.map(row => row.map(c => c === 'vazia' ? 'empty' : 'filled')),
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
     lastMove: null, // Not tracked in local state
-    winner: state.estado === 'vitoria-jogador1' ? 'player1' 
-          : state.estado === 'vitoria-jogador2' ? 'player2' 
-          : null,
+    winner: state.estado === 'vitoria-jogador1' ? 'player1'
+      : state.estado === 'vitoria-jogador2' ? 'player2'
+        : null,
     moveCount: state.primeiraJogada ? 0 : 1, // Approximation
     canSwap: state.trocaDisponivel,
     swapped: state.trocaEfetuada,
@@ -287,19 +288,19 @@ export function fromNetworkQuelhasState(
   modo: 'vs-computador' | 'dois-jogadores' = 'dois-jogadores'
 ): QuelhasState {
   type LocalCelula = 'vazia' | 'ocupada';
-  const tabuleiro: LocalCelula[][] = net.board.map(row => 
+  const tabuleiro: LocalCelula[][] = net.board.map(row =>
     row.map(c => c === 'empty' ? 'vazia' : 'ocupada')
   );
-  
+
   // Determine orientations based on swap status
   const orientacaoJogador1 = net.swapped ? 'horizontal' : 'vertical';
   const orientacaoJogador2 = net.swapped ? 'vertical' : 'horizontal';
-  
+
   const jogadorAtual = net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2';
   const estado: QuelhasState['estado'] =
     net.winner === 'player1' ? 'vitoria-jogador1'
-    : net.winner === 'player2' ? 'vitoria-jogador2'
-    : 'a-jogar';
+      : net.winner === 'player2' ? 'vitoria-jogador2'
+        : 'a-jogar';
 
   const orientacaoAtual = jogadorAtual === 'jogador1' ? orientacaoJogador1 : orientacaoJogador2;
   const jogadasValidas = estado === 'a-jogar'
@@ -350,20 +351,20 @@ export function toNetworkProdutoMove(move: JogadaDupla): NetworkProdutoMove {
     'preta': 'black',
     'branca': 'white',
   };
-  
+
   const placements: NetworkProdutoMove['placements'] = [];
   placements.push({
     coord: { q: move.pos1.q, r: move.pos1.r },
     color: colorMap[move.cor1],
   });
-  
+
   if (move.pos2 && move.cor2) {
     placements.push({
       coord: { q: move.pos2.q, r: move.pos2.r },
       color: colorMap[move.cor2],
     });
   }
-  
+
   return { placements };
 }
 
@@ -372,10 +373,10 @@ export function fromNetworkProdutoMove(move: NetworkProdutoMove): JogadaDupla {
     'black': 'preta',
     'white': 'branca',
   };
-  
+
   const first = move.placements[0];
   const second = move.placements[1];
-  
+
   return {
     pos1: { q: first.coord.q, r: first.coord.r },
     cor1: colorMap[first.color],
@@ -390,26 +391,26 @@ export function toNetworkProdutoState(state: ProdutoState): NetworkProdutoState 
     'preta': 'black',
     'branca': 'white',
   };
-  
+
   const board: Record<string, NetworkProdutoCelula> = {};
-  state.tabuleiro.forEach((celula, key) => {
+  for (const [key, celula] of Object.entries(state.tabuleiro)) {
     board[key] = celulaMap[celula];
-  });
-  
+  }
+
   let blackCount = 0;
   let whiteCount = 0;
-  state.tabuleiro.forEach(celula => {
+  for (const celula of Object.values(state.tabuleiro)) {
     if (celula === 'preta') blackCount++;
     if (celula === 'branca') whiteCount++;
-  });
-  
+  }
+
   return {
     board,
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
     lastMove: null, // Not tracked
-    winner: state.estado === 'vitoria-jogador1' ? 'player1' 
-          : state.estado === 'vitoria-jogador2' ? 'player2'
-          : state.estado === 'empate' ? 'draw'
+    winner: state.estado === 'vitoria-jogador1' ? 'player1'
+      : state.estado === 'vitoria-jogador2' ? 'player2'
+        : state.estado === 'empate' ? 'draw'
           : null,
     moveCount: state.primeiraJogada ? 0 : 1, // Approximation
     blackPiecesPlaced: blackCount,
@@ -426,29 +427,33 @@ export function fromNetworkProdutoState(
     'black': 'preta',
     'white': 'branca',
   };
-  
-  const tabuleiro = new Map<string, 'vazia' | 'preta' | 'branca'>();
+
+  const tabuleiro: Record<string, 'vazia' | 'preta' | 'branca'> = {};
   const casasVazias: ProdutoPosicao[] = [];
-  
+
   for (const [key, value] of Object.entries(net.board)) {
-    tabuleiro.set(key, celulaMap[value]);
+    tabuleiro[key] = celulaMap[value];
     if (value === 'empty') {
       const [q, r] = key.split(',').map(Number);
       casasVazias.push({ q, r });
     }
   }
-  
+
+  // Calculate scores correctly
+  const pontuacaoPretas = calcularPontuacaoProduto(tabuleiro, 'preta');
+  const pontuacaoBrancas = calcularPontuacaoProduto(tabuleiro, 'branca');
+
   return {
     tabuleiro,
     modo,
     jogadorAtual: net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2',
-    estado: net.winner === 'player1' ? 'vitoria-jogador1' 
-          : net.winner === 'player2' ? 'vitoria-jogador2'
-          : net.winner === 'draw' ? 'empate'
+    estado: net.winner === 'player1' ? 'vitoria-jogador1'
+      : net.winner === 'player2' ? 'vitoria-jogador2'
+        : net.winner === 'draw' ? 'empate'
           : 'a-jogar',
     primeiraJogada: net.moveCount === 0,
-    pontuacaoPretas: { maiorGrupo: 0, segundoMaiorGrupo: 0, produto: 0, totalPecas: net.blackPiecesPlaced },
-    pontuacaoBrancas: { maiorGrupo: 0, segundoMaiorGrupo: 0, produto: 0, totalPecas: net.whitePiecesPlaced },
+    pontuacaoPretas,
+    pontuacaoBrancas,
     jogadaEmCurso: { pos1: null, cor1: null },
     casasVazias,
   };
@@ -494,18 +499,18 @@ export function toNetworkAtariGoState(state: AtariGoState): NetworkAtariGoState 
     'preta': 'black',
     'branca': 'white',
   };
-  
+
   return {
     board: state.tabuleiro.map(row => row.map(c => celulaMap[c])),
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
     blackCaptures: state.pedrasCapturadas.brancas, // Pretas capturaram brancas
     whiteCaptures: state.pedrasCapturadas.pretas,  // Brancas capturaram pretas
-    lastMove: state.ultimaJogada 
+    lastMove: state.ultimaJogada
       ? { row: state.ultimaJogada.linha, col: state.ultimaJogada.coluna }
       : null,
-    winner: state.estado === 'vitoria-jogador1' ? 'player1' 
-          : state.estado === 'vitoria-jogador2' ? 'player2'
-          : state.estado === 'empate' ? 'draw'
+    winner: state.estado === 'vitoria-jogador1' ? 'player1'
+      : state.estado === 'vitoria-jogador2' ? 'player2'
+        : state.estado === 'empate' ? 'draw'
           : null,
     passCount: 0, // Not tracked in local state
   };
@@ -520,9 +525,9 @@ export function fromNetworkAtariGoState(
     'black': 'preta',
     'white': 'branca',
   };
-  
+
   const tabuleiro = net.board.map(row => row.map(c => celulaMap[c]));
-  
+
   // Calculate jogadasValidas (simplified - empty cells)
   const jogadasValidas: AtariGoPosicao[] = [];
   for (let linha = 0; linha < tabuleiro.length; linha++) {
@@ -532,14 +537,14 @@ export function fromNetworkAtariGoState(
       }
     }
   }
-  
+
   return {
     tabuleiro,
     modo,
     jogadorAtual: net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2',
-    estado: net.winner === 'player1' ? 'vitoria-jogador1' 
-          : net.winner === 'player2' ? 'vitoria-jogador2'
-          : net.winner === 'draw' ? 'empate'
+    estado: net.winner === 'player1' ? 'vitoria-jogador1'
+      : net.winner === 'player2' ? 'vitoria-jogador2'
+        : net.winner === 'draw' ? 'empate'
           : 'a-jogar',
     jogadasValidas,
     ultimaJogada: net.lastMove ? { linha: net.lastMove.row, coluna: net.lastMove.col } : null,
@@ -581,7 +586,7 @@ export function toNetworkNexMove(move: NexAcao | { tipo: 'swap' }): NetworkNexMo
   if (move.tipo === 'swap') {
     return { type: 'swap' };
   }
-  
+
   if (move.tipo === 'colocacao') {
     const colocacao = move as AcaoColocacao;
     return {
@@ -590,7 +595,7 @@ export function toNetworkNexMove(move: NexAcao | { tipo: 'swap' }): NetworkNexMo
       neutralPiece: { row: colocacao.posNeutra.x, col: colocacao.posNeutra.y },
     };
   }
-  
+
   if (move.tipo === 'substituicao') {
     const substituicao = move as AcaoSubstituicao;
     return {
@@ -599,7 +604,7 @@ export function toNetworkNexMove(move: NexAcao | { tipo: 'swap' }): NetworkNexMo
       ownToNeutral: { row: substituicao.propriaParaNeutra.x, col: substituicao.propriaParaNeutra.y },
     };
   }
-  
+
   throw new Error('Invalid Nex move type');
 }
 
@@ -607,7 +612,7 @@ export function fromNetworkNexMove(move: NetworkNexMove): NexAcao | { tipo: 'swa
   if (move.type === 'swap') {
     return { tipo: 'swap' };
   }
-  
+
   if (move.type === 'place' && move.ownPiece && move.neutralPiece) {
     return {
       tipo: 'colocacao',
@@ -615,7 +620,7 @@ export function fromNetworkNexMove(move: NetworkNexMove): NexAcao | { tipo: 'swa
       posNeutra: { x: move.neutralPiece.row, y: move.neutralPiece.col },
     };
   }
-  
+
   if (move.type === 'convert' && move.neutralsToConvert && move.ownToNeutral) {
     return {
       tipo: 'substituicao',
@@ -623,7 +628,7 @@ export function fromNetworkNexMove(move: NetworkNexMove): NexAcao | { tipo: 'swa
       propriaParaNeutra: { x: move.ownToNeutral.row, y: move.ownToNeutral.col },
     };
   }
-  
+
   throw new Error('Invalid network Nex move');
 }
 
@@ -634,14 +639,14 @@ export function toNetworkNexState(state: NexState): NetworkNexState {
     'branca': 'white',
     'neutra': 'neutral',
   };
-  
+
   return {
     board: state.tabuleiro.map(row => row.map(c => celulaMap[c])),
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
     lastMove: null, // Not tracked
-    winner: state.estado === 'vitoria-jogador1' ? 'player1' 
-          : state.estado === 'vitoria-jogador2' ? 'player2'
-          : null,
+    winner: state.estado === 'vitoria-jogador1' ? 'player1'
+      : state.estado === 'vitoria-jogador2' ? 'player2'
+        : null,
     moveCount: state.primeiraJogada ? 0 : 1, // Approximation
     canSwap: state.swapDisponivel,
     swapped: state.swapEfetuado,
@@ -658,14 +663,14 @@ export function fromNetworkNexState(
     'white': 'branca',
     'neutral': 'neutra',
   };
-  
+
   return {
     tabuleiro: net.board.map(row => row.map(c => celulaMap[c])),
     modo,
     jogadorAtual: net.currentPlayer === 'player1' ? 'jogador1' : 'jogador2',
-    estado: net.winner === 'player1' ? 'vitoria-jogador1' 
-          : net.winner === 'player2' ? 'vitoria-jogador2'
-          : 'a-jogar',
+    estado: net.winner === 'player1' ? 'vitoria-jogador1'
+      : net.winner === 'player2' ? 'vitoria-jogador2'
+        : 'a-jogar',
     primeiraJogada: net.moveCount === 0,
     swapDisponivel: net.canSwap,
     swapEfetuado: net.swapped,
@@ -683,25 +688,25 @@ export function fromNetworkNexState(
 // Generic converters by GameId
 // ============================================================================
 
-export type NetworkGameState = 
-  | NetworkGatosCaesState 
-  | NetworkDominorioState 
+export type NetworkGameState =
+  | NetworkGatosCaesState
+  | NetworkDominorioState
   | NetworkQuelhasState
   | NetworkProdutoState
   | NetworkAtariGoState
   | NetworkNexState;
 
-export type NetworkGameMove = 
-  | NetworkGatosCaesMove 
-  | NetworkDominorioMove 
+export type NetworkGameMove =
+  | NetworkGatosCaesMove
+  | NetworkDominorioMove
   | NetworkQuelhasMove
   | NetworkProdutoMove
   | NetworkAtariGoMove
   | NetworkNexMove;
 
-export type LocalGameState = 
-  | GatosCaesState 
-  | DominorioState 
+export type LocalGameState =
+  | GatosCaesState
+  | DominorioState
   | QuelhasState
   | ProdutoState
   | AtariGoState
