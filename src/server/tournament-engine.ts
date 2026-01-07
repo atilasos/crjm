@@ -51,15 +51,15 @@ export interface Tournament {
   createdAt: Date;
   startedAt: Date | null;
   finishedAt: Date | null;
-  
+
   // Índices para lookup rápido
   playerById: Map<string, TournamentPlayer>;
   matchById: Map<string, TournamentMatch>;
-  
+
   // Rastreia jogadores a aguardar próximo match em cada bracket
   winnersWaiting: string[];
   losersWaiting: string[];
-  
+
   // Contadores de rondas
   winnersRound: number;
   losersRound: number;
@@ -215,10 +215,10 @@ export function startTournament(tournament: Tournament): boolean {
 
   // Baralha jogadores para emparelhamento aleatório
   const shuffledPlayers = shuffle(tournament.players);
-  
+
   // Todos começam na winners bracket
   tournament.winnersWaiting = shuffledPlayers.map(p => p.id);
-  
+
   // Cria os primeiros matches da winners bracket
   createNextRoundMatches(tournament, 'winners');
 
@@ -231,15 +231,15 @@ export function startTournament(tournament: Tournament): boolean {
 
 function createNextRoundMatches(tournament: Tournament, bracket: BracketType): void {
   const waiting = bracket === 'winners' ? tournament.winnersWaiting : tournament.losersWaiting;
-  
+
   if (waiting.length === 0) return;
-  
+
   // Se só há 1 jogador a aguardar em cada bracket e é hora da final
   if (bracket === 'winners' && waiting.length === 1 && tournament.losersWaiting.length === 1) {
     createGrandFinal(tournament);
     return;
   }
-  
+
   // Se só há 1 jogador e é a winners, espera pela losers
   if (waiting.length === 1) {
     return;
@@ -251,7 +251,7 @@ function createNextRoundMatches(tournament: Tournament, bracket: BracketType): v
   // Emparelha jogadores
   const pairs: Array<[string, string | null]> = [];
   const playersCopy = [...waiting];
-  
+
   while (playersCopy.length > 0) {
     const p1Id = playersCopy.shift()!;
     const p2Id = playersCopy.shift() ?? null; // null = bye
@@ -326,7 +326,7 @@ export function processMatchResult(
   tournament: Tournament,
   matchId: string,
   winnerId: string
-): { 
+): {
   affectedPlayerIds: string[];
   newMatches: TournamentMatch[];
   isGrandFinal: boolean;
@@ -379,7 +379,7 @@ export function processMatchResult(
   if (match.bracket === 'winners') {
     // Vencedor continua na winners
     tournament.winnersWaiting.push(winnerId);
-    
+
     // Perdedor vai para losers (se ainda não foi eliminado)
     if (loser.losses < 2) {
       tournament.losersWaiting.push(loserId);
@@ -388,7 +388,7 @@ export function processMatchResult(
     // Losers bracket
     // Vencedor continua na losers
     tournament.losersWaiting.push(winnerId);
-    
+
     // Perdedor é eliminado (já tinha 1 derrota, agora tem 2)
     // Não precisa fazer nada, simplesmente não é adicionado a nenhuma lista
   }
@@ -468,7 +468,8 @@ export function recordMove(
   match: TournamentMatch,
   playerId: string,
   move: unknown,
-  newGameState: unknown
+  newGameState: unknown,
+  nextTurn: 'player1' | 'player2'
 ): void {
   match.moves.push({
     playerId,
@@ -477,8 +478,8 @@ export function recordMove(
   });
   match.gameState = newGameState;
 
-  // Alterna a vez
-  match.whoseTurn = match.whoseTurn === 'player1' ? 'player2' : 'player1';
+  // Define a vez baseada no argumento
+  match.whoseTurn = nextTurn;
 }
 
 export function endGame(
@@ -573,8 +574,8 @@ export function handlePlayerDisconnect(
   const activeMatch = [...tournament.winnersMatches, ...tournament.losersMatches]
     .concat(tournament.grandFinal ? [tournament.grandFinal] : [])
     .concat(tournament.grandFinalReset ? [tournament.grandFinalReset] : [])
-    .find(m => 
-      m.phase !== 'finished' && 
+    .find(m =>
+      m.phase !== 'finished' &&
       (m.player1?.id === playerId || m.player2?.id === playerId)
     );
 
@@ -596,8 +597,8 @@ export function forfeitMatch(
   }
 
   // O vencedor é o outro jogador
-  const winnerId = match.player1?.id === forfeitingPlayerId 
-    ? match.player2?.id 
+  const winnerId = match.player1?.id === forfeitingPlayerId
+    ? match.player2?.id
     : match.player1?.id;
 
   if (!winnerId) {
@@ -605,7 +606,7 @@ export function forfeitMatch(
   }
 
   // Dá vitória ao outro jogador (2-0 automático)
-  match.score = match.player1?.id === winnerId 
+  match.score = match.player1?.id === winnerId
     ? { player1Wins: 2, player2Wins: 0 }
     : { player1Wins: 0, player2Wins: 2 };
 
