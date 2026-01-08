@@ -35,6 +35,9 @@ import {
   eliminatePlayer,
   suspendPlayer,
   findActiveMatchForPlayer,
+  restartCurrentGame,
+  restartMatch,
+  getActiveMatchesWithGameState,
   exportTournament,
   importTournament,
   type Tournament,
@@ -135,6 +138,64 @@ function broadcastTournamentState(tournament: Tournament): void {
     type: 'tournament_state_update',
     ...state,
   });
+  
+  // Também envia a lista de jogos activos para espectadores
+  broadcastActiveGamesList(tournament);
+}
+
+/** Envia a lista de jogos em curso para todos os jogadores (para modo espectador) */
+function broadcastActiveGamesList(tournament: Tournament): void {
+  const activeMatches = getActiveMatchesWithGameState(tournament);
+  
+  const games = activeMatches.map(({ match }) => {
+    let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
+    if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
+    if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
+    
+    return {
+      matchId: match.id,
+      bracket,
+      round: match.round,
+      player1Name: match.player1?.name || 'TBD',
+      player2Name: match.player2?.name || 'TBD',
+      score: match.score,
+      gameNumber: match.currentGame,
+    };
+  });
+  
+  broadcastToTournament(tournament, {
+    type: 'active_games_list',
+    games,
+  });
+}
+
+/** Envia o estado de um jogo específico para todos os jogadores (espectadores) */
+function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMatch): void {
+  if (!match.gameState || match.phase !== 'playing') return;
+  
+  let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
+  if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
+  if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
+  
+  const message: ServerMessage = {
+    type: 'spectator_game_state',
+    matchId: match.id,
+    gameNumber: match.currentGame,
+    gameState: match.gameState,
+    bracket,
+    round: match.round,
+    player1Name: match.player1?.name || 'TBD',
+    player2Name: match.player2?.name || 'TBD',
+    score: match.score,
+    whoseTurn: match.whoseTurn,
+  };
+  
+  // Envia para todos os jogadores conectados (exceto os do próprio match que já recebem game_state_update)
+  for (const player of tournament.players) {
+    if (player.isConnected && player.id !== match.player1?.id && player.id !== match.player2?.id) {
+      sendToPlayer(player.id, message);
+    }
+  }
 }
 
 // ============================================================================
@@ -510,6 +571,8 @@ function handleReadyForMatch(
       yourRole: 'player2',
     });
 
+    // Broadcast para espectadores
+    broadcastSpectatorGameState(tournament, updatedMatch);
     broadcastTournamentState(tournament);
   } else {
     // Notificar que estamos à espera do outro jogador
@@ -740,6 +803,9 @@ function handleSubmitMove(
       yourTurn: !isP1Turn,
       lastMove: move,
     });
+    
+    // Broadcast para espectadores
+    broadcastSpectatorGameState(tournament, match);
   }
 }
 
@@ -1376,6 +1442,136 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // Logs
   if (url.pathname === '/api/logs') {
     return Response.json(eventLog, { headers: corsHeaders });
+  }
+
+  // Reiniciar apenas o jogo atual de um match (requer admin key)
+  // POST /api/tournaments/:gameId/matches/:matchId/restart-game
+  const restartGameMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/restart-game$/);
+  if (restartGameMatch && req.method === 'POST') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = restartGameMatch[1] as GameId;
+    const matchId = restartGameMatch[2];
+    const tournament = tournaments.get(gameId);
+
+    if (!tournament) {
+      return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const match = tournament.matchById.get(matchId);
+    if (!match) {
+      return Response.json({ error: 'Match not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const result = restartCurrentGame(tournament, matchId);
+    if (!result.success) {
+      return Response.json({ error: result.error }, { status: 400, headers: corsHeaders });
+    }
+
+    log({
+      type: 'match',
+      tournamentId: tournament.id,
+      matchId: matchId,
+      message: `Jogo atual reiniciado pelo administrador (${match.player1?.name} vs ${match.player2?.name})`,
+    });
+
+    // Notificar jogadores do match e enviar match_assigned para atualizar o estado
+    if (match.player1) {
+      sendToPlayer(match.player1.id, {
+        type: 'info',
+        message: 'O jogo foi reiniciado pelo administrador. Clica em "Estou pronto" para recomeçar.',
+      });
+      sendToPlayer(match.player1.id, {
+        type: 'match_assigned',
+        match: match,
+        yourRole: 'player1',
+        opponentName: match.player2?.name || 'TBD',
+      });
+    }
+    if (match.player2) {
+      sendToPlayer(match.player2.id, {
+        type: 'info',
+        message: 'O jogo foi reiniciado pelo administrador. Clica em "Estou pronto" para recomeçar.',
+      });
+      sendToPlayer(match.player2.id, {
+        type: 'match_assigned',
+        match: match,
+        yourRole: 'player2',
+        opponentName: match.player1?.name || 'TBD',
+      });
+    }
+
+    broadcastTournamentState(tournament);
+
+    return Response.json({ success: true, message: 'Jogo reiniciado' }, { headers: corsHeaders });
+  }
+
+  // Reiniciar um match completo (requer admin key)
+  // POST /api/tournaments/:gameId/matches/:matchId/restart-match
+  const restartMatchPattern = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/restart-match$/);
+  if (restartMatchPattern && req.method === 'POST') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = restartMatchPattern[1] as GameId;
+    const matchId = restartMatchPattern[2];
+    const tournament = tournaments.get(gameId);
+
+    if (!tournament) {
+      return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const match = tournament.matchById.get(matchId);
+    if (!match) {
+      return Response.json({ error: 'Match not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const result = restartMatch(tournament, matchId);
+    if (!result.success) {
+      return Response.json({ error: result.error }, { status: 400, headers: corsHeaders });
+    }
+
+    log({
+      type: 'match',
+      tournamentId: tournament.id,
+      matchId: matchId,
+      message: `Match reiniciado pelo administrador (${match.player1?.name} vs ${match.player2?.name}, score resetado para 0-0)`,
+    });
+
+    // Notificar jogadores do match
+    if (match.player1) {
+      sendToPlayer(match.player1.id, {
+        type: 'info',
+        message: 'O match foi reiniciado pelo administrador. Score volta a 0-0. Clica em "Estou pronto" para recomeçar.',
+      });
+      sendToPlayer(match.player1.id, {
+        type: 'match_assigned',
+        match: match,
+        yourRole: 'player1',
+        opponentName: match.player2?.name || 'TBD',
+      });
+    }
+    if (match.player2) {
+      sendToPlayer(match.player2.id, {
+        type: 'info',
+        message: 'O match foi reiniciado pelo administrador. Score volta a 0-0. Clica em "Estou pronto" para recomeçar.',
+      });
+      sendToPlayer(match.player2.id, {
+        type: 'match_assigned',
+        match: match,
+        yourRole: 'player2',
+        opponentName: match.player1?.name || 'TBD',
+      });
+    }
+
+    broadcastTournamentState(tournament);
+
+    return Response.json({ success: true, message: 'Match reiniciado (0-0)' }, { headers: corsHeaders });
   }
 
   return new Response('Not Found', { status: 404, headers: corsHeaders });

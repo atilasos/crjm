@@ -5,6 +5,12 @@ import {
   startTournament,
   processMatchResult,
   toTournamentState,
+  setPlayerReady,
+  startGame,
+  endGame,
+  restartCurrentGame,
+  restartMatch,
+  getActiveMatchesWithGameState,
   type Tournament,
 } from './tournament-engine';
 
@@ -286,5 +292,198 @@ describe('Tournament Engine - Edge Cases', () => {
 
     expect(startTournament(tournament)).toBe(true);
     expect(startTournament(tournament)).toBe(false);
+  });
+});
+
+describe('Tournament Engine - Restart Functions', () => {
+  test('restartCurrentGame - preserves match score, resets game state', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    startTournament(tournament);
+
+    const match = tournament.winnersMatches[0];
+    const p1Id = match.player1!.id;
+    const p2Id = match.player2!.id;
+
+    // Set both players ready and start game
+    setPlayerReady(tournament, match.id, p1Id);
+    setPlayerReady(tournament, match.id, p2Id);
+    startGame(match, { someState: 'initial' });
+
+    // Simulate player 1 winning first game
+    match.score.player1Wins = 1;
+    match.currentGame = 2;
+    match.gameState = { someState: 'game2' };
+    match.phase = 'playing';
+
+    // Restart current game
+    const result = restartCurrentGame(tournament, match.id);
+
+    expect(result.success).toBe(true);
+    expect(match.score.player1Wins).toBe(1); // Score preserved
+    expect(match.score.player2Wins).toBe(0);
+    expect(match.currentGame).toBe(2); // Same game number
+    expect(match.gameState).toBeNull(); // Game state cleared
+    expect(match.phase).toBe('waiting'); // Back to waiting
+    expect(match.player1Ready).toBe(false);
+    expect(match.player2Ready).toBe(false);
+  });
+
+  test('restartMatch - resets score to 0-0 and game to 1', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    startTournament(tournament);
+
+    const match = tournament.winnersMatches[0];
+    const p1Id = match.player1!.id;
+    const p2Id = match.player2!.id;
+
+    // Set both players ready and start game
+    setPlayerReady(tournament, match.id, p1Id);
+    setPlayerReady(tournament, match.id, p2Id);
+    startGame(match, { someState: 'initial' });
+
+    // Simulate ongoing match with score 1-1
+    match.score.player1Wins = 1;
+    match.score.player2Wins = 1;
+    match.currentGame = 3;
+    match.gameState = { someState: 'game3' };
+    match.phase = 'playing';
+
+    // Restart entire match
+    const result = restartMatch(tournament, match.id);
+
+    expect(result.success).toBe(true);
+    expect(match.score.player1Wins).toBe(0); // Score reset
+    expect(match.score.player2Wins).toBe(0);
+    expect(match.currentGame).toBe(1); // Back to game 1
+    expect(match.gameState).toBeNull(); // Game state cleared
+    expect(match.phase).toBe('waiting'); // Back to waiting
+    expect(match.winnerId).toBeNull(); // No winner yet
+  });
+
+  test('restart fails on finished match', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    startTournament(tournament);
+
+    const match = tournament.winnersMatches[0];
+    
+    // Mark match as finished
+    match.phase = 'finished';
+    match.winnerId = match.player1!.id;
+
+    // Try to restart
+    const gameResult = restartCurrentGame(tournament, match.id);
+    const matchResult = restartMatch(tournament, match.id);
+
+    expect(gameResult.success).toBe(false);
+    expect(gameResult.error).toBe('Match já terminou');
+    expect(matchResult.success).toBe(false);
+    expect(matchResult.error).toBe('Match já terminou');
+  });
+
+  test('restart fails when tournament not running', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    // Don't start tournament
+
+    // Try to restart non-existent match
+    const gameResult = restartCurrentGame(tournament, 'fake-match-id');
+    const matchResult = restartMatch(tournament, 'fake-match-id');
+
+    expect(gameResult.success).toBe(false);
+    expect(gameResult.error).toBe('Torneio não está a decorrer');
+    expect(matchResult.success).toBe(false);
+    expect(matchResult.error).toBe('Torneio não está a decorrer');
+  });
+
+  test('restartMatch preserves bracket position', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    startTournament(tournament);
+
+    const match = tournament.winnersMatches[0];
+    const originalBracket = match.bracket;
+    const originalRound = match.round;
+    const originalP1 = match.player1;
+    const originalP2 = match.player2;
+
+    // Modify match state
+    match.score.player1Wins = 1;
+    match.currentGame = 2;
+
+    // Restart match
+    restartMatch(tournament, match.id);
+
+    // Verify bracket/players preserved
+    expect(match.bracket).toBe(originalBracket);
+    expect(match.round).toBe(originalRound);
+    expect(match.player1).toEqual(originalP1);
+    expect(match.player2).toEqual(originalP2);
+  });
+});
+
+describe('Tournament Engine - Spectator Functions', () => {
+  test('getActiveMatchesWithGameState returns playing matches with game state', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    addPlayer(tournament, 'Player 3');
+    addPlayer(tournament, 'Player 4');
+    startTournament(tournament);
+
+    // Initially no active matches (all in waiting)
+    let active = getActiveMatchesWithGameState(tournament);
+    expect(active.length).toBe(0);
+
+    // Start first match
+    const match1 = tournament.winnersMatches[0];
+    const p1Id = match1.player1!.id;
+    const p2Id = match1.player2!.id;
+
+    setPlayerReady(tournament, match1.id, p1Id);
+    setPlayerReady(tournament, match1.id, p2Id);
+    startGame(match1, { board: 'test-state' });
+
+    // Now should have 1 active match
+    active = getActiveMatchesWithGameState(tournament);
+    expect(active.length).toBe(1);
+    expect(active[0].match.id).toBe(match1.id);
+    expect(active[0].gameState).toEqual({ board: 'test-state' });
+
+    // Start second match
+    const match2 = tournament.winnersMatches[1];
+    const p3Id = match2.player1!.id;
+    const p4Id = match2.player2!.id;
+
+    setPlayerReady(tournament, match2.id, p3Id);
+    setPlayerReady(tournament, match2.id, p4Id);
+    startGame(match2, { board: 'test-state-2' });
+
+    // Now should have 2 active matches
+    active = getActiveMatchesWithGameState(tournament);
+    expect(active.length).toBe(2);
+  });
+
+  test('getActiveMatchesWithGameState excludes matches without game state', () => {
+    const tournament = createTournament('gatos-caes');
+    addPlayer(tournament, 'Player 1');
+    addPlayer(tournament, 'Player 2');
+    startTournament(tournament);
+
+    const match = tournament.winnersMatches[0];
+    
+    // Set phase to playing but no game state
+    match.phase = 'playing';
+    match.gameState = null;
+
+    const active = getActiveMatchesWithGameState(tournament);
+    expect(active.length).toBe(0);
   });
 });

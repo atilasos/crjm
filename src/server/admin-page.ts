@@ -416,6 +416,49 @@ export function getAdminPageHtml(adminKey: string): string {
       opacity: 0.7;
     }
     
+    .match-actions {
+      display: flex;
+      gap: 4px;
+      padding: 6px 8px;
+      background: rgba(0,0,0,0.3);
+      justify-content: center;
+    }
+    
+    .match-list-actions {
+      display: inline-flex;
+      gap: 4px;
+      margin-left: 8px;
+    }
+    
+    .btn-restart-game, .btn-restart-match {
+      padding: 4px 8px;
+      font-size: 0.7rem;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s;
+    }
+    
+    .btn-restart-game {
+      background: rgba(59, 130, 246, 0.3);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.5);
+    }
+    
+    .btn-restart-game:hover {
+      background: rgba(59, 130, 246, 0.5);
+    }
+    
+    .btn-restart-match {
+      background: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+    
+    .btn-restart-match:hover {
+      background: rgba(239, 68, 68, 0.5);
+    }
+    
     .match-player {
       display: flex;
       align-items: center;
@@ -1164,8 +1207,8 @@ export function getAdminPageHtml(adminKey: string): string {
         let bracketHtml = '';
         if (t.state && t.phase !== 'registration') {
           bracketHtml = currentView === 'bracket' 
-            ? renderVisualBracket(t.state) 
-            : renderListBracket(t.state);
+            ? renderVisualBracket(t.state, t.gameId) 
+            : renderListBracket(t.state, t.gameId);
         }
         
         return '<div class="tournament-card">' +
@@ -1187,7 +1230,7 @@ export function getAdminPageHtml(adminKey: string): string {
     
     // ========== VISUAL BRACKET RENDERING ==========
     
-    function renderVisualBracket(state) {
+    function renderVisualBracket(state, gameId) {
       let html = '<div class="bracket-visual"><div class="bracket-container">';
       
       // Winners Bracket
@@ -1203,7 +1246,7 @@ export function getAdminPageHtml(adminKey: string): string {
         for (const [round, matches] of Object.entries(rounds).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
           html += '<div class="round">' +
             '<div class="round-header">Ronda ' + round + '</div>' +
-            matches.map(m => renderMatchCard(m)).join('') +
+            matches.map(m => renderMatchCard(m, gameId)).join('') +
           '</div>';
         }
         
@@ -1223,7 +1266,7 @@ export function getAdminPageHtml(adminKey: string): string {
         for (const [round, matches] of Object.entries(rounds).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
           html += '<div class="round">' +
             '<div class="round-header">Ronda ' + round + '</div>' +
-            matches.map(m => renderMatchCard(m)).join('') +
+            matches.map(m => renderMatchCard(m, gameId)).join('') +
           '</div>';
         }
         
@@ -1236,12 +1279,12 @@ export function getAdminPageHtml(adminKey: string): string {
           '<div class="bracket-title">🏆 Grand Final</div>';
         
         if (state.grandFinal) {
-          html += '<div class="grand-final-match">' + renderMatchCard(state.grandFinal) + '</div>';
+          html += '<div class="grand-final-match">' + renderMatchCard(state.grandFinal, gameId) + '</div>';
         }
         
         if (state.grandFinalReset) {
           html += '<div style="margin-top: 15px; font-size: 0.8rem; color: rgba(255,255,255,0.6);">Reset</div>' +
-            '<div class="grand-final-match">' + renderMatchCard(state.grandFinalReset) + '</div>';
+            '<div class="grand-final-match">' + renderMatchCard(state.grandFinalReset, gameId) + '</div>';
         }
         
         html += '</div>';
@@ -1271,13 +1314,22 @@ export function getAdminPageHtml(adminKey: string): string {
       return rounds;
     }
     
-    function renderMatchCard(match) {
+    function renderMatchCard(match, gameId) {
       const p1Name = match.player1?.name || 'TBD';
       const p2Name = match.player2?.name || 'TBD';
       const p1Score = match.score?.player1Wins || 0;
       const p2Score = match.score?.player2Wins || 0;
       const p1Winner = match.winnerId && match.winnerId === match.player1?.id;
       const p2Winner = match.winnerId && match.winnerId === match.player2?.id;
+      const showRestartButtons = match.phase === 'playing' || match.phase === 'waiting';
+      
+      let restartButtons = '';
+      if (showRestartButtons && gameId) {
+        restartButtons = '<div class="match-actions">' +
+          '<button class="btn-restart-game" onclick="restartGame(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar só o jogo atual (mantém score)">🔄 Jogo</button>' +
+          '<button class="btn-restart-match" onclick="restartMatchFull(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar match completo (0-0)">🔁 Match</button>' +
+        '</div>';
+      }
       
       return '<div class="match-card ' + match.phase + '">' +
         '<div class="match-player ' + (p1Winner ? 'winner' : '') + '">' +
@@ -1288,39 +1340,40 @@ export function getAdminPageHtml(adminKey: string): string {
           '<span class="player-name ' + (!match.player2 ? 'tbd' : '') + '">' + p2Name + '</span>' +
           '<span class="player-score">' + p2Score + '</span>' +
         '</div>' +
+        restartButtons +
       '</div>';
     }
     
     // ========== LIST BRACKET RENDERING (original) ==========
     
-    function renderListBracket(state) {
+    function renderListBracket(state, gameId) {
       let html = '<div class="bracket">';
       
       if (state.winnersMatches && state.winnersMatches.length > 0) {
         html += '<div class="bracket-section">' +
           '<div class="bracket-title">Winners Bracket</div>' +
-          state.winnersMatches.map(renderListMatch).join('') +
+          state.winnersMatches.map(m => renderListMatch(m, gameId)).join('') +
         '</div>';
       }
       
       if (state.losersMatches && state.losersMatches.length > 0) {
         html += '<div class="bracket-section">' +
           '<div class="bracket-title">Losers Bracket</div>' +
-          state.losersMatches.map(renderListMatch).join('') +
+          state.losersMatches.map(m => renderListMatch(m, gameId)).join('') +
         '</div>';
       }
       
       if (state.grandFinal) {
         html += '<div class="bracket-section">' +
           '<div class="bracket-title">Grand Final</div>' +
-          renderListMatch(state.grandFinal) +
+          renderListMatch(state.grandFinal, gameId) +
         '</div>';
       }
       
       if (state.grandFinalReset) {
         html += '<div class="bracket-section">' +
           '<div class="bracket-title">Grand Final Reset</div>' +
-          renderListMatch(state.grandFinalReset) +
+          renderListMatch(state.grandFinalReset, gameId) +
         '</div>';
       }
       
@@ -1336,12 +1389,21 @@ export function getAdminPageHtml(adminKey: string): string {
       return html;
     }
     
-    function renderListMatch(match) {
+    function renderListMatch(match, gameId) {
       const p1 = match.player1 ? match.player1.name : 'TBD';
       const p2 = match.player2 ? match.player2.name : 'TBD';
       const score = (match.score?.player1Wins || 0) + '-' + (match.score?.player2Wins || 0);
       const p1Winner = match.winnerId === match.player1?.id;
       const p2Winner = match.winnerId === match.player2?.id;
+      const showRestartButtons = match.phase === 'playing' || match.phase === 'waiting';
+      
+      let restartButtons = '';
+      if (showRestartButtons && gameId) {
+        restartButtons = '<div class="match-list-actions">' +
+          '<button class="btn-restart-game btn-tiny" onclick="restartGame(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar só o jogo atual">🔄</button>' +
+          '<button class="btn-restart-match btn-tiny" onclick="restartMatchFull(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar match (0-0)">🔁</button>' +
+        '</div>';
+      }
       
       return '<div class="match ' + match.phase + '">' +
         '<div class="match-players">' +
@@ -1350,6 +1412,7 @@ export function getAdminPageHtml(adminKey: string): string {
           '<span class="' + (p2Winner ? 'winner' : '') + '">' + p2 + '</span>' +
         '</div>' +
         '<div class="match-score">' + score + '</div>' +
+        restartButtons +
       '</div>';
     }
     
@@ -1473,7 +1536,7 @@ export function getAdminPageHtml(adminKey: string): string {
           '</h2>';
         
         if (t.state && t.phase !== 'registration') {
-          html += renderVisualBracket(t.state);
+          html += renderVisualBracket(t.state, t.gameId);
         } else {
           html += '<div class="no-data">Torneio ainda não iniciado</div>';
         }
@@ -1655,6 +1718,34 @@ export function getAdminPageHtml(adminKey: string): string {
         // Success, refresh will update
       } else {
         alert('Erro ao eliminar jogador: ' + (result?.error || 'Erro desconhecido'));
+      }
+      refresh();
+    }
+
+    // ========== MATCH RESTART ACTIONS ==========
+
+    async function restartGame(gameId, matchId, event) {
+      event.stopPropagation();
+      if (!confirm('Reiniciar o jogo atual deste match?\\n\\nO score do match será mantido, mas o jogo atual recomeça do zero.\\nOs jogadores terão de clicar "Estou pronto" novamente.')) return;
+
+      const result = await postAction('/api/tournaments/' + gameId + '/matches/' + matchId + '/restart-game');
+      if (result && result.success) {
+        alert('✅ Jogo reiniciado! Os jogadores foram notificados.');
+      } else {
+        alert('Erro ao reiniciar jogo: ' + (result?.error || 'Erro desconhecido'));
+      }
+      refresh();
+    }
+
+    async function restartMatchFull(gameId, matchId, event) {
+      event.stopPropagation();
+      if (!confirm('Reiniciar este match COMPLETO?\\n\\n⚠️ O score voltará a 0-0!\\nTodos os jogos deste confronto serão perdidos.\\nOs jogadores terão de clicar "Estou pronto" novamente.')) return;
+
+      const result = await postAction('/api/tournaments/' + gameId + '/matches/' + matchId + '/restart-match');
+      if (result && result.success) {
+        alert('✅ Match reiniciado (0-0)! Os jogadores foram notificados.');
+      } else {
+        alert('Erro ao reiniciar match: ' + (result?.error || 'Erro desconhecido'));
       }
       refresh();
     }

@@ -843,7 +843,117 @@ export function forfeitMatch(
     ? { player1Wins: 2, player2Wins: 0 }
     : { player1Wins: 0, player2Wins: 2 };
 
+  // Definir o vencedor do match (importante para notificações!)
+  match.winnerId = winnerId;
+
   return winnerId;
+}
+
+// ============================================================================
+// Funções para reiniciar jogos/matches (recuperação de bloqueios)
+// ============================================================================
+
+/**
+ * Reinicia apenas o jogo atual de um match.
+ * Mantém o score do match, só limpa o estado do jogo atual.
+ * Útil quando um jogo fica bloqueado/corrupto.
+ */
+export function restartCurrentGame(
+  tournament: Tournament,
+  matchId: string
+): { success: boolean; error?: string } {
+  if (tournament.phase !== 'running') {
+    return { success: false, error: 'Torneio não está a decorrer' };
+  }
+
+  const match = tournament.matchById.get(matchId);
+  if (!match) {
+    return { success: false, error: 'Match não encontrado' };
+  }
+
+  if (match.phase === 'finished') {
+    return { success: false, error: 'Match já terminou' };
+  }
+
+  // Limpa o estado do jogo atual
+  match.gameState = null;
+  match.whoseTurn = null;
+  match.moves = [];
+  match.player1Ready = false;
+  match.player2Ready = false;
+  match.phase = 'waiting';
+
+  // Limpa estado de pausa se existia
+  match.isPaused = false;
+  match.pausedAt = null;
+  match.pausedByPlayerId = null;
+
+  return { success: true };
+}
+
+/**
+ * Reinicia um match completo.
+ * Reseta o score para 0-0, volta ao jogo 1, limpa todos os estados.
+ * Mantém o bracket e os jogadores.
+ * Útil quando um match inteiro está bloqueado.
+ */
+export function restartMatch(
+  tournament: Tournament,
+  matchId: string
+): { success: boolean; error?: string } {
+  if (tournament.phase !== 'running') {
+    return { success: false, error: 'Torneio não está a decorrer' };
+  }
+
+  const match = tournament.matchById.get(matchId);
+  if (!match) {
+    return { success: false, error: 'Match não encontrado' };
+  }
+
+  if (match.phase === 'finished') {
+    return { success: false, error: 'Match já terminou' };
+  }
+
+  // Reseta tudo
+  match.score = { player1Wins: 0, player2Wins: 0 };
+  match.currentGame = 1;
+  match.whoStartsCurrentGame = 'player1';
+  match.gameState = null;
+  match.whoseTurn = null;
+  match.moves = [];
+  match.player1Ready = false;
+  match.player2Ready = false;
+  match.phase = 'waiting';
+  match.winnerId = null;
+
+  // Limpa estado de pausa se existia
+  match.isPaused = false;
+  match.pausedAt = null;
+  match.pausedByPlayerId = null;
+
+  return { success: true };
+}
+
+/**
+ * Obtém todos os matches em curso (para modo espectador).
+ * Devolve os matches com fase 'playing' e os seus estados de jogo.
+ */
+export function getActiveMatchesWithGameState(
+  tournament: Tournament
+): Array<{ match: TournamentMatch; gameState: unknown }> {
+  const allMatches = [
+    ...tournament.winnersMatches,
+    ...tournament.losersMatches,
+    ...(tournament.grandFinal ? [tournament.grandFinal] : []),
+    ...(tournament.grandFinalReset ? [tournament.grandFinalReset] : []),
+  ];
+
+  return allMatches
+    .filter(m => m.phase === 'playing' && m.gameState !== null)
+    .map(m => ({
+      match: m,
+      gameState: m.gameState,
+    }));
 }
 
 // ============================================================================

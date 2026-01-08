@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Header } from './Header';
 import {
   createTournamentClient,
@@ -43,6 +43,30 @@ interface LogEntry {
   timestamp: Date;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
+}
+
+/** Estado de jogo de um match para espectadores */
+interface SpectatorMatchState {
+  matchId: string;
+  gameNumber: number;
+  gameState: unknown;
+  bracket: string;
+  round: number;
+  player1Name: string;
+  player2Name: string;
+  score: { player1Wins: number; player2Wins: number };
+  whoseTurn: 'player1' | 'player2' | null;
+}
+
+/** Info básica de jogos activos para lista de selecção */
+interface ActiveGameInfo {
+  matchId: string;
+  bracket: string;
+  round: number;
+  player1Name: string;
+  player2Name: string;
+  score: { player1Wins: number; player2Wins: number };
+  gameNumber: number;
 }
 
 // Normaliza o formato de TournamentState vindo do servidor/mocks:
@@ -133,6 +157,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState | null
   >(null);
 
+  // Estado do modo espectador
+  const [activeGames, setActiveGames] = useState<ActiveGameInfo[]>([]);
+  const [spectatorMatchStates, setSpectatorMatchStates] = useState<Map<string, SpectatorMatchState>>(new Map());
+  const [selectedSpectateMatchId, setSelectedSpectateMatchId] = useState<string | null>(null);
+
   // Log de eventos
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const logIdRef = useRef(0);
@@ -215,9 +244,12 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'match_assigned':
         setCurrentMatch(message.match);
         setMyRole(message.yourRole);
-        setCurrentGameNumber(1);
-        setMatchScore({ player1Wins: 0, player2Wins: 0 });
+        // Usar o número do jogo e score do match (importante para reconexões!)
+        setCurrentGameNumber(message.match.currentGame || 1);
+        setMatchScore(message.match.score || { player1Wins: 0, player2Wins: 0 });
         setPhase('match');
+        // Limpar modo espectador quando recebemos um match
+        setSelectedSpectateMatchId(null);
         // Novo protocolo inclui opponentName directamente
         addLog(`Confronto atribuído: Tu vs ${message.opponentName}`, 'success');
         break;
@@ -331,8 +363,14 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         if (message.eliminatedFromTournament) {
           addLog('Foste eliminado do campeonato.', 'error');
           setPhase('finished');
-        } else if (!message.youWon) {
-          addLog('Vais para a Losers Bracket. Uma derrota e estás eliminado!', 'warning');
+        } else {
+          // Jogador continua no torneio - volta ao lobby para esperar próximo match
+          // (pode ir para Winners ou Losers bracket dependendo do resultado)
+          if (!message.youWon) {
+            addLog('Vais para a Losers Bracket. Uma derrota e estás eliminado!', 'warning');
+          }
+          // Voltar ao lobby para ver o painel de espera/espectador
+          setPhase('lobby');
         }
         break;
 
@@ -356,6 +394,32 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'info':
         addLog(message.message, 'info');
         break;
+        
+      case 'active_games_list':
+        // Atualiza lista de jogos activos para modo espectador
+        setActiveGames((message as any).games || []);
+        break;
+        
+      case 'spectator_game_state': {
+        // Atualiza estado de jogo para espectadores
+        const specMsg = message as any;
+        setSpectatorMatchStates(prev => {
+          const newMap = new Map(prev);
+          newMap.set(specMsg.matchId, {
+            matchId: specMsg.matchId,
+            gameNumber: specMsg.gameNumber,
+            gameState: specMsg.gameState,
+            bracket: specMsg.bracket,
+            round: specMsg.round,
+            player1Name: specMsg.player1Name,
+            player2Name: specMsg.player2Name,
+            score: specMsg.score,
+            whoseTurn: specMsg.whoseTurn,
+          });
+          return newMap;
+        });
+        break;
+      }
     }
   }, [addLog]); // Removido playerId das dependências - usa ref em vez disso
 
@@ -577,6 +641,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   tournamentState={tournamentState}
                   playerId={playerId}
                   reconnectionCode={reconnectionCode}
+                  activeGames={activeGames}
+                  spectatorMatchStates={spectatorMatchStates}
+                  selectedSpectateMatchId={selectedSpectateMatchId}
+                  onSelectSpectateMatch={setSelectedSpectateMatchId}
+                  currentGameId={currentGameId}
                 />
               )}
 
@@ -856,9 +925,23 @@ interface TournamentLobbyProps {
   tournamentState: TournamentState;
   playerId: string | null;
   reconnectionCode: string | null;
+  activeGames: ActiveGameInfo[];
+  spectatorMatchStates: Map<string, SpectatorMatchState>;
+  selectedSpectateMatchId: string | null;
+  onSelectSpectateMatch: (matchId: string | null) => void;
+  currentGameId: GameId | null;
 }
 
-function TournamentLobby({ tournamentState, playerId, reconnectionCode }: TournamentLobbyProps) {
+function TournamentLobby({ 
+  tournamentState, 
+  playerId, 
+  reconnectionCode,
+  activeGames,
+  spectatorMatchStates,
+  selectedSpectateMatchId,
+  onSelectSpectateMatch,
+  currentGameId,
+}: TournamentLobbyProps) {
   const copyCode = () => {
     if (reconnectionCode) {
       navigator.clipboard.writeText(reconnectionCode).then(() => {
@@ -868,68 +951,259 @@ function TournamentLobby({ tournamentState, playerId, reconnectionCode }: Tourna
   };
 
   const isWaitingForMatch = tournamentState.phase === 'running';
+  const selectedSpectateState = selectedSpectateMatchId 
+    ? spectatorMatchStates.get(selectedSpectateMatchId) 
+    : null;
+
+  // Converte estado de rede para local para o tabuleiro espectador
+  const spectatorGameState = useMemo(() => {
+    if (!selectedSpectateState?.gameState || !currentGameId) return null;
+    try {
+      return fromNetworkGameState(currentGameId, selectedSpectateState.gameState);
+    } catch {
+      return selectedSpectateState.gameState;
+    }
+  }, [selectedSpectateState, currentGameId]);
 
   return (
     <>
       {/* Overlay de espera quando o torneio está a decorrer */}
       {isWaitingForMatch && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center p-4">
-          <div className="bg-gradient-to-br from-indigo-900/90 to-purple-900/90 backdrop-blur-md rounded-3xl p-8 border border-white/20 max-w-md w-full text-center shadow-2xl">
-            {/* Animação de espera */}
-            <div className="relative mb-6">
-              <div className="text-6xl animate-bounce">⏳</div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-20 h-20 border-4 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin"></div>
-              </div>
-            </div>
-
-            <h2 className="text-2xl font-bold text-white mb-2">
-              A aguardar adversário
-            </h2>
-            <p className="text-white/70 mb-6">
-              O teu próximo match será atribuído em breve...
-            </p>
-
-            {/* Info do torneio */}
-            <div className="bg-white/10 rounded-xl p-4 mb-4">
-              <p className="text-white/60 text-sm mb-1">Jogo</p>
-              <p className="text-white font-bold text-lg flex items-center justify-center gap-2">
-                <span>🎮</span>
-                {GAME_NAMES[tournamentState.gameId]}
-              </p>
-            </div>
-
-            {/* Número de jogadores online */}
-            <div className="bg-white/10 rounded-xl p-4 mb-4">
-              <p className="text-white/60 text-sm mb-1">Jogadores no torneio</p>
-              <p className="text-white font-bold text-lg">
-                {tournamentState.players.filter(p => p.isOnline !== false).length} / {tournamentState.players.length}
-              </p>
-            </div>
-
-            {/* Código de reconexão no overlay */}
-            {reconnectionCode && (
-              <div className="bg-purple-500/20 border border-purple-400/40 rounded-xl p-4">
-                <p className="text-purple-200 text-xs mb-2">
-                  Se fores desconectado, usa este código:
-                </p>
-                <div className="flex items-center justify-center gap-2">
-                  <span className="font-mono text-xl font-bold text-white tracking-widest bg-black/30 px-4 py-2 rounded-lg">
-                    {reconnectionCode}
-                  </span>
-                  <button
-                    onClick={copyCode}
-                    className="px-2 py-2 rounded-lg bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm hover:bg-purple-500/40 transition-colors"
-                    title="Copiar código"
-                  >
-                    📋
-                  </button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex flex-col p-4 overflow-auto">
+          <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col gap-4">
+            {/* Header com info de espera */}
+            <div className="bg-gradient-to-r from-indigo-900/90 to-purple-900/90 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-xl">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-4">
+                  {/* Animação de espera */}
+                  <div className="relative">
+                    <div className="text-4xl animate-bounce">⏳</div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-12 h-12 border-3 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin"></div>
+                    </div>
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">
+                      A aguardar o teu match
+                    </h2>
+                    <p className="text-white/60 text-sm">
+                      Enquanto esperas, podes observar outros jogos!
+                    </p>
+                  </div>
+                </div>
+                
+                {/* Info do torneio compacta */}
+                <div className="flex items-center gap-4">
+                  <div className="bg-white/10 rounded-lg px-3 py-2">
+                    <p className="text-white/50 text-xs">Jogo</p>
+                    <p className="text-white font-medium text-sm">{GAME_NAMES[tournamentState.gameId]}</p>
+                  </div>
+                  <div className="bg-white/10 rounded-lg px-3 py-2">
+                    <p className="text-white/50 text-xs">Jogadores</p>
+                    <p className="text-white font-medium text-sm">
+                      {tournamentState.players.filter(p => p.isOnline !== false).length}/{tournamentState.players.length}
+                    </p>
+                  </div>
+                  {reconnectionCode && (
+                    <div className="bg-purple-500/20 border border-purple-400/40 rounded-lg px-3 py-2 flex items-center gap-2">
+                      <div>
+                        <p className="text-purple-200 text-xs">Código</p>
+                        <p className="font-mono font-bold text-white text-sm tracking-wider">{reconnectionCode}</p>
+                      </div>
+                      <button
+                        onClick={copyCode}
+                        className="p-1 rounded bg-purple-500/30 text-purple-200 text-xs hover:bg-purple-500/40"
+                        title="Copiar"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
-            )}
+            </div>
 
-            <p className="text-white/40 text-xs mt-6">
-              Não feches esta página! Serás notificado quando o match começar.
+            {/* Área principal: lista de jogos + tabuleiro espectador */}
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[500px]">
+              {/* Lista de jogos em curso */}
+              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
+                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+                  <span>🎮</span>
+                  Jogos em Curso ({activeGames.length})
+                </h3>
+                
+                {activeGames.length === 0 ? (
+                  <div className="text-white/50 text-sm text-center py-8">
+                    <p className="text-3xl mb-2">🔍</p>
+                    <p>Nenhum jogo a decorrer neste momento.</p>
+                    <p className="text-xs mt-1">Os jogos aparecerão aqui quando começarem.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                    {activeGames.map(game => (
+                      <button
+                        key={game.matchId}
+                        onClick={() => onSelectSpectateMatch(
+                          selectedSpectateMatchId === game.matchId ? null : game.matchId
+                        )}
+                        className={`w-full text-left p-3 rounded-xl transition-all ${
+                          selectedSpectateMatchId === game.matchId
+                            ? 'bg-yellow-500/30 border-2 border-yellow-400'
+                            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-[10px] uppercase tracking-wider text-white/50">
+                            {game.bracket === 'grandFinal' ? '🏆 Final' : 
+                             game.bracket === 'grandFinalReset' ? '🏆 Reset' :
+                             game.bracket === 'winners' ? '🟢 Winners' : '🟠 Losers'}
+                            {' • Ronda ' + game.round}
+                          </span>
+                          <span className="text-xs text-white/50">Jogo {game.gameNumber}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <p className="text-white font-medium text-sm truncate">{game.player1Name}</p>
+                            <p className="text-white/60 text-sm truncate">vs {game.player2Name}</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-bold">
+                              <span className="text-green-400">{game.score.player1Wins}</span>
+                              <span className="text-white/40 mx-1">-</span>
+                              <span className="text-red-400">{game.score.player2Wins}</span>
+                            </p>
+                          </div>
+                        </div>
+                        {selectedSpectateMatchId === game.matchId && (
+                          <div className="mt-2 text-[10px] text-yellow-300 flex items-center gap-1">
+                            <span className="animate-pulse">👁️</span> A observar
+                          </div>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Tabuleiro do jogo selecionado */}
+              <div className="lg:col-span-2 bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex flex-col">
+                {!selectedSpectateMatchId ? (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center text-white/50">
+                      <p className="text-5xl mb-4">👈</p>
+                      <p className="font-medium">Seleciona um jogo para observar</p>
+                      <p className="text-sm mt-1">Clica num jogo da lista à esquerda</p>
+                    </div>
+                  </div>
+                ) : selectedSpectateState && spectatorGameState ? (
+                  <>
+                    {/* Header do jogo espectador */}
+                    <div className="mb-4 pb-3 border-b border-white/10">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-white/50 text-xs uppercase tracking-wider">
+                            {selectedSpectateState.bracket === 'grandFinal' ? '🏆 Grand Final' :
+                             selectedSpectateState.bracket === 'grandFinalReset' ? '🏆 Grand Final Reset' :
+                             selectedSpectateState.bracket === 'winners' ? '🟢 Winners Bracket' : '🟠 Losers Bracket'}
+                            {' • Ronda ' + selectedSpectateState.round}
+                          </p>
+                          <p className="text-white font-semibold">
+                            {selectedSpectateState.player1Name} vs {selectedSpectateState.player2Name}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-2xl font-bold">
+                            <span className="text-green-400">{selectedSpectateState.score.player1Wins}</span>
+                            <span className="text-white/40 mx-2">-</span>
+                            <span className="text-red-400">{selectedSpectateState.score.player2Wins}</span>
+                          </p>
+                          <p className="text-white/50 text-xs">Jogo {selectedSpectateState.gameNumber}</p>
+                        </div>
+                      </div>
+                      {selectedSpectateState.whoseTurn && (
+                        <p className="text-sm mt-2 text-yellow-300">
+                          Vez de: {selectedSpectateState.whoseTurn === 'player1' 
+                            ? selectedSpectateState.player1Name 
+                            : selectedSpectateState.player2Name}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Tabuleiro read-only */}
+                    <div className="flex-1 flex items-center justify-center">
+                      <div className="w-full max-w-md">
+                        {currentGameId === 'gatos-caes' && (
+                          <GatosCaesBoard
+                            state={spectatorGameState as GatosCaesState}
+                            isMyTurn={false}
+                            myRole="jogador1"
+                            onMove={() => {}}
+                          />
+                        )}
+                        {currentGameId === 'dominorio' && (
+                          <DominorioBoard
+                            state={spectatorGameState as DominorioState}
+                            isMyTurn={false}
+                            myRole="jogador1"
+                            onMove={() => {}}
+                          />
+                        )}
+                        {currentGameId === 'quelhas' && (
+                          <QuelhasBoard
+                            state={spectatorGameState as QuelhasState}
+                            isMyTurn={false}
+                            myRole="jogador1"
+                            onMove={() => {}}
+                          />
+                        )}
+                        {currentGameId === 'produto' && (
+                          <ProdutoBoard
+                            state={spectatorGameState as ProdutoState}
+                            isMyTurn={false}
+                            myRole="jogador1"
+                            onMove={() => {}}
+                          />
+                        )}
+                        {currentGameId === 'atari-go' && (
+                          <AtariGoBoard
+                            state={spectatorGameState as AtariGoState}
+                            isMyTurn={false}
+                            myRole="jogador1"
+                            onMove={() => {}}
+                          />
+                        )}
+                        {currentGameId === 'nex' && (
+                          <NexBoard
+                            state={spectatorGameState as NexState}
+                            isMyTurn={false}
+                            myRole="jogador1"
+                            onMove={() => {}}
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Aviso de modo espectador */}
+                    <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2 text-center">
+                      <p className="text-yellow-200 text-xs">
+                        👁️ Modo espectador - Estás apenas a observar este jogo
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="text-center text-white/50">
+                      <div className="animate-spin text-4xl mb-4">⏳</div>
+                      <p>A carregar estado do jogo...</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Nota de rodapé */}
+            <p className="text-white/30 text-xs text-center">
+              💡 Serás automaticamente redirecionado quando o teu match começar
             </p>
           </div>
         </div>
