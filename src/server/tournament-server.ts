@@ -35,9 +35,12 @@ import {
   eliminatePlayer,
   suspendPlayer,
   findActiveMatchForPlayer,
+  exportTournament,
+  importTournament,
   type Tournament,
   type TournamentPlayer,
   type TournamentMatch,
+  type TournamentExport,
 } from './tournament-engine';
 import {
   createGameState,
@@ -996,7 +999,7 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
 // API HTTP de administração
 // ============================================================================
 
-function handleHttpRequest(req: Request): Response {
+async function handleHttpRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
 
   // CORS headers
@@ -1275,6 +1278,99 @@ function handleHttpRequest(req: Request): Response {
       reconnectionCode: player.reconnectionCode,
       status: player.status,
     }, { headers: corsHeaders });
+  }
+
+  // Exportar torneio (requer admin key)
+  // GET /api/tournaments/:gameId/export
+  const exportMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/export$/);
+  if (exportMatch && req.method === 'GET') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = exportMatch[1] as GameId;
+    const tournament = tournaments.get(gameId);
+
+    if (!tournament) {
+      return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const exported = exportTournament(tournament);
+
+    log({
+      type: 'info',
+      tournamentId: tournament.id,
+      message: `Torneio exportado pelo administrador`,
+    });
+
+    return Response.json(exported, {
+      headers: {
+        ...corsHeaders,
+        'Content-Disposition': `attachment; filename="torneio-${gameId}-${new Date().toISOString().split('T')[0]}.json"`,
+      },
+    });
+  }
+
+  // Importar torneio (requer admin key)
+  // POST /api/tournaments/:gameId/import
+  const importMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/import$/);
+  if (importMatch && req.method === 'POST') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = importMatch[1] as GameId;
+
+    try {
+      const body = await req.json() as TournamentExport;
+
+      // Validar que o gameId corresponde
+      if (body.gameId !== gameId) {
+        return Response.json({
+          error: 'Game ID mismatch',
+          expected: gameId,
+          received: body.gameId,
+        }, { status: 400, headers: corsHeaders });
+      }
+
+      // Validar versão
+      if (body.version !== 1) {
+        return Response.json({
+          error: 'Unsupported export version',
+          version: body.version,
+        }, { status: 400, headers: corsHeaders });
+      }
+
+      // Importar o torneio
+      const imported = importTournament(body);
+
+      // Substituir o torneio existente (ou adicionar se não existir)
+      tournaments.set(gameId, imported);
+
+      log({
+        type: 'info',
+        tournamentId: imported.id,
+        message: `Torneio importado pelo administrador com ${imported.players.length} jogadores`,
+      });
+
+      // Notificar jogadores conectados (se houver)
+      // Neste ponto, todos os jogadores estão marcados como desconectados
+      // Eles precisarão reconectar usando os seus códigos de reconexão
+
+      return Response.json({
+        success: true,
+        tournamentId: imported.id,
+        players: imported.players.length,
+        phase: imported.phase,
+      }, { headers: corsHeaders });
+    } catch (e) {
+      return Response.json({
+        error: 'Invalid import data',
+        details: e instanceof Error ? e.message : 'Unknown error',
+      }, { status: 400, headers: corsHeaders });
+    }
   }
 
   // Logs

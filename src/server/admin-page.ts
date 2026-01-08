@@ -1178,6 +1178,8 @@ export function getAdminPageHtml(adminKey: string): string {
           '<div class="actions">' +
             '<button class="btn-primary" onclick="startTournament(\\'' + t.gameId + '\\')" ' + (canStart ? '' : 'disabled') + '>▶️ Iniciar</button>' +
             '<button class="btn-danger" onclick="resetTournament(\\'' + t.gameId + '\\')" >🔄 Reiniciar</button>' +
+            '<button class="btn-secondary" onclick="doExportTournament(\\'' + t.gameId + '\\')">💾 Exportar</button>' +
+            '<button class="btn-secondary" onclick="doImportTournament(\\'' + t.gameId + '\\')">📂 Importar</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -1529,6 +1531,88 @@ export function getAdminPageHtml(adminKey: string): string {
         alert('Erro ao reiniciar torneio: ' + (result?.error || 'Erro desconhecido'));
       }
       refresh();
+    }
+
+    async function doExportTournament(gameId) {
+      try {
+        const res = await fetch('/api/tournaments/' + gameId + '/export', {
+          headers: { 'Authorization': 'Bearer ' + ADMIN_KEY },
+        });
+        
+        if (!res.ok) {
+          const error = await res.json();
+          alert('Erro ao exportar: ' + (error.error || 'Erro desconhecido'));
+          return;
+        }
+        
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'torneio-' + gameId + '-' + new Date().toISOString().split('T')[0] + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        alert('Torneio exportado com sucesso!');
+      } catch (e) {
+        alert('Erro ao exportar: ' + e.message);
+      }
+    }
+
+    function doImportTournament(gameId) {
+      // Create a file input dynamically
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          
+          // Validate basic structure
+          if (!data.version || !data.gameId || !data.players) {
+            alert('Ficheiro inválido: não parece ser um export de torneio.');
+            return;
+          }
+          
+          if (data.gameId !== gameId) {
+            if (!confirm('O ficheiro é de um torneio de ' + (GAME_NAMES[data.gameId] || data.gameId) + ', mas estás a importar para ' + (GAME_NAMES[gameId] || gameId) + '. Continuar?')) {
+              return;
+            }
+          }
+          
+          if (!confirm('Importar torneio com ' + data.players.length + ' jogadores? O torneio atual será substituído.')) {
+            return;
+          }
+          
+          const res = await fetch('/api/tournaments/' + gameId + '/import', {
+            method: 'POST',
+            headers: {
+              'Authorization': 'Bearer ' + ADMIN_KEY,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+          });
+          
+          const result = await res.json();
+          
+          if (result.success) {
+            alert('Torneio importado com sucesso! ' + result.players + ' jogadores restaurados.');
+            refresh();
+          } else {
+            alert('Erro ao importar: ' + (result.error || 'Erro desconhecido'));
+          }
+        } catch (e) {
+          alert('Erro ao ler ficheiro: ' + e.message);
+        }
+      };
+      input.click();
     }
 
     // ========== PLAYER MANAGEMENT ==========

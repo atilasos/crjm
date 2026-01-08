@@ -845,3 +845,161 @@ export function forfeitMatch(
 
   return winnerId;
 }
+
+// ============================================================================
+// Exportação e importação de torneios
+// ============================================================================
+
+/**
+ * Formato exportado de um jogador (sem Maps e com Dates como strings).
+ */
+export interface ExportedPlayer extends Omit<TournamentPlayer, 'suspendedAt'> {
+  suspendedAt: string | null;
+}
+
+/**
+ * Formato exportado de um match (sem Maps e com Dates como strings).
+ */
+export interface ExportedMatch extends Omit<TournamentMatch, 'moves' | 'pausedAt'> {
+  moves: Array<{ playerId: string; move: unknown; timestamp: string }>;
+  pausedAt: string | null;
+}
+
+/**
+ * Formato completo de exportação de um torneio.
+ */
+export interface TournamentExport {
+  version: 1;
+  exportedAt: string;
+  id: string;
+  gameId: GameId;
+  phase: TournamentPhase;
+  players: ExportedPlayer[];
+  winnersMatches: ExportedMatch[];
+  losersMatches: ExportedMatch[];
+  grandFinal: ExportedMatch | null;
+  grandFinalReset: ExportedMatch | null;
+  championId: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  winnersWaiting: string[];
+  losersWaiting: string[];
+  winnersRound: number;
+  losersRound: number;
+}
+
+/**
+ * Exporta um torneio para um formato JSON serializável.
+ */
+export function exportTournament(tournament: Tournament): TournamentExport {
+  const exportMatch = (m: TournamentMatch): ExportedMatch => ({
+    ...m,
+    moves: m.moves.map(move => ({
+      ...move,
+      timestamp: move.timestamp.toISOString(),
+    })),
+    pausedAt: m.pausedAt?.toISOString() ?? null,
+  });
+
+  const exportPlayer = (p: TournamentPlayer): ExportedPlayer => ({
+    ...p,
+    suspendedAt: p.suspendedAt?.toISOString() ?? null,
+  });
+
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    id: tournament.id,
+    gameId: tournament.gameId,
+    phase: tournament.phase,
+    players: tournament.players.map(exportPlayer),
+    winnersMatches: tournament.winnersMatches.map(exportMatch),
+    losersMatches: tournament.losersMatches.map(exportMatch),
+    grandFinal: tournament.grandFinal ? exportMatch(tournament.grandFinal) : null,
+    grandFinalReset: tournament.grandFinalReset ? exportMatch(tournament.grandFinalReset) : null,
+    championId: tournament.championId,
+    createdAt: tournament.createdAt.toISOString(),
+    startedAt: tournament.startedAt?.toISOString() ?? null,
+    finishedAt: tournament.finishedAt?.toISOString() ?? null,
+    winnersWaiting: [...tournament.winnersWaiting],
+    losersWaiting: [...tournament.losersWaiting],
+    winnersRound: tournament.winnersRound,
+    losersRound: tournament.losersRound,
+  };
+}
+
+/**
+ * Importa um torneio a partir de dados exportados.
+ * Reconstrói os Maps e converte strings ISO de volta para Dates.
+ */
+export function importTournament(data: TournamentExport): Tournament {
+  // Converter matches de volta para o formato interno
+  const importMatch = (m: ExportedMatch): TournamentMatch => ({
+    ...m,
+    moves: m.moves.map(move => ({
+      ...move,
+      timestamp: new Date(move.timestamp),
+    })),
+    pausedAt: m.pausedAt ? new Date(m.pausedAt) : null,
+  });
+
+  // Converter players de volta para o formato interno
+  const importPlayer = (p: ExportedPlayer): TournamentPlayer => ({
+    ...p,
+    suspendedAt: p.suspendedAt ? new Date(p.suspendedAt) : null,
+    // Marcar todos como desconectados ao importar (precisarão reconectar)
+    isConnected: false,
+    socketId: null,
+  });
+
+  const players = data.players.map(importPlayer);
+  const winnersMatches = data.winnersMatches.map(importMatch);
+  const losersMatches = data.losersMatches.map(importMatch);
+  const grandFinal = data.grandFinal ? importMatch(data.grandFinal) : null;
+  const grandFinalReset = data.grandFinalReset ? importMatch(data.grandFinalReset) : null;
+
+  // Reconstruir Maps
+  const playerById = new Map<string, TournamentPlayer>();
+  const playerByCode = new Map<string, TournamentPlayer>();
+  for (const player of players) {
+    playerById.set(player.id, player);
+    playerByCode.set(player.reconnectionCode, player);
+  }
+
+  const matchById = new Map<string, TournamentMatch>();
+  for (const match of winnersMatches) {
+    matchById.set(match.id, match);
+  }
+  for (const match of losersMatches) {
+    matchById.set(match.id, match);
+  }
+  if (grandFinal) {
+    matchById.set(grandFinal.id, grandFinal);
+  }
+  if (grandFinalReset) {
+    matchById.set(grandFinalReset.id, grandFinalReset);
+  }
+
+  return {
+    id: data.id,
+    gameId: data.gameId,
+    phase: data.phase,
+    players,
+    winnersMatches,
+    losersMatches,
+    grandFinal,
+    grandFinalReset,
+    championId: data.championId,
+    createdAt: new Date(data.createdAt),
+    startedAt: data.startedAt ? new Date(data.startedAt) : null,
+    finishedAt: data.finishedAt ? new Date(data.finishedAt) : null,
+    playerById,
+    matchById,
+    playerByCode,
+    winnersWaiting: [...data.winnersWaiting],
+    losersWaiting: [...data.losersWaiting],
+    winnersRound: data.winnersRound,
+    losersRound: data.losersRound,
+  };
+}
