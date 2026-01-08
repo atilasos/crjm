@@ -441,23 +441,40 @@ export function processMatchResult(
     // Não precisa fazer nada, simplesmente não é adicionado a nenhuma lista
   }
 
-  // Verifica se precisamos criar novos matches
-  const allWinnersMatchesFinished = tournament.winnersMatches.every(m => m.phase === 'finished');
-  const allLosersMatchesFinished = tournament.losersMatches.every(m => m.phase === 'finished');
+  // MELHORIA: Criar matches assim que há 2 jogadores disponíveis (não esperar todos terminarem)
+  // Isto reduz significativamente o tempo de espera para os jogadores
 
-  if (allWinnersMatchesFinished && tournament.winnersWaiting.length >= 2) {
-    createNextRoundMatches(tournament, 'winners');
-    newMatches.push(...tournament.winnersMatches.filter(m => m.phase === 'waiting'));
+  // Winners bracket: criar matches imediatos
+  while (tournament.winnersWaiting.length >= 2) {
+    const p1Id = tournament.winnersWaiting.shift()!;
+    const p2Id = tournament.winnersWaiting.shift()!;
+    const p1 = tournament.playerById.get(p1Id)!;
+    const p2 = tournament.playerById.get(p2Id)!;
+
+    const newMatch = createMatch('winners', tournament.winnersRound, p1, p2);
+    tournament.winnersMatches.push(newMatch);
+    tournament.matchById.set(newMatch.id, newMatch);
+    newMatches.push(newMatch);
   }
 
-  if (allLosersMatchesFinished && tournament.losersWaiting.length >= 2) {
-    createNextRoundMatches(tournament, 'losers');
-    newMatches.push(...tournament.losersMatches.filter(m => m.phase === 'waiting'));
+  // Losers bracket: criar matches imediatos
+  while (tournament.losersWaiting.length >= 2) {
+    const p1Id = tournament.losersWaiting.shift()!;
+    const p2Id = tournament.losersWaiting.shift()!;
+    const p1 = tournament.playerById.get(p1Id)!;
+    const p2 = tournament.playerById.get(p2Id)!;
+
+    const newMatch = createMatch('losers', tournament.losersRound, p1, p2);
+    tournament.losersMatches.push(newMatch);
+    tournament.matchById.set(newMatch.id, newMatch);
+    newMatches.push(newMatch);
   }
 
   // Verifica se é hora da grand final
-  // IMPORTANTE: Só cria grand final quando TODOS os matches terminaram
-  // e há exatamente 1 jogador em cada bracket
+  // Só cria quando há exatamente 1 jogador em cada bracket e não há mais matches em curso
+  const allWinnersMatchesFinished = tournament.winnersMatches.every(m => m.phase === 'finished');
+  const allLosersMatchesFinished = tournament.losersMatches.every(m => m.phase === 'finished');
+
   if (
     tournament.winnersWaiting.length === 1 &&
     tournament.losersWaiting.length === 1 &&
@@ -568,8 +585,12 @@ export function endGame(
 // ============================================================================
 
 export function toTournamentState(tournament: Tournament): TournamentState {
+  const champion = tournament.championId
+    ? tournament.playerById.get(tournament.championId)
+    : null;
+
   return {
-    id: tournament.id,
+    tournamentId: tournament.id,
     gameId: tournament.gameId,
     phase: tournament.phase,
     players: tournament.players.map(p => ({
@@ -585,6 +606,7 @@ export function toTournamentState(tournament: Tournament): TournamentState {
     grandFinal: tournament.grandFinal ? toProtocolMatch(tournament.grandFinal) : null,
     grandFinalReset: tournament.grandFinalReset ? toProtocolMatch(tournament.grandFinalReset) : null,
     championId: tournament.championId,
+    championName: champion?.name ?? null,
   };
 }
 

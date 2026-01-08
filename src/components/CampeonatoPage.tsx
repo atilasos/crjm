@@ -539,9 +539,13 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     setLastGameWinnerRole(null);
   };
 
+  // Só permite voltar se estiver no ecrã de connect
+  // Durante lobby ou match, não deve poder sair acidentalmente
+  const canGoBack = phase === 'connect';
+
   return (
     <div className="min-h-screen flex flex-col">
-      <Header titulo="Modo Campeonato" onVoltar={onVoltar} />
+      <Header titulo="Modo Campeonato" onVoltar={canGoBack ? onVoltar : undefined} />
 
       <main className="flex-1 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
@@ -863,82 +867,150 @@ function TournamentLobby({ tournamentState, playerId, reconnectionCode }: Tourna
     }
   };
 
-  return (
-    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-          <span>🏟️</span>
-          {GAME_NAMES[tournamentState.gameId]}
-        </h2>
-        <span className={`px-3 py-1 rounded-full text-sm font-medium ${tournamentState.phase === 'registration'
-          ? 'bg-blue-500/30 text-blue-200'
-          : 'bg-green-500/30 text-green-200'
-          }`}>
-          {tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer'}
-        </span>
-      </div>
+  const isWaitingForMatch = tournamentState.phase === 'running';
 
-      {/* Código de reconexão */}
-      {reconnectionCode && (
-        <div className="mb-6 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-400/50 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-200 text-sm font-medium mb-1">
-                🔑 O teu código de reconexão
-              </p>
-              <p className="text-white/60 text-xs">
-                Guarda este código! Dá-o ao professor se fores desconectado.
+  return (
+    <>
+      {/* Overlay de espera quando o torneio está a decorrer */}
+      {isWaitingForMatch && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+          <div className="bg-gradient-to-br from-indigo-900/90 to-purple-900/90 backdrop-blur-md rounded-3xl p-8 border border-white/20 max-w-md w-full text-center shadow-2xl">
+            {/* Animação de espera */}
+            <div className="relative mb-6">
+              <div className="text-6xl animate-bounce">⏳</div>
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-20 h-20 border-4 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin"></div>
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold text-white mb-2">
+              A aguardar adversário
+            </h2>
+            <p className="text-white/70 mb-6">
+              O teu próximo match será atribuído em breve...
+            </p>
+
+            {/* Info do torneio */}
+            <div className="bg-white/10 rounded-xl p-4 mb-4">
+              <p className="text-white/60 text-sm mb-1">Jogo</p>
+              <p className="text-white font-bold text-lg flex items-center justify-center gap-2">
+                <span>🎮</span>
+                {GAME_NAMES[tournamentState.gameId]}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-2xl font-bold text-white tracking-widest bg-black/30 px-4 py-2 rounded-lg">
-                {reconnectionCode}
-              </span>
-              <button
-                onClick={copyCode}
-                className="px-3 py-2 rounded-lg bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm hover:bg-purple-500/40 transition-colors"
-                title="Copiar código"
-              >
-                📋
-              </button>
+
+            {/* Número de jogadores online */}
+            <div className="bg-white/10 rounded-xl p-4 mb-4">
+              <p className="text-white/60 text-sm mb-1">Jogadores no torneio</p>
+              <p className="text-white font-bold text-lg">
+                {tournamentState.players.filter(p => p.isOnline !== false).length} / {tournamentState.players.length}
+              </p>
             </div>
+
+            {/* Código de reconexão no overlay */}
+            {reconnectionCode && (
+              <div className="bg-purple-500/20 border border-purple-400/40 rounded-xl p-4">
+                <p className="text-purple-200 text-xs mb-2">
+                  Se fores desconectado, usa este código:
+                </p>
+                <div className="flex items-center justify-center gap-2">
+                  <span className="font-mono text-xl font-bold text-white tracking-widest bg-black/30 px-4 py-2 rounded-lg">
+                    {reconnectionCode}
+                  </span>
+                  <button
+                    onClick={copyCode}
+                    className="px-2 py-2 rounded-lg bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm hover:bg-purple-500/40 transition-colors"
+                    title="Copiar código"
+                  >
+                    📋
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <p className="text-white/40 text-xs mt-6">
+              Não feches esta página! Serás notificado quando o match começar.
+            </p>
           </div>
         </div>
       )}
 
-      <div>
-        <h3 className="text-white/80 text-sm font-medium mb-3">
-          Jogadores ({tournamentState.players.length})
-        </h3>
-        <div className="grid grid-cols-2 gap-2">
-          {tournamentState.players.map(player => (
-            <div
-              key={player.id}
-              className={`px-3 py-2 rounded-lg text-sm ${player.id === playerId
-                ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-400/50'
-                : 'bg-white/10 text-white/80'
-                }`}
-            >
-              <span className="font-medium">{player.name}</span>
-              {player.classId && (
-                <span className="text-white/50 ml-1">({player.classId})</span>
-              )}
-              {player.id === playerId && (
-                <span className="ml-1">👈</span>
-              )}
-            </div>
-          ))}
+      <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+            <span>🏟️</span>
+            {GAME_NAMES[tournamentState.gameId]}
+          </h2>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${tournamentState.phase === 'registration'
+            ? 'bg-blue-500/30 text-blue-200'
+            : 'bg-green-500/30 text-green-200'
+            }`}>
+            {tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer'}
+          </span>
         </div>
-      </div>
 
-      {tournamentState.phase === 'registration' && (
-        <div className="mt-6 bg-blue-500/20 border border-blue-400/50 rounded-lg p-4">
-          <p className="text-blue-200 text-sm">
-            ⏳ A aguardar início do campeonato...
-          </p>
+        {/* Código de reconexão */}
+        {reconnectionCode && (
+          <div className="mb-6 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-400/50 rounded-lg p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-purple-200 text-sm font-medium mb-1">
+                  🔑 O teu código de reconexão
+                </p>
+                <p className="text-white/60 text-xs">
+                  Guarda este código! Dá-o ao professor se fores desconectado.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-2xl font-bold text-white tracking-widest bg-black/30 px-4 py-2 rounded-lg">
+                  {reconnectionCode}
+                </span>
+                <button
+                  onClick={copyCode}
+                  className="px-3 py-2 rounded-lg bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm hover:bg-purple-500/40 transition-colors"
+                  title="Copiar código"
+                >
+                  📋
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <h3 className="text-white/80 text-sm font-medium mb-3">
+            Jogadores ({tournamentState.players.length})
+          </h3>
+          <div className="grid grid-cols-2 gap-2">
+            {tournamentState.players.map(player => (
+              <div
+                key={player.id}
+                className={`px-3 py-2 rounded-lg text-sm ${player.id === playerId
+                  ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-400/50'
+                  : 'bg-white/10 text-white/80'
+                  }`}
+              >
+                <span className="font-medium">{player.name}</span>
+                {player.classId && (
+                  <span className="text-white/50 ml-1">({player.classId})</span>
+                )}
+                {player.id === playerId && (
+                  <span className="ml-1">👈</span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
-      )}
-    </div>
+
+        {tournamentState.phase === 'registration' && (
+          <div className="mt-6 bg-blue-500/20 border border-blue-400/50 rounded-lg p-4">
+            <p className="text-blue-200 text-sm">
+              ⏳ A aguardar início do campeonato...
+            </p>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 

@@ -259,14 +259,20 @@ function handleRejoinTournament(
   }
 
   // Verificar se já está conectado (evitar duplicados)
-  if (foundPlayer.isConnected && playerSockets.has(foundPlayer.id)) {
-    sendToSocket(socket, {
-      type: 'error',
-      code: 'ALREADY_CONNECTED',
-      message: 'Este jogador já está conectado.',
-    });
-    return;
+  // Mas primeiro limpar socket antigo se existir (evita race condition)
+  const existingSocket = playerSockets.get(foundPlayer.id);
+  if (existingSocket) {
+    // Fechar socket antigo se ainda existir
+    try {
+      existingSocket.close(1000, 'Reconexão de outro dispositivo');
+    } catch {
+      // Ignorar erros ao fechar socket
+    }
+    playerSockets.delete(foundPlayer.id);
   }
+
+  // Resetar estado de conexão antes de reativar
+  foundPlayer.isConnected = false;
 
   // Reativar jogador
   const socketId = `${Date.now()}-${Math.random()}`;
@@ -293,22 +299,52 @@ function handleRejoinTournament(
     reconnectionCode: foundPlayer.reconnectionCode,
   });
 
-  // Se tinha match pausado, notificar que retomou
+  // Se tinha match pausado, verificar se pode retomar
   if (resumedMatchId) {
     const match = foundTournament.matchById.get(resumedMatchId);
     if (match) {
-      // Notificar ambos os jogadores que o match retomou
       const opponentId = match.player1?.id === foundPlayer.id
         ? match.player2?.id
         : match.player1?.id;
 
-      sendToSocket(socket, {
-        type: 'info',
-        message: 'Voltaste ao teu match! O jogo vai continuar.',
-      });
+      const opponent = opponentId ? foundTournament.playerById.get(opponentId) : null;
+      const opponentConnected = opponent?.isConnected && playerSockets.has(opponentId!);
 
-      if (opponentId) {
-        sendToPlayer(opponentId, {
+      if (!opponentConnected) {
+        // Oponente não está conectado - manter match pausado e notificar
+        // Re-pausar o match (porque reactivatePlayer o retomou)
+        match.isPaused = true;
+        match.pausedAt = new Date();
+        match.pausedByPlayerId = opponentId ?? null;
+        foundPlayer.suspendedMatchId = resumedMatchId;
+
+        sendToSocket(socket, {
+          type: 'info',
+          message: 'Voltaste ao campeonato! O teu adversário ainda não está conectado. A aguardar...',
+        });
+
+        // Re-enviar match assignment para o jogador
+        sendToSocket(socket, {
+          type: 'match_assigned',
+          match: match,
+          yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
+          opponentName: opponent?.name ?? 'Adversário desconectado',
+        });
+
+        log({
+          type: 'match',
+          tournamentId: foundTournament.id,
+          matchId: resumedMatchId,
+          message: `${foundPlayer.name} voltou mas adversário ainda está desconectado`,
+        });
+      } else {
+        // Ambos conectados - retomar match normalmente
+        sendToSocket(socket, {
+          type: 'info',
+          message: 'Voltaste ao teu match! O jogo vai continuar.',
+        });
+
+        sendToPlayer(opponentId!, {
           type: 'info',
           message: `O teu adversário ${foundPlayer.name} voltou! O jogo vai continuar.`,
         });
@@ -318,9 +354,14 @@ function handleRejoinTournament(
           type: 'match_assigned',
           match: match,
           yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
-          opponentName: match.player1?.id === foundPlayer.id
-            ? match.player2?.name || ''
-            : match.player1?.name || '',
+          opponentName: opponent?.name || '',
+        });
+
+        sendToPlayer(opponentId!, {
+          type: 'match_assigned',
+          match: match,
+          yourRole: match.player1?.id === opponentId ? 'player1' : 'player2',
+          opponentName: foundPlayer.name,
         });
 
         // Se o match estava em playing, enviar o estado atual do jogo
@@ -334,16 +375,27 @@ function handleRejoinTournament(
             gameState: match.gameState,
             yourTurn: isMyTurn,
           });
+
+          // Enviar estado também para o oponente
+          const isOpponentP1 = match.player1?.id === opponentId;
+          const isOpponentTurn = match.whoseTurn === (isOpponentP1 ? 'player1' : 'player2');
+          sendToPlayer(opponentId!, {
+            type: 'game_state_update',
+            matchId: resumedMatchId,
+            gameNumber: match.currentGame,
+            gameState: match.gameState,
+            yourTurn: isOpponentTurn,
+          });
         }
+
+        log({
+          type: 'match',
+          tournamentId: foundTournament.id,
+          matchId: resumedMatchId,
+          message: `Match retomado após reconexão de ${foundPlayer.name}`,
+        });
       }
     }
-
-    log({
-      type: 'match',
-      tournamentId: foundTournament.id,
-      matchId: resumedMatchId,
-      message: `Match retomado após reconexão de ${foundPlayer.name}`,
-    });
   } else {
     sendToSocket(socket, {
       type: 'info',
