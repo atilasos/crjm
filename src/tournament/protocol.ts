@@ -237,6 +237,34 @@ export interface InfoMessage {
   message: string;
 }
 
+/** Atualização de estado de jogo para espectadores */
+export interface SpectatorGameStateMessage {
+  type: 'spectator_game_state';
+  matchId: string;
+  gameNumber: number;
+  gameState: unknown;
+  bracket: BracketType | 'grandFinal' | 'grandFinalReset';
+  round: number;
+  player1Name: string;
+  player2Name: string;
+  score: MatchScore;
+  whoseTurn: 'player1' | 'player2' | null;
+}
+
+/** Lista de jogos em curso disponíveis para observar */
+export interface ActiveGamesListMessage {
+  type: 'active_games_list';
+  games: Array<{
+    matchId: string;
+    bracket: BracketType | 'grandFinal' | 'grandFinalReset';
+    round: number;
+    player1Name: string;
+    player2Name: string;
+    score: MatchScore;
+    gameNumber: number;
+  }>;
+}
+
 export type ServerMessage =
   | WelcomeMessage
   | TournamentStateUpdateMessage
@@ -247,7 +275,9 @@ export type ServerMessage =
   | MatchEndMessage
   | TournamentEndMessage
   | ErrorMessage
-  | InfoMessage;
+  | InfoMessage
+  | SpectatorGameStateMessage
+  | ActiveGamesListMessage;
 
 // ============================================================================
 // Helpers para converter entre formatos
