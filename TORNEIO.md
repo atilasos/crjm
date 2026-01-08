@@ -144,6 +144,29 @@ Quando todos os alunos estiverem inscritos:
 - O bracket atualiza automaticamente a cada 2 segundos
 - Os logs mostram todas as jogadas e resultados
 
+#### Modo Espectador (para jogadores à espera)
+
+Quando um jogador está à espera do seu próximo match:
+- Aparece uma interface melhorada com indicação visual de que está à espera
+- Pode ver uma lista de todos os jogos em curso no torneio
+- Pode selecionar um jogo para observar (modo espectador read-only)
+- O tabuleiro atualiza em tempo real enquanto observa
+- Quando o seu match é atribuído, é automaticamente redirecionado para o seu jogo
+
+#### Reiniciar jogos bloqueados (admin)
+
+Se um jogo ficar bloqueado ou corrompido, podes reiniciá-lo no painel de administração:
+
+1. No bracket (vista visual ou lista), cada match em curso tem dois botões:
+   - **🔄 Jogo** - Reinicia apenas o jogo atual (mantém o score do match)
+   - **🔁 Match** - Reinicia o match completo (score volta a 0-0)
+
+2. Os jogadores são notificados e devem clicar "Estou pronto" novamente
+
+**Quando usar cada opção:**
+- **Reiniciar jogo**: Quando o jogo atual está bloqueado mas o score do match está correto
+- **Reiniciar match**: Quando há problemas graves ou o estado está totalmente corrupto
+
 ### 7. Problemas comuns
 
 #### "Não consigo ligar ao servidor"
@@ -155,6 +178,12 @@ Quando todos os alunos estiverem inscritos:
 #### "Perdi a ligação durante um jogo"
 - O jogador que desconecta perde automaticamente o match atual
 - Pode voltar a inscrever-se se o torneio permitir
+
+#### "Um jogo ficou bloqueado"
+- No painel admin, localiza o match no bracket
+- Clica em "🔄 Jogo" para reiniciar apenas o jogo atual (mantém score)
+- Ou clica em "🔁 Match" para reiniciar o confronto todo (score 0-0)
+- Os jogadores serão notificados e devem clicar "Estou pronto" novamente
 
 #### "Preciso reiniciar o torneio"
 - No painel admin, clica em "🔄 Reiniciar"
@@ -216,8 +245,24 @@ curl http://localhost:4000/api/tournaments
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/start \
   -H "Authorization: Bearer admin123"
 
-# Reiniciar torneio
+# Reiniciar torneio completo (todos os dados perdidos)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/reset \
+  -H "Authorization: Bearer admin123"
+
+# Reiniciar apenas o jogo atual de um match (mantém score do match)
+curl -X POST http://localhost:4000/api/tournaments/gatos-caes/matches/MATCH_ID/restart-game \
+  -H "Authorization: Bearer admin123"
+
+# Reiniciar match completo (score volta a 0-0)
+curl -X POST http://localhost:4000/api/tournaments/gatos-caes/matches/MATCH_ID/restart-match \
+  -H "Authorization: Bearer admin123"
+
+# Suspender jogador (pausa o match se estiver a jogar)
+curl -X POST http://localhost:4000/api/tournaments/gatos-caes/players/PLAYER_ID/suspend \
+  -H "Authorization: Bearer admin123"
+
+# Eliminar jogador (oponente ganha automaticamente)
+curl -X POST http://localhost:4000/api/tournaments/gatos-caes/players/PLAYER_ID/eliminate \
   -H "Authorization: Bearer admin123"
 
 # Ver logs
