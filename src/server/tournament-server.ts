@@ -30,6 +30,11 @@ import {
   toTournamentState,
   handlePlayerDisconnect,
   forfeitMatch,
+  findPlayerByCode,
+  reactivatePlayer,
+  eliminatePlayer,
+  suspendPlayer,
+  findActiveMatchForPlayer,
   type Tournament,
   type TournamentPlayer,
   type TournamentMatch,
@@ -203,6 +208,7 @@ function handleJoinTournament(
     playerName: player.name,
     tournamentId: tournament.id,
     tournamentState: toTournamentState(tournament),
+    reconnectionCode: player.reconnectionCode,
   });
 
   // Notificar todos os outros jogadores
@@ -210,8 +216,143 @@ function handleJoinTournament(
 
   sendToSocket(socket, {
     type: 'info',
-    message: `Bem-vindo ao campeonato de ${gameId}! A aguardar início do torneio...`,
+    message: `Bem-vindo ao campeonato de ${gameId}! O teu código de reconexão é: ${player.reconnectionCode}`,
   });
+}
+
+function handleRejoinTournament(
+  socket: ServerWebSocket<ClientData>,
+  reconnectionCode: string
+): void {
+  const normalizedCode = reconnectionCode.toUpperCase().trim();
+
+  // Procurar jogador em todos os torneios
+  let foundTournament: Tournament | null = null;
+  let foundPlayer: TournamentPlayer | null = null;
+
+  for (const tournament of tournaments.values()) {
+    const player = findPlayerByCode(tournament, normalizedCode);
+    if (player) {
+      foundTournament = tournament;
+      foundPlayer = player;
+      break;
+    }
+  }
+
+  if (!foundTournament || !foundPlayer) {
+    sendToSocket(socket, {
+      type: 'error',
+      code: 'INVALID_CODE',
+      message: 'Código de reconexão inválido.',
+    });
+    return;
+  }
+
+  // Verificar se o jogador foi eliminado
+  if (foundPlayer.status === 'eliminated') {
+    sendToSocket(socket, {
+      type: 'error',
+      code: 'PLAYER_ELIMINATED',
+      message: 'Este jogador foi eliminado do torneio.',
+    });
+    return;
+  }
+
+  // Verificar se já está conectado (evitar duplicados)
+  if (foundPlayer.isConnected && playerSockets.has(foundPlayer.id)) {
+    sendToSocket(socket, {
+      type: 'error',
+      code: 'ALREADY_CONNECTED',
+      message: 'Este jogador já está conectado.',
+    });
+    return;
+  }
+
+  // Reativar jogador
+  const socketId = `${Date.now()}-${Math.random()}`;
+  const { resumedMatchId } = reactivatePlayer(foundTournament, foundPlayer.id, socketId);
+
+  // Associar socket ao jogador
+  socket.data.playerId = foundPlayer.id;
+  socket.data.tournamentId = foundTournament.id;
+  playerSockets.set(foundPlayer.id, socket);
+
+  log({
+    type: 'info',
+    tournamentId: foundTournament.id,
+    message: `Jogador ${foundPlayer.name} reconectou usando código ${normalizedCode}`,
+  });
+
+  // Enviar welcome
+  sendToSocket(socket, {
+    type: 'welcome',
+    playerId: foundPlayer.id,
+    playerName: foundPlayer.name,
+    tournamentId: foundTournament.id,
+    tournamentState: toTournamentState(foundTournament),
+    reconnectionCode: foundPlayer.reconnectionCode,
+  });
+
+  // Se tinha match pausado, notificar que retomou
+  if (resumedMatchId) {
+    const match = foundTournament.matchById.get(resumedMatchId);
+    if (match) {
+      // Notificar ambos os jogadores que o match retomou
+      const opponentId = match.player1?.id === foundPlayer.id
+        ? match.player2?.id
+        : match.player1?.id;
+
+      sendToSocket(socket, {
+        type: 'info',
+        message: 'Voltaste ao teu match! O jogo vai continuar.',
+      });
+
+      if (opponentId) {
+        sendToPlayer(opponentId, {
+          type: 'info',
+          message: `O teu adversário ${foundPlayer.name} voltou! O jogo vai continuar.`,
+        });
+
+        // Re-enviar match assignment para ambos
+        sendToSocket(socket, {
+          type: 'match_assigned',
+          match: match,
+          yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
+          opponentName: match.player1?.id === foundPlayer.id
+            ? match.player2?.name || ''
+            : match.player1?.name || '',
+        });
+
+        // Se o match estava em playing, enviar o estado atual do jogo
+        if (match.phase === 'playing' && match.gameState) {
+          const isP1 = match.player1?.id === foundPlayer.id;
+          const isMyTurn = match.whoseTurn === (isP1 ? 'player1' : 'player2');
+          sendToSocket(socket, {
+            type: 'game_state_update',
+            matchId: resumedMatchId,
+            gameNumber: match.currentGame,
+            gameState: match.gameState,
+            yourTurn: isMyTurn,
+          });
+        }
+      }
+    }
+
+    log({
+      type: 'match',
+      tournamentId: foundTournament.id,
+      matchId: resumedMatchId,
+      message: `Match retomado após reconexão de ${foundPlayer.name}`,
+    });
+  } else {
+    sendToSocket(socket, {
+      type: 'info',
+      message: 'Voltaste ao campeonato! A aguardar próximo match...',
+    });
+  }
+
+  // Notificar todos os jogadores da atualização
+  broadcastTournamentState(foundTournament);
 }
 
 function handleReadyForMatch(
@@ -712,6 +853,10 @@ function handleMessage(
       );
       break;
 
+    case 'rejoin_tournament':
+      handleRejoinTournament(socket, message.reconnectionCode);
+      break;
+
     case 'ready_for_match':
       handleReadyForMatch(socket, message.matchId);
       break;
@@ -748,28 +893,45 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
   const playerId = socket.data.playerId;
 
   if (playerId) {
-    // Encontrar torneio e marcar jogador como desconectado
+    // Encontrar torneio e marcar jogador como suspenso (pode reconectar)
     for (const tournament of tournaments.values()) {
       const player = tournament.playerById.get(playerId);
       if (player) {
-        updatePlayerConnection(tournament, playerId, false);
         log({
           type: 'info',
           tournamentId: tournament.id,
           message: `Jogador ${player.name} desconectou`,
         });
 
-        // Se o torneio está a decorrer, dar forfeit
-        if (tournament.phase === 'running') {
-          const { forfeitMatchId } = handlePlayerDisconnect(tournament, playerId);
-          if (forfeitMatchId) {
-            const winnerId = forfeitMatch(tournament, forfeitMatchId, playerId);
-            if (winnerId) {
-              const match = tournament.matchById.get(forfeitMatchId)!;
-              handleMatchEnd(tournament, match, winnerId);
+        // Suspender jogador (pausa match em vez de forfeit imediato)
+        const { pausedMatchId } = handlePlayerDisconnect(tournament, playerId);
+
+        if (pausedMatchId) {
+          const match = tournament.matchById.get(pausedMatchId);
+          if (match) {
+            // Notificar o oponente que o match está pausado
+            const opponentId = match.player1?.id === playerId
+              ? match.player2?.id
+              : match.player1?.id;
+
+            if (opponentId) {
+              sendToPlayer(opponentId, {
+                type: 'info',
+                message: `O teu adversário ${player.name} desconectou. O jogo está pausado. A aguardar reconexão...`,
+              });
             }
+
+            log({
+              type: 'match',
+              tournamentId: tournament.id,
+              matchId: pausedMatchId,
+              message: `Match pausado devido a desconexão de ${player.name}`,
+            });
           }
         }
+
+        // Atualizar estado para todos
+        broadcastTournamentState(tournament);
         break;
       }
     }
@@ -835,6 +997,8 @@ function handleHttpRequest(req: Request): Response {
           classId: p.classId,
           losses: p.losses,
           isConnected: p.isConnected,
+          status: p.status,
+          reconnectionCode: p.reconnectionCode,
         })),
         state: toTournamentState(t),
       })),
@@ -920,6 +1084,145 @@ function handleHttpRequest(req: Request): Response {
     });
 
     return Response.json({ success: true }, { headers: corsHeaders });
+  }
+
+  // Eliminar jogador (requer admin key)
+  // POST /api/tournaments/:gameId/players/:playerId/eliminate
+  const eliminateMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/eliminate$/);
+  if (eliminateMatch && req.method === 'POST') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = eliminateMatch[1] as GameId;
+    const playerId = eliminateMatch[2];
+    const tournament = tournaments.get(gameId);
+
+    if (!tournament) {
+      return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const player = tournament.playerById.get(playerId);
+    if (!player) {
+      return Response.json({ error: 'Player not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    if (player.status === 'eliminated') {
+      return Response.json({ error: 'Player already eliminated' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Eliminar jogador (forfeit todos os matches)
+    const { forfeitedMatchIds } = eliminatePlayer(tournament, playerId);
+
+    log({
+      type: 'info',
+      tournamentId: tournament.id,
+      message: `Jogador ${player.name} eliminado pelo administrador`,
+    });
+
+    // Processar resultados dos matches forfeitados
+    for (const matchId of forfeitedMatchIds) {
+      const match = tournament.matchById.get(matchId);
+      if (match && match.winnerId) {
+        handleMatchEnd(tournament, match, match.winnerId);
+      }
+    }
+
+    broadcastTournamentState(tournament);
+
+    return Response.json({ success: true, forfeitedMatchIds }, { headers: corsHeaders });
+  }
+
+  // Suspender jogador manualmente (requer admin key)
+  // POST /api/tournaments/:gameId/players/:playerId/suspend
+  const suspendMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/suspend$/);
+  if (suspendMatch && req.method === 'POST') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = suspendMatch[1] as GameId;
+    const playerId = suspendMatch[2];
+    const tournament = tournaments.get(gameId);
+
+    if (!tournament) {
+      return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const player = tournament.playerById.get(playerId);
+    if (!player) {
+      return Response.json({ error: 'Player not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    if (player.status === 'suspended') {
+      return Response.json({ error: 'Player already suspended' }, { status: 400, headers: corsHeaders });
+    }
+
+    if (player.status === 'eliminated') {
+      return Response.json({ error: 'Cannot suspend eliminated player' }, { status: 400, headers: corsHeaders });
+    }
+
+    // Suspender jogador
+    const { pausedMatchId } = suspendPlayer(tournament, playerId);
+
+    log({
+      type: 'info',
+      tournamentId: tournament.id,
+      message: `Jogador ${player.name} suspenso pelo administrador`,
+    });
+
+    // Notificar oponente se tinha match em curso
+    if (pausedMatchId) {
+      const match = tournament.matchById.get(pausedMatchId);
+      if (match) {
+        const opponentId = match.player1?.id === playerId
+          ? match.player2?.id
+          : match.player1?.id;
+
+        if (opponentId) {
+          sendToPlayer(opponentId, {
+            type: 'info',
+            message: `O teu adversário ${player.name} foi suspenso. O jogo está pausado.`,
+          });
+        }
+      }
+    }
+
+    broadcastTournamentState(tournament);
+
+    return Response.json({ success: true, pausedMatchId }, { headers: corsHeaders });
+  }
+
+  // Obter código de reconexão de um jogador (requer admin key)
+  // GET /api/tournaments/:gameId/players/:playerId/code
+  const codeMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/code$/);
+  if (codeMatch && req.method === 'GET') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = codeMatch[1] as GameId;
+    const playerId = codeMatch[2];
+    const tournament = tournaments.get(gameId);
+
+    if (!tournament) {
+      return Response.json({ error: 'Tournament not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    const player = tournament.playerById.get(playerId);
+    if (!player) {
+      return Response.json({ error: 'Player not found' }, { status: 404, headers: corsHeaders });
+    }
+
+    return Response.json({
+      playerId: player.id,
+      playerName: player.name,
+      reconnectionCode: player.reconnectionCode,
+      status: player.status,
+    }, { headers: corsHeaders });
   }
 
   // Logs

@@ -107,6 +107,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [selectedGame, setSelectedGame] = useState<GameId>('gatos-caes');
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [reconnectionCode, setReconnectionCode] = useState<string | null>(null);
+  const [reconnectionCodeInput, setReconnectionCodeInput] = useState('');
 
   // Estado do torneio
   const [phase, setPhase] = useState<Phase>('connect');
@@ -171,6 +173,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     switch (message.type) {
       case 'welcome':
         setPlayerId(message.playerId);
+        // Guardar código de reconexão
+        if (message.reconnectionCode) {
+          setReconnectionCode(message.reconnectionCode);
+        }
         // Aceita tanto o formato antigo (message.tournamentState.id, ...) como o novo
         {
           const rawState = (message as any).tournamentState ?? null;
@@ -416,6 +422,51 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     }
   };
 
+  const handleRejoin = async () => {
+    if (!reconnectionCodeInput.trim() || reconnectionCodeInput.length !== 6) {
+      addLog('Introduz um código de reconexão válido (6 caracteres)!', 'error');
+      return;
+    }
+
+    if (!serverUrl.trim()) {
+      addLog('Introduz o endereço do servidor!', 'error');
+      return;
+    }
+
+    // Limpa cliente anterior se existir
+    if (clientRef.current) {
+      clientRef.current.disconnect();
+      clientRef.current = null;
+    }
+
+    // Cria novo cliente
+    const client = createTournamentClient(serverUrl);
+    clientRef.current = client;
+
+    // Configura handlers
+    client.setEventHandlers({
+      onConnectionStatusChange: (status, error) => {
+        setConnectionStatus(status);
+        setConnectionError(error ?? null);
+        if (status === 'connected') {
+          addLog('Ligado ao servidor!', 'success');
+        } else if (status === 'error') {
+          addLog(`Erro de ligação: ${error}`, 'error');
+        } else if (status === 'disconnected') {
+          addLog('Desligado do servidor.', 'warning');
+        }
+      },
+      onMessage: handleServerMessage,
+    });
+
+    try {
+      addLog(`A reconectar com código ${reconnectionCodeInput}...`, 'info');
+      await client.rejoin(serverUrl, reconnectionCodeInput);
+    } catch {
+      addLog('Falha ao reconectar ao servidor.', 'error');
+    }
+  };
+
   const handleReadyForMatch = () => {
     if (!currentMatch || !clientRef.current) return;
     clientRef.current.send({
@@ -511,6 +562,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   connectionStatus={connectionStatus}
                   connectionError={connectionError}
                   onConnect={handleConnect}
+                  reconnectionCodeInput={reconnectionCodeInput}
+                  setReconnectionCodeInput={setReconnectionCodeInput}
+                  onRejoin={handleRejoin}
                 />
               )}
 
@@ -518,6 +572,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                 <TournamentLobby
                   tournamentState={tournamentState}
                   playerId={playerId}
+                  reconnectionCode={reconnectionCode}
                 />
               )}
 
@@ -582,6 +637,9 @@ interface ConnectFormProps {
   connectionStatus: ConnectionStatus;
   connectionError: string | null;
   onConnect: () => void;
+  reconnectionCodeInput: string;
+  setReconnectionCodeInput: (code: string) => void;
+  onRejoin: () => void;
 }
 
 function ConnectForm({
@@ -592,6 +650,8 @@ function ConnectForm({
   selectedGame, setSelectedGame,
   connectionStatus, connectionError,
   onConnect,
+  reconnectionCodeInput, setReconnectionCodeInput,
+  onRejoin,
 }: ConnectFormProps) {
   // Jogos suportados no modo campeonato (servidor real + mock)
   const games: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
@@ -752,6 +812,37 @@ function ConnectForm({
             </>
           )}
         </button>
+
+        {/* Secção de reconexão */}
+        {!useMockServer && (
+          <div className="mt-6 pt-6 border-t border-white/20">
+            <h3 className="text-white/80 text-sm font-medium mb-3 flex items-center gap-2">
+              <span>🔄</span>
+              Voltar a entrar no torneio
+            </h3>
+            <p className="text-white/50 text-xs mb-3">
+              Se foste desconectado, insere o teu código de reconexão:
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={reconnectionCodeInput}
+                onChange={e => setReconnectionCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
+                placeholder="ABC234"
+                maxLength={6}
+                className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/50 font-mono text-lg tracking-widest text-center uppercase"
+                disabled={isConnecting}
+              />
+              <button
+                onClick={onRejoin}
+                disabled={isConnecting || reconnectionCodeInput.length !== 6 || (!serverUrl.trim() || serverUrl === 'custom')}
+                className="px-4 py-2 rounded-lg bg-blue-500/30 border border-blue-400/50 text-blue-200 font-medium hover:bg-blue-500/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Reconectar
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -760,9 +851,18 @@ function ConnectForm({
 interface TournamentLobbyProps {
   tournamentState: TournamentState;
   playerId: string | null;
+  reconnectionCode: string | null;
 }
 
-function TournamentLobby({ tournamentState, playerId }: TournamentLobbyProps) {
+function TournamentLobby({ tournamentState, playerId, reconnectionCode }: TournamentLobbyProps) {
+  const copyCode = () => {
+    if (reconnectionCode) {
+      navigator.clipboard.writeText(reconnectionCode).then(() => {
+        // Success feedback could be added here
+      });
+    }
+  };
+
   return (
     <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
       <div className="flex items-center justify-between mb-6">
@@ -777,6 +877,34 @@ function TournamentLobby({ tournamentState, playerId }: TournamentLobbyProps) {
           {tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer'}
         </span>
       </div>
+
+      {/* Código de reconexão */}
+      {reconnectionCode && (
+        <div className="mb-6 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-400/50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-200 text-sm font-medium mb-1">
+                🔑 O teu código de reconexão
+              </p>
+              <p className="text-white/60 text-xs">
+                Guarda este código! Dá-o ao professor se fores desconectado.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-2xl font-bold text-white tracking-widest bg-black/30 px-4 py-2 rounded-lg">
+                {reconnectionCode}
+              </span>
+              <button
+                onClick={copyCode}
+                className="px-3 py-2 rounded-lg bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm hover:bg-purple-500/40 transition-colors"
+                title="Copiar código"
+              >
+                📋
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div>
         <h3 className="text-white/80 text-sm font-medium mb-3">

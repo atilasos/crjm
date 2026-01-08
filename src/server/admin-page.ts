@@ -202,19 +202,76 @@ export function getAdminPageHtml(adminKey: string): string {
     }
     
     .player-tag {
-      padding: 4px 10px;
+      padding: 6px 10px;
       background: rgba(255,255,255,0.1);
       border-radius: 8px;
       font-size: 0.85rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
-    
+
     .player-tag.connected {
       border: 1px solid #4ade80;
     }
-    
+
     .player-tag.disconnected {
-      opacity: 0.5;
+      opacity: 0.7;
       border: 1px solid #f87171;
+    }
+
+    .player-tag.suspended {
+      background: rgba(245, 158, 11, 0.2);
+      border: 1px solid #f59e0b;
+    }
+
+    .player-tag.eliminated {
+      background: rgba(239, 68, 68, 0.2);
+      border: 1px solid #ef4444;
+      opacity: 0.5;
+      text-decoration: line-through;
+    }
+
+    .player-code {
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      font-size: 0.75rem;
+      background: rgba(0,0,0,0.3);
+      padding: 2px 5px;
+      border-radius: 4px;
+      cursor: pointer;
+      user-select: all;
+    }
+
+    .player-code:hover {
+      background: rgba(0,0,0,0.5);
+    }
+
+    .player-actions-inline {
+      display: inline-flex;
+      gap: 4px;
+      margin-left: 4px;
+    }
+
+    .btn-tiny {
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      border-radius: 4px;
+    }
+
+    .btn-suspend {
+      background: rgba(245, 158, 11, 0.3);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.5);
+    }
+
+    .btn-eliminate {
+      background: rgba(239, 68, 68, 0.3);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.5);
+    }
+
+    .player-status-icon {
+      font-size: 0.8rem;
     }
     
     .actions {
@@ -1079,12 +1136,28 @@ export function getAdminPageHtml(adminKey: string): string {
         const phaseText = t.phase === 'registration' ? 'Inscrições' : 
                          t.phase === 'running' ? 'A decorrer' : 'Terminado';
         
-        const players = t.players.map(p => 
-          '<span class="player-tag ' + (p.isConnected ? 'connected' : 'disconnected') + '">' +
+        const players = t.players.map(p => {
+          let statusClass = p.status === 'eliminated' ? 'eliminated' :
+                           p.status === 'suspended' ? 'suspended' :
+                           p.isConnected ? 'connected' : 'disconnected';
+          let statusIcon = p.status === 'eliminated' ? '❌' :
+                          p.status === 'suspended' ? '⏸️' :
+                          p.isConnected ? '🟢' : '🔴';
+          let actionBtns = '';
+          if (p.status !== 'eliminated' && t.phase === 'running') {
+            actionBtns = '<span class="player-actions-inline">' +
+              (p.status !== 'suspended' ? '<button class="btn-tiny btn-suspend" onclick="suspendPlayer(\\'' + t.gameId + '\\', \\'' + p.id + '\\', event)" title="Suspender">⏸</button>' : '') +
+              '<button class="btn-tiny btn-eliminate" onclick="eliminatePlayer(\\'' + t.gameId + '\\', \\'' + p.id + '\\', event)" title="Eliminar">✕</button>' +
+            '</span>';
+          }
+          return '<span class="player-tag ' + statusClass + '">' +
+            '<span class="player-status-icon">' + statusIcon + '</span>' +
             p.name + (p.classId ? ' (' + p.classId + ')' : '') +
             (p.losses > 0 ? ' [' + p.losses + 'D]' : '') +
-          '</span>'
-        ).join('');
+            ' <span class="player-code" onclick="copyCode(\\'' + p.reconnectionCode + '\\', event)" title="Clique para copiar">' + p.reconnectionCode + '</span>' +
+            actionBtns +
+          '</span>';
+        }).join('');
         
         const canStart = t.phase === 'registration' && t.players.length >= 2;
         
@@ -1433,10 +1506,10 @@ export function getAdminPageHtml(adminKey: string): string {
     }
     
     // ========== TOURNAMENT ACTIONS ==========
-    
+
     async function startTournament(gameId) {
       if (!confirm('Iniciar o torneio de ' + (GAME_NAMES[gameId] || gameId) + '?')) return;
-      
+
       const result = await postAction('/api/tournaments/' + gameId + '/start');
       if (result && result.success) {
         alert('Torneio iniciado!');
@@ -1445,15 +1518,59 @@ export function getAdminPageHtml(adminKey: string): string {
       }
       refresh();
     }
-    
+
     async function resetTournament(gameId) {
       if (!confirm('Reiniciar o torneio de ' + (GAME_NAMES[gameId] || gameId) + '? Todos os dados serão perdidos!')) return;
-      
+
       const result = await postAction('/api/tournaments/' + gameId + '/reset');
       if (result && result.success) {
         alert('Torneio reiniciado!');
       } else {
         alert('Erro ao reiniciar torneio: ' + (result?.error || 'Erro desconhecido'));
+      }
+      refresh();
+    }
+
+    // ========== PLAYER MANAGEMENT ==========
+
+    function copyCode(code, event) {
+      event.stopPropagation();
+      navigator.clipboard.writeText(code).then(() => {
+        const el = event.target;
+        const originalText = el.textContent;
+        el.textContent = '✓ Copiado!';
+        el.style.background = 'rgba(34, 197, 94, 0.3)';
+        setTimeout(() => {
+          el.textContent = originalText;
+          el.style.background = '';
+        }, 1500);
+      }).catch(err => {
+        alert('Erro ao copiar: ' + err);
+      });
+    }
+
+    async function suspendPlayer(gameId, playerId, event) {
+      event.stopPropagation();
+      if (!confirm('Suspender este jogador? O match será pausado.')) return;
+
+      const result = await postAction('/api/tournaments/' + gameId + '/players/' + playerId + '/suspend');
+      if (result && result.success) {
+        // Success, refresh will update
+      } else {
+        alert('Erro ao suspender jogador: ' + (result?.error || 'Erro desconhecido'));
+      }
+      refresh();
+    }
+
+    async function eliminatePlayer(gameId, playerId, event) {
+      event.stopPropagation();
+      if (!confirm('Eliminar este jogador? O oponente ganhará automaticamente todos os matches pendentes.')) return;
+
+      const result = await postAction('/api/tournaments/' + gameId + '/players/' + playerId + '/eliminate');
+      if (result && result.success) {
+        // Success, refresh will update
+      } else {
+        alert('Erro ao eliminar jogador: ' + (result?.error || 'Erro desconhecido'));
       }
       refresh();
     }

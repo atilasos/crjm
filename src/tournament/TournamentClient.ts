@@ -23,18 +23,24 @@ export interface TournamentClientEvents {
 export interface TournamentClient {
   /** Estado atual da ligação */
   readonly status: ConnectionStatus;
-  
+
   /** ID do jogador (após join bem-sucedido) */
   readonly playerId: string | null;
-  
+
   /** Estado atual do torneio (atualizado automaticamente) */
   readonly tournamentState: TournamentState | null;
+
+  /** Código de reconexão do jogador (após join bem-sucedido) */
+  readonly reconnectionCode: string | null;
 
   /** Liga ao servidor */
   connect(serverUrl: string): Promise<void>;
 
   /** Desliga do servidor */
   disconnect(): void;
+
+  /** Reconecta ao torneio usando um código de reconexão */
+  rejoin(serverUrl: string, reconnectionCode: string): Promise<void>;
 
   /** Envia uma mensagem para o servidor */
   send(message: ClientMessage): void;

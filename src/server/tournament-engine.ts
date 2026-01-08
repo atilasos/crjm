@@ -23,10 +23,17 @@ import type {
 // Tipos internos do motor
 // ============================================================================
 
+export type PlayerStatus = 'active' | 'suspended' | 'eliminated';
+
 export interface TournamentPlayer extends Player {
   losses: number; // 0, 1 ou 2 (eliminado)
   isConnected: boolean;
   socketId: string | null;
+  // Campos para reconexão
+  reconnectionCode: string;           // Código único 6 caracteres (ex: ABC234)
+  status: PlayerStatus;               // Estado do jogador
+  suspendedAt: Date | null;           // Quando foi suspenso
+  suspendedMatchId: string | null;    // Match pausado (se houver)
 }
 
 export interface TournamentMatch extends Match {
@@ -36,6 +43,10 @@ export interface TournamentMatch extends Match {
   gameState: unknown | null;
   whoseTurn: 'player1' | 'player2' | null;
   moves: Array<{ playerId: string; move: unknown; timestamp: Date }>;
+  // Campos para pausa por desconexão
+  isPaused: boolean;
+  pausedAt: Date | null;
+  pausedByPlayerId: string | null;
 }
 
 export interface Tournament {
@@ -55,6 +66,7 @@ export interface Tournament {
   // Índices para lookup rápido
   playerById: Map<string, TournamentPlayer>;
   matchById: Map<string, TournamentMatch>;
+  playerByCode: Map<string, TournamentPlayer>; // Índice por código de reconexão
 
   // Rastreia jogadores a aguardar próximo match em cada bracket
   winnersWaiting: string[];
@@ -71,6 +83,23 @@ export interface Tournament {
 
 function generateId(): string {
   return Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+}
+
+/**
+ * Gera código de reconexão amigável: 3 letras + 3 números.
+ * Exclui caracteres confusos (O, I, 0, 1).
+ */
+function generateReconnectionCode(): string {
+  const letters = 'ABCDEFGHJKMNPQRSTUVWXYZ'; // Sem O, I
+  const numbers = '23456789';                 // Sem 0, 1
+  let code = '';
+  for (let i = 0; i < 3; i++) {
+    code += letters[Math.floor(Math.random() * letters.length)];
+  }
+  for (let i = 0; i < 3; i++) {
+    code += numbers[Math.floor(Math.random() * numbers.length)];
+  }
+  return code;
 }
 
 function shuffle<T>(array: T[]): T[] {
@@ -103,6 +132,7 @@ export function createTournament(gameId: GameId): Tournament {
     finishedAt: null,
     playerById: new Map(),
     matchById: new Map(),
+    playerByCode: new Map(),
     winnersWaiting: [],
     losersWaiting: [],
     winnersRound: 1,
@@ -124,6 +154,12 @@ export function addPlayer(
     return null;
   }
 
+  // Gera código único (verifica colisões)
+  let reconnectionCode: string;
+  do {
+    reconnectionCode = generateReconnectionCode();
+  } while (tournament.playerByCode.has(reconnectionCode));
+
   const player: TournamentPlayer = {
     id: generateId(),
     name,
@@ -131,10 +167,15 @@ export function addPlayer(
     losses: 0,
     isConnected: true,
     socketId: socketId ?? null,
+    reconnectionCode,
+    status: 'active',
+    suspendedAt: null,
+    suspendedMatchId: null,
   };
 
   tournament.players.push(player);
   tournament.playerById.set(player.id, player);
+  tournament.playerByCode.set(reconnectionCode, player);
 
   return player;
 }
@@ -144,11 +185,15 @@ export function removePlayer(tournament: Tournament, playerId: string): boolean 
     return false;
   }
 
+  const player = tournament.playerById.get(playerId);
+  if (!player) return false;
+
   const index = tournament.players.findIndex(p => p.id === playerId);
   if (index === -1) return false;
 
   tournament.players.splice(index, 1);
   tournament.playerById.delete(playerId);
+  tournament.playerByCode.delete(player.reconnectionCode);
   return true;
 }
 
@@ -194,6 +239,9 @@ function createMatch(
     gameState: null,
     whoseTurn: null,
     moves: [],
+    isPaused: false,
+    pausedAt: null,
+    pausedByPlayerId: null,
   };
 }
 
@@ -528,6 +576,9 @@ export function toTournamentState(tournament: Tournament): TournamentState {
       id: p.id,
       name: p.name,
       classId: p.classId,
+      isOnline: p.isConnected,
+      status: p.status,
+      reconnectionCode: p.reconnectionCode,
     })),
     winnersMatches: tournament.winnersMatches.map(toProtocolMatch),
     losersMatches: tournament.losersMatches.map(toProtocolMatch),
@@ -554,40 +605,191 @@ function toProtocolMatch(match: TournamentMatch): Match {
 }
 
 // ============================================================================
-// Utilitários para desconexão
+// Utilitários para reconexão e gestão de jogadores
 // ============================================================================
 
-export function handlePlayerDisconnect(
+/**
+ * Encontra jogador pelo código de reconexão.
+ */
+export function findPlayerByCode(
+  tournament: Tournament,
+  code: string
+): TournamentPlayer | null {
+  const normalizedCode = code.toUpperCase().trim();
+  return tournament.playerByCode.get(normalizedCode) ?? null;
+}
+
+/**
+ * Encontra o match ativo onde o jogador está envolvido.
+ */
+export function findActiveMatchForPlayer(
   tournament: Tournament,
   playerId: string
-): { forfeitMatchId: string | null } {
-  const player = tournament.playerById.get(playerId);
-  if (!player) {
-    return { forfeitMatchId: null };
-  }
-
-  player.isConnected = false;
-  player.socketId = null;
-
-  // Se o torneio não está a decorrer, não há nada a fazer
-  if (tournament.phase !== 'running') {
-    return { forfeitMatchId: null };
-  }
-
-  // Encontra match em curso onde este jogador está envolvido
-  const activeMatch = [...tournament.winnersMatches, ...tournament.losersMatches]
+): TournamentMatch | null {
+  return [...tournament.winnersMatches, ...tournament.losersMatches]
     .concat(tournament.grandFinal ? [tournament.grandFinal] : [])
     .concat(tournament.grandFinalReset ? [tournament.grandFinalReset] : [])
     .find(m =>
       m.phase !== 'finished' &&
       (m.player1?.id === playerId || m.player2?.id === playerId)
-    );
+    ) ?? null;
+}
 
-  if (activeMatch) {
-    return { forfeitMatchId: activeMatch.id };
+/**
+ * Pausa um match devido a desconexão de jogador.
+ */
+export function pauseMatch(
+  tournament: Tournament,
+  matchId: string,
+  byPlayerId: string
+): void {
+  const match = tournament.matchById.get(matchId);
+  if (!match || match.phase === 'finished') return;
+
+  match.isPaused = true;
+  match.pausedAt = new Date();
+  match.pausedByPlayerId = byPlayerId;
+}
+
+/**
+ * Retoma um match que estava pausado.
+ */
+export function resumeMatch(
+  tournament: Tournament,
+  matchId: string
+): void {
+  const match = tournament.matchById.get(matchId);
+  if (!match || !match.isPaused) return;
+
+  match.isPaused = false;
+  match.pausedAt = null;
+  match.pausedByPlayerId = null;
+}
+
+/**
+ * Suspende um jogador (desconectado mas pode voltar).
+ * Se estiver num match ativo, pausa o match em vez de forfeit.
+ */
+export function suspendPlayer(
+  tournament: Tournament,
+  playerId: string
+): { pausedMatchId: string | null } {
+  const player = tournament.playerById.get(playerId);
+  if (!player) return { pausedMatchId: null };
+
+  player.status = 'suspended';
+  player.suspendedAt = new Date();
+  player.isConnected = false;
+
+  // Se está em match ativo, pausar em vez de forfeit
+  if (tournament.phase === 'running') {
+    const activeMatch = findActiveMatchForPlayer(tournament, playerId);
+    if (activeMatch && activeMatch.phase !== 'finished') {
+      pauseMatch(tournament, activeMatch.id, playerId);
+      player.suspendedMatchId = activeMatch.id;
+      return { pausedMatchId: activeMatch.id };
+    }
   }
 
-  return { forfeitMatchId: null };
+  return { pausedMatchId: null };
+}
+
+/**
+ * Reativa um jogador que estava suspenso (reconectou).
+ */
+export function reactivatePlayer(
+  tournament: Tournament,
+  playerId: string,
+  socketId: string
+): { resumedMatchId: string | null } {
+  const player = tournament.playerById.get(playerId);
+  if (!player) return { resumedMatchId: null };
+
+  player.status = 'active';
+  player.isConnected = true;
+  player.socketId = socketId;
+  player.suspendedAt = null;
+
+  // Se tinha um match pausado, retomar
+  const pausedMatchId = player.suspendedMatchId;
+  if (pausedMatchId) {
+    resumeMatch(tournament, pausedMatchId);
+    player.suspendedMatchId = null;
+    return { resumedMatchId: pausedMatchId };
+  }
+
+  return { resumedMatchId: null };
+}
+
+/**
+ * Elimina um jogador do torneio.
+ * Todos os matches ativos/pendentes são forfeitados.
+ */
+export function eliminatePlayer(
+  tournament: Tournament,
+  playerId: string
+): { forfeitedMatchIds: string[] } {
+  const player = tournament.playerById.get(playerId);
+  if (!player) return { forfeitedMatchIds: [] };
+
+  player.status = 'eliminated';
+  player.losses = 2; // Marcar como eliminado
+  player.isConnected = false;
+  player.suspendedAt = null;
+  player.suspendedMatchId = null;
+
+  const forfeitedMatchIds: string[] = [];
+
+  // Encontrar e forfeit todos os matches onde este jogador está envolvido
+  const allMatches = [...tournament.winnersMatches, ...tournament.losersMatches]
+    .concat(tournament.grandFinal ? [tournament.grandFinal] : [])
+    .concat(tournament.grandFinalReset ? [tournament.grandFinalReset] : []);
+
+  for (const match of allMatches) {
+    if (match.phase === 'finished') continue;
+    if (match.player1?.id !== playerId && match.player2?.id !== playerId) continue;
+
+    // Forfeit este match
+    const winnerId = forfeitMatch(tournament, match.id, playerId);
+    if (winnerId) {
+      forfeitedMatchIds.push(match.id);
+    }
+  }
+
+  return { forfeitedMatchIds };
+}
+
+// ============================================================================
+// Utilitários para desconexão (legado - mantido para compatibilidade)
+// ============================================================================
+
+/**
+ * @deprecated Use suspendPlayer() em vez disso para suportar reconexão.
+ * Esta função agora suspende o jogador em vez de forfeit imediato.
+ */
+export function handlePlayerDisconnect(
+  tournament: Tournament,
+  playerId: string
+): { forfeitMatchId: string | null; pausedMatchId: string | null } {
+  const player = tournament.playerById.get(playerId);
+  if (!player) {
+    return { forfeitMatchId: null, pausedMatchId: null };
+  }
+
+  player.isConnected = false;
+  player.socketId = null;
+
+  // Se o torneio não está a decorrer, apenas marcar como suspenso
+  if (tournament.phase !== 'running') {
+    player.status = 'suspended';
+    player.suspendedAt = new Date();
+    return { forfeitMatchId: null, pausedMatchId: null };
+  }
+
+  // Suspender jogador e pausar match (em vez de forfeit imediato)
+  const { pausedMatchId } = suspendPlayer(tournament, playerId);
+
+  return { forfeitMatchId: null, pausedMatchId };
 }
 
 export function forfeitMatch(
@@ -608,6 +810,11 @@ export function forfeitMatch(
   if (!winnerId) {
     return null;
   }
+
+  // Limpar estado de pausa se existia
+  match.isPaused = false;
+  match.pausedAt = null;
+  match.pausedByPlayerId = null;
 
   // Dá vitória ao outro jogador (2-0 automático)
   match.score = match.player1?.id === winnerId

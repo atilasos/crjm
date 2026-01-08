@@ -102,6 +102,7 @@ export class TournamentClientMock implements TournamentClient {
   private _currentMatch: InternalMatch | null = null;
   private _myRole: 'player1' | 'player2' | null = null;
   private _gameId: GameId | null = null;
+  private _reconnectionCode: string | null = null;
 
   // Seat fixo no match (player1 ou player2 - não muda)
   // myRole pode mudar entre jogos quando os papéis trocam
@@ -126,6 +127,10 @@ export class TournamentClientMock implements TournamentClient {
 
   get tournamentState(): TournamentState | null {
     return this._tournamentState;
+  }
+
+  get reconnectionCode(): string | null {
+    return this._reconnectionCode;
   }
 
   setEventHandlers(events: Partial<TournamentClientEvents>): void {
@@ -156,7 +161,18 @@ export class TournamentClientMock implements TournamentClient {
     this._myRole = null;
     this._gameState = null;
     this._gameId = null;
+    this._reconnectionCode = null;
     this._events.onConnectionStatusChange?.('disconnected');
+  }
+
+  async rejoin(serverUrl: string, reconnectionCode: string): Promise<void> {
+    // O mock não suporta reconexão real, mas implementamos a interface
+    await this.connect(serverUrl);
+    this.emit({
+      type: 'error',
+      code: 'MOCK_NO_REJOIN',
+      message: 'O modo de teste não suporta reconexão. Inscreve-te novamente.',
+    });
   }
 
   send(message: ClientMessage): void {
@@ -230,6 +246,17 @@ export class TournamentClientMock implements TournamentClient {
       championName: null,
     };
 
+    // Gerar código de reconexão mock
+    const letters = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+    const numbers = '23456789';
+    this._reconnectionCode = '';
+    for (let i = 0; i < 3; i++) {
+      this._reconnectionCode += letters[Math.floor(Math.random() * letters.length)];
+    }
+    for (let i = 0; i < 3; i++) {
+      this._reconnectionCode += numbers[Math.floor(Math.random() * numbers.length)];
+    }
+
     // Send welcome message (NEW protocol)
     const welcomeMsg: WelcomeMessage = {
       type: 'welcome',
@@ -237,12 +264,13 @@ export class TournamentClientMock implements TournamentClient {
       playerName: playerName,
       tournamentId: tournamentId,
       tournamentState: this._tournamentState,
+      reconnectionCode: this._reconnectionCode,
     };
     this.emit(welcomeMsg);
 
     this.emit({
       type: 'info',
-      message: `Inscrito no campeonato de ${gameId}! O teu adversário será ${botName} (Bot). A aguardar início...`,
+      message: `Inscrito no campeonato de ${gameId}! O teu código de reconexão é: ${this._reconnectionCode}. O teu adversário será ${botName} (Bot). A aguardar início...`,
     });
 
     // Inicia o campeonato automaticamente

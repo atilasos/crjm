@@ -25,6 +25,7 @@ export class TournamentWebSocketClient implements TournamentClient {
   private _maxReconnectAttempts = 3;
   private _reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private _serverUrl: string | null = null;
+  private _reconnectionCode: string | null = null;
 
   get status(): ConnectionStatus {
     return this._status;
@@ -36,6 +37,10 @@ export class TournamentWebSocketClient implements TournamentClient {
 
   get tournamentState(): TournamentState | null {
     return this._tournamentState;
+  }
+
+  get reconnectionCode(): string | null {
+    return this._reconnectionCode;
   }
 
   setEventHandlers(events: Partial<TournamentClientEvents>): void {
@@ -117,17 +122,31 @@ export class TournamentWebSocketClient implements TournamentClient {
   disconnect(): void {
     this.clearReconnectTimeout();
     this._reconnectAttempts = this._maxReconnectAttempts; // Previne reconexão
-    
+
     if (this._ws) {
       this._ws.close(1000, 'Desligado pelo utilizador');
       this._ws = null;
     }
-    
+
     this._status = 'disconnected';
     this._playerId = null;
     this._tournamentState = null;
     this._serverUrl = null;
+    this._reconnectionCode = null;
     this._events.onConnectionStatusChange?.('disconnected');
+  }
+
+  /**
+   * Reconecta ao torneio usando um código de reconexão.
+   */
+  async rejoin(serverUrl: string, reconnectionCode: string): Promise<void> {
+    await this.connect(serverUrl);
+
+    // Enviar mensagem de rejoin
+    this.send({
+      type: 'rejoin_tournament',
+      reconnectionCode: reconnectionCode.toUpperCase().trim(),
+    });
   }
 
   send(message: ClientMessage): void {
@@ -158,8 +177,9 @@ export class TournamentWebSocketClient implements TournamentClient {
       case 'welcome':
         this._playerId = message.playerId;
         this._tournamentState = message.tournamentState;
+        this._reconnectionCode = message.reconnectionCode;
         break;
-        
+
       case 'tournament_state_update':
         this._tournamentState = message.tournamentState;
         break;

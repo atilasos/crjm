@@ -27,12 +27,16 @@ export const GAME_NAMES: Record<GameId, string> = {
   'nex': 'Nex',
 };
 
+export type PlayerStatus = 'active' | 'suspended' | 'eliminated';
+
 export interface Player {
   id: string;
   name: string;
   classId?: string;
   isOnline: boolean;
   isBot?: boolean;
+  status?: PlayerStatus;
+  reconnectionCode?: string;
 }
 
 export type BracketType = 'winners' | 'losers';
@@ -122,8 +126,14 @@ export interface LeaveTournamentMessage {
   type: 'leave_tournament';
 }
 
+export interface RejoinTournamentMessage {
+  type: 'rejoin_tournament';
+  reconnectionCode: string;
+}
+
 export type ClientMessage =
   | JoinTournamentMessage
+  | RejoinTournamentMessage
   | ReadyForMatchMessage
   | SubmitMoveMessage
   | LeaveTournamentMessage;
@@ -138,6 +148,7 @@ export interface WelcomeMessage {
   playerName: string;
   tournamentId: string;
   tournamentState: TournamentState;
+  reconnectionCode: string;
 }
 
 export interface TournamentStateUpdateMessage {
