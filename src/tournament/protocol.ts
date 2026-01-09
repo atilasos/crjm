@@ -66,6 +66,11 @@ export interface MatchSummary {
   score: MatchScore;
   phase: MatchPhase;
   winnerId: string | null;
+  // Campos para brackets pré-planeados
+  matchNumber?: number;           // Número sequencial da partida (Jogo #1, #2, etc.)
+  sourceLabel1?: string;          // "Vencedor do Jogo #X" ou "Vencedor: Maria vs Joana"
+  sourceLabel2?: string;          // Idem para jogador 2
+  result?: 'normal' | 'bye';      // 'bye' indica vitória automática
 }
 
 /** Match completo (usado em match_assigned) */
@@ -81,6 +86,15 @@ export interface Match {
   whoStartsCurrentGame: 'player1' | 'player2';
   phase: MatchPhase;
   winnerId: string | null;
+  // Campos para brackets pré-planeados
+  matchNumber?: number;           // Número sequencial da partida
+  sourceMatch1?: number;          // Partida de origem do jogador 1
+  sourceMatch2?: number;          // Partida de origem do jogador 2
+  sourceLabel1?: string;          // "Vencedor do Jogo #X" ou "Vencedor: Maria vs Joana"
+  sourceLabel2?: string;          // Idem para jogador 2
+  nextMatchIfWin?: number;        // Próxima partida se ganhar
+  nextMatchIfLose?: number;       // Próxima partida se perder (losers bracket)
+  result?: 'normal' | 'bye';      // 'bye' indica vitória automática
 }
 
 /** Estado do torneio conforme CLIENT-INTEGRATION_NEW */

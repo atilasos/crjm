@@ -431,6 +431,15 @@ export function getAdminPageHtml(adminKey: string): string {
     .match-card.finished {
       opacity: 0.7;
     }
+
+    .match-card.bye {
+      opacity: 0.6;
+      border-style: dashed;
+    }
+
+    .match-card.bye .match-player {
+      background: rgba(100, 100, 100, 0.2);
+    }
     
     .match-actions {
       display: flex;
@@ -1367,32 +1376,61 @@ export function getAdminPageHtml(adminKey: string): string {
     }
     
     function renderMatchCard(match, gameId) {
-      const p1Name = match.player1?.name || 'A aguardar...';
-      const p2Name = match.player2?.name || 'A aguardar...';
-      const p1Class = match.player1 ? '' : 'tbd';
-      const p2Class = match.player2 ? '' : 'tbd';
+      // Determinar nomes/labels para jogadores
+      let p1Label, p2Label, p1Class, p2Class;
+
+      if (match.player1) {
+        p1Label = match.player1.name;
+        p1Class = '';
+      } else if (match.sourceLabel1) {
+        p1Label = match.sourceLabel1;
+        p1Class = 'pending-match';
+      } else {
+        p1Label = 'A aguardar...';
+        p1Class = 'tbd';
+      }
+
+      if (match.player2) {
+        p2Label = match.player2.name;
+        p2Class = '';
+      } else if (match.sourceLabel2) {
+        p2Label = match.sourceLabel2;
+        p2Class = 'pending-match';
+      } else {
+        p2Label = 'A aguardar...';
+        p2Class = 'tbd';
+      }
 
       const p1Score = match.score?.player1Wins || 0;
       const p2Score = match.score?.player2Wins || 0;
       const p1Winner = match.winnerId && match.winnerId === match.player1?.id;
       const p2Winner = match.winnerId && match.winnerId === match.player2?.id;
       const showRestartButtons = match.phase === 'playing' || match.phase === 'waiting';
+      const isBye = match.result === 'bye';
+
+      // Match number header
+      const matchNumberHeader = match.matchNumber
+        ? '<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-align: center; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">' +
+            'Jogo #' + match.matchNumber + (isBye ? ' (BYE)' : '') +
+          '</div>'
+        : '';
 
       let restartButtons = '';
-      if (showRestartButtons && gameId) {
+      if (showRestartButtons && gameId && !isBye) {
         restartButtons = '<div class="match-actions">' +
           '<button class="btn-restart-game" onclick="restartGame(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar só o jogo atual (mantém score)">🔄 Jogo</button>' +
           '<button class="btn-restart-match" onclick="restartMatchFull(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar match completo (0-0)">🔁 Match</button>' +
         '</div>';
       }
 
-      return '<div class="match-card ' + match.phase + '">' +
+      return '<div class="match-card ' + match.phase + (isBye ? ' bye' : '') + '">' +
+        matchNumberHeader +
         '<div class="match-player ' + (p1Winner ? 'winner' : '') + '">' +
-          '<span class="player-name ' + p1Class + '">' + p1Name + '</span>' +
+          '<span class="player-name ' + p1Class + '" title="' + p1Label + '">' + p1Label + '</span>' +
           '<span class="player-score">' + p1Score + '</span>' +
         '</div>' +
         '<div class="match-player ' + (p2Winner ? 'winner' : '') + '">' +
-          '<span class="player-name ' + p2Class + '">' + p2Name + '</span>' +
+          '<span class="player-name ' + p2Class + '" title="' + p2Label + '">' + p2Label + '</span>' +
           '<span class="player-score">' + p2Score + '</span>' +
         '</div>' +
         restartButtons +
