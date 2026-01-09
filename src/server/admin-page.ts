@@ -115,13 +115,25 @@ export function getAdminPageHtml(adminKey: string): string {
     
     .grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      grid-template-columns: 1fr;
       gap: 20px;
     }
-    
+
+    .grid.bracket-view {
+      grid-template-columns: 3fr 1fr;
+    }
+
+    .grid.bracket-view .card:first-child {
+      grid-row: 1 / 3;
+    }
+
+    .grid.bracket-view .card:nth-child(3) {
+      grid-column: 1 / -1;
+    }
+
     body.fullscreen-mode .grid {
       flex: 1;
-      grid-template-columns: 2fr 1fr;
+      grid-template-columns: 4fr 1fr;
       overflow: hidden;
     }
     
@@ -364,37 +376,41 @@ export function getAdminPageHtml(adminKey: string): string {
     
     .rounds-container {
       display: flex;
-      gap: 40px;
+      gap: 25px;
       align-items: flex-start;
+      flex-wrap: wrap;
     }
-    
+
     .round {
       display: flex;
       flex-direction: column;
-      gap: 15px;
-      min-width: 200px;
+      gap: 8px;
+      min-width: 180px;
+      flex: 1;
+      max-width: 220px;
     }
-    
+
     .round-header {
-      font-size: 0.75rem;
+      font-size: 0.7rem;
       color: rgba(255,255,255,0.5);
       text-transform: uppercase;
       text-align: center;
       letter-spacing: 1px;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
     }
-    
+
     .match-card {
       background: rgba(255,255,255,0.08);
-      border-radius: 10px;
+      border-radius: 8px;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,0.1);
-      transition: all 0.3s ease;
+      transition: all 0.2s ease;
+      font-size: 0.85rem;
     }
-    
+
     .match-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
     
     .match-card.playing {
@@ -463,41 +479,47 @@ export function getAdminPageHtml(adminKey: string): string {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 10px 12px;
+      padding: 6px 10px;
       background: rgba(0,0,0,0.2);
       border-bottom: 1px solid rgba(255,255,255,0.05);
     }
-    
+
     .match-player:last-child {
       border-bottom: none;
     }
-    
+
     .match-player.winner {
       background: rgba(34, 197, 94, 0.2);
     }
-    
+
     .match-player.winner .player-name {
       color: #4ade80;
       font-weight: 600;
     }
-    
+
     .player-name {
-      font-size: 0.9rem;
-      max-width: 140px;
+      font-size: 0.8rem;
+      max-width: 130px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    
+
     .player-name.tbd {
       color: rgba(255,255,255,0.4);
       font-style: italic;
+      font-size: 0.75rem;
     }
-    
+
+    .player-name.pending-match {
+      color: rgba(255,255,255,0.5);
+      font-size: 0.7rem;
+    }
+
     .player-score {
       font-weight: 700;
-      font-size: 0.95rem;
-      min-width: 20px;
+      font-size: 0.85rem;
+      min-width: 18px;
       text-align: center;
     }
     
@@ -1015,6 +1037,8 @@ export function getAdminPageHtml(adminKey: string): string {
       currentView = view;
       document.getElementById('viewList').classList.toggle('active', view === 'list');
       document.getElementById('viewBracket').classList.toggle('active', view === 'bracket');
+      // Toggle grid layout based on view
+      document.querySelector('.normal-content .grid').classList.toggle('bracket-view', view === 'bracket');
       renderTournaments(cachedTournaments);
     }
     
@@ -1251,7 +1275,13 @@ export function getAdminPageHtml(adminKey: string): string {
     
     function renderVisualBracket(state, gameId) {
       let html = '<div class="bracket-visual"><div class="bracket-container">';
-      
+
+      // Collect all matches for source match lookup
+      const allMatches = [
+        ...(state.winnersMatches || []),
+        ...(state.losersMatches || []),
+      ];
+
       // Winners Bracket
       if (state.winnersMatches && state.winnersMatches.length > 0) {
         const rounds = groupMatchesByRound(state.winnersMatches);
@@ -1261,17 +1291,17 @@ export function getAdminPageHtml(adminKey: string): string {
             '<div class="bracket-line"></div>' +
           '</div>' +
           '<div class="rounds-container">';
-        
+
         for (const [round, matches] of Object.entries(rounds).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
           html += '<div class="round">' +
             '<div class="round-header">Ronda ' + round + '</div>' +
-            matches.map(m => renderMatchCard(m, gameId)).join('') +
+            matches.map(m => renderMatchCard(m, gameId, allMatches)).join('') +
           '</div>';
         }
-        
+
         html += '</div></div>';
       }
-      
+
       // Losers Bracket
       if (state.losersMatches && state.losersMatches.length > 0) {
         const rounds = groupMatchesByRound(state.losersMatches);
@@ -1281,31 +1311,31 @@ export function getAdminPageHtml(adminKey: string): string {
             '<div class="bracket-line"></div>' +
           '</div>' +
           '<div class="rounds-container">';
-        
+
         for (const [round, matches] of Object.entries(rounds).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
           html += '<div class="round">' +
             '<div class="round-header">Ronda ' + round + '</div>' +
-            matches.map(m => renderMatchCard(m, gameId)).join('') +
+            matches.map(m => renderMatchCard(m, gameId, allMatches)).join('') +
           '</div>';
         }
-        
+
         html += '</div></div>';
       }
-      
+
       // Grand Final
       if (state.grandFinal || state.grandFinalReset) {
         html += '<div class="grand-final-section">' +
           '<div class="bracket-title">🏆 Grand Final</div>';
-        
+
         if (state.grandFinal) {
-          html += '<div class="grand-final-match">' + renderMatchCard(state.grandFinal, gameId) + '</div>';
+          html += '<div class="grand-final-match">' + renderMatchCard(state.grandFinal, gameId, allMatches) + '</div>';
         }
-        
+
         if (state.grandFinalReset) {
           html += '<div style="margin-top: 15px; font-size: 0.8rem; color: rgba(255,255,255,0.6);">Reset</div>' +
-            '<div class="grand-final-match">' + renderMatchCard(state.grandFinalReset, gameId) + '</div>';
+            '<div class="grand-final-match">' + renderMatchCard(state.grandFinalReset, gameId, allMatches) + '</div>';
         }
-        
+
         html += '</div>';
       }
       
@@ -1333,15 +1363,44 @@ export function getAdminPageHtml(adminKey: string): string {
       return rounds;
     }
     
-    function renderMatchCard(match, gameId) {
-      const p1Name = match.player1?.name || 'TBD';
-      const p2Name = match.player2?.name || 'TBD';
+    function renderMatchCard(match, gameId, allMatches) {
+      // Determine player names - show pending match info if available
+      let p1Name, p2Name, p1Class, p2Class;
+
+      if (match.player1) {
+        p1Name = match.player1.name;
+        p1Class = '';
+      } else {
+        const sourceMatch = findSourceMatch(match, 'player1', allMatches);
+        if (sourceMatch && sourceMatch.player1 && sourceMatch.player2) {
+          p1Name = '⏳ ' + sourceMatch.player1.name + ' vs ' + sourceMatch.player2.name;
+          p1Class = 'pending-match';
+        } else {
+          p1Name = 'A aguardar...';
+          p1Class = 'tbd';
+        }
+      }
+
+      if (match.player2) {
+        p2Name = match.player2.name;
+        p2Class = '';
+      } else {
+        const sourceMatch = findSourceMatch(match, 'player2', allMatches);
+        if (sourceMatch && sourceMatch.player1 && sourceMatch.player2) {
+          p2Name = '⏳ ' + sourceMatch.player1.name + ' vs ' + sourceMatch.player2.name;
+          p2Class = 'pending-match';
+        } else {
+          p2Name = 'A aguardar...';
+          p2Class = 'tbd';
+        }
+      }
+
       const p1Score = match.score?.player1Wins || 0;
       const p2Score = match.score?.player2Wins || 0;
       const p1Winner = match.winnerId && match.winnerId === match.player1?.id;
       const p2Winner = match.winnerId && match.winnerId === match.player2?.id;
       const showRestartButtons = match.phase === 'playing' || match.phase === 'waiting';
-      
+
       let restartButtons = '';
       if (showRestartButtons && gameId) {
         restartButtons = '<div class="match-actions">' +
@@ -1349,18 +1408,47 @@ export function getAdminPageHtml(adminKey: string): string {
           '<button class="btn-restart-match" onclick="restartMatchFull(\\'' + gameId + '\\', \\'' + match.id + '\\', event)" title="Reiniciar match completo (0-0)">🔁 Match</button>' +
         '</div>';
       }
-      
+
       return '<div class="match-card ' + match.phase + '">' +
         '<div class="match-player ' + (p1Winner ? 'winner' : '') + '">' +
-          '<span class="player-name ' + (!match.player1 ? 'tbd' : '') + '">' + p1Name + '</span>' +
+          '<span class="player-name ' + p1Class + '">' + p1Name + '</span>' +
           '<span class="player-score">' + p1Score + '</span>' +
         '</div>' +
         '<div class="match-player ' + (p2Winner ? 'winner' : '') + '">' +
-          '<span class="player-name ' + (!match.player2 ? 'tbd' : '') + '">' + p2Name + '</span>' +
+          '<span class="player-name ' + p2Class + '">' + p2Name + '</span>' +
           '<span class="player-score">' + p2Score + '</span>' +
         '</div>' +
         restartButtons +
       '</div>';
+    }
+
+    // Find the source match that will determine a player for a given match slot
+    function findSourceMatch(targetMatch, slot, allMatches) {
+      if (!allMatches) return null;
+
+      // In double elimination, the structure is:
+      // Winners bracket: winner of round N match goes to round N+1
+      // Losers bracket: more complex routing
+
+      const targetRound = targetMatch.round;
+      const targetBracket = targetMatch.bracket;
+
+      if (targetRound <= 1) return null;
+
+      // For winners bracket, look for matches in previous round
+      if (targetBracket === 'winners') {
+        const prevRoundMatches = allMatches.filter(m =>
+          m.bracket === 'winners' && m.round === targetRound - 1
+        );
+        // Simple heuristic: return first unfinished match from previous round
+        return prevRoundMatches.find(m => !m.winnerId);
+      }
+
+      // For losers bracket, it's more complex - just find an unfinished match
+      const prevMatches = allMatches.filter(m =>
+        m.round < targetRound && !m.winnerId
+      );
+      return prevMatches.length > 0 ? prevMatches[0] : null;
     }
     
     // ========== LIST BRACKET RENDERING (original) ==========
