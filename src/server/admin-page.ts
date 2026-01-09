@@ -1150,13 +1150,32 @@ export function getAdminPageHtml(adminKey: string): string {
         });
       }
       
-      // Sort: 1-5 by position, rest alphabetically
+      // Sort:
+      // 1. Players with position (1-5) first, sorted by position
+      // 2. Active players (playing/waiting) sorted by wins desc, then losses asc
+      // 3. Eliminated players without position sorted by wins desc, then losses asc
       standings.sort((a, b) => {
+        // Both have positions - sort by position
         if (a.position !== null && b.position !== null) {
           return a.position - b.position;
         }
+        // Only one has position - that one comes first
         if (a.position !== null) return -1;
         if (b.position !== null) return 1;
+
+        // Check if players are active (not eliminated)
+        const aActive = a.status === 'playing' || a.status === 'waiting';
+        const bActive = b.status === 'playing' || b.status === 'waiting';
+
+        // Active players come before eliminated
+        if (aActive && !bActive) return -1;
+        if (!aActive && bActive) return 1;
+
+        // Within same group (both active or both eliminated), sort by wins desc, then losses asc
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (a.losses !== b.losses) return a.losses - b.losses;
+
+        // If still tied, sort alphabetically
         return a.player.name.localeCompare(b.player.name, 'pt');
       });
       
