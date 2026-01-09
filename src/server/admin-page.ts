@@ -1126,18 +1126,21 @@ export function getAdminPageHtml(adminKey: string): string {
         if (loserId && !positionedPlayers.has(loserId)) positionedPlayers.set(loserId, 2);
       }
       
-      // 3rd, 4th, 5th: Last eliminated from losers bracket
-      const remainingEliminated = eliminationOrder
-        .filter(id => !positionedPlayers.has(id))
-        .reverse();
-      
-      let nextPosition = 3;
-      for (const playerId of remainingEliminated) {
-        if (nextPosition <= 5) {
-          positionedPlayers.set(playerId, nextPosition);
-          nextPosition++;
-        } else {
-          break;
+      // 3rd, 4th, 5th: Only assign when tournament is finished (has champion)
+      // Otherwise eliminated players shouldn't have positions yet
+      if (state?.championId) {
+        const remainingEliminated = eliminationOrder
+          .filter(id => !positionedPlayers.has(id))
+          .reverse();
+
+        let nextPosition = 3;
+        for (const playerId of remainingEliminated) {
+          if (nextPosition <= 5) {
+            positionedPlayers.set(playerId, nextPosition);
+            nextPosition++;
+          } else {
+            break;
+          }
         }
       }
       
@@ -1276,12 +1279,6 @@ export function getAdminPageHtml(adminKey: string): string {
     function renderVisualBracket(state, gameId) {
       let html = '<div class="bracket-visual"><div class="bracket-container">';
 
-      // Collect all matches for source match lookup
-      const allMatches = [
-        ...(state.winnersMatches || []),
-        ...(state.losersMatches || []),
-      ];
-
       // Winners Bracket
       if (state.winnersMatches && state.winnersMatches.length > 0) {
         const rounds = groupMatchesByRound(state.winnersMatches);
@@ -1295,16 +1292,22 @@ export function getAdminPageHtml(adminKey: string): string {
         for (const [round, matches] of Object.entries(rounds).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
           html += '<div class="round">' +
             '<div class="round-header">Ronda ' + round + '</div>' +
-            matches.map(m => renderMatchCard(m, gameId, allMatches)).join('') +
+            matches.map(m => renderMatchCard(m, gameId)).join('') +
           '</div>';
         }
 
         html += '</div></div>';
       }
 
-      // Losers Bracket
+      // Losers Bracket - group by phase first (playing/waiting first), then by round
       if (state.losersMatches && state.losersMatches.length > 0) {
-        const rounds = groupMatchesByRound(state.losersMatches);
+        // Sort: playing first, then waiting, then finished
+        const sortedMatches = [...state.losersMatches].sort((a, b) => {
+          const phaseOrder = { playing: 0, waiting: 1, finished: 2 };
+          return (phaseOrder[a.phase] || 2) - (phaseOrder[b.phase] || 2);
+        });
+
+        const rounds = groupMatchesByRound(sortedMatches);
         html += '<div class="bracket-section">' +
           '<div class="bracket-section-header">' +
             '<span class="bracket-title" style="color: #f59e0b;">Losers Bracket</span>' +
@@ -1315,7 +1318,7 @@ export function getAdminPageHtml(adminKey: string): string {
         for (const [round, matches] of Object.entries(rounds).sort((a, b) => parseInt(a[0]) - parseInt(b[0]))) {
           html += '<div class="round">' +
             '<div class="round-header">Ronda ' + round + '</div>' +
-            matches.map(m => renderMatchCard(m, gameId, allMatches)).join('') +
+            matches.map(m => renderMatchCard(m, gameId)).join('') +
           '</div>';
         }
 
@@ -1328,12 +1331,12 @@ export function getAdminPageHtml(adminKey: string): string {
           '<div class="bracket-title">🏆 Grand Final</div>';
 
         if (state.grandFinal) {
-          html += '<div class="grand-final-match">' + renderMatchCard(state.grandFinal, gameId, allMatches) + '</div>';
+          html += '<div class="grand-final-match">' + renderMatchCard(state.grandFinal, gameId) + '</div>';
         }
 
         if (state.grandFinalReset) {
           html += '<div style="margin-top: 15px; font-size: 0.8rem; color: rgba(255,255,255,0.6);">Reset</div>' +
-            '<div class="grand-final-match">' + renderMatchCard(state.grandFinalReset, gameId, allMatches) + '</div>';
+            '<div class="grand-final-match">' + renderMatchCard(state.grandFinalReset, gameId) + '</div>';
         }
 
         html += '</div>';
@@ -1363,37 +1366,11 @@ export function getAdminPageHtml(adminKey: string): string {
       return rounds;
     }
     
-    function renderMatchCard(match, gameId, allMatches) {
-      // Determine player names - show pending match info if available
-      let p1Name, p2Name, p1Class, p2Class;
-
-      if (match.player1) {
-        p1Name = match.player1.name;
-        p1Class = '';
-      } else {
-        const sourceMatch = findSourceMatch(match, 'player1', allMatches);
-        if (sourceMatch && sourceMatch.player1 && sourceMatch.player2) {
-          p1Name = '⏳ ' + sourceMatch.player1.name + ' vs ' + sourceMatch.player2.name;
-          p1Class = 'pending-match';
-        } else {
-          p1Name = 'A aguardar...';
-          p1Class = 'tbd';
-        }
-      }
-
-      if (match.player2) {
-        p2Name = match.player2.name;
-        p2Class = '';
-      } else {
-        const sourceMatch = findSourceMatch(match, 'player2', allMatches);
-        if (sourceMatch && sourceMatch.player1 && sourceMatch.player2) {
-          p2Name = '⏳ ' + sourceMatch.player1.name + ' vs ' + sourceMatch.player2.name;
-          p2Class = 'pending-match';
-        } else {
-          p2Name = 'A aguardar...';
-          p2Class = 'tbd';
-        }
-      }
+    function renderMatchCard(match, gameId) {
+      const p1Name = match.player1?.name || 'A aguardar...';
+      const p2Name = match.player2?.name || 'A aguardar...';
+      const p1Class = match.player1 ? '' : 'tbd';
+      const p2Class = match.player2 ? '' : 'tbd';
 
       const p1Score = match.score?.player1Wins || 0;
       const p2Score = match.score?.player2Wins || 0;
@@ -1420,35 +1397,6 @@ export function getAdminPageHtml(adminKey: string): string {
         '</div>' +
         restartButtons +
       '</div>';
-    }
-
-    // Find the source match that will determine a player for a given match slot
-    function findSourceMatch(targetMatch, slot, allMatches) {
-      if (!allMatches) return null;
-
-      // In double elimination, the structure is:
-      // Winners bracket: winner of round N match goes to round N+1
-      // Losers bracket: more complex routing
-
-      const targetRound = targetMatch.round;
-      const targetBracket = targetMatch.bracket;
-
-      if (targetRound <= 1) return null;
-
-      // For winners bracket, look for matches in previous round
-      if (targetBracket === 'winners') {
-        const prevRoundMatches = allMatches.filter(m =>
-          m.bracket === 'winners' && m.round === targetRound - 1
-        );
-        // Simple heuristic: return first unfinished match from previous round
-        return prevRoundMatches.find(m => !m.winnerId);
-      }
-
-      // For losers bracket, it's more complex - just find an unfinished match
-      const prevMatches = allMatches.filter(m =>
-        m.round < targetRound && !m.winnerId
-      );
-      return prevMatches.length > 0 ? prevMatches[0] : null;
     }
     
     // ========== LIST BRACKET RENDERING (original) ==========

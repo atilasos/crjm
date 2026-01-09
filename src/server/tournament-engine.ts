@@ -445,29 +445,49 @@ export function processMatchResult(
   // Isto reduz significativamente o tempo de espera para os jogadores
 
   // Winners bracket: criar matches imediatos
+  // Incrementar ronda para cada novo match criado (após a ronda inicial)
+  const hasExistingWinnersMatches = tournament.winnersMatches.length > 0;
+  let winnersMatchesCreated = 0;
+
   while (tournament.winnersWaiting.length >= 2) {
     const p1Id = tournament.winnersWaiting.shift()!;
     const p2Id = tournament.winnersWaiting.shift()!;
     const p1 = tournament.playerById.get(p1Id)!;
     const p2 = tournament.playerById.get(p2Id)!;
 
+    // Incrementar ronda se já existem matches e é um novo ciclo
+    if (hasExistingWinnersMatches && winnersMatchesCreated === 0) {
+      tournament.winnersRound++;
+    }
+
     const newMatch = createMatch('winners', tournament.winnersRound, p1, p2);
     tournament.winnersMatches.push(newMatch);
     tournament.matchById.set(newMatch.id, newMatch);
     newMatches.push(newMatch);
+    winnersMatchesCreated++;
   }
 
   // Losers bracket: criar matches imediatos
+  // Incrementar ronda para cada novo match criado (após a ronda inicial)
+  const hasExistingLosersMatches = tournament.losersMatches.length > 0;
+  let losersMatchesCreated = 0;
+
   while (tournament.losersWaiting.length >= 2) {
     const p1Id = tournament.losersWaiting.shift()!;
     const p2Id = tournament.losersWaiting.shift()!;
     const p1 = tournament.playerById.get(p1Id)!;
     const p2 = tournament.playerById.get(p2Id)!;
 
+    // Incrementar ronda se já existem matches e é um novo ciclo
+    if (hasExistingLosersMatches && losersMatchesCreated === 0) {
+      tournament.losersRound++;
+    }
+
     const newMatch = createMatch('losers', tournament.losersRound, p1, p2);
     tournament.losersMatches.push(newMatch);
     tournament.matchById.set(newMatch.id, newMatch);
     newMatches.push(newMatch);
+    losersMatchesCreated++;
   }
 
   // Verifica se é hora da grand final
