@@ -833,7 +833,9 @@ function ConnectForm({
                   value={PRESET_SERVERS.find(s => s.url === serverUrl)?.url || 'custom'}
                   onChange={e => {
                     const selected = e.target.value;
-                    if (selected !== 'custom') {
+                    if (selected === 'custom') {
+                      setServerUrl('');
+                    } else {
                       setServerUrl(selected);
                     }
                   }}
@@ -847,10 +849,10 @@ function ConnectForm({
                   ))}
                 </select>
                 {/* Show custom URL input if 'custom' is selected or URL doesn't match presets */}
-                {(!PRESET_SERVERS.find(s => s.url === serverUrl) || serverUrl === 'custom' || PRESET_SERVERS.find(s => s.url === serverUrl)?.url === 'custom') && (
+                {!PRESET_SERVERS.some(s => s.url === serverUrl && s.url !== 'custom') && (
                   <input
                     type="text"
-                    value={serverUrl === 'custom' ? '' : serverUrl}
+                    value={serverUrl}
                     onChange={e => setServerUrl(e.target.value)}
                     placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
                     className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-400/50 font-mono text-sm"
