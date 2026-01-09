@@ -273,6 +273,7 @@ interface QuelhasBoardProps {
 export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: QuelhasBoardProps) {
   const minhaOrientacao = myRole === 'jogador1' ? state.orientacaoJogador1 : state.orientacaoJogador2;
   const [inicioSelecao, setInicioSelecao] = useState<QuelhasPosicao | null>(null);
+  const [segmentoPreviewLocal, setSegmentoPreviewLocal] = useState<Segmento | null>(null);
 
   const isStartSelectable = (linha: number, coluna: number): boolean => {
     if (!isMyTurn) return false;
@@ -299,7 +300,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha]?.[coluna];
     const isInicio = !!inicioSelecao && inicioSelecao.linha === linha && inicioSelecao.coluna === coluna;
-    const isPreview = state.segmentoPreview && getCelulasSegmento(state.segmentoPreview).some(c => c.linha === linha && c.coluna === coluna);
+    const isPreview = segmentoPreviewLocal && getCelulasSegmento(segmentoPreviewLocal).some(c => c.linha === linha && c.coluna === coluna);
 
     let classes = 'aspect-square rounded-sm flex items-center justify-center transition-all duration-150 text-xs font-bold ';
 
@@ -343,6 +344,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
       if (segmento) {
         onMove(segmento);
         setInicioSelecao(null);
+        setSegmentoPreviewLocal(null);
         return;
       }
 
@@ -378,7 +380,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
       <div className="aspect-square max-w-md mx-auto relative group">
         <div
           className="grid grid-cols-10 gap-0.5 h-full bg-gray-600 p-1 rounded-xl shadow-2xl"
-          onMouseLeave={() => state.segmentoPreview && onMove({ ...state.segmentoPreview, isPreview: true, deletePreview: true } as any)}
+          onMouseLeave={() => setSegmentoPreviewLocal(null)}
         >
           {state.tabuleiro.map((linha, linhaIdx) =>
             linha.map((_, colunaIdx) => (
@@ -388,7 +390,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
                 onMouseEnter={() => {
                   if (inicioSelecao) {
                     const seg = getSegmentoForEnd(linhaIdx, colunaIdx);
-                    if (seg) onMove({ ...seg, isPreview: true } as any);
+                    setSegmentoPreviewLocal(seg);
                   }
                 }}
                 className={getCelulaClasses(linhaIdx, colunaIdx)}

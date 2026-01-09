@@ -543,6 +543,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const handleMove = (move: unknown) => {
     if (!currentMatch || !clientRef.current || !isMyTurn) return;
 
+    // Ignorar previews (usados apenas para visualização, não são jogadas reais)
+    if (move && typeof move === 'object' && (move as any).isPreview) return;
+
     // Converter para formato de rede se necessário
     let networkMove = move;
     if (currentGameId === 'produto' && move) {
