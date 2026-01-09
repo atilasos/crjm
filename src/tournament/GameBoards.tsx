@@ -142,6 +142,7 @@ export function GatosCaesBoard({ state, isMyTurn, myRole, onMove }: GatosCaesBoa
 // ============================================================================
 
 import type { DominorioState, Domino, Posicao as DominorioPosicao } from '../games/dominorio/types';
+import { getDominoPreview } from '../games/dominorio/logic';
 export type { DominorioState, Domino, DominorioPosicao };
 
 interface DominorioBoardProps {
@@ -153,6 +154,7 @@ interface DominorioBoardProps {
 
 export function DominorioBoard({ state, isMyTurn, myRole, onMove }: DominorioBoardProps) {
   const minhaOrientacao = myRole === 'jogador1' ? 'vertical' : 'horizontal';
+  const [dominoPreviewLocal, setDominoPreviewLocal] = useState<Domino | null>(null);
 
   // Encontrar dominó válido que começa nesta posição
   const getDominoInicio = (linha: number, coluna: number): Domino | null => {
@@ -162,48 +164,78 @@ export function DominorioBoard({ state, isMyTurn, myRole, onMove }: DominorioBoa
     ) || null;
   };
 
+  // Última jogada do adversário (último dominó colocado)
+  const ultimaJogada = state.dominosColocados.length > 0
+    ? state.dominosColocados[state.dominosColocados.length - 1]
+    : null;
+
+  const isUltimaJogada = (linha: number, coluna: number): boolean => {
+    if (!ultimaJogada) return false;
+    return (ultimaJogada.pos1.linha === linha && ultimaJogada.pos1.coluna === coluna) ||
+           (ultimaJogada.pos2.linha === linha && ultimaJogada.pos2.coluna === coluna);
+  };
+
+  const isPreview = (linha: number, coluna: number): boolean => {
+    if (!dominoPreviewLocal) return false;
+    return (dominoPreviewLocal.pos1.linha === linha && dominoPreviewLocal.pos1.coluna === coluna) ||
+           (dominoPreviewLocal.pos2.linha === linha && dominoPreviewLocal.pos2.coluna === coluna);
+  };
+
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha]?.[coluna];
-    const preview = state.dominoPreview && (
-      (state.dominoPreview.pos1.linha === linha && state.dominoPreview.pos1.coluna === coluna) ||
-      (state.dominoPreview.pos2.linha === linha && state.dominoPreview.pos2.coluna === coluna)
-    );
+    const preview = isPreview(linha, coluna);
+    const ultima = isUltimaJogada(linha, coluna);
 
     let classes = 'aspect-square rounded-md flex items-center justify-center transition-all duration-150 ';
 
     if (celula === 'vazia') {
       if (preview) {
-        classes += state.jogadorAtual === 'jogador1'
+        classes += minhaOrientacao === 'vertical'
           ? 'bg-pink-400 ring-2 ring-pink-300 '
           : 'bg-cyan-400 ring-2 ring-cyan-300 ';
       } else {
         classes += 'bg-gray-100 hover:bg-gray-200 cursor-pointer ';
       }
     } else if (celula === 'ocupada-vertical') {
-      classes += 'bg-pink-500 ';
+      classes += ultima ? 'bg-pink-500 ring-2 ring-yellow-400 ring-offset-1 ring-offset-emerald-800 ' : 'bg-pink-500 ';
     } else {
-      classes += 'bg-cyan-500 ';
+      classes += ultima ? 'bg-cyan-500 ring-2 ring-yellow-400 ring-offset-1 ring-offset-emerald-800 ' : 'bg-cyan-500 ';
     }
 
     return classes;
+  };
+
+  const handleMouseEnter = (linha: number, coluna: number) => {
+    if (!isMyTurn) return;
+    const preview = getDominoPreview(state, { linha, coluna });
+    setDominoPreviewLocal(preview);
+  };
+
+  const handleMouseLeave = () => {
+    setDominoPreviewLocal(null);
   };
 
   const handleClick = (linha: number, coluna: number) => {
     const domino = getDominoInicio(linha, coluna);
     if (domino) {
       onMove(domino);
+      setDominoPreviewLocal(null);
     }
   };
 
   return (
     <div className="space-y-4">
       <div className="aspect-square max-w-md mx-auto">
-        <div className="grid grid-cols-8 gap-1 h-full bg-emerald-800 p-2 rounded-xl">
+        <div
+          className="grid grid-cols-8 gap-1 h-full bg-emerald-800 p-2 rounded-xl"
+          onMouseLeave={handleMouseLeave}
+        >
           {state.tabuleiro.map((linha, linhaIdx) =>
             linha.map((celula, colunaIdx) => (
               <button
                 key={`${linhaIdx}-${colunaIdx}`}
                 onClick={() => handleClick(linhaIdx, colunaIdx)}
+                onMouseEnter={() => handleMouseEnter(linhaIdx, colunaIdx)}
                 className={getCelulaClasses(linhaIdx, colunaIdx)}
                 disabled={!getDominoInicio(linhaIdx, colunaIdx)}
               >
