@@ -133,14 +133,33 @@ Diz aos alunos para:
 
 Quando todos os alunos estiverem inscritos:
 
+#### Opção A: Inscrição Manual (Alunos)
 1. Vai ao painel de administração: http://localhost:4000/admin
 2. Verifica que todos os jogadores aparecem na lista
 3. Clica no botão "▶️ Iniciar"
-4. O servidor emparelha automaticamente os jogadores e notifica cada um
+
+#### Opção B: Pré-registo (Admin)
+Se tiveres a lista de alunos (ex: Excel), podes criá-lo logo:
+1. No painel admin, clica em "➕ Criar Torneio"
+2. Seleciona o jogo
+3. Cola a lista de nomes (um por linha)
+   - Formato opcional: `Nome;Turma`
+4. Clica em "Criar Torneio"
+5. **Importante**: Usa o botão "🗂️ Cartões" para gerar um PDF com os códigos de reconexão para cada aluno.
+
+O servidor emparelha automaticamente os jogadores e notifica cada um.
 
 ### 6. Durante o torneio
 
-- Acompanha o progresso no painel de administração
+- Acompanha o progresso no painel de administração (Vista Visual ou Lista)
+- O bracket atualiza automaticamente em tempo real
+- Os logs mostram todas as jogadas e resultados
+
+#### Manter a Sessão (Reconexão)
+Se um aluno fechar o browser ou perder a net:
+1. Ele volta a entrar no site -> Modo Campeonato
+2. Introduz o seu **Código de Reconexão** (ex: ABC234)
+3. Clica em "Retomar" e volta exatamente onde estava!
 - O bracket atualiza automaticamente a cada 2 segundos
 - Os logs mostram todas as jogadas e resultados
 
@@ -164,8 +183,17 @@ Se um jogo ficar bloqueado ou corrompido, podes reiniciá-lo no painel de admini
 2. Os jogadores são notificados e devem clicar "Estou pronto" novamente
 
 **Quando usar cada opção:**
-- **Reiniciar jogo**: Quando o jogo atual está bloqueado mas o score do match está correto
-- **Reiniciar match**: Quando há problemas graves ou o estado está totalmente corrupto
+- **Reiniciar jogo**: Quando o jogo atual está bloqueado ou houve interferência (mantém score)
+- **Reiniciar match**: Quando o estado está corrupto ou o confronto deve ser repetido (0-0)
+- **Pausar/Suspender**: No estado do jogador, podes suspendê-lo para pausar o seu jogo temporariamente
+- **Eliminar**: Remove o jogador do torneio e atribui vitória automática ao oponente nos matches pendentes
+
+#### Exportação e Relatórios
+No topo do painel de administração:
+- **🗂️ Cartões**: Gera PDF com códigos de acesso para os alunos
+- **📊 Estado (PDF)**: Gera um relatório completo do bracket e classificações
+- **💾 Exportar (JSON)**: Guarda o estado total do torneio para backup
+- **📂 Importar (JSON)**: Restaura um torneio de um backup anterior
 
 ### 7. Problemas comuns
 
@@ -263,6 +291,16 @@ curl -X POST http://localhost:4000/api/tournaments/gatos-caes/players/PLAYER_ID/
 
 # Eliminar jogador (oponente ganha automaticamente)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/players/PLAYER_ID/eliminate \
+  -H "Authorization: Bearer admin123"
+
+# Criar torneio com pré-registo de jogadores
+curl -X POST http://localhost:4000/api/tournaments/gatos-caes/create-with-players \
+  -H "Authorization: Bearer admin123" \
+  -H "Content-Type: application/json" \
+  -d '{"players": [{"name": "Ana", "classId": "5A"}, {"name": "Bruno", "classId": "5B"}]}'
+
+# Exportar para JSON
+curl http://localhost:4000/api/tournaments/gatos-caes/export \
   -H "Authorization: Bearer admin123"
 
 # Ver logs
