@@ -1166,6 +1166,10 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     // Enviar match assignments para os primeiros matches
     const allMatches = [...tournament.winnersMatches, ...tournament.losersMatches];
     for (const match of allMatches) {
+      // Skip matches já terminados (byes) - jogadores serão notificados separadamente
+      if (match.phase === 'finished') {
+        continue;
+      }
       const p1 = match.player1;
       const p2 = match.player2;
       if (p1) {
@@ -1183,6 +1187,18 @@ async function handleHttpRequest(req: Request): Promise<Response> {
           yourRole: 'player2',
           opponentName: p1?.name || 'A aguardar adversário...',
         });
+      }
+    }
+
+    // Notificar jogadores que ganharam por bye para irem ao lobby ver jogos
+    for (const match of allMatches) {
+      if (match.result === 'bye' && match.winnerId) {
+        sendToPlayer(match.winnerId, {
+          type: 'info',
+          message: 'Avançaste automaticamente! Podes ver os outros jogos enquanto esperas pelo próximo adversário.',
+        });
+        // Enviar também a lista de jogos ativos para que possam ver
+        broadcastActiveGamesList(tournament);
       }
     }
 
