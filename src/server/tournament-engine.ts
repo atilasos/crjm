@@ -396,6 +396,9 @@ function planBracket(tournament: Tournament): void {
   // etc.
 
   // Losers R1: perdedores do Winners R1 (apenas se houver pelo menos 2 matches no Winners R1)
+  // Rastrear match ímpar do Winners R1 (sem par no Losers R1)
+  let oddWinnersR1Match: TournamentMatch | null = null;
+
   if (winnersMatchesByRound[0].length >= 2) {
     const losersR1: TournamentMatch[] = [];
     const winnersR1Matches = winnersMatchesByRound[0].filter(m => m.result !== 'bye');
@@ -405,7 +408,8 @@ function planBracket(tournament: Tournament): void {
       const source2 = winnersR1Matches[i + 1];
 
       if (!source2) {
-        // Número ímpar de matches, o perdedor deste avança sozinho
+        // Número ímpar de matches - rastrear para configurar nextMatchIfLose depois
+        oddWinnersR1Match = source1;
         continue;
       }
 
@@ -450,16 +454,21 @@ function planBracket(tournament: Tournament): void {
         const winnersDrop = winnersDropping[i];
         const losersAdvance = prevLosersMatches[i];
 
-        if (!winnersDrop && !losersAdvance) continue;
+        if (!winnersDrop && !losersAdvance && !oddWinnersR1Match) continue; // Only skip if absolutely no source
+
+        // Se não há losersAdvance mas há oddWinnersR1Match, usar o perdedor desse match
+        const oddMatchAsSource = !losersAdvance && oddWinnersR1Match ? oddWinnersR1Match : null;
 
         const match = createMatch({
           bracket: 'losers',
           round: losersRound,
           matchNumber: matchNumber++,
-          sourceMatch1: losersAdvance?.matchNumber ?? null,
+          sourceMatch1: oddMatchAsSource?.matchNumber ?? losersAdvance?.matchNumber ?? null,
           sourceMatch2: winnersDrop?.matchNumber ?? null,
-          sourceLabel1: losersAdvance ? `Vencedor do Jogo #${losersAdvance.matchNumber}` : 'TBD',
-          sourceLabel2: winnersDrop ? `Perdedor do Jogo #${winnersDrop.matchNumber}` : 'TBD',
+          sourceLabel1: oddMatchAsSource
+            ? `Perdedor do Jogo #${oddMatchAsSource.matchNumber}`
+            : (losersAdvance ? `Vencedor do Jogo #${losersAdvance.matchNumber}` : 'BYE'),
+          sourceLabel2: winnersDrop ? `Perdedor do Jogo #${winnersDrop.matchNumber}` : 'BYE',
         });
 
         thisRound.push(match);
@@ -467,6 +476,10 @@ function planBracket(tournament: Tournament): void {
 
         // Configurar links
         if (losersAdvance) losersAdvance.nextMatchIfWin = match.matchNumber;
+        if (oddMatchAsSource) {
+          oddMatchAsSource.nextMatchIfLose = match.matchNumber;
+          oddWinnersR1Match = null; // Já foi usado, limpar
+        }
         if (winnersDrop) winnersDrop.nextMatchIfLose = match.matchNumber;
       }
 
@@ -474,6 +487,7 @@ function planBracket(tournament: Tournament): void {
         losersMatchesByRound.push(thisRound);
         losersRound++;
       }
+
       winnersRoundForDropdown++;
     }
 
@@ -577,6 +591,9 @@ function planBracket(tournament: Tournament): void {
 
   // Propagar jogadores de matches com bye para os próximos matches
   propagateByeWinners(tournament);
+
+  // Resolver matches do Losers que têm TBD (sem fonte de jogador)
+  resolveLosersBracketTBDs(tournament);
 }
 
 /**
@@ -616,6 +633,92 @@ function generateSeedOrder(size: number): number[] {
     result.push(topHalf[i], bottomHalf[halfSize - 1 - i]);
   }
   return result;
+}
+
+/**
+ * Resolve matches do Losers Bracket que têm TBD (sem fonte de jogador).
+ * Estes são convertidos em byes quando apenas um jogador está presente.
+ */
+function resolveLosersBracketTBDs(tournament: Tournament): void {
+  for (const match of tournament.losersMatches) {
+    // Se o match já tem resultado, ignorar
+    if (match.result !== null) continue;
+
+    // Se não tem player1 mas tem player2, e sourceMatch1 é null (sem fonte)
+    // Então é um bye - o player2 avança
+    if (!match.player1 && match.player2 && match.sourceMatch1 === null) {
+      match.winnerId = match.player2.id;
+      match.phase = 'finished';
+      match.result = 'bye';
+      match.score = { player1Wins: 0, player2Wins: 2 };
+      match.sourceLabel1 = 'BYE';
+
+      // Propagar para o próximo match
+      const winnerPlayer = tournament.playerById.get(match.player2.id);
+      if (winnerPlayer && match.nextMatchIfWin) {
+        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
+        if (nextMatch) {
+          assignPlayerToMatch(nextMatch, winnerPlayer, match);
+        }
+      }
+    }
+
+    // Caso inverso: tem player1 mas não tem player2, e sourceMatch2 é null
+    if (match.player1 && !match.player2 && match.sourceMatch2 === null) {
+      match.winnerId = match.player1.id;
+      match.phase = 'finished';
+      match.result = 'bye';
+      match.score = { player1Wins: 2, player2Wins: 0 };
+      match.sourceLabel2 = 'BYE';
+
+      // Propagar para o próximo match
+      const winnerPlayer = tournament.playerById.get(match.player1.id);
+      if (winnerPlayer && match.nextMatchIfWin) {
+        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
+        if (nextMatch) {
+          assignPlayerToMatch(nextMatch, winnerPlayer, match);
+        }
+      }
+    }
+  }
+
+  // Recursivamente resolver novos TBDs criados pela propagação
+  let hasChanges = true;
+  let iterations = 0;
+  while (hasChanges && iterations < 10) {
+    hasChanges = false;
+    iterations++;
+
+    for (const match of tournament.losersMatches) {
+      if (match.result !== null) continue;
+
+      const hasP1 = match.player1 !== null;
+      const hasP2 = match.player2 !== null;
+
+      if (hasP1 !== hasP2) {
+        // Verificar se a fonte em falta não vai enviar mais ninguém
+        const missingSource = hasP1 ? match.sourceMatch2 : match.sourceMatch1;
+        if (missingSource === null) {
+          const winner = hasP1 ? match.player1 : match.player2;
+          if (winner) {
+            match.winnerId = winner.id;
+            match.phase = 'finished';
+            match.result = 'bye';
+            match.score = hasP1 ? { player1Wins: 2, player2Wins: 0 } : { player1Wins: 0, player2Wins: 2 };
+            hasChanges = true;
+
+            const winnerPlayer = tournament.playerById.get(winner.id);
+            if (winnerPlayer && match.nextMatchIfWin) {
+              const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
+              if (nextMatch) {
+                assignPlayerToMatch(nextMatch, winnerPlayer, match);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 /**
@@ -664,20 +767,76 @@ function checkAndResolveBye(tournament: Tournament, match: TournamentMatch): voi
   const hasPlayer1 = match.player1 !== null;
   const hasPlayer2 = match.player2 !== null;
 
-  // Se ambos têm jogador ou ambos não têm, não é bye
-  if (hasPlayer1 === hasPlayer2) return;
+  // Se ambos têm jogador, não é bye - é um match normal
+  if (hasPlayer1 && hasPlayer2) return;
 
-  // Só 1 jogador - resolver como bye
+  // Se ambos não têm jogador, ainda não há dados suficientes
+  if (!hasPlayer1 && !hasPlayer2) return;
+
+  // Caso especial: se a fonte do slot vazio é NULL, significa que nunca vai haver jogador
+  // Nesse caso, o jogador existente ganha por bye imediato
+  if (!hasPlayer1 && match.sourceMatch1 === null) {
+    // Slot 1 nunca terá jogador - player2 ganha por bye
+    const winner = match.player2;
+    if (winner) {
+      match.winnerId = winner.id;
+      match.phase = 'finished';
+      match.result = 'bye';
+      match.score = { player1Wins: 0, player2Wins: 2 };
+      match.sourceLabel1 = 'BYE';
+
+      // Propagar para o próximo match
+      const winnerPlayer = tournament.playerById.get(winner.id);
+      if (winnerPlayer && match.nextMatchIfWin) {
+        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
+        if (nextMatch) {
+          assignPlayerToMatch(nextMatch, winnerPlayer, match);
+          checkAndResolveBye(tournament, nextMatch);
+        }
+      }
+      return;
+    }
+  }
+
+  if (!hasPlayer2 && match.sourceMatch2 === null) {
+    // Slot 2 nunca terá jogador - player1 ganha por bye
+    const winner = match.player1;
+    if (winner) {
+      match.winnerId = winner.id;
+      match.phase = 'finished';
+      match.result = 'bye';
+      match.score = { player1Wins: 2, player2Wins: 0 };
+      match.sourceLabel2 = 'BYE';
+
+      // Propagar para o próximo match
+      const winnerPlayer = tournament.playerById.get(winner.id);
+      if (winnerPlayer && match.nextMatchIfWin) {
+        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
+        if (nextMatch) {
+          assignPlayerToMatch(nextMatch, winnerPlayer, match);
+          checkAndResolveBye(tournament, nextMatch);
+        }
+      }
+      return;
+    }
+  }
+
+  // Verificar se as fontes têm vencedores que ainda não propagaram
+  // Se uma fonte terminou com vencedor mas o slot está vazio, aguardar propagação
+  if (!hasPlayer1 && match.sourceMatch1) {
+    const src1 = tournament.matchByNumber.get(match.sourceMatch1);
+    // Se a fonte ainda não terminou, ou terminou com vencedor (propagação pendente)
+    if (src1 && (src1.phase !== 'finished' || src1.winnerId)) return;
+  }
+  if (!hasPlayer2 && match.sourceMatch2) {
+    const src2 = tournament.matchByNumber.get(match.sourceMatch2);
+    // Se a fonte ainda não terminou, ou terminou com vencedor (propagação pendente)
+    if (src2 && (src2.phase !== 'finished' || src2.winnerId)) return;
+  }
+
+  // Só 1 jogador e ambas as fontes terminaram - resolver como bye
   const winner = hasPlayer1 ? match.player1 : match.player2;
   if (!winner) return;
-
-  // Verificar se a fonte do jogador em falta também é bye
-  const missingSourceMatch = hasPlayer1 ? match.sourceMatch2 : match.sourceMatch1;
-  if (missingSourceMatch) {
-    const sourceMatch = tournament.matchByNumber.get(missingSourceMatch);
-    // Se a fonte ainda não terminou, não resolver ainda
-    if (sourceMatch && sourceMatch.phase !== 'finished') return;
-  }
 
   match.winnerId = winner.id;
   match.phase = 'finished';
@@ -973,6 +1132,9 @@ export function toTournamentState(tournament: Tournament): TournamentState {
     ? tournament.playerById.get(tournament.championId)
     : null;
 
+  // Filtrar matches de BYE do Losers e reajustar labels
+  const { filteredLosers, labelRemapping } = filterByeMatches(tournament);
+
   return {
     tournamentId: tournament.id,
     gameId: tournament.gameId,
@@ -986,11 +1148,85 @@ export function toTournamentState(tournament: Tournament): TournamentState {
       reconnectionCode: p.reconnectionCode,
     })),
     winnersMatches: tournament.winnersMatches.map(toProtocolMatch),
-    losersMatches: tournament.losersMatches.map(toProtocolMatch),
+    losersMatches: filteredLosers.map(m => toProtocolMatchWithRemapping(m, labelRemapping)),
     grandFinal: tournament.grandFinal ? toProtocolMatch(tournament.grandFinal) : null,
     grandFinalReset: tournament.grandFinalReset ? toProtocolMatch(tournament.grandFinalReset) : null,
     championId: tournament.championId,
     championName: champion?.name ?? null,
+  };
+}
+
+/**
+ * Filtra matches BYE do Losers e cria mapeamento de labels.
+ * Matches BYE são aqueles que têm sourceLabel1 === 'BYE' ou sourceLabel2 === 'BYE'.
+ */
+function filterByeMatches(tournament: Tournament): {
+  filteredLosers: TournamentMatch[];
+  labelRemapping: Map<number, string>;
+} {
+  const labelRemapping = new Map<number, string>();
+  const byeMatches = new Set<number>();
+
+  // Identificar matches BYE e criar remapeamento
+  for (const match of tournament.losersMatches) {
+    const isBye1 = match.sourceLabel1 === 'BYE';
+    const isBye2 = match.sourceLabel2 === 'BYE';
+
+    if (isBye1 && !isBye2 && match.sourceMatch2) {
+      // Slot 1 é BYE, jogador vem do slot 2
+      byeMatches.add(match.matchNumber);
+      labelRemapping.set(match.matchNumber, match.sourceLabel2);
+    } else if (isBye2 && !isBye1 && match.sourceMatch1) {
+      // Slot 2 é BYE, jogador vem do slot 1
+      byeMatches.add(match.matchNumber);
+      labelRemapping.set(match.matchNumber, match.sourceLabel1);
+    }
+  }
+
+  // Filtrar matches BYE
+  const filteredLosers = tournament.losersMatches.filter(m => !byeMatches.has(m.matchNumber));
+
+  return { filteredLosers, labelRemapping };
+}
+
+/**
+ * Converte match para protocolo, aplicando remapeamento de labels.
+ */
+function toProtocolMatchWithRemapping(
+  match: TournamentMatch,
+  labelRemapping: Map<number, string>
+): Match {
+  let label1 = match.sourceLabel1;
+  let label2 = match.sourceLabel2;
+
+  // Remapar labels que apontam para matches BYE
+  if (match.sourceMatch1 && labelRemapping.has(match.sourceMatch1)) {
+    label1 = labelRemapping.get(match.sourceMatch1) || label1;
+  }
+  if (match.sourceMatch2 && labelRemapping.has(match.sourceMatch2)) {
+    label2 = labelRemapping.get(match.sourceMatch2) || label2;
+  }
+
+  return {
+    id: match.id,
+    round: match.round,
+    bracket: match.bracket,
+    player1: match.player1,
+    player2: match.player2,
+    score: match.score,
+    bestOf: match.bestOf,
+    currentGame: match.currentGame,
+    whoStartsCurrentGame: match.whoStartsCurrentGame,
+    phase: match.phase,
+    winnerId: match.winnerId,
+    matchNumber: match.matchNumber,
+    sourceMatch1: match.sourceMatch1,
+    sourceMatch2: match.sourceMatch2,
+    sourceLabel1: label1,
+    sourceLabel2: label2,
+    nextMatchIfWin: match.nextMatchIfWin,
+    nextMatchIfLose: match.nextMatchIfLose,
+    result: match.result,
   };
 }
 
