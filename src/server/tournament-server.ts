@@ -138,7 +138,7 @@ function broadcastTournamentState(tournament: Tournament): void {
     type: 'tournament_state_update',
     ...state,
   });
-  
+
   // Também envia a lista de jogos activos para espectadores
   broadcastActiveGamesList(tournament);
 }
@@ -146,12 +146,12 @@ function broadcastTournamentState(tournament: Tournament): void {
 /** Envia a lista de jogos em curso para todos os jogadores (para modo espectador) */
 function broadcastActiveGamesList(tournament: Tournament): void {
   const activeMatches = getActiveMatchesWithGameState(tournament);
-  
+
   const games = activeMatches.map(({ match }) => {
     let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
     if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
     if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
-    
+
     return {
       matchId: match.id,
       bracket,
@@ -162,7 +162,7 @@ function broadcastActiveGamesList(tournament: Tournament): void {
       gameNumber: match.currentGame,
     };
   });
-  
+
   broadcastToTournament(tournament, {
     type: 'active_games_list',
     games,
@@ -172,11 +172,11 @@ function broadcastActiveGamesList(tournament: Tournament): void {
 /** Envia o estado de um jogo específico para todos os jogadores (espectadores) */
 function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMatch): void {
   if (!match.gameState || match.phase !== 'playing') return;
-  
+
   let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
   if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
   if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
-  
+
   const message: ServerMessage = {
     type: 'spectator_game_state',
     matchId: match.id,
@@ -189,7 +189,7 @@ function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMa
     score: match.score,
     whoseTurn: match.whoseTurn,
   };
-  
+
   // Envia para todos os jogadores conectados (exceto os do próprio match que já recebem game_state_update)
   for (const player of tournament.players) {
     if (player.isConnected && player.id !== match.player1?.id && player.id !== match.player2?.id) {
@@ -803,7 +803,7 @@ function handleSubmitMove(
       yourTurn: !isP1Turn,
       lastMove: move,
     });
-    
+
     // Broadcast para espectadores
     broadcastSpectatorGameState(tournament, match);
   }
@@ -1434,6 +1434,85 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     } catch (e) {
       return Response.json({
         error: 'Invalid import data',
+        details: e instanceof Error ? e.message : 'Unknown error',
+      }, { status: 400, headers: corsHeaders });
+    }
+  }
+
+  // Create tournament with pre-registered players (requer admin key)
+  // POST /api/tournaments/:gameId/create-with-players
+  const createWithPlayersMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/create-with-players$/);
+  if (createWithPlayersMatch && req.method === 'POST') {
+    const authHeader = req.headers.get('Authorization');
+    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    }
+
+    const gameId = createWithPlayersMatch[1] as GameId;
+
+    // Verificar se o jogo é suportado
+    if (!isGameSupported(gameId)) {
+      return Response.json({
+        error: 'Unsupported game',
+        gameId,
+      }, { status: 400, headers: corsHeaders });
+    }
+
+    try {
+      const body = await req.json() as { players: Array<{ name: string; classId?: string }> };
+
+      if (!body.players || !Array.isArray(body.players) || body.players.length === 0) {
+        return Response.json({
+          error: 'Players array is required and must not be empty',
+        }, { status: 400, headers: corsHeaders });
+      }
+
+      // Remover torneio existente (se houver)
+      tournaments.delete(gameId);
+
+      // Criar novo torneio
+      const tournament = createTournament(gameId);
+      tournaments.set(gameId, tournament);
+
+      // Adicionar todos os jogadores
+      const addedPlayers: Array<{ id: string; name: string; classId?: string; reconnectionCode: string }> = [];
+
+      for (const playerData of body.players) {
+        if (!playerData.name || typeof playerData.name !== 'string') {
+          continue; // Skip invalid entries
+        }
+
+        const player = addPlayer(tournament, playerData.name.trim(), playerData.classId?.trim());
+        if (player) {
+          // Marcar como desconectado (aguardando conexão via código)
+          player.isConnected = false;
+          player.socketId = null;
+
+          addedPlayers.push({
+            id: player.id,
+            name: player.name,
+            classId: player.classId,
+            reconnectionCode: player.reconnectionCode,
+          });
+        }
+      }
+
+      log({
+        type: 'info',
+        tournamentId: tournament.id,
+        message: `Torneio criado pelo administrador com ${addedPlayers.length} jogadores pré-registados`,
+      });
+
+      return Response.json({
+        success: true,
+        tournamentId: tournament.id,
+        gameId,
+        players: addedPlayers,
+        phase: tournament.phase,
+      }, { headers: corsHeaders });
+    } catch (e) {
+      return Response.json({
+        error: 'Invalid request data',
         details: e instanceof Error ? e.message : 'Unknown error',
       }, { status: 400, headers: corsHeaders });
     }
