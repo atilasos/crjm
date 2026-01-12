@@ -930,6 +930,7 @@ export function getAdminPageHtml(adminKey: string): string {
           <h2>
             <span class="title-left"><span class="emoji">🎮</span> Torneios Ativos</span>
             <div class="view-toggle">
+              <button class="btn-secondary btn-tiny" onclick="doImportTournament()" style="margin-right: 10px; padding: 4px 8px;">📂 Importar</button>
               <button id="viewList" class="active" onclick="setView('list')">Lista</button>
               <button id="viewBracket" onclick="setView('bracket')">Bracket</button>
             </div>
@@ -1224,7 +1225,10 @@ export function getAdminPageHtml(adminKey: string): string {
       const container = document.getElementById('tournaments');
       
       if (tournaments.length === 0) {
-        container.innerHTML = '<div class="no-data">Nenhum torneio ativo. Os jogadores podem criar um ao inscrever-se.</div>';
+        container.innerHTML = '<div class="no-data">' +
+          'Nenhum torneio ativo. Os jogadores podem criar um ao inscrever-se.' +
+          '<div style="margin-top: 15px;"><button class="btn-secondary" onclick="doImportTournament()">📂 Importar Torneio</button></div>' +
+        '</div>';
         return;
       }
       
@@ -1737,17 +1741,20 @@ export function getAdminPageHtml(adminKey: string): string {
             return;
           }
           
-          if (data.gameId !== gameId) {
+          const targetGameId = gameId || data.gameId;
+          
+          if (gameId && data.gameId !== gameId) {
             if (!confirm('O ficheiro é de um torneio de ' + (GAME_NAMES[data.gameId] || data.gameId) + ', mas estás a importar para ' + (GAME_NAMES[gameId] || gameId) + '. Continuar?')) {
               return;
             }
           }
           
-          if (!confirm('Importar torneio com ' + data.players.length + ' jogadores? O torneio atual será substituído.')) {
+          const gameName = GAME_NAMES[targetGameId] || targetGameId;
+          if (!confirm('Importar torneio de ' + gameName + ' com ' + data.players.length + ' jogadores? O torneio atual será substituído.')) {
             return;
           }
           
-          const res = await fetch('/api/tournaments/' + gameId + '/import', {
+          const res = await fetch('/api/tournaments/' + targetGameId + '/import', {
             method: 'POST',
             headers: {
               'Authorization': 'Bearer ' + ADMIN_KEY,
