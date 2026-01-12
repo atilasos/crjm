@@ -80,7 +80,7 @@ Sistema de torneios online com dupla eliminação para competições escolares.
 
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
-- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (neste momento: **Gatos & Cães**, **Dominório** e **Quelhas**)
+- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (suporta os **6 jogos oficiais**)
 - Regras oficiais do CRJM
 - Interface em **Português de Portugal** (PT-PT)
 - Totalmente responsivo (funciona em computador e tablet)
@@ -149,10 +149,13 @@ Notas sobre o build:
 
 O projeto inclui um servidor de torneios que permite organizar campeonatos online com sistema de dupla eliminação.
 
-Atualmente, o servidor (e a UI do modo campeonato) suportam **apenas**:
+Atualmente, o servidor e a UI do modo campeonato suportam **todos os 6 jogos**:
 - **Gatos & Cães**
 - **Dominório**
 - **Quelhas**
+- **Produto**
+- **Atari Go**
+- **Nex**
 
 ### Iniciar o Servidor
 

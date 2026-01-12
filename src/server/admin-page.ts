@@ -18,6 +18,7 @@ export function getAdminPageHtml(adminKey: string): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin - Torneio de Jogos Matemáticos</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     * {
       margin: 0;
@@ -930,7 +931,9 @@ export function getAdminPageHtml(adminKey: string): string {
           <h2>
             <span class="title-left"><span class="emoji">🎮</span> Torneios Ativos</span>
             <div class="view-toggle">
+              <button class="btn-primary btn-tiny" onclick="doShowCreateTournament()" style="margin-right: 10px; padding: 4px 8px;">➕ Criar</button>
               <button class="btn-secondary btn-tiny" onclick="doImportTournament()" style="margin-right: 10px; padding: 4px 8px;">📂 Importar</button>
+              <button class="btn-secondary btn-tiny" onclick="doGeneratePdfFromUpload()" style="margin-right: 10px; padding: 4px 8px;">📄 PDF de Ficheiro</button>
               <button id="viewList" class="active" onclick="setView('list')">Lista</button>
               <button id="viewBracket" onclick="setView('bracket')">Bracket</button>
             </div>
@@ -969,6 +972,105 @@ export function getAdminPageHtml(adminKey: string): string {
       </div>
     </div>
   </div>
+  
+  <!-- Modal for Create Tournament -->
+  <div id="createTournamentModal" class="modal" style="display: none;">
+    <div class="modal-backdrop" onclick="hideCreateTournamentModal()"></div>
+    <div class="modal-content">
+      <h2>➕ Criar Torneio</h2>
+      <div class="form-group">
+        <label for="gameSelect">Jogo:</label>
+        <select id="gameSelect" class="form-input">
+          <option value="gatos-caes">Gatos & Cães</option>
+          <option value="dominorio">Dominório</option>
+          <option value="quelhas">Quelhas</option>
+          <option value="produto">Produto</option>
+          <option value="atari-go">Atari Go</option>
+          <option value="nex">Nex</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="playerList">Lista de Jogadores (um por linha, formato: Nome ou Nome;Turma):</label>
+        <textarea id="playerList" class="form-input" rows="10" placeholder="João Silva;5A
+Maria Santos;5B
+Pedro Costa"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-primary" onclick="doCreateTournament()">Criar Torneio</button>
+        <button class="btn-secondary" onclick="hideCreateTournamentModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+  
+  <style>
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-backdrop {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+    }
+    .modal-content {
+      position: relative;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+      padding: 30px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .modal-content h2 {
+      margin-bottom: 20px;
+      color: white;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 0.9rem;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      color: white;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: #22c55e;
+    }
+    .form-input option {
+      background: #1a1a2e;
+      color: white;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 20px;
+    }
+  </style>
   
   <button class="btn-primary refresh-btn" onclick="refresh()" title="Atualizar">🔄</button>
   
@@ -1280,8 +1382,10 @@ export function getAdminPageHtml(adminKey: string): string {
           '<div class="actions">' +
             '<button class="btn-primary" onclick="startTournament(\\'' + t.gameId + '\\')" ' + (canStart ? '' : 'disabled') + '>▶️ Iniciar</button>' +
             '<button class="btn-danger" onclick="resetTournament(\\'' + t.gameId + '\\')" >🔄 Reiniciar</button>' +
-            '<button class="btn-secondary" onclick="doExportTournament(\\'' + t.gameId + '\\')">💾 Exportar</button>' +
-            '<button class="btn-secondary" onclick="doImportTournament(\\'' + t.gameId + '\\')">📂 Importar</button>' +
+            '<button class="btn-secondary" onclick="doExportTournament(\\'' + t.gameId + '\\')">' + '💾 Exportar</button>' +
+            '<button class="btn-secondary" onclick="doImportTournament(\\'' + t.gameId + '\\')">' + '📂 Importar</button>' +
+            '<button class="btn-secondary" onclick="doExportCards(\\'' + t.gameId + '\\')">' + '🎴 Cartões</button>' +
+            '<button class="btn-secondary" onclick="doExportStatePdf(\\'' + t.gameId + '\\')">' + '📄 PDF</button>' +
           '</div>' +
         '</div>';
       }).join('');
@@ -1776,6 +1880,306 @@ export function getAdminPageHtml(adminKey: string): string {
         }
       };
       input.click();
+    }
+
+    // ========== PDF EXPORT FUNCTIONS ==========
+
+    function generateTournamentPdf(data, filename) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const gameName = GAME_NAMES[data.gameId] || data.gameId;
+      const timestamp = new Date().toLocaleString('pt-PT');
+      
+      // Page 1: Bracket
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('Torneio: ' + gameName, 105, 15, { align: 'center' });
+      doc.setFontSize(10);
+      doc.setFont(undefined, 'normal');
+      doc.text('Gerado em: ' + timestamp, 105, 22, { align: 'center' });
+      
+      let y = 35;
+      
+      // Winners Bracket
+      if (data.state && data.state.winnersMatches && data.state.winnersMatches.length > 0) {
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(34, 197, 94);
+        doc.text('Winners Bracket', 10, y);
+        doc.setTextColor(0, 0, 0);
+        y += 8;
+        
+        const rounds = {};
+        data.state.winnersMatches.forEach(m => {
+          if (!rounds[m.round]) rounds[m.round] = [];
+          rounds[m.round].push(m);
+        });
+        
+        Object.keys(rounds).sort((a, b) => a - b).forEach(round => {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.text('Ronda ' + round, 10, y);
+          y += 5;
+          doc.setFont(undefined, 'normal');
+          rounds[round].forEach(m => {
+            const p1 = m.player1?.name || 'TBD';
+            const p2 = m.player2?.name || 'TBD';
+            const score = m.score ? m.score[0] + '-' + m.score[1] : '-';
+            doc.text('  ' + p1 + ' vs ' + p2 + ' (' + score + ')', 10, y);
+            y += 5;
+            if (y > 270) { doc.addPage(); y = 20; }
+          });
+          y += 3;
+        });
+      }
+      
+      // Losers Bracket
+      if (data.state && data.state.losersMatches && data.state.losersMatches.length > 0) {
+        y += 5;
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(245, 158, 11);
+        doc.text('Losers Bracket', 10, y);
+        doc.setTextColor(0, 0, 0);
+        y += 8;
+        
+        const rounds = {};
+        data.state.losersMatches.forEach(m => {
+          if (!rounds[m.round]) rounds[m.round] = [];
+          rounds[m.round].push(m);
+        });
+        
+        Object.keys(rounds).sort((a, b) => a - b).forEach(round => {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'bold');
+          doc.text('Ronda ' + round, 10, y);
+          y += 5;
+          doc.setFont(undefined, 'normal');
+          rounds[round].forEach(m => {
+            const p1 = m.player1?.name || 'TBD';
+            const p2 = m.player2?.name || 'TBD';
+            const score = m.score ? m.score[0] + '-' + m.score[1] : '-';
+            doc.text('  ' + p1 + ' vs ' + p2 + ' (' + score + ')', 10, y);
+            y += 5;
+            if (y > 270) { doc.addPage(); y = 20; }
+          });
+          y += 3;
+        });
+      }
+      
+      // Page 2: Standings
+      doc.addPage();
+      doc.setFontSize(20);
+      doc.setFont(undefined, 'bold');
+      doc.text('Classifica\u00e7\u00e3o - ' + gameName, 105, 15, { align: 'center' });
+      
+      y = 30;
+      doc.setFontSize(12);
+      doc.setFont(undefined, 'bold');
+      doc.text('Pos', 10, y);
+      doc.text('Nome', 30, y);
+      doc.text('Turma', 120, y);
+      doc.text('Derrotas', 160, y);
+      y += 2;
+      doc.line(10, y, 200, y);
+      y += 6;
+      
+      doc.setFont(undefined, 'normal');
+      const sortedPlayers = [...data.players].sort((a, b) => {
+        if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
+        if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
+        return (a.losses || 0) - (b.losses || 0);
+      });
+      
+      sortedPlayers.forEach((p, i) => {
+        const pos = (i + 1) + '.';
+        doc.text(pos, 10, y);
+        doc.text(p.name || 'Desconhecido', 30, y);
+        doc.text(p.classId || '-', 120, y);
+        doc.text(String(p.losses || 0), 165, y);
+        y += 7;
+        if (y > 270) { doc.addPage(); y = 20; }
+      });
+      
+      doc.save(filename);
+    }
+
+    function doExportCards(gameId) {
+      const tournament = cachedTournaments.find(t => t.gameId === gameId);
+      if (!tournament || !tournament.players || tournament.players.length === 0) {
+        alert('Sem jogadores para exportar.');
+        return;
+      }
+      
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      const gameName = GAME_NAMES[gameId] || gameId;
+      
+      const cardWidth = 90;
+      const cardHeight = 60;
+      const margin = 10;
+      const cardsPerRow = 2;
+      const cardsPerCol = 4;
+      const cardsPerPage = cardsPerRow * cardsPerCol;
+      
+      tournament.players.forEach((player, index) => {
+        if (index > 0 && index % cardsPerPage === 0) {
+          doc.addPage();
+        }
+        
+        const pageIndex = index % cardsPerPage;
+        const col = pageIndex % cardsPerRow;
+        const row = Math.floor(pageIndex / cardsPerRow);
+        
+        const x = margin + col * (cardWidth + margin);
+        const y = margin + row * (cardHeight + margin);
+        
+        // Card border
+        doc.setDrawColor(100, 100, 100);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(x, y, cardWidth, cardHeight, 3, 3);
+        
+        // Game name header
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100, 100, 100);
+        doc.text(gameName, x + cardWidth / 2, y + 8, { align: 'center' });
+        
+        // Player name
+        doc.setFontSize(14);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(0, 0, 0);
+        const displayName = player.name.length > 18 ? player.name.substring(0, 16) + '...' : player.name;
+        doc.text(displayName, x + cardWidth / 2, y + 22, { align: 'center' });
+        
+        // Class ID
+        if (player.classId) {
+          doc.setFontSize(10);
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(80, 80, 80);
+          doc.text('Turma: ' + player.classId, x + cardWidth / 2, y + 32, { align: 'center' });
+        }
+        
+        // Reconnection code
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(59, 130, 246);
+        doc.text(player.reconnectionCode || '---', x + cardWidth / 2, y + 48, { align: 'center' });
+        
+        // Label
+        doc.setFontSize(7);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(120, 120, 120);
+        doc.text('C\u00f3digo de Reconex\u00e3o', x + cardWidth / 2, y + 55, { align: 'center' });
+      });
+      
+      doc.save('cartoes-' + gameId + '.pdf');
+    }
+
+    async function doExportStatePdf(gameId) {
+      const tournament = cachedTournaments.find(t => t.gameId === gameId);
+      if (!tournament) {
+        alert('Torneio n\u00e3o encontrado.');
+        return;
+      }
+      
+      generateTournamentPdf(tournament, 'torneio-' + gameId + '.pdf');
+    }
+
+    function doGeneratePdfFromUpload() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json,application/json';
+      input.onchange = async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        try {
+          const text = await file.text();
+          const data = JSON.parse(text);
+          
+          if (!data.version || !data.gameId || !data.players) {
+            alert('Ficheiro inv\u00e1lido: n\u00e3o parece ser um export de torneio.');
+            return;
+          }
+          
+          const gameName = GAME_NAMES[data.gameId] || data.gameId;
+          generateTournamentPdf(data, 'torneio-' + data.gameId + '-arquivo.pdf');
+          alert('PDF gerado com sucesso!');
+        } catch (e) {
+          alert('Erro ao processar ficheiro: ' + e.message);
+        }
+      };
+      input.click();
+    }
+
+    // ========== TOURNAMENT CREATION ==========
+
+    function doShowCreateTournament() {
+      document.getElementById('createTournamentModal').style.display = 'flex';
+      document.getElementById('playerList').value = '';
+    }
+
+    function hideCreateTournamentModal() {
+      document.getElementById('createTournamentModal').style.display = 'none';
+    }
+
+    async function doCreateTournament() {
+      const gameId = document.getElementById('gameSelect').value;
+      const playerListText = document.getElementById('playerList').value.trim();
+      
+      if (!playerListText) {
+        alert('Por favor, insira pelo menos um jogador.');
+        return;
+      }
+      
+      // Parse player list (one per line, format: Name or Name;Class)
+      const lines = playerListText.split('\\n').filter(line => line.trim());
+      const players = lines.map(line => {
+        const parts = line.split(';').map(p => p.trim());
+        return {
+          name: parts[0] || '',
+          classId: parts[1] || undefined
+        };
+      }).filter(p => p.name);
+      
+      if (players.length === 0) {
+        alert('Nenhum jogador v\u00e1lido encontrado.');
+        return;
+      }
+      
+      if (players.length < 2) {
+        alert('S\u00e3o necess\u00e1rios pelo menos 2 jogadores para criar um torneio.');
+        return;
+      }
+      
+      const gameName = GAME_NAMES[gameId] || gameId;
+      if (!confirm('Criar torneio de ' + gameName + ' com ' + players.length + ' jogadores?')) {
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/tournaments/' + gameId + '/create-with-players', {
+          method: 'POST',
+          headers: {
+            'Authorization': 'Bearer ' + ADMIN_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ players }),
+        });
+        
+        const result = await res.json();
+        
+        if (result.success) {
+          hideCreateTournamentModal();
+          alert('Torneio criado com sucesso!\\n\\n' + result.players.length + ' jogadores registados.\\n\\nUsa o bot\u00e3o \"Cart\u00f5es\" para exportar os c\u00f3digos de reconex\u00e3o.');
+          refresh();
+        } else {
+          alert('Erro ao criar torneio: ' + (result.error || 'Erro desconhecido'));
+        }
+      } catch (e) {
+        alert('Erro de comunica\u00e7\u00e3o: ' + e.message);
+      }
     }
 
     // ========== PLAYER MANAGEMENT ==========
