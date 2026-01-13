@@ -1195,13 +1195,13 @@ Pedro Costa"></textarea>
         }
       }
       
-      // Calculate wins for each player
+      // Calculate wins and losses for each player from all finished matches
       const playerWins = new Map();
       const playerLosses = new Map();
       
       for (const p of players) {
         playerWins.set(p.id, 0);
-        playerLosses.set(p.id, p.losses || 0);
+        playerLosses.set(p.id, 0);
       }
       
       const allMatchesList = [
@@ -1212,8 +1212,18 @@ Pedro Costa"></textarea>
       ].filter(Boolean);
       
       for (const match of allMatchesList) {
-        if (match.winnerId) {
+        // Only count matches that are finished and have a winner (not BYE matches)
+        if (match.winnerId && match.result !== 'bye') {
+          // Count the win
           playerWins.set(match.winnerId, (playerWins.get(match.winnerId) || 0) + 1);
+          
+          // Count the loss for the loser
+          const loserId = match.player1?.id === match.winnerId 
+            ? match.player2?.id 
+            : match.player1?.id;
+          if (loserId) {
+            playerLosses.set(loserId, (playerLosses.get(loserId) || 0) + 1);
+          }
         }
       }
       
