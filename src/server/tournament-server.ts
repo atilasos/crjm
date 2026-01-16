@@ -1105,6 +1105,37 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     });
   }
 
+  // Admin spectator page
+  if (url.pathname === '/admin/spectator') {
+    try {
+      // Try to serve from dist first (production)
+      const distPath = './dist/admin/spectator.html';
+      const srcPath = './src/admin/spectator.html';
+      const file = Bun.file(distPath);
+      if (await file.exists()) {
+        return new Response(await file.text(), {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            ...corsHeaders,
+          },
+        });
+      }
+      // Fallback to src (development)
+      const srcFile = Bun.file(srcPath);
+      if (await srcFile.exists()) {
+        return new Response(await srcFile.text(), {
+          headers: {
+            'Content-Type': 'text/html; charset=utf-8',
+            ...corsHeaders,
+          },
+        });
+      }
+      return new Response('Admin spectator page not found', { status: 404 });
+    } catch (e) {
+      return new Response('Error loading admin spectator page', { status: 500 });
+    }
+  }
+
   // Listar torneios
   if (url.pathname === '/api/tournaments') {
     return Response.json(
@@ -1667,6 +1698,33 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     broadcastTournamentState(tournament);
 
     return Response.json({ success: true, message: 'Match reiniciado (0-0)' }, { headers: corsHeaders });
+  }
+
+  // Serve static files from dist/ for admin spectator page
+  if (
+    url.pathname.startsWith('/chunks/') ||
+    url.pathname.startsWith('/assets/') ||
+    url.pathname.endsWith('.js') ||
+    url.pathname.endsWith('.css') ||
+    url.pathname.endsWith('.svg')
+  ) {
+    const filePath = `./dist${url.pathname}`;
+    const file = Bun.file(filePath);
+
+    if (await file.exists()) {
+      const contentType = url.pathname.endsWith('.js') ? 'application/javascript'
+        : url.pathname.endsWith('.css') ? 'text/css'
+        : url.pathname.endsWith('.svg') ? 'image/svg+xml'
+        : url.pathname.endsWith('.html') ? 'text/html'
+        : 'application/octet-stream';
+
+      return new Response(await file.arrayBuffer(), {
+        headers: {
+          'Content-Type': contentType,
+          ...corsHeaders,
+        },
+      });
+    }
   }
 
   return new Response('Not Found', { status: 404, headers: corsHeaders });

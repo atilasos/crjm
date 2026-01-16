@@ -872,8 +872,94 @@ export function getAdminPageHtml(adminKey: string): string {
       border-left: 1px solid rgba(255,255,255,0.1);
     }
     
+    /* ========== ACTIVE GAMES LIST ========== */
+
+    .active-game-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .active-game-item:hover {
+      background: rgba(255,255,255,0.1);
+      border-color: rgba(34, 197, 94, 0.5);
+      transform: translateX(3px);
+    }
+
+    .active-game-item.watching {
+      border-color: #22c55e;
+      background: rgba(34, 197, 94, 0.15);
+    }
+
+    .active-game-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .active-game-bracket {
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-weight: 600;
+    }
+
+    .bracket-winners {
+      background: rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+
+    .bracket-losers {
+      background: rgba(245, 158, 11, 0.2);
+      color: #fbbf24;
+    }
+
+    .bracket-final {
+      background: rgba(255, 215, 0, 0.2);
+      color: #FFD700;
+    }
+
+    .active-game-players {
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .active-game-score {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+    }
+
+    .active-game-score .score-value {
+      font-weight: 700;
+    }
+
+    .active-game-score .score-p1 {
+      color: #4ade80;
+    }
+
+    .active-game-score .score-p2 {
+      color: #f87171;
+    }
+
+    .active-game-watching {
+      font-size: 0.7rem;
+      color: #22c55e;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
     /* ========== RESPONSIVE ========== */
-    
+
     @media (max-width: 900px) {
       .grid {
         grid-template-columns: 1fr;
@@ -950,6 +1036,28 @@ export function getAdminPageHtml(adminKey: string): string {
           </div>
         </div>
         
+        <div class="card" id="active-games-card">
+          <h2>
+            <span class="title-left"><span class="emoji">🎮</span> Jogos em Curso</span>
+            <span id="activeGamesCount" style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">(0)</span>
+          </h2>
+          <div id="active-games-list">
+            <div class="no-data">Nenhum jogo em curso</div>
+          </div>
+        </div>
+
+        <div class="card" id="game-viewer-card" style="display: none; grid-column: 1 / -1;">
+          <h2>
+            <span class="title-left"><span class="emoji">📺</span> Visualizar Jogo</span>
+            <button class="btn-secondary btn-icon" onclick="closeGameViewer()" title="Fechar">✕</button>
+          </h2>
+          <iframe
+            id="game-viewer-iframe"
+            src=""
+            style="width: 100%; height: 600px; border: none; border-radius: 8px; background: #1a1a2e;"
+          ></iframe>
+        </div>
+
         <div class="card" style="grid-column: 1 / -1;">
           <h2><span class="title-left"><span class="emoji">📋</span> Logs de Eventos</span></h2>
           <div class="logs-container" id="logs">
@@ -2301,8 +2409,121 @@ Pedro Costa"></textarea>
       }
     });
     
+    // ========== SPECTATOR WEBSOCKET ==========
+
+    let spectatorWs = null;
+    let activeGames = [];
+    let watchingMatchId = null;
+
+    function connectSpectatorWs() {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = protocol + '//' + window.location.host + '/ws';
+
+      spectatorWs = new WebSocket(wsUrl);
+
+      spectatorWs.onopen = () => {
+        console.log('[Spectator] WebSocket connected');
+      };
+
+      spectatorWs.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+
+          if (msg.type === 'active_games_list') {
+            activeGames = msg.games || [];
+            renderActiveGamesList();
+          }
+        } catch (e) {
+          console.error('[Spectator] Error parsing message:', e);
+        }
+      };
+
+      spectatorWs.onerror = (error) => {
+        console.error('[Spectator] WebSocket error:', error);
+      };
+
+      spectatorWs.onclose = () => {
+        console.log('[Spectator] WebSocket closed, reconnecting in 3s...');
+        setTimeout(connectSpectatorWs, 3000);
+      };
+    }
+
+    function renderActiveGamesList() {
+      const container = document.getElementById('active-games-list');
+      const countEl = document.getElementById('activeGamesCount');
+
+      countEl.textContent = '(' + activeGames.length + ')';
+
+      if (activeGames.length === 0) {
+        container.innerHTML = '<div class="no-data" style="padding: 15px;">Nenhum jogo em curso</div>';
+        return;
+      }
+
+      container.innerHTML = activeGames.map(game => {
+        const bracketClass = game.bracket === 'winners' ? 'bracket-winners' :
+                            game.bracket === 'losers' ? 'bracket-losers' : 'bracket-final';
+        const bracketLabel = game.bracket === 'winners' ? 'Winners' :
+                            game.bracket === 'losers' ? 'Losers' :
+                            game.bracket === 'grandFinal' ? 'Grand Final' : 'Final Reset';
+        const isWatching = watchingMatchId === game.matchId;
+
+        return '<div class="active-game-item' + (isWatching ? ' watching' : '') + '" onclick="watchGame(\\'' + game.matchId + '\\')">' +
+          '<div class="active-game-header">' +
+            '<span class="active-game-bracket ' + bracketClass + '">' + bracketLabel + ' R' + game.round + '</span>' +
+            '<span style="font-size: 0.75rem; color: rgba(255,255,255,0.4);">Jogo ' + game.gameNumber + '</span>' +
+          '</div>' +
+          '<div class="active-game-players">' + game.player1Name + ' vs ' + game.player2Name + '</div>' +
+          '<div class="active-game-score">' +
+            '<span class="score-value score-p1">' + game.score.player1Wins + '</span>' +
+            '<span style="color: rgba(255,255,255,0.3);">-</span>' +
+            '<span class="score-value score-p2">' + game.score.player2Wins + '</span>' +
+            (isWatching ? '<span class="active-game-watching"><span>👁️</span> A observar</span>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    function watchGame(matchId) {
+      const iframe = document.getElementById('game-viewer-iframe');
+      const card = document.getElementById('game-viewer-card');
+
+      // Get current tournament gameId from cached tournaments
+      let gameId = 'gatos-caes'; // default
+      if (cachedTournaments.length > 0) {
+        const runningTournament = cachedTournaments.find(t => t.phase === 'running');
+        if (runningTournament) {
+          gameId = runningTournament.gameId;
+        } else {
+          gameId = cachedTournaments[0].gameId;
+        }
+      }
+
+      watchingMatchId = matchId;
+      iframe.src = '/admin/spectator?matchId=' + matchId + '&gameId=' + gameId;
+      card.style.display = 'block';
+
+      // Scroll to iframe
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+      // Re-render list to show watching indicator
+      renderActiveGamesList();
+    }
+
+    function closeGameViewer() {
+      const card = document.getElementById('game-viewer-card');
+      const iframe = document.getElementById('game-viewer-iframe');
+
+      card.style.display = 'none';
+      iframe.src = '';
+      watchingMatchId = null;
+
+      // Re-render list to remove watching indicator
+      renderActiveGamesList();
+    }
+
     // ========== INIT ==========
-    
+
+    connectSpectatorWs();
     refresh();
     startAutoRefresh();
   </script>
