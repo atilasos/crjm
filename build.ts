@@ -666,33 +666,56 @@ if (existsSync(outdir)) {
 
 const start = performance.now();
 
-const entrypoints = [...new Bun.Glob("**/*.html").scanSync("src")]
-  .map(a => path.resolve("src", a))
-  .filter(dir => !dir.includes("node_modules"));
-console.log(`📄 Found ${entrypoints.length} HTML ${entrypoints.length === 1 ? "file" : "files"} to process\n`);
+// Build principal (index.html)
+const mainEntrypoint = path.resolve("src", "index.html");
+console.log(`📄 Building main app (index.html)\n`);
 
-const result = await Bun.build({
-  entrypoints,
+const mainResult = await Bun.build({
+  entrypoints: [mainEntrypoint],
   outdir,
   plugins: [plugin],
   minify: true,
   target: "browser",
   sourcemap: "linked",
-  splitting: true,
-  naming: {
-    entry: "[dir]/[name].[ext]",
-    chunk: "[name]-[hash].[ext]",
-    asset: "[name]-[hash].[ext]",
-  },
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
   },
   ...cliConfig,
 });
 
+if (!mainResult.success) {
+  console.error("❌ Main build failed:");
+  mainResult.logs.forEach(log => console.error(log));
+  process.exit(1);
+}
+
+// Build admin spectator (separado para evitar conflitos)
+const adminEntrypoint = path.resolve("src", "admin", "spectator.html");
+if (existsSync(adminEntrypoint)) {
+  console.log(`📄 Building admin spectator page\n`);
+
+  const adminResult = await Bun.build({
+    entrypoints: [adminEntrypoint],
+    outdir: path.join(outdir, "admin"),
+    plugins: [plugin],
+    minify: true,
+    target: "browser",
+    sourcemap: "linked",
+    define: {
+      "process.env.NODE_ENV": JSON.stringify("production"),
+    },
+    ...cliConfig,
+  });
+
+  if (!adminResult.success) {
+    console.error("⚠️ Admin spectator build failed:");
+    adminResult.logs.forEach(log => console.error(log));
+  }
+}
+
 const end = performance.now();
 
-const outputTable = result.outputs.map(output => ({
+const outputTable = mainResult.outputs.map(output => ({
   File: path.relative(process.cwd(), output.path),
   Type: output.kind,
   Size: formatFileSize(output.size),
