@@ -681,8 +681,8 @@ const result = await Bun.build({
   splitting: true,
   naming: {
     entry: "[dir]/[name].[ext]",
-    chunk: "chunks/[name]-[hash].[ext]",
-    asset: "assets/[name]-[hash].[ext]",
+    chunk: "[name]-[hash].[ext]",
+    asset: "[name]-[hash].[ext]",
   },
   define: {
     "process.env.NODE_ENV": JSON.stringify("production"),
