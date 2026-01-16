@@ -1702,8 +1702,6 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Serve static files from dist/ for admin spectator page
   if (
-    url.pathname.startsWith('/chunks/') ||
-    url.pathname.startsWith('/assets/') ||
     url.pathname.endsWith('.js') ||
     url.pathname.endsWith('.css') ||
     url.pathname.endsWith('.svg')
@@ -1715,7 +1713,6 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       const contentType = url.pathname.endsWith('.js') ? 'application/javascript'
         : url.pathname.endsWith('.css') ? 'text/css'
         : url.pathname.endsWith('.svg') ? 'image/svg+xml'
-        : url.pathname.endsWith('.html') ? 'text/html'
         : 'application/octet-stream';
 
       return new Response(await file.arrayBuffer(), {
