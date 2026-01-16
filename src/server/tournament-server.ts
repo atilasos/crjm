@@ -78,6 +78,9 @@ const tournaments = new Map<GameId, Tournament>();
 // Mapa de sockets por playerId
 const playerSockets = new Map<string, ServerWebSocket<ClientData>>();
 
+// Set de conexões de espectadores/admin (conexões anónimas que querem receber updates)
+const spectatorSockets = new Set<ServerWebSocket<ClientData>>();
+
 // Log de eventos
 interface LogEntry {
   timestamp: Date;
@@ -143,7 +146,7 @@ function broadcastTournamentState(tournament: Tournament): void {
   broadcastActiveGamesList(tournament);
 }
 
-/** Envia a lista de jogos em curso para todos os jogadores (para modo espectador) */
+/** Envia a lista de jogos em curso para todos os jogadores e espectadores */
 function broadcastActiveGamesList(tournament: Tournament): void {
   const activeMatches = getActiveMatchesWithGameState(tournament);
 
@@ -163,13 +166,21 @@ function broadcastActiveGamesList(tournament: Tournament): void {
     };
   });
 
-  broadcastToTournament(tournament, {
+  const message: ServerMessage = {
     type: 'active_games_list',
     games,
-  });
+  };
+
+  // Enviar para jogadores do torneio
+  broadcastToTournament(tournament, message);
+
+  // Enviar também para espectadores/admin
+  for (const socket of spectatorSockets) {
+    sendToSocket(socket, message);
+  }
 }
 
-/** Envia o estado de um jogo específico para todos os jogadores (espectadores) */
+/** Envia o estado de um jogo específico para todos os jogadores e espectadores */
 function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMatch): void {
   if (!match.gameState || match.phase !== 'playing') return;
 
@@ -195,6 +206,11 @@ function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMa
     if (player.isConnected && player.id !== match.player1?.id && player.id !== match.player2?.id) {
       sendToPlayer(player.id, message);
     }
+  }
+
+  // Enviar também para espectadores/admin
+  for (const socket of spectatorSockets) {
+    sendToSocket(socket, message);
   }
 }
 
@@ -254,10 +270,11 @@ function handleJoinTournament(
     return;
   }
 
-  // Associar socket ao jogador
+  // Associar socket ao jogador (e remover do set de espectadores)
   socket.data.playerId = player.id;
   socket.data.tournamentId = tournament.id;
   playerSockets.set(player.id, socket);
+  spectatorSockets.delete(socket);
 
   log({
     type: 'info',
@@ -342,10 +359,11 @@ function handleRejoinTournament(
   const socketId = `${Date.now()}-${Math.random()}`;
   const { resumedMatchId } = reactivatePlayer(foundTournament, foundPlayer.id, socketId);
 
-  // Associar socket ao jogador
+  // Associar socket ao jogador (e remover do set de espectadores)
   socket.data.playerId = foundPlayer.id;
   socket.data.tournamentId = foundTournament.id;
   playerSockets.set(foundPlayer.id, socket);
+  spectatorSockets.delete(socket);
 
   log({
     type: 'info',
@@ -1008,9 +1026,23 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
     type: 'info',
     message: 'Nova conexão WebSocket',
   });
+
+  // Adicionar ao set de espectadores (será removido se se tornar jogador)
+  spectatorSockets.add(socket);
+
+  // Enviar lista de jogos activos imediatamente
+  for (const tournament of tournaments.values()) {
+    if (tournament.phase === 'running') {
+      broadcastActiveGamesList(tournament);
+      break; // Só precisa de enviar uma vez
+    }
+  }
 }
 
 function handleClose(socket: ServerWebSocket<ClientData>): void {
+  // Remover do set de espectadores
+  spectatorSockets.delete(socket);
+
   const playerId = socket.data.playerId;
 
   if (playerId) {
