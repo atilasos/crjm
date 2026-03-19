@@ -60,6 +60,35 @@ describe('DominorioV1Adapter', () => {
     expect(response.bestMove).toBeNull();
     expect(response.topMoves).toEqual([]);
     expect(response.explainText).toBe('Sem jogadas válidas nesta posição.');
+    expect(response.criticalThreats).toEqual([]);
+  });
+
+  test('emits a minimal critical threat on low-mobility positions', async () => {
+    const adapter = new DominorioV1Adapter();
+    const board: Celula[][] = Array.from({ length: 8 }, () =>
+      Array(8).fill('ocupada-horizontal' as const),
+    );
+    board[0][0] = 'vazia';
+    board[1][0] = 'vazia';
+
+    const lowMobilityState: DominorioState = {
+      tabuleiro: board,
+      modo: 'vs-computador',
+      jogadorAtual: 'jogador1',
+      estado: 'a-jogar',
+      dominoPreview: null,
+      jogadasValidas: [],
+      dominosColocados: [],
+    };
+
+    const response = await adapter.compute(buildRequest(lowMobilityState));
+    adapter.terminate();
+
+    expect(response.topMoves.length).toBe(1);
+    expect(response.criticalThreats?.length).toBe(1);
+    expect(response.criticalThreats?.[0].id).toBe('low-mobility');
+    expect(response.criticalThreats?.[0].severity).toBe('high');
+    expect(response.criticalThreats?.[0].counterMove).toEqual(response.topMoves[0].move);
   });
 
   test('maps core levels to legacy difficulty buckets', () => {

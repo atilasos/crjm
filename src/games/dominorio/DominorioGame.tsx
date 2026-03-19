@@ -2,23 +2,27 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
-import { DominorioState, Posicao } from './types';
-import { 
-  criarEstadoInicial, 
+import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { DominorioState, Posicao, Domino } from './types';
+import {
+  criarEstadoInicial,
   atualizarPreview,
   colocarDomino,
   getDominoPreview,
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
-import { 
-  DominorioAIClient, 
-  type AIDifficulty, 
+import {
+  DominorioAIClient,
+  DominorioV1Adapter,
+  type AIDifficulty,
   type AIMetrics,
   DIFFICULTY_PRESETS,
-  INITIAL_METRICS 
+  INITIAL_METRICS,
 } from './ai';
 import { withTimeout } from '../../utils/withTimeout';
+import { TutorHintCard } from './components/TutorHintCard';
+import { TopMovesRail } from './components/TopMovesRail';
 
 interface DominorioGameProps {
   onVoltar: () => void;
@@ -34,19 +38,58 @@ const REGRAS = [
   'Se não tiveres jogadas no teu turno, PERDES.',
 ];
 
+function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
+  if (difficulty === 'easy') return 2;
+  if (difficulty === 'medium') return 3;
+  return 4;
+}
+
+function formatMove(move: Domino): string {
+  const l1 = move.pos1.linha + 1;
+  const c1 = move.pos1.coluna + 1;
+  const l2 = move.pos2.linha + 1;
+  const c2 = move.pos2.coluna + 1;
+  return `(${l1},${c1})-(${l2},${c2})`;
+}
+
+function getSuggestedAction(response: AIResponseV1<Domino, DominorioState> | null): string {
+  if (!response?.bestMove) {
+    return 'Procura manter o máximo de jogadas legais no próximo turno.';
+  }
+
+  return `Prioriza a jogada ${formatMove(response.bestMove)}.`;
+}
+
+function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
+  if (severity === 'high') {
+    return 'border-red-300 bg-red-50 text-red-900';
+  }
+
+  if (severity === 'medium') {
+    return 'border-amber-300 bg-amber-50 text-amber-900';
+  }
+
+  return 'border-slate-300 bg-slate-50 text-slate-800';
+}
+
 export function DominorioGame({ onVoltar }: DominorioGameProps) {
-  const [state, setState] = useState<DominorioState>(() => 
-    criarEstadoInicial('vs-computador')
+  const [state, setState] = useState<DominorioState>(() =>
+    criarEstadoInicial('vs-computador'),
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [difficulty, setDifficulty] = useState<AIDifficulty>('medium');
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
-  
+  const [tutorResponse, setTutorResponse] =
+    useState<AIResponseV1<Domino, DominorioState> | null>(null);
+  const [tutorLoading, setTutorLoading] = useState(false);
+
   // AI client ref (persistent across renders)
   const aiClientRef = useRef<DominorioAIClient | null>(null);
-  
+  const tutorAdapterRef = useRef<DominorioV1Adapter | null>(null);
+  const tutorRequestSeqRef = useRef(0);
+
   // Initialize AI client
   useEffect(() => {
     const client = new DominorioAIClient({
@@ -54,17 +97,90 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       onReady: () => setAiReady(true),
     });
     aiClientRef.current = client;
-    
+
     return () => {
       client.terminate();
     };
   }, []);
 
+  useEffect(() => {
+    const adapter = new DominorioV1Adapter();
+    tutorAdapterRef.current = adapter;
+
+    return () => {
+      adapter.terminate();
+    };
+  }, []);
+
+  const isVezDaIA =
+    state.modo === 'vs-computador' &&
+    state.estado === 'a-jogar' &&
+    state.jogadorAtual !== humanPlayer;
+
+  useEffect(() => {
+    if (!tutorAdapterRef.current) return;
+
+    if (state.estado !== 'a-jogar') {
+      // Mantém último payload para facilitar futura revisão pós-jogo (F1.3+).
+      setTutorLoading(false);
+      return;
+    }
+
+    if (isVezDaIA) {
+      setTutorLoading(false);
+      return;
+    }
+
+    const requestId = `dom-tutor-${Date.now()}-${++tutorRequestSeqRef.current}`;
+    const request: AIRequestV1<DominorioState, Domino> = {
+      version: '1.0',
+      requestId,
+      gameId: 'dominorio',
+      mode: 'tutor',
+      level: mapDifficultyToLevel(difficulty),
+      state,
+      locale: 'pt-PT',
+    };
+
+    let cancelled = false;
+    setTutorLoading(true);
+
+    tutorAdapterRef.current
+      .compute(request)
+      .then((response) => {
+        if (cancelled) return;
+        setTutorResponse(response);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTutorResponse(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTutorLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      tutorAdapterRef.current?.cancel();
+    };
+  }, [
+    state.tabuleiro,
+    state.jogadorAtual,
+    state.estado,
+    state.modo,
+    state.dominosColocados.length,
+    difficulty,
+    isVezDaIA,
+    state,
+  ]);
+
   // Efeito para jogada do computador (usando AI Worker)
   useEffect(() => {
     if (
-      state.modo === 'vs-computador' && 
-      state.jogadorAtual !== humanPlayer && 
+      state.modo === 'vs-computador' &&
+      state.jogadorAtual !== humanPlayer &&
       state.estado === 'a-jogar' &&
       aiClientRef.current
     ) {
@@ -72,31 +188,31 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       let finished = false;
       const client = aiClientRef.current;
       const maxWaitMs = DIFFICULTY_PRESETS[difficulty].timeBudgetMs + 250;
-      
+
       // Small delay for UX
       const timer = setTimeout(async () => {
         if (cancelled || !client) return;
-        
+
         try {
           const move = await withTimeout(
             client.getBestMove(state, difficulty),
             maxWaitMs,
-            () => client.cancel()
+            () => client.cancel(),
           );
-          
+
           if (cancelled) return;
-          
+
           finished = true;
-          setState(prev => (move ? colocarDomino(prev, move) : jogadaComputador(prev)));
+          setState((prev) => (move ? colocarDomino(prev, move) : jogadaComputador(prev)));
         } catch (e) {
           if (e instanceof Error && e.message === 'cancelled') return;
           console.error('[DominorioGame] AI error:', e);
           if (cancelled) return;
           finished = true;
-          setState(prev => jogadaComputador(prev));
+          setState((prev) => jogadaComputador(prev));
         }
       }, 200);
-      
+
       return () => {
         cancelled = true;
         clearTimeout(timer);
@@ -112,51 +228,67 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     }
   }, [state.estado]);
 
-  const handleMouseEnter = useCallback((pos: Posicao) => {
-    if (state.estado !== 'a-jogar') return;
-    if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
-    setState(prev => atualizarPreview(prev, pos));
-  }, [state.estado, state.modo, state.jogadorAtual, humanPlayer]);
+  const handleMouseEnter = useCallback(
+    (pos: Posicao) => {
+      if (state.estado !== 'a-jogar') return;
+      if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
+      setState((prev) => atualizarPreview(prev, pos));
+    },
+    [state.estado, state.modo, state.jogadorAtual, humanPlayer],
+  );
 
   const handleMouseLeave = useCallback(() => {
-    setState(prev => ({ ...prev, dominoPreview: null }));
+    setState((prev) => ({ ...prev, dominoPreview: null }));
   }, []);
 
-  const handleCellClick = useCallback((pos: Posicao) => {
-    if (state.estado !== 'a-jogar') return;
-    if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
+  const handleCellClick = useCallback(
+    (pos: Posicao) => {
+      if (state.estado !== 'a-jogar') return;
+      if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
-    const preview = getDominoPreview(state, pos);
-    if (preview) {
-      setState(prev => colocarDomino(prev, preview));
-    }
-  }, [state, humanPlayer]);
+      const preview = getDominoPreview(state, pos);
+      if (preview) {
+        setState((prev) => colocarDomino(prev, preview));
+      }
+    },
+    [state, humanPlayer],
+  );
 
   const novoJogo = useCallback(() => {
     // Cancel any pending AI search
     aiClientRef.current?.cancel();
+    tutorAdapterRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
+    setTutorLoading(false);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
-    const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
+    const novoModo: GameMode =
+      state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
     // Cancel any pending AI search
     aiClientRef.current?.cancel();
+    tutorAdapterRef.current?.cancel();
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setHumanPlayer('jogador1'); // Reset ao trocar modo
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
+    setTutorLoading(false);
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
     // Cancel any pending AI search
     aiClientRef.current?.cancel();
+    tutorAdapterRef.current?.cancel();
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
+    setTutorLoading(false);
   }, []);
 
   const handleChangeDifficulty = useCallback((newDifficulty: AIDifficulty) => {
@@ -167,22 +299,26 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   const isPreview = (linha: number, coluna: number): boolean => {
     if (!state.dominoPreview) return false;
     const { pos1, pos2 } = state.dominoPreview;
-    return (pos1.linha === linha && pos1.coluna === coluna) ||
-           (pos2.linha === linha && pos2.coluna === coluna);
+    return (
+      (pos1.linha === linha && pos1.coluna === coluna) ||
+      (pos2.linha === linha && pos2.coluna === coluna)
+    );
   };
 
   // Obter cor da célula
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha][coluna];
     const preview = isPreview(linha, coluna);
-    
-    let classes = 'aspect-square rounded-md flex items-center justify-center transition-all duration-150 ';
-    
+
+    let classes =
+      'aspect-square rounded-md flex items-center justify-center transition-all duration-150 ';
+
     if (celula === 'vazia') {
       if (preview) {
-        classes += state.jogadorAtual === 'jogador1' 
-          ? 'bg-pink-400 ring-2 ring-pink-300' 
-          : 'bg-cyan-400 ring-2 ring-cyan-300';
+        classes +=
+          state.jogadorAtual === 'jogador1'
+            ? 'bg-pink-400 ring-2 ring-pink-300'
+            : 'bg-cyan-400 ring-2 ring-cyan-300';
       } else {
         classes += 'bg-gray-100 hover:bg-gray-200 cursor-pointer';
       }
@@ -191,14 +327,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     } else {
       classes += 'bg-cyan-500';
     }
-    
+
     return classes;
   };
 
-  const isVezDaIA =
-    state.modo === 'vs-computador' &&
-    state.estado === 'a-jogar' &&
-    state.jogadorAtual !== humanPlayer;
+  const criticalThreat = tutorResponse?.criticalThreats?.[0];
 
   return (
     <GameLayout titulo="Dominório" regras={REGRAS} onVoltar={onVoltar}>
@@ -226,7 +359,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
         {/* Tabuleiro */}
         <div className="game-container">
           <div className="aspect-square max-w-md mx-auto">
-            <div 
+            <div
               className="grid grid-cols-8 gap-1 h-full bg-emerald-800 p-2 rounded-xl"
               onMouseLeave={handleMouseLeave}
             >
@@ -243,7 +376,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
                       <div className="w-2 h-2 rounded-full bg-white/50"></div>
                     )}
                   </button>
-                ))
+                )),
               )}
             </div>
           </div>
@@ -262,23 +395,51 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
           {/* Dica de jogada */}
           <div className="mt-2 text-center text-sm text-gray-500">
-            {state.estado === 'a-jogar' && (
-              isVezDaIA ? (
+            {state.estado === 'a-jogar' &&
+              (isVezDaIA ? (
                 <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
                   <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
                   IA a pensar…
                 </span>
               ) : (
                 <>
-                  {state.jogadorAtual === 'jogador1' 
-                    ? 'Clica para colocar um dominó VERTICAL' 
-                    : 'Clica para colocar um dominó HORIZONTAL'}
-                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                  {state.jogadorAtual === 'jogador1'
+                    ? 'Clica para colocar um dominó VERTICAL'
+                    : 'Clica para colocar um dominó HORIZONTAL'}{' '}
+                  • Jogadas disponíveis: {state.jogadasValidas.length}
                 </>
-              )
-            )}
+              ))}
           </div>
         </div>
+
+        {state.estado === 'a-jogar' && !isVezDaIA && (
+          <div className="space-y-3">
+            <TutorHintCard
+              insight={
+                tutorResponse?.explainText ||
+                'Mantém a posição equilibrada e evita reduzir demasiado as opções.'
+              }
+              suggestedAction={getSuggestedAction(tutorResponse)}
+              isLoading={tutorLoading}
+            />
+
+            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+
+            {criticalThreat && (
+              <section
+                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+              >
+                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
+                <p className="mt-1">{criticalThreat.description}</p>
+                {criticalThreat.counterMove && (
+                  <p className="mt-1 font-medium">
+                    Resposta mínima: {formatMove(criticalThreat.counterMove)}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Anúncio de vencedor */}

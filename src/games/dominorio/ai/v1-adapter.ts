@@ -2,6 +2,7 @@ import type {
   AIRequestV1,
   AIResponseV1,
   AIMoveCandidate,
+  AICriticalThreat,
   DifficultyLevel,
 } from '../../../ai-core';
 import type { DominorioState, Domino } from '../types';
@@ -51,6 +52,7 @@ export class DominorioV1Adapter {
       topMoves,
       explainText: buildExplainText(bestMove, topMoves),
       confidence: topMoves[0]?.confidence,
+      criticalThreats: buildCriticalThreats(topMoves),
       stats: {
         elapsedMs,
         depth: this.client.metrics.lastDepth || undefined,
@@ -161,6 +163,27 @@ function normalizeConfidence(score: number, maxScore: number, minScore: number):
   if (maxScore === minScore) return 0.5;
   const raw = (score - minScore) / (maxScore - minScore);
   return Number(Math.max(0, Math.min(1, raw)).toFixed(2));
+}
+
+function buildCriticalThreats(
+  topMoves: AIMoveCandidate<Domino>[],
+): AICriticalThreat<Domino>[] {
+  if (topMoves.length <= 2 && topMoves.length > 0) {
+    return [
+      {
+        id: 'low-mobility',
+        severity: topMoves.length === 1 ? 'high' : 'medium',
+        title: 'Mobilidade crítica baixa',
+        description:
+          topMoves.length === 1
+            ? 'Só tens uma jogada segura disponível neste turno.'
+            : 'Tens poucas respostas fortes; escolhe uma das melhores opções.',
+        counterMove: topMoves[0].move,
+      },
+    ];
+  }
+
+  return [];
 }
 
 function buildExplainText(
