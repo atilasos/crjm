@@ -29,16 +29,16 @@ export interface DifficultyParams {
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
   easy: {
-    timeBudgetMs: 2800,
+    timeBudgetMs: 2600,
     maxDepth: 4,
     topN: 6,
-    scoreDelta: 60,
+    scoreDelta: 70,
   },
   medium: {
-    timeBudgetMs: 7500,
+    timeBudgetMs: 7800,
     maxDepth: 7,
     topN: 2,
-    scoreDelta: 12,
+    scoreDelta: 10,
   },
   hard: {
     timeBudgetMs: 15000,

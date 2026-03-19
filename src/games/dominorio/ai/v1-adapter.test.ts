@@ -139,12 +139,18 @@ describe('DominorioV1Adapter', () => {
     expect(mapLevelToLegacyDifficulty(5)).toBe('hard');
   });
 
+  test('keeps easy levels separated', () => {
+    expect(resolveLegacyTimeBudgetMs(2, 'easy')).toBeGreaterThan(
+      resolveLegacyTimeBudgetMs(1, 'easy'),
+    );
+  });
+
   test('separates hard budgets between level 4 and 5', () => {
     expect(resolveLegacyTimeBudgetMs(4, 'hard')).toBe(
-      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 0.9),
+      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.08),
     );
     expect(resolveLegacyTimeBudgetMs(5, 'hard')).toBe(
-      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.15),
+      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.18),
     );
   });
 

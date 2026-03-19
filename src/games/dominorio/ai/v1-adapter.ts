@@ -104,11 +104,11 @@ export function mapLevelToLegacyDifficulty(level: DifficultyLevel): AIDifficulty
 }
 
 const LEVEL_TIME_BUDGET_MULTIPLIER: Record<DifficultyLevel, number> = {
-  1: 0.85,
-  2: 1,
-  3: 0.95,
-  4: 0.9,
-  5: 1.15,
+  1: 0.82,
+  2: 0.94,
+  3: 1,
+  4: 1.08,
+  5: 1.18,
 };
 
 export function resolveLegacyTimeBudgetMs(
