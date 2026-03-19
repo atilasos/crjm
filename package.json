@@ -10,6 +10,7 @@
     "build": "bun run build.ts",
     "test": "bun test",
     "baseline:dominorio": "bun run scripts/dominorio-baseline.ts",
+    "hardening:f3.1": "bun run scripts/hardening-f3_1.ts",
     "tournament": "bun run src/server/tournament-server.ts",
     "tournament:dev": "bun --hot src/server/tournament-server.ts",
     "screenshots": "bun run scripts/capture-screenshots.ts",
