@@ -23,6 +23,10 @@ export interface AIClientOptions {
   onReady?: () => void;
 }
 
+export interface AIComputeOverrides {
+  timeBudgetMs?: number;
+}
+
 export class DominorioAIClient {
   private isReady = false;
   private options: AIClientOptions;
@@ -237,7 +241,8 @@ export class DominorioAIClient {
    */
   async getBestMove(
     state: DominorioState,
-    difficulty: AIDifficulty = 'medium'
+    difficulty: AIDifficulty = 'medium',
+    overrides: AIComputeOverrides = {},
   ): Promise<Domino | null> {
     // Convert board state to bitboard
     const [occupiedLow, occupiedHigh] = bitboard.boardToBitboard(state.tabuleiro);
@@ -270,13 +275,17 @@ export class DominorioAIClient {
     
     // Get difficulty params
     const params = DIFFICULTY_PRESETS[difficulty];
+    const timeBudgetMs =
+      typeof overrides.timeBudgetMs === 'number' && Number.isFinite(overrides.timeBudgetMs)
+        ? Math.max(1, Math.trunc(overrides.timeBudgetMs))
+        : params.timeBudgetMs;
     
     // Run search
     const response = await this.searchTS(
       occupiedLow,
       occupiedHigh,
       side,
-      params.timeBudgetMs,
+      timeBudgetMs,
       params.maxDepth,
       params.topN,
       params.scoreDelta

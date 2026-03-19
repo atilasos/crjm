@@ -37,7 +37,9 @@ export class DominorioV1Adapter {
   ): Promise<AIResponseV1<Domino, DominorioState>> {
     const startedAt = performance.now();
     const difficulty = mapLevelToLegacyDifficulty(request.level);
-    const bestMove = await this.client.getBestMove(request.state, difficulty);
+    const bestMove = await this.client.getBestMove(request.state, difficulty, {
+      timeBudgetMs: request.timeBudgetMs,
+    });
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(topMoves);
     const pedagogy = buildPedagogy(request.level, request.state, topMoves, criticalThreats);
