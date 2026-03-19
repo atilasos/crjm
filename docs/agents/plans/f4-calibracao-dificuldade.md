@@ -54,9 +54,9 @@
 - Write/update: `artifacts/dominorio-baseline/latest/*`
 - Write: `docs/reports/dominorio/F4-calibracao-report.md`
 
-- [ ] Gerar novo baseline
-- [ ] Comparar com baseline anterior
-- [ ] Explicar PASS/FAIL por métrica T1–T4
+- [x] Gerar novo baseline
+- [x] Comparar com baseline anterior
+- [x] Explicar PASS/FAIL por métrica T1–T4
 - [ ] Commit + push
 
 ## Task 4 — Ajuste incremental Atari Go ladder
