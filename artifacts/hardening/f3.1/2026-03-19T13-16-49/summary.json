@@ -1,0 +1,65 @@
+{
+  "phase": "F3.1",
+  "generatedAt": "2026-03-19T13:16:49.335Z",
+  "checks": [
+    {
+      "id": "dominorio-v1-adapter-tests",
+      "command": "bun test src/games/dominorio/ai/v1-adapter.test.ts",
+      "durationMs": 191,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\nsrc/games/dominorio/ai/v1-adapter.test.ts:\n(pass) DominorioV1Adapter > maps initial state into AIResponseV1 with mandatory fields [12.49ms]\n(pass) DominorioV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [1.95ms]\n(pass) DominorioV1Adapter > emits a minimal critical threat on low-mobility positions [0.96ms]\n(pass) DominorioV1Adapter > classifies endgame instability as E-DO-03 [5.44ms]\n(pass) DominorioV1Adapter > maps core levels to legacy difficulty buckets [0.03ms]\n\n 5 pass\n 0 fail\n 33 expect() calls\nRan 5 tests across 1 file. [160.00ms]\n"
+    },
+    {
+      "id": "atari-go-v1-adapter-tests",
+      "command": "bun test src/games/atari-go/ai/v1-adapter.test.ts",
+      "durationMs": 221,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\nsrc/games/atari-go/ai/v1-adapter.test.ts:\n(pass) AtariGoV1Adapter > maps state into AIResponseV1 mandatory fields [112.84ms]\n(pass) AtariGoV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [0.24ms]\n(pass) AtariGoV1Adapter > emits critical threat and turning point when opponent has immediate capture [69.02ms]\n(pass) AtariGoV1Adapter > maps core levels to legacy difficulty buckets [0.62ms]\n\n 4 pass\n 0 fail\n 25 expect() calls\nRan 4 tests across 1 file. [205.00ms]\n"
+    },
+    {
+      "id": "dominorio-baseline-lite",
+      "command": "bun run baseline:dominorio",
+      "durationMs": 6658,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[dominorio-baseline] starting {\n  gamesPerMirror: 1,\n  t4ProbeEveryPly: 12,\n  maxPliesPerGame: 32,\n  budgetScale: 0.05,\n}\n[dominorio-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/dominorio-baseline/2026-03-19T13-16-49\n[dominorio-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/dominorio-baseline/latest\n[dominorio-baseline] done: games=8, decisions=234, t1Fails=2, t2Fails=1, t3Pass=true, t4Pass=false\n",
+      "stderrTail": "$ bun run scripts/dominorio-baseline.ts\n"
+    }
+  ],
+  "aggregate": {
+    "total": 3,
+    "passed": 3,
+    "failed": 0,
+    "ok": true
+  },
+  "dominorioBaseline": {
+    "generatedAt": "2026-03-19T13:16:49.305Z",
+    "games": 8,
+    "decisions": 234,
+    "t1": {
+      "failedPairs": [
+        "N4>N3",
+        "N5>N4"
+      ],
+      "passAll": false
+    },
+    "t2": {
+      "failedLevels": [
+        1
+      ],
+      "passAll": false
+    },
+    "t3Pass": true,
+    "t4Pass": false,
+    "pedagogy": {
+      "p1Pass": true,
+      "p5Pass": true,
+      "p6Pass": true,
+      "p7Pass": true
+    }
+  }
+}
