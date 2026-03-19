@@ -34,6 +34,9 @@ describe('DominorioV1Adapter', () => {
     expect(response.topMoves.length).toBeLessThanOrEqual(3);
     expect(response.topMoves[0].rank).toBe(1);
     expect(response.explainText.length).toBeGreaterThan(0);
+    expect(response.explainText.length).toBeLessThanOrEqual(160);
+    expect(response.pedagogy?.errorCode).toBeDefined();
+    expect(response.pedagogy?.hintLevelSuggested).toBeDefined();
     expect(response.stats.elapsedMs).toBeGreaterThanOrEqual(0);
     expect(response.stats.usedWasm).toBe(false);
     expect(response.stats.engine).toBe('ts-fallback');
@@ -59,8 +62,10 @@ describe('DominorioV1Adapter', () => {
 
     expect(response.bestMove).toBeNull();
     expect(response.topMoves).toEqual([]);
-    expect(response.explainText).toBe('Sem jogadas válidas nesta posição.');
+    expect(response.explainText).toContain('Sem jogadas válidas nesta posição.');
     expect(response.criticalThreats).toEqual([]);
+    expect(response.pedagogy?.errorCode).toBe('E-DO-02');
+    expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
   });
 
   test('emits a minimal critical threat on low-mobility positions', async () => {
@@ -89,6 +94,39 @@ describe('DominorioV1Adapter', () => {
     expect(response.criticalThreats?.[0].id).toBe('low-mobility');
     expect(response.criticalThreats?.[0].severity).toBe('high');
     expect(response.criticalThreats?.[0].counterMove).toEqual(response.topMoves[0].move);
+    expect(response.pedagogy?.errorCode).toBe('E-DO-02');
+    expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
+  });
+
+  test('classifies endgame instability as E-DO-03', async () => {
+    const adapter = new DominorioV1Adapter();
+    const board: Celula[][] = Array.from({ length: 8 }, () =>
+      Array(8).fill('ocupada-vertical' as const),
+    );
+    board[0][0] = 'vazia';
+    board[0][1] = 'vazia';
+    board[1][0] = 'vazia';
+    board[1][1] = 'vazia';
+    board[2][0] = 'vazia';
+    board[2][1] = 'vazia';
+    board[3][0] = 'vazia';
+    board[3][1] = 'vazia';
+
+    const endgameState: DominorioState = {
+      tabuleiro: board,
+      modo: 'vs-computador',
+      jogadorAtual: 'jogador1',
+      estado: 'a-jogar',
+      dominoPreview: null,
+      jogadasValidas: [],
+      dominosColocados: [],
+    };
+
+    const response = await adapter.compute(buildRequest(endgameState));
+    adapter.terminate();
+
+    expect(response.pedagogy?.errorCode).toBe('E-DO-03');
+    expect(response.explainText).toContain('final');
   });
 
   test('maps core levels to legacy difficulty buckets', () => {
