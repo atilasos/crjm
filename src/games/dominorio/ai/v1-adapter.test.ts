@@ -5,7 +5,9 @@ import type { Celula, DominorioState, Domino } from '../types';
 import {
   DominorioV1Adapter,
   mapLevelToLegacyDifficulty,
+  resolveLegacyTimeBudgetMs,
 } from './v1-adapter';
+import { DIFFICULTY_PRESETS } from './types';
 
 function buildRequest(state: DominorioState): AIRequestV1<DominorioState, Domino> {
   return {
@@ -135,5 +137,18 @@ describe('DominorioV1Adapter', () => {
     expect(mapLevelToLegacyDifficulty(3)).toBe('medium');
     expect(mapLevelToLegacyDifficulty(4)).toBe('hard');
     expect(mapLevelToLegacyDifficulty(5)).toBe('hard');
+  });
+
+  test('separates hard budgets between level 4 and 5', () => {
+    expect(resolveLegacyTimeBudgetMs(4, 'hard')).toBe(
+      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 0.9),
+    );
+    expect(resolveLegacyTimeBudgetMs(5, 'hard')).toBe(
+      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.15),
+    );
+  });
+
+  test('keeps explicit request time budget when provided', () => {
+    expect(resolveLegacyTimeBudgetMs(5, 'hard', 1234.8)).toBe(1234);
   });
 });

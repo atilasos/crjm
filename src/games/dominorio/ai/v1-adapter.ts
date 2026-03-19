@@ -8,7 +8,7 @@ import type {
 } from '../../../ai-core';
 import type { DominorioState, Domino } from '../types';
 import { DominorioAIClient, type AIClientOptions } from './ai-client';
-import type { AIDifficulty } from './types';
+import { DIFFICULTY_PRESETS, type AIDifficulty } from './types';
 import { squareIndex } from './types';
 import * as bitboard from './bitboard';
 
@@ -37,8 +37,13 @@ export class DominorioV1Adapter {
   ): Promise<AIResponseV1<Domino, DominorioState>> {
     const startedAt = performance.now();
     const difficulty = mapLevelToLegacyDifficulty(request.level);
+    const timeBudgetMs = resolveLegacyTimeBudgetMs(
+      request.level,
+      difficulty,
+      request.timeBudgetMs,
+    );
     const bestMove = await this.client.getBestMove(request.state, difficulty, {
-      timeBudgetMs: request.timeBudgetMs,
+      timeBudgetMs,
     });
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(topMoves);
@@ -96,6 +101,28 @@ export function mapLevelToLegacyDifficulty(level: DifficultyLevel): AIDifficulty
   if (level <= 2) return 'easy';
   if (level === 3) return 'medium';
   return 'hard';
+}
+
+const LEVEL_TIME_BUDGET_MULTIPLIER: Record<DifficultyLevel, number> = {
+  1: 0.85,
+  2: 1,
+  3: 0.95,
+  4: 0.9,
+  5: 1.15,
+};
+
+export function resolveLegacyTimeBudgetMs(
+  level: DifficultyLevel,
+  difficulty: AIDifficulty,
+  requestTimeBudgetMs?: number,
+): number {
+  if (typeof requestTimeBudgetMs === 'number' && Number.isFinite(requestTimeBudgetMs)) {
+    return Math.max(1, Math.trunc(requestTimeBudgetMs));
+  }
+
+  const baseBudget = DIFFICULTY_PRESETS[difficulty].timeBudgetMs;
+  const multiplier = LEVEL_TIME_BUDGET_MULTIPLIER[level] ?? 1;
+  return Math.max(1, Math.round(baseBudget * multiplier));
 }
 
 type HintLevel = 'H1' | 'H2' | 'H3';
