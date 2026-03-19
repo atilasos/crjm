@@ -2,17 +2,21 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
+import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { AtariGoState, Posicao, TAMANHO_TABULEIRO } from './types';
-import { 
-  criarEstadoInicial, 
+import {
+  criarEstadoInicial,
   colocarPedra,
   isJogadaValida,
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
 import { AtariGoAIClient, idxToPos } from './ai/ai-client';
+import { AtariGoV1Adapter } from './ai/v1-adapter';
 import { DIFFICULTY_PRESETS, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
+import { TutorHintCard } from './components/TutorHintCard';
+import { TopMovesRail } from './components/TopMovesRail';
 
 interface AtariGoGameProps {
   onVoltar: () => void;
@@ -28,15 +32,68 @@ const REGRAS = [
   'OBJETIVO: O primeiro a fazer QUALQUER captura VENCE!',
 ];
 
+function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
+  if (difficulty === 'easy') return 2;
+  if (difficulty === 'medium') return 3;
+  if (difficulty === 'hard') return 4;
+  return 5;
+}
+
+function formatMove(move: Posicao): string {
+  return `(${move.linha + 1},${move.coluna + 1})`;
+}
+
+function getSuggestedAction(
+  response: AIResponseV1<Posicao, AtariGoState> | null,
+): string {
+  if (!response?.bestMove) {
+    return 'Mantém grupos com mais de uma liberdade para evitar captura imediata.';
+  }
+
+  if (response.criticalThreats?.[0]) {
+    return `Defende já em ${formatMove(response.bestMove)} para bloquear ameaça imediata.`;
+  }
+
+  return `Joga em ${formatMove(response.bestMove)} para aumentar pressão tática.`;
+}
+
+function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
+  if (severity === 'high') {
+    return 'border-red-300 bg-red-50 text-red-900';
+  }
+
+  if (severity === 'medium') {
+    return 'border-amber-300 bg-amber-50 text-amber-900';
+  }
+
+  return 'border-slate-300 bg-slate-50 text-slate-800';
+}
+
+function getPostGameTurningPoint(
+  history: Array<AIResponseV1<Posicao, AtariGoState>>,
+): AIResponseV1<Posicao, AtariGoState>['turningPoints'][number] | null {
+  for (let i = history.length - 1; i >= 0; i--) {
+    const point = history[i].turningPoints?.[0];
+    if (point) return point;
+  }
+  return null;
+}
+
 export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
-  const [state, setState] = useState<AtariGoState>(() => 
+  const [state, setState] = useState<AtariGoState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>({ ...INITIAL_METRICS });
+  const [tutorResponse, setTutorResponse] =
+    useState<AIResponseV1<Posicao, AtariGoState> | null>(null);
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<Posicao, AtariGoState>>>([]);
   const aiRef = useRef<AtariGoAIClient | null>(null);
+  const tutorAdapterRef = useRef<AtariGoV1Adapter | null>(null);
+  const tutorRequestSeqRef = useRef(0);
 
   useEffect(() => {
     aiRef.current = new AtariGoAIClient({
@@ -45,11 +102,85 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     return () => aiRef.current?.terminate();
   }, []);
 
+  useEffect(() => {
+    const adapter = new AtariGoV1Adapter();
+    tutorAdapterRef.current = adapter;
+
+    return () => {
+      adapter.terminate();
+    };
+  }, []);
+
+  const isVezDaIA =
+    state.modo === 'vs-computador' &&
+    state.estado === 'a-jogar' &&
+    state.jogadorAtual !== humanPlayer;
+
+  useEffect(() => {
+    if (!tutorAdapterRef.current) return;
+
+    if (state.estado !== 'a-jogar') {
+      setTutorLoading(false);
+      return;
+    }
+
+    if (isVezDaIA) {
+      setTutorLoading(false);
+      return;
+    }
+
+    const requestId = `atari-tutor-${Date.now()}-${++tutorRequestSeqRef.current}`;
+    const request: AIRequestV1<AtariGoState, Posicao> = {
+      version: '1.0',
+      requestId,
+      gameId: 'atari-go',
+      mode: 'tutor',
+      level: mapDifficultyToLevel(aiDifficulty),
+      state,
+      locale: 'pt-PT',
+    };
+
+    let cancelled = false;
+    setTutorLoading(true);
+
+    tutorAdapterRef.current
+      .compute(request)
+      .then((response) => {
+        if (cancelled) return;
+        setTutorResponse(response);
+        setTutorHistory((prev) => [...prev.slice(-11), response]);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTutorResponse(null);
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTutorLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      tutorAdapterRef.current?.cancel();
+    };
+  }, [
+    state,
+    state.tabuleiro,
+    state.estado,
+    state.jogadorAtual,
+    state.modo,
+    state.pedrasCapturadas.brancas,
+    state.pedrasCapturadas.pretas,
+    isVezDaIA,
+    aiDifficulty,
+  ]);
+
   // Efeito para jogada do computador
   useEffect(() => {
     if (
-      state.modo === 'vs-computador' && 
-      state.jogadorAtual !== humanPlayer && 
+      state.modo === 'vs-computador' &&
+      state.jogadorAtual !== humanPlayer &&
       state.estado === 'a-jogar'
     ) {
       let cancelled = false;
@@ -124,12 +255,14 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
   const novoJogo = useCallback(() => {
     aiRef.current?.cancel();
+    tutorAdapterRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
     aiRef.current?.cancel();
+    tutorAdapterRef.current?.cancel();
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
@@ -138,6 +271,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
     aiRef.current?.cancel();
+    tutorAdapterRef.current?.cancel();
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
@@ -145,8 +279,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
   // Verificar se é última jogada
   const isUltimaJogada = (linha: number, coluna: number): boolean => {
-    return state.ultimaJogada !== null && 
-           state.ultimaJogada.linha === linha && 
+    return state.ultimaJogada !== null &&
+           state.ultimaJogada.linha === linha &&
            state.ultimaJogada.coluna === coluna;
   };
 
@@ -161,7 +295,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     const ultimaJogada = isUltimaJogada(linha, coluna);
     const jogadaValida = isJogadaValidaPos(linha, coluna);
     const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
-    
+
     // Calcular posição das linhas do grid
     const isTop = linha === 0;
     const isBottom = linha === TAMANHO_TABULEIRO - 1;
@@ -181,13 +315,13 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         {/* Linhas do grid */}
         <div className="absolute inset-0 flex items-center justify-center">
           {/* Linha horizontal */}
-          <div 
+          <div
             className={`absolute h-[2px] bg-gray-800 top-1/2 -translate-y-1/2
               ${isLeft ? 'left-1/2 right-0' : isRight ? 'left-0 right-1/2' : 'left-0 right-0'}
             `}
           />
           {/* Linha vertical */}
-          <div 
+          <div
             className={`absolute w-[2px] bg-gray-800 left-1/2 -translate-x-1/2
               ${isTop ? 'top-1/2 bottom-0' : isBottom ? 'top-0 bottom-1/2' : 'top-0 bottom-0'}
             `}
@@ -201,28 +335,28 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         {/* Pedra */}
         {celula !== 'vazia' && (
-          <div 
+          <div
             className={`
-              absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+              absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
               w-[85%] h-[85%] rounded-full z-20
-              ${celula === 'preta' 
-                ? 'bg-gradient-to-br from-gray-700 via-gray-900 to-black shadow-lg' 
+              ${celula === 'preta'
+                ? 'bg-gradient-to-br from-gray-700 via-gray-900 to-black shadow-lg'
                 : 'bg-gradient-to-br from-white via-gray-100 to-gray-200 shadow-lg border border-gray-300'
               }
               ${ultimaJogada ? 'ring-4 ring-yellow-400 ring-opacity-75' : ''}
             `}
           >
             {/* Brilho da pedra */}
-            <div 
-              className={`absolute top-1 left-1 w-3 h-3 rounded-full 
+            <div
+              className={`absolute top-1 left-1 w-3 h-3 rounded-full
                 ${celula === 'preta' ? 'bg-gray-600' : 'bg-white'}
                 opacity-60
               `}
             />
             {/* Marcador de última jogada */}
             {ultimaJogada && (
-              <div 
-                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+              <div
+                className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
                   w-3 h-3 rounded-full
                   ${celula === 'preta' ? 'bg-white' : 'bg-black'}
                 `}
@@ -233,8 +367,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         {/* Indicador de jogada válida */}
         {celula === 'vazia' && jogadaValida && isVezDoHumano && state.estado === 'a-jogar' && (
-          <div 
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
               w-[40%] h-[40%] rounded-full bg-green-400 opacity-40 z-10
               hover:opacity-70 transition-opacity"
           />
@@ -243,10 +377,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     );
   };
 
-  const isVezDaIA =
-    state.modo === 'vs-computador' &&
-    state.estado === 'a-jogar' &&
-    state.jogadorAtual !== humanPlayer;
+  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const postGameTurningPoint = getPostGameTurningPoint(tutorHistory);
 
   return (
     <GameLayout titulo="Atari Go" regras={REGRAS} onVoltar={onVoltar}>
@@ -305,15 +437,15 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         {/* Tabuleiro */}
         <div className="game-container">
           <div className="aspect-square max-w-md mx-auto">
-            <div 
+            <div
               className="w-full h-full bg-amber-200 p-4 rounded-xl shadow-inner"
-              style={{ 
+              style={{
                 backgroundImage: 'linear-gradient(135deg, #f5d89a 0%, #e8c76b 100%)',
               }}
             >
               <div className="grid grid-cols-9 gap-0 h-full w-full">
                 {Array.from({ length: TAMANHO_TABULEIRO }, (_, linha) =>
-                  Array.from({ length: TAMANHO_TABULEIRO }, (_, coluna) => 
+                  Array.from({ length: TAMANHO_TABULEIRO }, (_, coluna) =>
                     renderIntersecao(linha, coluna)
                   )
                 )}
@@ -349,8 +481,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
                 </span>
               ) : (
                 <>
-                  {state.jogadorAtual === 'jogador1' 
-                    ? 'Pretas: clica numa interseção para colocar uma pedra' 
+                  {state.jogadorAtual === 'jogador1'
+                    ? 'Pretas: clica numa interseção para colocar uma pedra'
                     : 'Brancas: clica numa interseção para colocar uma pedra'}
                   {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
                 </>
@@ -358,6 +490,45 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
             )}
           </div>
         </div>
+
+        {state.estado === 'a-jogar' && !isVezDaIA && (
+          <div className="space-y-3">
+            <TutorHintCard
+              insight={
+                tutorResponse?.explainText ||
+                'Mantém a leitura local de liberdades antes de atacar.'
+              }
+              suggestedAction={getSuggestedAction(tutorResponse)}
+              isLoading={tutorLoading}
+            />
+
+            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+
+            {criticalThreat && (
+              <section
+                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+              >
+                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
+                <p className="mt-1">{criticalThreat.description}</p>
+                {criticalThreat.counterMove && (
+                  <p className="mt-1 font-medium">
+                    Resposta mínima: {formatMove(criticalThreat.counterMove)}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+
+        {state.estado !== 'a-jogar' && postGameTurningPoint && (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <p className="font-semibold">Turning point pós-jogo</p>
+            <p className="mt-1 text-emerald-800">{postGameTurningPoint.explanation}</p>
+            <p className="mt-1 font-medium">
+              Jogada recomendada: {formatMove(postGameTurningPoint.bestMove ?? postGameTurningPoint.playedMove)}
+            </p>
+          </section>
+        )}
       </div>
 
       {/* Anúncio de vencedor */}
