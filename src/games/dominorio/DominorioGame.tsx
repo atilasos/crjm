@@ -23,6 +23,11 @@ import {
 import { withTimeout } from '../../utils/withTimeout';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
+import {
+  buildQuickReviewItems,
+  computeAdaptiveHintLevel,
+  type TutorHintLevel,
+} from './ai/pedagogy-mvp';
 
 interface DominorioGameProps {
   onVoltar: () => void;
@@ -52,9 +57,35 @@ function formatMove(move: Domino): string {
   return `(${l1},${c1})-(${l2},${c2})`;
 }
 
-function getSuggestedAction(response: AIResponseV1<Domino, DominorioState> | null): string {
+function samePos(a: Posicao, b: Posicao): boolean {
+  return a.linha === b.linha && a.coluna === b.coluna;
+}
+
+function sameMove(a: Domino | null, b: Domino | null): boolean {
+  if (!a || !b) return false;
+  return (
+    (samePos(a.pos1, b.pos1) && samePos(a.pos2, b.pos2)) ||
+    (samePos(a.pos1, b.pos2) && samePos(a.pos2, b.pos1))
+  );
+}
+
+function getSuggestedAction(
+  response: AIResponseV1<Domino, DominorioState> | null,
+  hintLevel: TutorHintLevel,
+): string {
   if (!response?.bestMove) {
-    return 'Procura manter o máximo de jogadas legais no próximo turno.';
+    return 'Mantém duas zonas abertas para não ficares sem resposta.';
+  }
+
+  if (hintLevel === 'H1') {
+    return 'Procura a zona com mais espaço livre para preservar mobilidade.';
+  }
+
+  if (hintLevel === 'H2') {
+    if (response.criticalThreats?.[0]) {
+      return 'Foca-te em bloquear a ameaça crítica antes de expandir.';
+    }
+    return 'Prioriza uma jogada que mantenha pelo menos duas respostas no próximo turno.';
   }
 
   return `Prioriza a jogada ${formatMove(response.bestMove)}.`;
@@ -84,11 +115,20 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<Domino, DominorioState> | null>(null);
   const [tutorLoading, setTutorLoading] = useState(false);
+  const [hintLevel, setHintLevel] = useState<TutorHintLevel>('H2');
+  const [tutorHistory, setTutorHistory] = useState<AIResponseV1<Domino, DominorioState>[]>([]);
 
   // AI client ref (persistent across renders)
   const aiClientRef = useRef<DominorioAIClient | null>(null);
   const tutorAdapterRef = useRef<DominorioV1Adapter | null>(null);
   const tutorRequestSeqRef = useRef(0);
+  const previousMoveCountRef = useRef(0);
+  const lastSuggestedMoveRef = useRef<Domino | null>(null);
+  const hintSignalsRef = useRef({
+    struggleStreak: 0,
+    stableStreak: 0,
+    h3Streak: 0,
+  });
 
   // Initialize AI client
   useEffect(() => {
@@ -150,6 +190,13 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       .then((response) => {
         if (cancelled) return;
         setTutorResponse(response);
+        setTutorHistory((prev) => [...prev.slice(-11), response]);
+        setHintLevel((currentLevel) => {
+          const next = computeAdaptiveHintLevel(response, currentLevel, hintSignalsRef.current);
+          hintSignalsRef.current.h3Streak = next === 'H3' ? hintSignalsRef.current.h3Streak + 1 : 0;
+          return next;
+        });
+        lastSuggestedMoveRef.current = response.bestMove;
       })
       .catch(() => {
         if (cancelled) return;
@@ -175,6 +222,31 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     isVezDaIA,
     state,
   ]);
+
+  useEffect(() => {
+    const currentCount = state.dominosColocados.length;
+    if (currentCount <= previousMoveCountRef.current) {
+      previousMoveCountRef.current = currentCount;
+      return;
+    }
+
+    const lastMove = state.dominosColocados[currentCount - 1];
+    const humanOrientation = humanPlayer === 'jogador1' ? 'vertical' : 'horizontal';
+    const playedByHuman = lastMove?.orientacao === humanOrientation;
+
+    if (playedByHuman) {
+      const followedSuggestion = sameMove(lastSuggestedMoveRef.current, lastMove);
+      if (followedSuggestion) {
+        hintSignalsRef.current.stableStreak += 1;
+        hintSignalsRef.current.struggleStreak = 0;
+      } else {
+        hintSignalsRef.current.struggleStreak += 1;
+        hintSignalsRef.current.stableStreak = 0;
+      }
+    }
+
+    previousMoveCountRef.current = currentCount;
+  }, [state.dominosColocados, humanPlayer]);
 
   // Efeito para jogada do computador (usando AI Worker)
   useEffect(() => {
@@ -263,6 +335,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
     setTutorLoading(false);
+    setHintLevel('H2');
+    setTutorHistory([]);
+    previousMoveCountRef.current = 0;
+    lastSuggestedMoveRef.current = null;
+    hintSignalsRef.current = { struggleStreak: 0, stableStreak: 0, h3Streak: 0 };
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -277,6 +354,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
     setTutorLoading(false);
+    setHintLevel('H2');
+    setTutorHistory([]);
+    previousMoveCountRef.current = 0;
+    lastSuggestedMoveRef.current = null;
+    hintSignalsRef.current = { struggleStreak: 0, stableStreak: 0, h3Streak: 0 };
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -289,6 +371,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
     setTutorLoading(false);
+    setHintLevel('H2');
+    setTutorHistory([]);
+    previousMoveCountRef.current = 0;
+    lastSuggestedMoveRef.current = null;
+    hintSignalsRef.current = { struggleStreak: 0, stableStreak: 0, h3Streak: 0 };
   }, []);
 
   const handleChangeDifficulty = useCallback((newDifficulty: AIDifficulty) => {
@@ -332,6 +419,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   };
 
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const quickReviewItems = buildQuickReviewItems(tutorHistory);
 
   return (
     <GameLayout titulo="Dominório" regras={REGRAS} onVoltar={onVoltar}>
@@ -419,7 +507,9 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
                 tutorResponse?.explainText ||
                 'Mantém a posição equilibrada e evita reduzir demasiado as opções.'
               }
-              suggestedAction={getSuggestedAction(tutorResponse)}
+              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+              hintLevel={hintLevel}
+              errorCode={tutorResponse?.pedagogy?.errorCode}
               isLoading={tutorLoading}
             />
 
@@ -439,6 +529,28 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
               </section>
             )}
           </div>
+        )}
+
+        {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold">Revisão rápida pós-jogo</p>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                2-4 min
+              </span>
+            </div>
+            <p className="mt-1 text-emerald-800">
+              Revê até 2 momentos e tenta repetir a melhor alternativa.
+            </p>
+            <div className="mt-2 space-y-2">
+              {quickReviewItems.map((item) => (
+                <div key={item.title} className="rounded-lg border border-emerald-200 bg-white px-3 py-2">
+                  <p className="font-semibold text-emerald-900">{item.title}</p>
+                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </div>
 
