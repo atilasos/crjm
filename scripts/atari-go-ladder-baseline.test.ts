@@ -23,7 +23,7 @@ describe('atari-go-ladder-baseline script', () => {
     const raw = await readFile(latestPath, 'utf8');
     const baseline = JSON.parse(raw) as {
       ladder: Array<{ strongerLevel: number; weakerLevel: number; t1Pass: boolean }>;
-      t2ByLevel: Record<string, { p50: number; t2Pass: boolean }>;
+      t2ByLevel: Record<string, { p50: number; p95: number; budgetMs: number; t2Pass: boolean }>;
       nC2: { failedPairs: string[]; passAll: boolean };
       nC3: {
         failedLevels: number[];
@@ -40,6 +40,9 @@ describe('atari-go-ladder-baseline script', () => {
     expect(baseline.ladder.length).toBe(4);
     expect(Object.keys(baseline.t2ByLevel)).toEqual(['1', '2', '3', '4', '5']);
 
+    expect(typeof baseline.t2ByLevel['3'].p95).toBe('number');
+    expect(typeof baseline.t2ByLevel['3'].budgetMs).toBe('number');
+
     expect(Array.isArray(baseline.nC2.failedPairs)).toBeTrue();
     expect(typeof baseline.nC2.passAll).toBe('boolean');
 
@@ -52,5 +55,5 @@ describe('atari-go-ladder-baseline script', () => {
     const firstLadderPair = baseline.ladder[0];
     expect(firstLadderPair.strongerLevel).toBe(2);
     expect(firstLadderPair.weakerLevel).toBe(1);
-    }, 30000);
+  }, 30000);
 });

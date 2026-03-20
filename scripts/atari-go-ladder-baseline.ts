@@ -98,7 +98,7 @@ interface MoveScore {
 const EVAL_CAP_BY_LEVEL: Record<DifficultyLevel, number> = {
   1: 6,
   2: 10,
-  3: 16,
+  3: 12,
   4: 24,
   5: 40,
 };
@@ -118,7 +118,7 @@ function parseOptions(): HarnessOptions {
 function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
-  const idx = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
+  const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(p * (sorted.length - 1))));
   return Number(sorted[idx].toFixed(2));
 }
 
