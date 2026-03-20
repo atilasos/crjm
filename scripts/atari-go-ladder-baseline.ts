@@ -223,7 +223,7 @@ function rankIndexForLevel(
   if (total <= 1) return 0;
   if (level <= 1) return Math.min(total - 1, 3);
   if (level === 2) {
-    const targetRank = opponentLevel === 3 ? 3 : 2;
+    const targetRank = opponentLevel === 3 ? 3 : 1;
     return Math.min(total - 1, targetRank);
   }
   if (level === 3) return 0;

@@ -60,6 +60,7 @@ describe('atari-go-ladder-baseline script', () => {
     const firstLadderPair = baseline.ladder[0];
     expect(firstLadderPair.strongerLevel).toBe(2);
     expect(firstLadderPair.weakerLevel).toBe(1);
+    expect(firstLadderPair.strongerWinrate).toBeGreaterThanOrEqual(0.55);
 
     const n3OverN2 = baseline.ladder.find(
       (pair) => pair.strongerLevel === 3 && pair.weakerLevel === 2,
