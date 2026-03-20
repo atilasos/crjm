@@ -97,21 +97,41 @@
 
 ---
 
-## Próximo trabalho executável (uma unidade)
+## Fecho F4.2 (executado)
 
-#### NEXT-F4.2.4 — Atari Go nC3: reduzir instabilidade do nível 3 (p95 > 3*p50)
+#### F4.2.4 — Atari Go nC3: reduzir instabilidade do nível 3 (p95 > 3*p50)
+**Status (evidência já em `main`):** concluída — commit `d95f6be`, review `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`.
+
 **Files:**
 - Modify: `scripts/atari-go-ladder-baseline.ts`
 - Test: `scripts/atari-go-ladder-baseline.test.ts`
 - Write: `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`
 
 **Checks:**
-- [ ] Ajuste mínimo para o nível 3 cumprir `p95 <= 3*p50` em `nC3`
-- [ ] Preservar `nC2Pass=true` e compatibilidade do shape de `baseline.json`
-- [ ] Teste do ladder atualizado e a passar
+- [x] Ajuste mínimo para o nível 3 cumprir `p95 <= 3*p50` em `nC3`
+- [x] Preservar `nC2Pass=true` e compatibilidade do shape de `baseline.json`
+- [x] Teste do ladder atualizado e a passar
 
 **Artefacto esperado:**
-- [ ] Review curto com before/after (`p50`, `p95`, razão `p95/p50`) e decisão de continuar para novo gate final
+- [x] Review curto com before/after (`p50`, `p95`, razão `p95/p50`) e decisão de continuar para novo gate final
+
+---
+
+## Próximo trabalho executável (uma unidade)
+
+#### NEXT-F4.2.5 — Reexecutar gate final F4 (hardening consolidado)
+**Files:**
+- Run: `scripts/hardening-f3_2.ts` (ou sucessor)
+- Write/update: `docs/agents/reviews/f4-final-review.md`
+
+**Checks:**
+- [ ] Executar benchmark/hardening consolidado com baseline atualizado pós-F4.2.4
+- [ ] Revalidar critérios de pronto da F4 (T1 e T4) com decisão explícita PASS/FAIL
+- [ ] Se PASS: marcar F4 como concluída no roadmap
+- [ ] Se FAIL: abrir sub-bloco seguinte com causa específica e próxima unidade mínima
+
+**Artefacto esperado:**
+- [ ] Review final atualizado com evidência do gate e decisão de progressão
 
 ### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 

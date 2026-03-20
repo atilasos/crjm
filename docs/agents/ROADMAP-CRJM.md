@@ -47,14 +47,14 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - F4.2.1 concluída (`4b8455f`, review `docs/agents/reviews/f4-2-1-atarigo-reauditoria.md`)
 - F4.2.2 concluída (`30fc75c`, review `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`)
 - F4.2.3 concluída (`16303c7`, report `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`, `nC2Pass=true`, `nC3Pass=false` no nível 3)
+- F4.2.4 concluída (`d95f6be`, review `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`, `nC2Pass=true`, `nC3Pass=true`)
 
 **Progressão de sub-blocos (F4 permanece ativa):**
 - **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
-- **F4.2 (ativa):** `nC2Pass` resolvido e `nC3Pass` ainda em FAIL no nível 3 (`p95 > 3*p50`).
-  - próxima unidade executável: `NEXT-F4.2.4`
-  - files: `scripts/atari-go-ladder-baseline.ts`
-  - test: `scripts/atari-go-ladder-baseline.test.ts`
-  - artifact: `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`
+- **F4.2 (ativa):** recalibração de ladder estabilizada com `nC2Pass=true` e `nC3Pass=true` após F4.2.4.
+  - próxima unidade executável: `NEXT-F4.2.5` (novo gate final F4)
+  - files: `scripts/hardening-f3_2.ts` (ou sucessor) + `docs/agents/reviews/f4-final-review.md`
+  - artifact: atualização de `docs/agents/reviews/f4-final-review.md` com decisão PASS/FAIL final da F4
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.
