@@ -1,6 +1,6 @@
 # ROADMAP CRJM — Visão Macro
 
-Data: 2026-03-19
+Data: 2026-03-20
 Repo: `~/dev/crjm`
 
 ## Objetivo final
@@ -34,6 +34,12 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - T1 (nível N vs N-1 win rate ≥ 60%) PASS em todos os pares para Dominório e Atari Go
 - T4 (estabilidade/repetibilidade) ≤ 15% divergência
 - Baseline atualizado e publicado
+
+**Estado atual (Task 5, 2026-03-20):** FAIL no gate de saída.
+
+**Sub-blocos F4 abertos:**
+- **F4.1 (ativo):** recalibração Dominório para fechar T1/T4
+- **F4.2 (pendente):** recalibração Atari Go para fechar N-C2/N-C3 e T1
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.
