@@ -119,19 +119,35 @@
 
 ## Próximo trabalho executável (uma unidade)
 
-#### NEXT-F4.2.5 — Reexecutar gate final F4 (hardening consolidado)
+#### F4.2.5 — Reexecutar gate final F4 (hardening consolidado)
+**Status (evidência já em `main`):** executada com **FAIL** no gate F4 — commit `277464d`, review `docs/agents/reviews/f4-final-review.md`.
+
 **Files:**
 - Run: `scripts/hardening-f3_2.ts` (ou sucessor)
 - Write/update: `docs/agents/reviews/f4-final-review.md`
 
 **Checks:**
-- [ ] Executar benchmark/hardening consolidado com baseline atualizado pós-F4.2.4
-- [ ] Revalidar critérios de pronto da F4 (T1 e T4) com decisão explícita PASS/FAIL
-- [ ] Se PASS: marcar F4 como concluída no roadmap
-- [ ] Se FAIL: abrir sub-bloco seguinte com causa específica e próxima unidade mínima
+- [x] Executar benchmark/hardening consolidado com baseline atualizado pós-F4.2.4
+- [x] Revalidar critérios de pronto da F4 (T1 e T4) com decisão explícita PASS/FAIL
+- [ ] Se PASS: marcar F4 como concluída no roadmap (não aplicável neste ciclo)
+- [x] Se FAIL: abrir sub-bloco seguinte com causa específica e próxima unidade mínima
 
 **Artefacto esperado:**
-- [ ] Review final atualizado com evidência do gate e decisão de progressão
+- [x] Review final atualizado com evidência do gate e decisão de progressão
+
+#### NEXT-F4.2.6 — Reabrir ajuste mínimo de ladder (foco no primeiro par em regressão `N3>N2`)
+**Files:**
+- Modify: `scripts/atari-go-ladder-baseline.ts`
+- Test: `scripts/atari-go-ladder-baseline.test.ts`
+- Write: `docs/agents/reviews/f4-2-6-atarigo-reajuste.md`
+
+**Checks:**
+- [ ] Ajustar separação do ladder com mudança mínima focada em `N3>N2`
+- [ ] Revalidar `nC2Pass` e `nC3Pass` após o ajuste
+- [ ] Produzir decisão explícita para novo gate final F4
+
+**Artefacto esperado:**
+- [ ] Review curto com before/after de `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
 
 ### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 
