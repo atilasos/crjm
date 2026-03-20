@@ -218,8 +218,8 @@ function scoreMoves(
 function rankIndexForLevel(level: DifficultyLevel, total: number): number {
   if (total <= 1) return 0;
   if (level <= 1) return Math.min(total - 1, 3);
-  if (level === 2) return Math.min(total - 1, 2);
-  if (level === 3) return Math.min(total - 1, 1);
+  if (level === 2) return Math.min(total - 1, 3);
+  if (level === 3) return 0;
   return 0;
 }
 
