@@ -135,19 +135,36 @@
 **Artefacto esperado:**
 - [x] Review final atualizado com evidência do gate e decisão de progressão
 
-#### NEXT-F4.2.6 — Reabrir ajuste mínimo de ladder (foco no primeiro par em regressão `N3>N2`)
+#### F4.2.6 — Reabrir ajuste mínimo de ladder (foco no primeiro par em regressão `N3>N2`)
+**Status (evidência já em `main`):** concluída — commit `b937338`, review `docs/agents/reviews/f4-2-6-atarigo-reajuste.md`.
+
 **Files:**
 - Modify: `scripts/atari-go-ladder-baseline.ts`
 - Test: `scripts/atari-go-ladder-baseline.test.ts`
 - Write: `docs/agents/reviews/f4-2-6-atarigo-reajuste.md`
 
 **Checks:**
-- [ ] Ajustar separação do ladder com mudança mínima focada em `N3>N2`
+- [x] Ajustar separação do ladder com mudança mínima focada em `N3>N2`
+- [x] Revalidar `nC2Pass` e `nC3Pass` após o ajuste
+- [x] Produzir decisão explícita para novo gate final F4
+
+**Artefacto esperado:**
+- [x] Review curto com before/after de `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
+
+#### NEXT-F4.2.7 — Corrigir regressão em `N2>N1` sem perder `N3>N2`
+**Files:**
+- Modify: `scripts/atari-go-ladder-baseline.ts`
+- Test: `scripts/atari-go-ladder-baseline.test.ts`
+- Write: `docs/agents/reviews/f4-2-7-atarigo-n2n1-fix.md`
+
+**Checks:**
+- [ ] Ajustar separação do ladder com mudança mínima focada em recuperar `N2>N1`
+- [ ] Preservar `N3>N2 >= 0.60` após o ajuste
 - [ ] Revalidar `nC2Pass` e `nC3Pass` após o ajuste
 - [ ] Produzir decisão explícita para novo gate final F4
 
 **Artefacto esperado:**
-- [ ] Review curto com before/after de `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
+- [ ] Review curto com before/after de `N2>N1`, `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
 
 ### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 
