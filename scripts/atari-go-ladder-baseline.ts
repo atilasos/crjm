@@ -95,6 +95,14 @@ interface MoveScore {
   baseScore: number;
 }
 
+const EVAL_CAP_BY_LEVEL: Record<DifficultyLevel, number> = {
+  1: 6,
+  2: 10,
+  3: 16,
+  4: 24,
+  5: 40,
+};
+
 function parseOptions(): HarnessOptions {
   const gamesPerMirror = Number(process.env.ATARIGO_GAMES_PER_MIRROR ?? 5);
   const maxPliesPerGame = Number(process.env.ATARIGO_MAX_PLIES ?? 72);
@@ -169,13 +177,25 @@ function distanceToCenter(move: Posicao): number {
   return Math.abs(move.linha - center) + Math.abs(move.coluna - center);
 }
 
-function scoreMoves(state: AtariGoState, player: AtariGoState['jogadorAtual']): MoveScore[] {
+function scoreMoves(
+  state: AtariGoState,
+  player: AtariGoState['jogadorAtual'],
+  level: DifficultyLevel,
+): MoveScore[] {
   const legalMoves =
     state.jogadasValidas.length > 0
       ? state.jogadasValidas
       : calcularJogadasValidas(state.tabuleiro, player);
 
-  const scored = legalMoves.map((move) => {
+  const evalCap = Math.max(
+    1,
+    Math.min(legalMoves.length, EVAL_CAP_BY_LEVEL[level] ?? legalMoves.length),
+  );
+
+  const scored = legalMoves.map((move, index) => {
+    if (index >= evalCap) {
+      return { move, baseScore: Number.NEGATIVE_INFINITY };
+    }
     const simulation = simulateMove(state, move, player);
     const baseScore =
       simulation.isWinningCapture * 1000 +
@@ -205,7 +225,7 @@ function rankIndexForLevel(level: DifficultyLevel, total: number): number {
 
 function chooseMove(state: AtariGoState, level: DifficultyLevel): Posicao | null {
   const player = state.jogadorAtual;
-  const scored = scoreMoves(state, player);
+  const scored = scoreMoves(state, player, level);
   if (scored.length === 0) return null;
 
   if (level <= 4) {
