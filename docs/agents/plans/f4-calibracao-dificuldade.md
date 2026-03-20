@@ -20,6 +20,8 @@
 
 ## Task 1 — Auditoria dos parâmetros atuais
 
+**Status (evidência já em `main`):** concluída — commit `7be4388`, review `docs/agents/reviews/f4-01-auditoria-parametros.md`.
+
 **Files:**
 - Read: `src/ai-core/difficulty.ts`
 - Read: `src/games/dominorio/ai/*`
@@ -36,6 +38,8 @@
 
 ## Task 2 — Ajuste incremental Dominório (budgets/variação)
 
+**Status (evidência já em `main`):** concluída — commits `841b0e7` e `a7fc773`.
+
 **Files:**
 - Modify: `src/games/dominorio/ai/types.ts`
 - Modify: `src/games/dominorio/ai/v1-adapter.ts`
@@ -49,6 +53,8 @@
 
 ## Task 3 — Baseline Dominório pós-ajuste
 
+**Status (evidência já em `main`):** concluída — commits `1807dfc` e `673d8f0`; report `docs/reports/dominorio/F4-calibracao-report.md`.
+
 **Files:**
 - Run: `baseline:dominorio` ou script equivalente
 - Write/update: `artifacts/dominorio-baseline/latest/*`
@@ -60,6 +66,8 @@
 - [x] Commit + push
 
 ## Task 4 — Ajuste incremental Atari Go ladder
+
+**Status (evidência já em `main`):** concluída — commit `5781003`, review `docs/agents/reviews/f4-04-atarigo-ajuste.md`.
 
 **Files:**
 - Modify: `src/games/atari-go/ai/*`
@@ -74,6 +82,8 @@
 - [x] Commit + push
 
 ## Task 5 — Hardening final F4
+
+**Status (evidência já em `main`):** executada com **FAIL** no gate F4 — commit `277464d`, review `docs/agents/reviews/f4-final-review.md`.
 
 **Files:**
 - Run: `scripts/hardening-f3_2.ts` ou sucessor
@@ -90,6 +100,21 @@
 ## Próximo trabalho executável (sub-blocos pós-Task 5)
 
 Estado de fase após Task 5: **FAIL** no gate F4; seguir execução incremental por sub-blocos.
+
+### Próximas duas unidades (uma por execução)
+
+#### NEXT-F4.1 — Dominório T1/T4: separar N4/N5 + reduzir variância de topo
+**Files:**
+- Modify: `src/games/dominorio/ai/types.ts`
+- Modify: `src/games/dominorio/ai/v1-adapter.ts`
+- Test: `src/games/dominorio/ai/*.test.ts`
+- Artifact: `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`
+
+#### NEXT-F4.2 — Atari Go ladder: reforçar separação N2/N3 no baseline
+**Files:**
+- Modify: `scripts/atari-go-ladder-baseline.ts`
+- Test: `scripts/atari-go-ladder-baseline.test.ts`
+- Artifact: `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`
 
 ### F4.1 (ativo) — Recalibração Dominório para fechar T1/T4
 

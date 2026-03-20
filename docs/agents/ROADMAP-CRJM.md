@@ -36,16 +36,23 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - Baseline atualizado e publicado
 
 **Estado atual (2026-03-20):**
-- Task 1–5 do plano F4: concluídas
-- Decisão da Task 5: **FAIL** no gate de saída (fase mantém-se ativa)
-- Execução corrente: sub-bloco **F4.1 (ativo)**
-- Próximo na fila após F4.1: sub-bloco **F4.2 (pendente)**
+- Task 1 concluída (`7be4388`, review `docs/agents/reviews/f4-01-auditoria-parametros.md`)
+- Task 2 concluída (`841b0e7`, `a7fc773`)
+- Task 3 concluída (`1807dfc`, `673d8f0`, report `docs/reports/dominorio/F4-calibracao-report.md`)
+- Task 4 concluída (`5781003`, review `docs/agents/reviews/f4-04-atarigo-ajuste.md`)
+- Task 5 executada com **FAIL** no gate (`277464d`, review `docs/agents/reviews/f4-final-review.md`)
 
-**Progressão de sub-blocos:**
+**Progressão de sub-blocos (F4 permanece ativa):**
 - **F4.1 (ativo):** recalibração Dominório para fechar T1/T4
-  - sequência executável atual: F4.1.1 (reauditoria) -> F4.1.2 (ajuste N4/N5) -> F4.1.3 (baseline + decisão)
+  - próxima unidade executável: `NEXT-F4.1`
+  - files: `src/games/dominorio/ai/types.ts`, `src/games/dominorio/ai/v1-adapter.ts`
+  - test: `src/games/dominorio/ai/*.test.ts`
+  - artifact: `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`
 - **F4.2 (pendente):** recalibração Atari Go para fechar N-C2/N-C3 e T1
-  - sequência prevista: F4.2.1 (reauditoria) -> F4.2.2 (ajuste ladder) -> F4.2.3 (baseline + decisão)
+  - próxima unidade executável após F4.1: `NEXT-F4.2`
+  - files: `scripts/atari-go-ladder-baseline.ts`
+  - test: `scripts/atari-go-ladder-baseline.test.ts`
+  - artifact: `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.
