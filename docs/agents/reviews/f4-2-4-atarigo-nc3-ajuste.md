@@ -11,11 +11,11 @@ Arquivo alterado:
 - `scripts/atari-go-ladder-baseline.ts`
 
 Mudança:
-- `EVAL_CAP_BY_LEVEL[3]`: `12 -> 13`
+- `EVAL_CAP_BY_LEVEL[3]`: `12 -> 14`
 
 Racional:
 - O nível 3 estava borderline/intermitente no guard de cauda (`p95/p50` próximo/acima de 3 em snapshots anteriores).
-- Aumentar ligeiramente o cap do N3 estabiliza a razão `p95/p50` sem alterar contrato de output.
+- Um aumento pequeno no cap do N3 reduz a variância relativa de cauda sem alterar contrato de output.
 
 ## Before / After (N3)
 Before (snapshot oficial F4.2.3, `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`):
@@ -23,13 +23,13 @@ Before (snapshot oficial F4.2.3, `docs/reports/atari-go/F4-2-ladder-recalibracao
 - `p95=80.11ms`
 - `p95/p50=3.17` (**FAIL**)
 
-After (snapshot pós-ajuste, `generatedAt=2026-03-20T10:43:41.760Z`):
-- `p50=18.21ms`
-- `p95=53.43ms`
-- `p95/p50=2.93` (**PASS**)
+After (snapshot pós-ajuste, `generatedAt=2026-03-20T10:57:24.429Z`):
+- `p50=15.51ms`
+- `p95=41.59ms`
+- `p95/p50=2.68` (**PASS**)
 
 ## Checks da unidade
-- `N3 guard`: `53.43 <= 3 * 18.21 (54.63)` -> **PASS**
+- `N3 guard`: `41.59 <= 3 * 15.51 (46.53)` -> **PASS**
 - `nC2Pass`: **true** (preservado)
 - `baseline.json` shape: **compatível** (sem alterações de schema)
 

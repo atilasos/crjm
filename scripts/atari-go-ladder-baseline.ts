@@ -98,7 +98,7 @@ interface MoveScore {
 const EVAL_CAP_BY_LEVEL: Record<DifficultyLevel, number> = {
   1: 6,
   2: 10,
-  3: 13,
+  3: 14,
   4: 24,
   5: 40,
 };
