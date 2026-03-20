@@ -48,13 +48,14 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - F4.2.2 concluída (`30fc75c`, review `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`)
 - F4.2.3 concluída (`16303c7`, report `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`, `nC2Pass=true`, `nC3Pass=false` no nível 3)
 - F4.2.4 concluída (`d95f6be`, review `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`, `nC2Pass=true`, `nC3Pass=true`)
+- F4.2.5 executada (hardening consolidado em `2026-03-20T11:16:49Z`, review `docs/agents/reviews/f4-final-review.md`), decisão do gate F4: **FAIL**
 
 **Progressão de sub-blocos (F4 permanece ativa):**
 - **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
-- **F4.2 (ativa):** recalibração de ladder estabilizada com `nC2Pass=true` e `nC3Pass=true` após F4.2.4.
-  - próxima unidade executável: `NEXT-F4.2.5` (novo gate final F4)
-  - files: `scripts/hardening-f3_2.ts` (ou sucessor) + `docs/agents/reviews/f4-final-review.md`
-  - artifact: atualização de `docs/agents/reviews/f4-final-review.md` com decisão PASS/FAIL final da F4
+- **F4.2 (ativa):** pós-F4.2.5, ladder Atari Go voltou a falhar no gate consolidado (`nC2Pass=false`, `nC3Pass=false`).
+  - próxima unidade executável: `NEXT-F4.2.6` (reabrir ajuste mínimo de ladder com foco no primeiro par em regressão `N3>N2`)
+  - files: `scripts/atari-go-ladder-baseline.ts` + `scripts/atari-go-ladder-baseline.test.ts` + `docs/agents/reviews/f4-2-6-atarigo-reajuste.md`
+  - artifact: review curto com before/after de `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.
