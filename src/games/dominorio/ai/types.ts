@@ -16,7 +16,7 @@
 // Difficulty Settings
 // ============================================================================
 
-export type AIDifficulty = 'easy' | 'medium' | 'hard';
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'hardPlus';
 
 export interface DifficultyParams {
   timeBudgetMs: number;
@@ -43,6 +43,12 @@ export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
   hard: {
     timeBudgetMs: 15000,
     maxDepth: 13,
+    topN: 0,
+    scoreDelta: 0,
+  },
+  hardPlus: {
+    timeBudgetMs: 15000,
+    maxDepth: 15,
     topN: 0,
     scoreDelta: 0,
   },

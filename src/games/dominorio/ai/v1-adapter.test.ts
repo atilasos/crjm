@@ -1,21 +1,25 @@
 import { describe, expect, test } from 'bun:test';
-import type { AIRequestV1 } from '../../../ai-core';
+import type { AIRequestV1, DifficultyLevel } from '../../../ai-core';
 import { criarEstadoInicial } from '../logic';
 import type { Celula, DominorioState, Domino } from '../types';
 import {
   DominorioV1Adapter,
+  applyTopLevelStabilityPolicy,
   mapLevelToLegacyDifficulty,
   resolveLegacyTimeBudgetMs,
 } from './v1-adapter';
 import { DIFFICULTY_PRESETS } from './types';
 
-function buildRequest(state: DominorioState): AIRequestV1<DominorioState, Domino> {
+function buildRequest(
+  state: DominorioState,
+  level: DifficultyLevel = 3,
+): AIRequestV1<DominorioState, Domino> {
   return {
     version: '1.0',
     requestId: 'req-dominorio-v1-test',
     gameId: 'dominorio',
     mode: 'tutor',
-    level: 3,
+    level,
     state,
     locale: 'pt-PT',
   };
@@ -136,7 +140,7 @@ describe('DominorioV1Adapter', () => {
     expect(mapLevelToLegacyDifficulty(2)).toBe('easy');
     expect(mapLevelToLegacyDifficulty(3)).toBe('medium');
     expect(mapLevelToLegacyDifficulty(4)).toBe('hard');
-    expect(mapLevelToLegacyDifficulty(5)).toBe('hard');
+    expect(mapLevelToLegacyDifficulty(5)).toBe('hardPlus');
   });
 
   test('keeps easy levels separated', () => {
@@ -149,12 +153,26 @@ describe('DominorioV1Adapter', () => {
     expect(resolveLegacyTimeBudgetMs(4, 'hard')).toBe(
       Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.08),
     );
-    expect(resolveLegacyTimeBudgetMs(5, 'hard')).toBe(
-      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.18),
+    expect(resolveLegacyTimeBudgetMs(5, 'hardPlus')).toBe(
+      Math.round(DIFFICULTY_PRESETS.hardPlus.timeBudgetMs * 1.18),
     );
   });
 
   test('keeps explicit request time budget when provided', () => {
-    expect(resolveLegacyTimeBudgetMs(5, 'hard', 1234.8)).toBe(1234);
+    expect(resolveLegacyTimeBudgetMs(5, 'hardPlus', 1234.8)).toBe(1234);
+  });
+
+  test('keeps non-top levels unchanged for stability policy', () => {
+    const state = criarEstadoInicial('vs-computador');
+    expect(applyTopLevelStabilityPolicy(3, state)).toBe(state);
+  });
+
+  test('inflates top-level ply count to skip early opening-book randomness', () => {
+    const state = criarEstadoInicial('vs-computador');
+    const stabilizedState = applyTopLevelStabilityPolicy(4, state);
+
+    expect(stabilizedState).not.toBe(state);
+    expect(stabilizedState.dominosColocados.length).toBeGreaterThan(6);
+    expect(state.dominosColocados.length).toBe(0);
   });
 });

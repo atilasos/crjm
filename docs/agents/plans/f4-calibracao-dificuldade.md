@@ -139,12 +139,12 @@ Estado de fase após Task 5: **FAIL** no gate F4; seguir execução incremental 
 - Test: `src/games/dominorio/ai/*.test.ts`
 
 **Checks:**
-- [ ] N4 e N5 deixam de partilhar preset efetivo no runtime
-- [ ] Política de abertura/seleção para N4/N5 reduz aleatoriedade não necessária
-- [ ] Testes Dominório relevantes passam
+- [x] N4 e N5 deixam de partilhar preset efetivo no runtime
+- [x] Política de abertura/seleção para N4/N5 reduz aleatoriedade não necessária
+- [x] Testes Dominório relevantes passam
 
 **Artefacto esperado:**
-- [ ] Commit com diff mínimo + nota de racional em mensagem de commit
+- [x] Commit com diff mínimo + nota de racional em mensagem de commit
 
 #### F4.1.3 — Regenerar baseline Dominório e validar gate local F4.1
 **Files:**

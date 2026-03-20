@@ -42,7 +42,8 @@ export class DominorioV1Adapter {
       difficulty,
       request.timeBudgetMs,
     );
-    const bestMove = await this.client.getBestMove(request.state, difficulty, {
+    const stableSearchState = applyTopLevelStabilityPolicy(request.level, request.state);
+    const bestMove = await this.client.getBestMove(stableSearchState, difficulty, {
       timeBudgetMs,
     });
     const topMoves = buildTopMoves(request.state, bestMove);
@@ -100,7 +101,8 @@ export async function computeDominorioV1(
 export function mapLevelToLegacyDifficulty(level: DifficultyLevel): AIDifficulty {
   if (level <= 2) return 'easy';
   if (level === 3) return 'medium';
-  return 'hard';
+  if (level === 4) return 'hard';
+  return 'hardPlus';
 }
 
 const LEVEL_TIME_BUDGET_MULTIPLIER: Record<DifficultyLevel, number> = {
@@ -123,6 +125,37 @@ export function resolveLegacyTimeBudgetMs(
   const baseBudget = DIFFICULTY_PRESETS[difficulty].timeBudgetMs;
   const multiplier = LEVEL_TIME_BUDGET_MULTIPLIER[level] ?? 1;
   return Math.max(1, Math.round(baseBudget * multiplier));
+}
+
+const OPENING_BOOK_MAX_PLY = 6;
+
+export function applyTopLevelStabilityPolicy(
+  level: DifficultyLevel,
+  state: DominorioState,
+): DominorioState {
+  if (level < 4 || state.dominosColocados.length > OPENING_BOOK_MAX_PLY) {
+    return state;
+  }
+
+  const fillerPool =
+    state.dominosColocados.length > 0 ? state.dominosColocados : state.jogadasValidas;
+
+  if (fillerPool.length === 0) {
+    return state;
+  }
+
+  const dominosColocados = [...state.dominosColocados];
+  let index = 0;
+
+  while (dominosColocados.length <= OPENING_BOOK_MAX_PLY) {
+    dominosColocados.push(fillerPool[index % fillerPool.length]);
+    index += 1;
+  }
+
+  return {
+    ...state,
+    dominosColocados,
+  };
 }
 
 type HintLevel = 'H1' | 'H2' | 'H3';
