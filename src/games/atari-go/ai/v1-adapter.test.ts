@@ -36,13 +36,38 @@ class FakeClient implements AtariGoV1Client {
   }
 }
 
-function buildRequest(state: AtariGoState): AIRequestV1<AtariGoState, Posicao> {
+class CapturingClient implements AtariGoV1Client {
+  readonly metrics: AIMetrics = {
+    isThinking: false,
+    lastTimeMs: 1,
+    usedWasm: true,
+  };
+  lastDifficulty: AIDifficulty | null = null;
+
+  async getBestMove(_state: AtariGoState, difficulty: AIDifficulty): Promise<number | null> {
+    this.lastDifficulty = difficulty;
+    return 0;
+  }
+
+  cancel(): void {
+    // noop
+  }
+
+  terminate(): void {
+    // noop
+  }
+}
+
+function buildRequest(
+  state: AtariGoState,
+  level: 1 | 2 | 3 | 4 | 5 = 4,
+): AIRequestV1<AtariGoState, Posicao> {
   return {
     version: '1.0',
     requestId: 'req-atari-v1-test',
     gameId: 'atari-go',
     mode: 'tutor',
-    level: 4,
+    level,
     state,
     locale: 'pt-PT',
   };
@@ -108,9 +133,21 @@ describe('AtariGoV1Adapter', () => {
 
   test('maps core levels to legacy difficulty buckets', () => {
     expect(mapLevelToLegacyDifficulty(1)).toBe('easy');
-    expect(mapLevelToLegacyDifficulty(2)).toBe('easy');
-    expect(mapLevelToLegacyDifficulty(3)).toBe('medium');
-    expect(mapLevelToLegacyDifficulty(4)).toBe('hard');
+    expect(mapLevelToLegacyDifficulty(2)).toBe('medium');
+    expect(mapLevelToLegacyDifficulty(3)).toBe('hard');
+    expect(mapLevelToLegacyDifficulty(4)).toBe('very-hard');
     expect(mapLevelToLegacyDifficulty(5)).toBe('very-hard');
+  });
+
+  test('forwards separated difficulty buckets for N2 and N3', async () => {
+    const state = criarEstadoInicial('vs-computador');
+    const client = new CapturingClient();
+    const adapter = new AtariGoV1Adapter({ client });
+
+    await adapter.compute(buildRequest(state, 2));
+    expect(client.lastDifficulty).toBe('medium');
+
+    await adapter.compute(buildRequest(state, 3));
+    expect(client.lastDifficulty).toBe('hard');
   });
 });

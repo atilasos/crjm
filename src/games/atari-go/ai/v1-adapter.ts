@@ -91,9 +91,9 @@ export class AtariGoV1Adapter {
 }
 
 export function mapLevelToLegacyDifficulty(level: DifficultyLevel): AIDifficulty {
-  if (level <= 2) return 'easy';
-  if (level === 3) return 'medium';
-  if (level === 4) return 'hard';
+  if (level <= 1) return 'easy';
+  if (level === 2) return 'medium';
+  if (level === 3) return 'hard';
   return 'very-hard';
 }
 
