@@ -51,13 +51,14 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - F4.2.5 executada (hardening consolidado em `2026-03-20T11:16:49Z`, review `docs/agents/reviews/f4-final-review.md`), decisão do gate F4: **FAIL**
 - F4.2.6 concluída (`b937338`, review `docs/agents/reviews/f4-2-6-atarigo-reajuste.md`, objetivo `N3>N2` atingido)
 - F4.2.7 concluída (`bd48a88`, review `docs/agents/reviews/f4-2-7-atarigo-n2n1-fix.md`, objetivo `N2>N1` recuperado)
+- F4.2.8 concluída (`caaae81`, review `docs/agents/reviews/f4-2-8-atarigo-nc3-l4-fix.md`, objetivo `nC3Pass` no nível 4 recuperado preservando `N2>N1` e `N3>N2`)
 
 **Progressão de sub-blocos (F4 permanece ativa):**
 - **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
-- **F4.2 (ativa):** após F4.2.7, `N2>N1` e `N3>N2` ficaram acima do alvo, mas persiste `nC3Pass=false` no nível 4.
-  - próxima unidade executável: `NEXT-F4.2.8` (corrigir `nC3Pass=false` remanescente no nível 4 preservando `N2>N1` e `N3>N2 >= 0.60`)
-  - files: `scripts/atari-go-ladder-baseline.ts` + `scripts/atari-go-ladder-baseline.test.ts` + `docs/agents/reviews/f4-2-8-atarigo-nc3-l4-fix.md`
-  - artifact: review curto com before/after de `N2>N1`, `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
+- **F4.2 (ativa):** após F4.2.8, os ajustes de ladder foram concluídos; próximo passo é revalidar o gate final F4.
+  - próxima unidade executável: `NEXT-F4.2.9` (reexecutar gate final F4 com hardening consolidado e baseline pós-F4.2.8)
+  - files: `scripts/hardening-f3_2.ts` (ou sucessor) + `docs/agents/reviews/f4-final-review.md`
+  - artifact: review atualizado com decisão explícita PASS/FAIL do gate final F4
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.

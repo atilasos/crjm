@@ -168,21 +168,37 @@
 **Artefacto esperado:**
 - [x] Review curto com before/after de `N2>N1`, `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
 
-#### NEXT-F4.2.8 — Corrigir `nC3Pass=false` remanescente no nível 4 preservando `N2>N1` e `N3>N2`
+#### F4.2.8 — Corrigir `nC3Pass=false` remanescente no nível 4 preservando `N2>N1` e `N3>N2`
+**Status (evidência já em `main`):** concluída — commit `caaae81`, review `docs/agents/reviews/f4-2-8-atarigo-nc3-l4-fix.md`.
+
 **Files:**
 - Modify: `scripts/atari-go-ladder-baseline.ts`
 - Test: `scripts/atari-go-ladder-baseline.test.ts`
 - Write: `docs/agents/reviews/f4-2-8-atarigo-nc3-l4-fix.md`
 
 **Checks:**
-- [ ] Ajustar separação do ladder com mudança mínima focada no nível 4 para fechar `nC3Pass=false`
-- [ ] Preservar `N2>N1 >= 0.60` após o ajuste
-- [ ] Preservar `N3>N2 >= 0.60` após o ajuste
-- [ ] Revalidar `nC2Pass` e `nC3Pass` após o ajuste
-- [ ] Produzir decisão explícita para novo gate final F4
+- [x] Ajustar separação do ladder com mudança mínima focada no nível 4 para fechar `nC3Pass=false`
+- [x] Preservar `N2>N1 >= 0.60` após o ajuste
+- [x] Preservar `N3>N2 >= 0.60` após o ajuste
+- [x] Revalidar `nC2Pass` e `nC3Pass` após o ajuste
+- [x] Produzir decisão explícita para novo gate final F4
 
 **Artefacto esperado:**
-- [ ] Review curto com before/after de `N2>N1`, `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
+- [x] Review curto com before/after de `N2>N1`, `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
+
+#### NEXT-F4.2.9 — Reexecutar gate final F4 (hardening consolidado pós-F4.2.8)
+**Files:**
+- Run: `scripts/hardening-f3_2.ts` (ou sucessor)
+- Write: `docs/agents/reviews/f4-final-review.md`
+
+**Checks:**
+- [ ] Executar benchmark/hardening consolidado com baseline pós-F4.2.8
+- [ ] Revalidar critérios de pronto da F4 (T1 e T4) com decisão explícita PASS/FAIL
+- [ ] Se PASS: marcar F4 como concluída no roadmap
+- [ ] Se FAIL: manter F4 ativa e abrir próxima unidade mínima com foco no gap remanescente
+
+**Artefacto esperado:**
+- [ ] Review atualizado do gate final F4 com evidência consolidada e decisão PASS/FAIL
 
 ### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 
