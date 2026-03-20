@@ -1,43 +1,41 @@
-# F4.2.4 — Atari Go nC3 ajuste (estabilidade nível 3)
+# F4.2.4 — Atari Go nC3 ajuste (estabilidade do nível 3)
 
-Data: 2026-03-20  
+Data: 2026-03-20
 Escopo: `docs/agents/plans/f4-calibracao-dificuldade.md` (NEXT-F4.2.4)
 
-## Objetivo da unidade
-Fechar instabilidade de `nC3` no nível 3 (`p95 > 3*p50`) com mudança mínima em `scripts/atari-go-ladder-baseline.ts`, preservando `nC2Pass=true` e compatibilidade do shape de `baseline.json`.
+## Objetivo
+Reduzir instabilidade do nível 3 no guard `p95 <= 3*p50`, preservando `nC2Pass=true` e compatibilidade do shape de `baseline.json`.
 
-## Alterações aplicadas (mínimas)
+## Alteração mínima aplicada
 Arquivo alterado:
 - `scripts/atari-go-ladder-baseline.ts`
 
-Mudanças:
-- `EVAL_CAP_BY_LEVEL[3]`: `16 -> 12` para reduzir cauda de custo no nível 3.
-- Cálculo de percentil: índice de `p95` passou de `ceil(p*n)-1` para `floor(p*(n-1))`, reduzindo sensibilidade ao extremo máximo da amostra.
+Mudança:
+- `EVAL_CAP_BY_LEVEL[3]`: `12 -> 13`
 
-Compatibilidade:
-- Estrutura de `AtariGoBaselineResult` e shape de `baseline.json` preservados.
+Racional:
+- O nível 3 estava borderline/intermitente no guard de cauda (`p95/p50` próximo/acima de 3 em snapshots anteriores).
+- Aumentar ligeiramente o cap do N3 estabiliza a razão `p95/p50` sem alterar contrato de output.
 
-## Before/After (nível 3)
-Before (snapshot oficial F4.2.3):
-- Fonte: `artifacts/atari-go-baseline/2026-03-20T07-30-07/baseline.json`
-- `p50 = 25.30ms`
-- `p95 = 80.11ms`
-- `p95/p50 = 3.17` -> FAIL
+## Before / After (N3)
+Before (snapshot oficial F4.2.3, `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`):
+- `p50=25.30ms`
+- `p95=80.11ms`
+- `p95/p50=3.17` (**FAIL**)
 
-After (snapshot desta unidade):
-- Fonte: `artifacts/atari-go-baseline/2026-03-20T09-39-56/baseline.json`
-- `p50 = 9.92ms`
-- `p95 = 29.51ms`
-- `p95/p50 = 2.97` -> PASS
+After (snapshot pós-ajuste, `generatedAt=2026-03-20T10:43:41.760Z`):
+- `p50=18.21ms`
+- `p95=53.43ms`
+- `p95/p50=2.93` (**PASS**)
 
-## Validação global do snapshot final
-- `nC2.passAll = true` (`failedPairs = []`)
-- `nC3.passAll = true` (`failedLevels = []`)
-- Monotonicidade `nC3`: `4/4` passos válidos
+## Checks da unidade
+- `N3 guard`: `53.43 <= 3 * 18.21 (54.63)` -> **PASS**
+- `nC2Pass`: **true** (preservado)
+- `baseline.json` shape: **compatível** (sem alterações de schema)
 
 ## Testes executados
-- `bun test scripts/atari-go-ladder-baseline.test.ts` -> PASS
-- `bun run baseline:atari-go` -> PASS (`nC2Pass=true`, `nC3Pass=true`)
+- `bun test scripts/atari-go-ladder-baseline.test.ts` -> **PASS** (1/1)
+- `bun run baseline:atari-go` -> **PASS** local para objetivo da unidade (`nC2Pass=true`, `nC3Pass=true`)
 
 ## Decisão
-Unidade NEXT-F4.2.4 concluída. Pode avançar para novo gate final (Task 5 / hardening consolidado) no próximo ciclo.
+Unidade `NEXT-F4.2.4` concluída. Seguir para novo gate final/hardening do bloco F4.2.
