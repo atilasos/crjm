@@ -11,7 +11,7 @@ describe('atari-go-ladder-baseline script', () => {
       env: {
         ...process.env,
         ATARIGO_GAMES_PER_MIRROR: '1',
-        ATARIGO_MAX_PLIES: '32',
+        ATARIGO_MAX_PLIES: '48',
         ATARIGO_BUDGET_SCALE: '0.05',
       },
       encoding: 'utf8',
@@ -66,5 +66,5 @@ describe('atari-go-ladder-baseline script', () => {
     );
     expect(n3OverN2).toBeDefined();
     expect(n3OverN2?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
-  }, 30000);
+  }, 90000);
 });

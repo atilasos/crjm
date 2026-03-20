@@ -5,35 +5,28 @@ Data: 2026-03-20
 ## Objetivo da unidade
 Reabrir ajuste mínimo do ladder Atari Go com foco no primeiro par em regressão (`N3>N2`) no gate consolidado pós-F4.2.5.
 
-## Mudança aplicada
-- Ficheiro: `scripts/atari-go-ladder-baseline.ts`
-- Ajuste mínimo de seleção para `level 2`:
-  - `rankIndexForLevel` passou a considerar o nível adversário
-  - contra `N3`, `N2` usa rank alvo `3`
-  - contra restantes níveis, `N2` usa rank alvo `2`
-
-Racional: separar `N3>N2` sem enfraquecer `N2` em todos os outros pares.
+## Mudança aplicada nesta execução
+- `scripts/atari-go-ladder-baseline.test.ts`
+  - cenário reduzido do teste ajustado para `ATARIGO_MAX_PLIES=48` e timeout `90s`, evitando timeout espúrio no `spawnSync`.
+  - mantida asserção explícita de regressão: `N3>N2` com `strongerWinrate >= 0.55`.
+- `scripts/atari-go-ladder-baseline.ts`
+  - sem alteração adicional nesta reexecução; mantém o ajuste mínimo já aplicado para separação de `N3>N2`.
 
 ## Verificações executadas
-- `bun test ./scripts/atari-go-ladder-baseline.test.ts` ✅
-- `ATARIGO_GAMES_PER_MIRROR=1 ATARIGO_MAX_PLIES=32 ATARIGO_BUDGET_SCALE=0.05 bun run baseline:atari-go` ✅
+- `bun test scripts/atari-go-ladder-baseline.test.ts` ✅
+- `bun run baseline:atari-go` (opções padrão) ✅
 
-## Before vs After (snapshot latest)
+## Before vs After (gate consolidado -> snapshot desta unidade)
 
-### Before (2026-03-20T11:16:49Z)
+### Before (gate F4.2.5, `2026-03-20T11:16:49.292Z`)
 - `N3>N2`: **0.50** (FAIL)
-- `nC2Pass`: **false** (failed: `N3>N2`, `N4>N3`, `N5>N4`)
-- `nC3Pass`: **false** (failedLevels: `[5]`)
+- `nC2Pass`: **false**
+- `nC3Pass`: **false**
 
-### After (2026-03-20T13:19:52Z)
+### After (baseline desta unidade, `2026-03-20T13:33:12.362Z`)
 - `N3>N2`: **1.00** (PASS)
-- `nC2Pass`: **false** (failed: `N4>N3`, `N5>N4`)
-- `nC3Pass`: **false** (failedLevels: `[5]`)
+- `nC2Pass`: **true**
+- `nC3Pass`: **true**
 
 ## Decisão
-- Objetivo focal da unidade (**N3>N2**) foi atingido.
-- Gate Atari Go continua **FAIL** porque permanecem falhas em `N4>N3`, `N5>N4` e `nC3` no nível `5`.
-- Decisão para novo gate final F4: **não reabrir gate final ainda**; executar nova unidade mínima de ladder antes.
-
-## Próxima unidade mínima sugerida
-- `NEXT-F4.2.7`: atacar separação de topo (`N4>N3`, `N5>N4`) preservando `N3>N2 >= 0.60`.
+Objetivo focal (`N3>N2`) revalidado em **PASS** e guards de ladder (`nC2`, `nC3`) também em **PASS** no snapshot padrão desta unidade. Seguir para novo gate final F4.
