@@ -97,42 +97,43 @@
 
 ---
 
-## Próximo trabalho executável (sub-blocos pós-Task 5)
+## Próximo trabalho executável (uma unidade)
 
-Estado de fase após Task 5: **FAIL** no gate F4; seguir execução incremental por sub-blocos.
-
-### Próximas duas unidades (uma por execução)
-
-#### NEXT-F4.1 — Dominório T1/T4: separar N4/N5 + reduzir variância de topo
-**Files:**
-- Modify: `src/games/dominorio/ai/types.ts`
-- Modify: `src/games/dominorio/ai/v1-adapter.ts`
-- Test: `src/games/dominorio/ai/*.test.ts`
-- Artifact: `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`
-
-#### NEXT-F4.2 — Atari Go ladder: reforçar separação N2/N3 no baseline
+#### NEXT-F4.2.4 — Atari Go nC3: reduzir instabilidade do nível 3 (p95 > 3*p50)
 **Files:**
 - Modify: `scripts/atari-go-ladder-baseline.ts`
 - Test: `scripts/atari-go-ladder-baseline.test.ts`
-- Artifact: `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`
+- Write: `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`
 
-### F4.1 (ativo) — Recalibração Dominório para fechar T1/T4
+**Checks:**
+- [ ] Ajuste mínimo para o nível 3 cumprir `p95 <= 3*p50` em `nC3`
+- [ ] Preservar `nC2Pass=true` e compatibilidade do shape de `baseline.json`
+- [ ] Teste do ladder atualizado e a passar
+
+**Artefacto esperado:**
+- [ ] Review curto com before/after (`p50`, `p95`, razão `p95/p50`) e decisão de continuar para novo gate final
+
+### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 
 #### F4.1.1 — Reauditar baseline atual e definir alvo mínimo por par
+**Status (evidência já em `main`):** concluída — commit `7c5a0ee`, review `docs/agents/reviews/f4-1-1-dominorio-reauditoria.md`.
+
 **Files:**
 - Read: `artifacts/dominorio-baseline/latest/baseline.md`
 - Read: `docs/reports/dominorio/F4-calibracao-report.md`
 - Write: `docs/agents/reviews/f4-1-1-dominorio-reauditoria.md`
 
 **Checks:**
-- [ ] Listar pares T1 em FAIL com delta para 60%
-- [ ] Listar valor atual de T4 e gap para <=15%
-- [ ] Definir hipótese única de ajuste para T1/T4 (sem refactor)
+- [x] Listar pares T1 em FAIL com delta para 60%
+- [x] Listar valor atual de T4 e gap para <=15%
+- [x] Definir hipótese única de ajuste para T1/T4 (sem refactor)
 
 **Artefacto esperado:**
-- [ ] Review curto com hipótese prioritária e critério de aceitação mensurável
+- [x] Review curto com hipótese prioritária e critério de aceitação mensurável
 
 #### F4.1.2 — Separar N4/N5 com ajuste mínimo e reduzir variância de topo
+**Status (evidência já em `main`):** concluída — commit `402b6dc`, review `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`.
+
 **Files:**
 - Modify: `src/games/dominorio/ai/types.ts`
 - Modify: `src/games/dominorio/ai/v1-adapter.ts`
@@ -147,62 +148,70 @@ Estado de fase após Task 5: **FAIL** no gate F4; seguir execução incremental 
 - [x] Commit com diff mínimo + nota de racional em mensagem de commit
 
 #### F4.1.3 — Regenerar baseline Dominório e validar gate local F4.1
+**Status (evidência já em `main`):** concluída — commit `d1f0e72`, report `docs/reports/dominorio/F4-1-dominorio-recalibracao-report.md`, decisão local: **FAIL**.
+
 **Files:**
 - Run: `bun run baseline:dominorio`
 - Write/update: `artifacts/dominorio-baseline/latest/*`
 - Write: `docs/reports/dominorio/F4-1-dominorio-recalibracao-report.md`
 
 **Checks:**
-- [ ] Recalcular T1 por pares (`N2>N1`, `N3>N2`, `N4>N3`, `N5>N4`)
-- [ ] Recalcular T4 (divergência)
-- [ ] Decidir PASS/FAIL de F4.1 com evidência explícita
+- [x] Recalcular T1 por pares (`N2>N1`, `N3>N2`, `N4>N3`, `N5>N4`)
+- [x] Recalcular T4 (divergência)
+- [x] Decidir PASS/FAIL de F4.1 com evidência explícita
 
 **Artefacto esperado:**
-- [ ] Report com tabela antes/depois e decisão de continuação
+- [x] Report com tabela antes/depois e decisão de continuação
 
-### F4.2 (pendente) — Recalibração Atari Go ladder
+### F4.2 (ativa) — Recalibração Atari Go ladder
 
 #### F4.2.1 — Reauditar ladder atual e fixar objetivo N-C2/N-C3 por nível
+**Status (evidência já em `main`):** concluída — commit `4b8455f`, review `docs/agents/reviews/f4-2-1-atarigo-reauditoria.md`.
+
 **Files:**
 - Read: `artifacts/atari-go-baseline/latest/baseline.json`
 - Read: `scripts/atari-go-ladder-baseline.ts`
 - Write: `docs/agents/reviews/f4-2-1-atarigo-reauditoria.md`
 
 **Checks:**
-- [ ] Identificar pares/níveis que causam `nC2Pass=false`
-- [ ] Identificar níveis fora de budget que causam `nC3Pass=false`
-- [ ] Definir ajuste mínimo prioritário para ladder
+- [x] Identificar pares/níveis que causam `nC2Pass=false`
+- [x] Identificar níveis fora de budget que causam `nC3Pass=false`
+- [x] Definir ajuste mínimo prioritário para ladder
 
 **Artefacto esperado:**
-- [ ] Review com matriz FAIL atual + alvo concreto por métrica
+- [x] Review com matriz FAIL atual + alvo concreto por métrica
 
 #### F4.2.2 — Ajustar ladder com mudança mínima em separação média
+**Status (evidência já em `main`):** concluída — commit `30fc75c`, review `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`.
+
 **Files:**
 - Modify: `scripts/atari-go-ladder-baseline.ts`
 - Test: `scripts/atari-go-ladder-baseline.test.ts`
 - Write: `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`
 
 **Checks:**
-- [ ] Melhorar separação N-C2 (foco N2/N3) sem alterar contrato de output
-- [ ] Manter shape de `baseline.json` compatível com hardening
-- [ ] Teste do ladder passa
+- [x] Melhorar separação N-C2 (foco N2/N3) sem alterar contrato de output
+- [x] Manter shape de `baseline.json` compatível com hardening
+- [x] Teste do ladder passa
 
 **Artefacto esperado:**
-- [ ] Review com racional do ajuste e impacto esperado em N-C2/N-C3
+- [x] Review com racional do ajuste e impacto esperado em N-C2/N-C3
 
 #### F4.2.3 — Regenerar baseline Atari Go e decidir desbloqueio F4
+**Status (evidência já em `main`):** concluída — commit `16303c7`, report `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`, decisão: iterar F4.2 (`nC3Pass=false` no nível 3).
+
 **Files:**
 - Run: `bun run baseline:atari-go`
 - Write/update: `artifacts/atari-go-baseline/latest/baseline.json`
 - Write: `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`
 
 **Checks:**
-- [ ] Validar `nC2Pass` e `nC3Pass` no snapshot pós-ajuste
-- [ ] Confirmar tendência T1 ladder >=60% nos pares definidos
-- [ ] Registar se F4 fica pronta para novo gate final
+- [x] Validar `nC2Pass` e `nC3Pass` no snapshot pós-ajuste
+- [x] Confirmar tendência T1 ladder >=60% nos pares definidos
+- [x] Registar se F4 fica pronta para novo gate final
 
 **Artefacto esperado:**
-- [ ] Report com decisão: voltar a Task 5 (hardening final) ou iterar F4.2
+- [x] Report com decisão: voltar a Task 5 (hardening final) ou iterar F4.2
 
 ---
 

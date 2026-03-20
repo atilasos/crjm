@@ -41,18 +41,20 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - Task 3 concluída (`1807dfc`, `673d8f0`, report `docs/reports/dominorio/F4-calibracao-report.md`)
 - Task 4 concluída (`5781003`, review `docs/agents/reviews/f4-04-atarigo-ajuste.md`)
 - Task 5 executada com **FAIL** no gate (`277464d`, review `docs/agents/reviews/f4-final-review.md`)
+- F4.1.1 concluída (`7c5a0ee`, review `docs/agents/reviews/f4-1-1-dominorio-reauditoria.md`)
+- F4.1.2 concluída (`402b6dc`, review `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`)
+- F4.1.3 concluída (`d1f0e72`, report `docs/reports/dominorio/F4-1-dominorio-recalibracao-report.md`, decisão local: FAIL)
+- F4.2.1 concluída (`4b8455f`, review `docs/agents/reviews/f4-2-1-atarigo-reauditoria.md`)
+- F4.2.2 concluída (`30fc75c`, review `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`)
+- F4.2.3 concluída (`16303c7`, report `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`, `nC2Pass=true`, `nC3Pass=false` no nível 3)
 
 **Progressão de sub-blocos (F4 permanece ativa):**
-- **F4.1 (ativo):** recalibração Dominório para fechar T1/T4
-  - próxima unidade executável: `NEXT-F4.1`
-  - files: `src/games/dominorio/ai/types.ts`, `src/games/dominorio/ai/v1-adapter.ts`
-  - test: `src/games/dominorio/ai/*.test.ts`
-  - artifact: `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`
-- **F4.2 (pendente):** recalibração Atari Go para fechar N-C2/N-C3 e T1
-  - próxima unidade executável após F4.1: `NEXT-F4.2`
+- **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
+- **F4.2 (ativa):** `nC2Pass` resolvido e `nC3Pass` ainda em FAIL no nível 3 (`p95 > 3*p50`).
+  - próxima unidade executável: `NEXT-F4.2.4`
   - files: `scripts/atari-go-ladder-baseline.ts`
   - test: `scripts/atari-go-ladder-baseline.test.ts`
-  - artifact: `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`
+  - artifact: `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.
