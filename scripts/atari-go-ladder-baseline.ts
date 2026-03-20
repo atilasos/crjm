@@ -98,7 +98,7 @@ interface MoveScore {
 const EVAL_CAP_BY_LEVEL: Record<DifficultyLevel, number> = {
   1: 6,
   2: 10,
-  3: 14,
+  3: 13,
   4: 24,
   5: 40,
 };
@@ -187,9 +187,11 @@ function scoreMoves(
       ? state.jogadasValidas
       : calcularJogadasValidas(state.tabuleiro, player);
 
+  const baseCap = EVAL_CAP_BY_LEVEL[level] ?? legalMoves.length;
+  const adjustedCap = level === 4 && legalMoves.length >= 30 ? baseCap - 2 : baseCap;
   const evalCap = Math.max(
     1,
-    Math.min(legalMoves.length, EVAL_CAP_BY_LEVEL[level] ?? legalMoves.length),
+    Math.min(legalMoves.length, adjustedCap),
   );
 
   const scored = legalMoves.map((move, index) => {
@@ -226,7 +228,10 @@ function rankIndexForLevel(
     const targetRank = opponentLevel === 3 ? 3 : 1;
     return Math.min(total - 1, targetRank);
   }
-  if (level === 3) return 0;
+  if (level === 3) {
+    const targetRank = opponentLevel >= 4 ? 1 : 0;
+    return Math.min(total - 1, targetRank);
+  }
   return 0;
 }
 
