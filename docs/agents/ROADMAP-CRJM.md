@@ -31,15 +31,21 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 **Objetivo:** a escada N1–N5 deve ser claramente observável nos benchmarks.
 **Plano:** `docs/agents/plans/f4-calibracao-dificuldade.md`
 **Critério de saída:**
-- T1 (nível N vs N-1 win rate ≥ 60%) PASS em todos os pares para Dominório e Atari Go
-- T4 (estabilidade/repetibilidade) ≤ 15% divergência
+- T1 (nível N vs N-1 win rate >= 60%) PASS em todos os pares para Dominório e Atari Go
+- T4 (estabilidade/repetibilidade) <= 15% divergência
 - Baseline atualizado e publicado
 
-**Estado atual (Task 5, 2026-03-20):** FAIL no gate de saída.
+**Estado atual (2026-03-20):**
+- Task 1–5 do plano F4: concluídas
+- Decisão da Task 5: **FAIL** no gate de saída (fase mantém-se ativa)
+- Execução corrente: sub-bloco **F4.1 (ativo)**
+- Próximo na fila após F4.1: sub-bloco **F4.2 (pendente)**
 
-**Sub-blocos F4 abertos:**
+**Progressão de sub-blocos:**
 - **F4.1 (ativo):** recalibração Dominório para fechar T1/T4
+  - sequência executável atual: F4.1.1 (reauditoria) -> F4.1.2 (ajuste N4/N5) -> F4.1.3 (baseline + decisão)
 - **F4.2 (pendente):** recalibração Atari Go para fechar N-C2/N-C3 e T1
+  - sequência prevista: F4.2.1 (reauditoria) -> F4.2.2 (ajuste ladder) -> F4.2.3 (baseline + decisão)
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.
