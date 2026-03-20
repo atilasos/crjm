@@ -11,7 +11,7 @@ describe('atari-go-ladder-baseline script', () => {
       env: {
         ...process.env,
         ATARIGO_GAMES_PER_MIRROR: '1',
-        ATARIGO_MAX_PLIES: '8',
+        ATARIGO_MAX_PLIES: '32',
         ATARIGO_BUDGET_SCALE: '0.05',
       },
       encoding: 'utf8',
@@ -22,7 +22,12 @@ describe('atari-go-ladder-baseline script', () => {
     const latestPath = join(repoRoot, 'artifacts', 'atari-go-baseline', 'latest', 'baseline.json');
     const raw = await readFile(latestPath, 'utf8');
     const baseline = JSON.parse(raw) as {
-      ladder: Array<{ strongerLevel: number; weakerLevel: number; t1Pass: boolean }>;
+      ladder: Array<{
+        strongerLevel: number;
+        weakerLevel: number;
+        strongerWinrate: number;
+        t1Pass: boolean;
+      }>;
       t2ByLevel: Record<string, { p50: number; p95: number; budgetMs: number; t2Pass: boolean }>;
       nC2: { failedPairs: string[]; passAll: boolean };
       nC3: {
@@ -55,5 +60,11 @@ describe('atari-go-ladder-baseline script', () => {
     const firstLadderPair = baseline.ladder[0];
     expect(firstLadderPair.strongerLevel).toBe(2);
     expect(firstLadderPair.weakerLevel).toBe(1);
+
+    const n3OverN2 = baseline.ladder.find(
+      (pair) => pair.strongerLevel === 3 && pair.weakerLevel === 2,
+    );
+    expect(n3OverN2).toBeDefined();
+    expect(n3OverN2?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
   }, 30000);
 });

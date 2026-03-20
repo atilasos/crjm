@@ -215,21 +215,32 @@ function scoreMoves(
   return scored;
 }
 
-function rankIndexForLevel(level: DifficultyLevel, total: number): number {
+function rankIndexForLevel(
+  level: DifficultyLevel,
+  total: number,
+  opponentLevel: DifficultyLevel,
+): number {
   if (total <= 1) return 0;
   if (level <= 1) return Math.min(total - 1, 3);
-  if (level === 2) return Math.min(total - 1, 3);
+  if (level === 2) {
+    const targetRank = opponentLevel === 3 ? 3 : 2;
+    return Math.min(total - 1, targetRank);
+  }
   if (level === 3) return 0;
   return 0;
 }
 
-function chooseMove(state: AtariGoState, level: DifficultyLevel): Posicao | null {
+function chooseMove(
+  state: AtariGoState,
+  level: DifficultyLevel,
+  opponentLevel: DifficultyLevel,
+): Posicao | null {
   const player = state.jogadorAtual;
   const scored = scoreMoves(state, player, level);
   if (scored.length === 0) return null;
 
   if (level <= 4) {
-    return scored[rankIndexForLevel(level, scored.length)]?.move ?? scored[0].move;
+    return scored[rankIndexForLevel(level, scored.length, opponentLevel)]?.move ?? scored[0].move;
   }
 
   const opponent = getOpponent(player);
@@ -290,7 +301,8 @@ async function runGame(
         : weakerLevel;
 
     const startedAt = performance.now();
-    const bestMove = chooseMove(state, level);
+    const opponentLevel = level === strongerLevel ? weakerLevel : strongerLevel;
+    const bestMove = chooseMove(state, level, opponentLevel);
     const elapsedMs = Math.max(0, performance.now() - startedAt);
 
     const legal = bestMove ? isJogadaValida(state, bestMove) : state.jogadasValidas.length === 0;

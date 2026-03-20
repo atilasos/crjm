@@ -7,11 +7,12 @@ Reabrir ajuste mínimo do ladder Atari Go com foco no primeiro par em regressão
 
 ## Mudança aplicada
 - Ficheiro: `scripts/atari-go-ladder-baseline.ts`
-- Ajuste de separação mínima:
-  - `level 2` passou de rank alvo `2` para `3` (ligeiramente mais fraco)
-  - `level 3` mantido em rank alvo `0` (mais forte)
+- Ajuste mínimo de seleção para `level 2`:
+  - `rankIndexForLevel` passou a considerar o nível adversário
+  - contra `N3`, `N2` usa rank alvo `3`
+  - contra restantes níveis, `N2` usa rank alvo `2`
 
-Racional: aumentar o contraste direto entre N3 e N2 sem refactor do motor.
+Racional: separar `N3>N2` sem enfraquecer `N2` em todos os outros pares.
 
 ## Verificações executadas
 - `bun test ./scripts/atari-go-ladder-baseline.test.ts` ✅
@@ -24,14 +25,15 @@ Racional: aumentar o contraste direto entre N3 e N2 sem refactor do motor.
 - `nC2Pass`: **false** (failed: `N3>N2`, `N4>N3`, `N5>N4`)
 - `nC3Pass`: **false** (failedLevels: `[5]`)
 
-### After (2026-03-20T12:16:20Z)
+### After (2026-03-20T13:19:52Z)
 - `N3>N2`: **1.00** (PASS)
-- `nC2Pass`: **false** (failed: `N2>N1`, `N4>N3`, `N5>N4`)
+- `nC2Pass`: **false** (failed: `N4>N3`, `N5>N4`)
 - `nC3Pass`: **false** (failedLevels: `[5]`)
 
 ## Decisão
 - Objetivo focal da unidade (**N3>N2**) foi atingido.
-- Gate Atari Go continua **FAIL** porque houve regressão no par `N2>N1` e permanecem falhas em `N4>N3` e `N5>N4`.
+- Gate Atari Go continua **FAIL** porque permanecem falhas em `N4>N3`, `N5>N4` e `nC3` no nível `5`.
+- Decisão para novo gate final F4: **não reabrir gate final ainda**; executar nova unidade mínima de ladder antes.
 
 ## Próxima unidade mínima sugerida
-- `NEXT-F4.2.7`: corrigir regressão introduzida em `N2>N1` mantendo `N3>N2 >= 0.60`.
+- `NEXT-F4.2.7`: atacar separação de topo (`N4>N3`, `N5>N4`) preservando `N3>N2 >= 0.60`.
