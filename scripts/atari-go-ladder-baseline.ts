@@ -326,10 +326,20 @@ function evaluateCandidateSafety(
     return candidate.baseScore + 60;
   }
 
+  const opponentScored =
+    lookahead === 2
+      ? scoreMoves(
+          simulation.next,
+          opponent,
+          Math.min(LEVEL_POLICY[level].evalCap, 8),
+        )
+      : opponentMoves.map((move) => ({ move, baseScore: 0 }));
+  const opponentFrontier = opponentScored.slice(0, Math.min(opponentScored.length, lookahead === 2 ? 4 : 6));
+
   let worstLineForUs = Number.POSITIVE_INFINITY;
 
-  for (const opponentMove of opponentMoves) {
-    const opponentSimulation = simulateMove(simulation.next, opponentMove, opponent);
+  for (const opponentCandidate of opponentFrontier) {
+    const opponentSimulation = simulateMove(simulation.next, opponentCandidate.move, opponent);
     if (opponentSimulation.isWinningCapture) {
       worstLineForUs = Math.min(worstLineForUs, candidate.baseScore - 900);
       continue;
@@ -344,7 +354,7 @@ function evaluateCandidateSafety(
     const ourReplyScores = scoreMoves(
       opponentSimulation.next,
       player,
-      LEVEL_POLICY[level].evalCap,
+      Math.min(LEVEL_POLICY[level].evalCap, 12),
     );
     const bestReply = ourReplyScores[0]?.baseScore ?? (candidate.baseScore - 120);
     const lineScore = bestReply - opponentSimulation.capturedCount * 120;
