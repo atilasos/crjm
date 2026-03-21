@@ -26,6 +26,7 @@ export interface AIClientOptions {
 export interface AIComputeOverrides {
   timeBudgetMs?: number;
   seed?: number;
+  benchmarkMode?: boolean;
 }
 
 function fnv1a32(text: string): number {
@@ -47,8 +48,15 @@ function mulberry32(seed: number): () => number {
   };
 }
 
-function createRandom(seed: number | undefined, key: string): () => number {
+function createRandom(
+  seed: number | undefined,
+  key: string,
+  deterministicFallback: boolean,
+): () => number {
   if (typeof seed !== 'number' || !Number.isFinite(seed)) {
+    if (deterministicFallback) {
+      return mulberry32(fnv1a32(key));
+    }
     return Math.random;
   }
   const mixedSeed = ((Math.trunc(seed) >>> 0) ^ fnv1a32(key)) >>> 0;
@@ -279,9 +287,13 @@ export class DominorioAIClient {
     const side = bitboard.playerToSide(state.jogadorAtual);
     const plyCount = state.dominosColocados.length;
     
+    const benchmarkMode =
+      overrides.benchmarkMode === true ||
+      (typeof overrides.seed === 'number' && Number.isFinite(overrides.seed));
     const random = createRandom(
       overrides.seed,
       `${occupiedLow}:${occupiedHigh}:${side}:${plyCount}:${difficulty}`,
+      benchmarkMode,
     );
     
     // Update metrics to show thinking

@@ -154,7 +154,7 @@ describe('DominorioV1Adapter', () => {
       Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.08),
     );
     expect(resolveLegacyTimeBudgetMs(5, 'hardPlus')).toBe(
-      Math.round(DIFFICULTY_PRESETS.hardPlus.timeBudgetMs * 1.18),
+      Math.round(DIFFICULTY_PRESETS.hardPlus.timeBudgetMs * 1.28),
     );
   });
 

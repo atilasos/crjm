@@ -48,7 +48,7 @@ export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
   },
   hardPlus: {
     timeBudgetMs: 15000,
-    maxDepth: 15,
+    maxDepth: 17,
     topN: 0,
     scoreDelta: 0,
   },
@@ -211,4 +211,3 @@ export const INITIAL_METRICS: AIMetrics = {
   lastScore: 0,
   fromBook: false,
 };
-

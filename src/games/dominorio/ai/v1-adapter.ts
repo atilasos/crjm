@@ -46,6 +46,7 @@ export class DominorioV1Adapter {
     const bestMove = await this.client.getBestMove(stableSearchState, difficulty, {
       timeBudgetMs,
       seed: request.seed,
+      benchmarkMode: typeof request.seed === 'number' && Number.isFinite(request.seed),
     });
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(topMoves);
@@ -111,7 +112,7 @@ const LEVEL_TIME_BUDGET_MULTIPLIER: Record<DifficultyLevel, number> = {
   2: 0.94,
   3: 1,
   4: 1.08,
-  5: 1.18,
+  5: 1.28,
 };
 
 export function resolveLegacyTimeBudgetMs(
