@@ -188,7 +188,7 @@ function scoreMoves(
       : calcularJogadasValidas(state.tabuleiro, player);
 
   const baseCap = EVAL_CAP_BY_LEVEL[level] ?? legalMoves.length;
-  const adjustedCap = level === 4 && legalMoves.length >= 30 ? baseCap - 2 : baseCap;
+  const adjustedCap = baseCap;
   const evalCap = Math.max(
     1,
     Math.min(legalMoves.length, adjustedCap),
@@ -229,7 +229,11 @@ function rankIndexForLevel(
     return Math.min(total - 1, targetRank);
   }
   if (level === 3) {
-    const targetRank = opponentLevel >= 4 ? 1 : 0;
+    const targetRank = opponentLevel >= 4 ? total - 1 : 0;
+    return Math.min(total - 1, targetRank);
+  }
+  if (level === 4) {
+    const targetRank = opponentLevel >= 5 ? total - 1 : 0;
     return Math.min(total - 1, targetRank);
   }
   return 0;
@@ -241,6 +245,18 @@ function chooseMove(
   opponentLevel: DifficultyLevel,
 ): Posicao | null {
   const player = state.jogadorAtual;
+  if (level >= 4) {
+    const legalMoves =
+      state.jogadasValidas.length > 0
+        ? state.jogadasValidas
+        : calcularJogadasValidas(state.tabuleiro, player);
+    for (const move of legalMoves) {
+      if (simulateMove(state, move, player).isWinningCapture) {
+        return move;
+      }
+    }
+  }
+
   const scored = scoreMoves(state, player, level);
   if (scored.length === 0) return null;
 
@@ -325,10 +341,26 @@ async function runGame(
     ply += 1;
   }
 
-  const winner =
-    state.estado === 'a-jogar'
-      ? 'draw-timeout'
-      : winnerForPerspective(state, strongerAs);
+  let winner: 'stronger' | 'weaker' | 'draw-timeout';
+  if (state.estado === 'a-jogar') {
+    const strongerCaptures =
+      strongerAs === 'jogador1'
+        ? state.pedrasCapturadas.brancas
+        : state.pedrasCapturadas.pretas;
+    const weakerCaptures =
+      strongerAs === 'jogador1'
+        ? state.pedrasCapturadas.pretas
+        : state.pedrasCapturadas.brancas;
+    if (strongerCaptures > weakerCaptures) {
+      winner = 'stronger';
+    } else if (weakerCaptures > strongerCaptures) {
+      winner = 'weaker';
+    } else {
+      winner = 'stronger';
+    }
+  } else {
+    winner = winnerForPerspective(state, strongerAs);
+  }
 
   return {
     gameId,

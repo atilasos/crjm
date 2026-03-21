@@ -67,5 +67,17 @@ describe('atari-go-ladder-baseline script', () => {
     );
     expect(n3OverN2).toBeDefined();
     expect(n3OverN2?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
+
+    const n4OverN3 = baseline.ladder.find(
+      (pair) => pair.strongerLevel === 4 && pair.weakerLevel === 3,
+    );
+    expect(n4OverN3).toBeDefined();
+    expect(n4OverN3?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
+
+    const n5OverN4 = baseline.ladder.find(
+      (pair) => pair.strongerLevel === 5 && pair.weakerLevel === 4,
+    );
+    expect(n5OverN4).toBeDefined();
+    expect(n5OverN4?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
   }, 90000);
 });
