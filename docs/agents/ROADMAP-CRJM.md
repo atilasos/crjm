@@ -28,12 +28,13 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 ## Fases ativas
 
 ### F4 — Calibração de dificuldade e estabilidade 🔧
-**Status:** ✅ CONCLUÍDA (2026-03-21)
-- Critérios T1/T4 batidos com novos protocolos de semente fixa e thresholds KB-aligned.
-- Atari Go (N1-N5) e Dominório (N1-N5) validados via hardening técnico.
+**Status:** 🔧 ATIVA (bloqueada) — FAIL no gate final de 2026-03-21
+- Plano ativo: `docs/agents/plans/f4-cirurgia-gate-fix.md`
+- Review do gate final: `docs/agents/reviews/f4-phase-c-fail-2026-03-21.md`
+- Bloqueios atuais: Dominório falha T1 em `N2>N1` e `N5>N4`; B1 falha em pares críticos de Dominório e Atari Go.
 
 ### F5 — Classroom-ready gate 🔒
-**Status:** 🔧 ATIVA (2026-03-21)
+**Status:** ⏸️ PENDENTE (aguarda fecho da F4)
 **Objetivo:** definir e validar critérios formais para teste com alunos reais (Piloto).
 **Plano:** `docs/agents/plans/f5-classroom-gate.md`
 **Critério de saída:**

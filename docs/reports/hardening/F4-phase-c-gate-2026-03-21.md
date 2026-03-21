@@ -41,9 +41,17 @@ Artefactos desta corrida:
 - Atari Go: sem métrica T4 explícita neste baseline (`n/a` no schema atual) -> **N/A**
 
 ### B1 (assimetria start/second <=10pp)
-- Dominório baseline expõe split start/second, mas sem agregado `b1` (campo `null`) e com assimetria extrema nos pares em fail (ex.: `N2>N1`: 100% starts vs 0% second).
-- Atari Go baseline não expõe split start/second nesta versão.
-- Decisão B1: **FAIL (não comprovado / incompleto)**
+- Dominório:
+  - `N2>N1`: 100% (start) vs 0% (second), assimetria **100pp** -> **FAIL**
+  - `N3>N2`: 100% vs 100%, assimetria **0pp** -> PASS
+  - `N4>N3`: 100% vs 100%, assimetria **0pp** -> PASS
+  - `N5>N4`: 0% vs 100%, assimetria **100pp** -> **FAIL**
+- Atari Go (derivado de `gameRuns`):
+  - `N2>N1`: 80% (start) vs 100% (second), assimetria **20pp** -> **FAIL**
+  - `N3>N2`: 100% vs 90%, assimetria **10pp** -> PASS (limite)
+  - `N4>N3`: 100% vs 100%, assimetria **0pp** -> PASS
+  - `N5>N4`: 100% vs 80%, assimetria **20pp** -> **FAIL**
+- Decisão B1: **FAIL**
 
 ## Decisão do gate F4
 
@@ -51,6 +59,6 @@ Resultado global: **FAIL**.
 
 Motivos de bloqueio:
 1. Dominório não cumpre T1 em `N2>N1` e `N5>N4`.
-2. Critério B1 não está validado de forma completa no pipeline atual (schema incompleto + evidência de assimetria alta em Dominório).
+2. Critério B1 falha em ambos os jogos (assimetria >10pp em pares críticos).
 
 Nota: checks técnicos do hardening (`aggregate.ok=true`) passaram, mas isso não equivale a aprovação do gate F4 pelos critérios do plano.
