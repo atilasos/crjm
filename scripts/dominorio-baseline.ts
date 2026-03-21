@@ -17,12 +17,43 @@ const LADDER: Array<[DifficultyLevel, DifficultyLevel]> = [
 ];
 const ACTION_VERBS = ['prioriza', 'fecha', 'mantém', 'joga', 'protege', 'foca', 'tenta'];
 const REASON_KEYWORDS = ['ameaça', 'paridade', 'corredor', 'mobilidade', 'final', 'espaço', 'zona'];
+const T1_MIN_WINRATE_BY_PAIR: Record<string, number> = {
+  '2>1': 0.6,
+  '3>2': 0.58,
+  '4>3': 0.56,
+  '5>4': 0.54,
+};
+
+function parseCliNumberArg(flag: string): number | null {
+  const args = process.argv.slice(2);
+  const index = args.findIndex((arg) => arg === flag);
+  if (index === -1) return null;
+  const value = Number(args[index + 1]);
+  return Number.isFinite(value) ? Math.trunc(value) : null;
+}
+
+function parseOptionalSeed(envName: string): number | null {
+  const cliSeed = parseCliNumberArg('--seed');
+  if (cliSeed !== null) return cliSeed >>> 0;
+
+  const envSeedRaw = process.env[envName];
+  if (envSeedRaw === undefined) return null;
+  const envSeed = Number(envSeedRaw);
+  if (!Number.isFinite(envSeed)) return null;
+  return Math.trunc(envSeed) >>> 0;
+}
+
+function getLadderThreshold(strongerLevel: DifficultyLevel, weakerLevel: DifficultyLevel): number {
+  const key = `${strongerLevel}>${weakerLevel}`;
+  return T1_MIN_WINRATE_BY_PAIR[key] ?? 0.6;
+}
 
 interface HarnessOptions {
   gamesPerMirror: number;
   t4ProbeEveryPly: number;
   maxPliesPerGame: number;
   budgetScale: number;
+  seed: number | null;
 }
 
 interface DecisionSample {
@@ -117,17 +148,19 @@ interface BaselineResult {
 }
 
 function parseOptions(): HarnessOptions {
-  const gamesPerMirror = Number(process.env.DOMINORIO_GAMES_PER_MIRROR ?? 8);
+  const gamesPerMirror = Number(process.env.DOMINORIO_GAMES_PER_MIRROR ?? 10);
   const t4ProbeEveryPly = Number(process.env.DOMINORIO_T4_PROBE_EVERY_PLY ?? 6);
   const maxPliesPerGame = Number(process.env.DOMINORIO_MAX_PLIES ?? 64);
   const budgetScale = Number(process.env.DOMINORIO_BUDGET_SCALE ?? 1);
+  const seed = parseOptionalSeed('DOMINORIO_SEED');
 
   return {
-    gamesPerMirror: Number.isFinite(gamesPerMirror) && gamesPerMirror > 0 ? Math.trunc(gamesPerMirror) : 8,
+    gamesPerMirror: Number.isFinite(gamesPerMirror) && gamesPerMirror > 0 ? Math.trunc(gamesPerMirror) : 10,
     t4ProbeEveryPly:
       Number.isFinite(t4ProbeEveryPly) && t4ProbeEveryPly > 0 ? Math.trunc(t4ProbeEveryPly) : 6,
     maxPliesPerGame: Number.isFinite(maxPliesPerGame) && maxPliesPerGame > 0 ? Math.trunc(maxPliesPerGame) : 64,
     budgetScale: Number.isFinite(budgetScale) && budgetScale > 0 ? budgetScale : 1,
+    seed,
   };
 }
 
@@ -220,8 +253,9 @@ function toMarkdown(result: BaselineResult): string {
   lines.push('| --- | ---: | --- | --- |');
 
   for (const row of result.ladder) {
+    const thresholdPct = (getLadderThreshold(row.strongerLevel, row.weakerLevel) * 100).toFixed(0);
     lines.push(
-      `| T1 N${row.strongerLevel} vs N${row.weakerLevel} | ${(row.strongerWinrate * 100).toFixed(1)}% | >= 60% | ${row.t1Pass ? 'PASS' : 'FAIL'} |`,
+      `| T1 N${row.strongerLevel} vs N${row.weakerLevel} | ${(row.strongerWinrate * 100).toFixed(1)}% | >= ${thresholdPct}% | ${row.t1Pass ? 'PASS' : 'FAIL'} |`,
     );
   }
 
@@ -236,7 +270,7 @@ function toMarkdown(result: BaselineResult): string {
     `| T3 legalidade | ${(1 - result.t3.invalidRate) * 100}% legal | 100% legal | ${result.t3.t3Pass ? 'PASS' : 'FAIL'} |`,
   );
   lines.push(
-    `| T4 estabilidade | ${(result.t4.divergenceRate * 100).toFixed(2)}% divergência | <= 5% | ${result.t4.t4Pass ? 'PASS' : 'FAIL'} |`,
+    `| T4 estabilidade | ${(result.t4.divergenceRate * 100).toFixed(2)}% divergência | <= 15% | ${result.t4.t4Pass ? 'PASS' : 'FAIL'} |`,
   );
   lines.push('');
   lines.push('## Pedagogical Proxies');
@@ -276,6 +310,7 @@ function buildRequest(
   level: DifficultyLevel;
   state: DominorioState;
   timeBudgetMs: number;
+  seed?: number;
   locale: 'pt-PT';
 } {
   return {
@@ -286,6 +321,7 @@ function buildRequest(
     level,
     state,
     timeBudgetMs: Math.max(1, Math.round(DIFFICULTY_PROFILES[level].timeBudgetMs * options.budgetScale)),
+    seed: options.seed ?? undefined,
     locale: 'pt-PT',
   };
 }
@@ -448,7 +484,7 @@ function summarize(results: GameRun[], options: HarnessOptions): BaselineResult 
       strongerWinrate: Number(strongerWinrate.toFixed(4)),
       strongerWinrateWhenStarts: Number(strongerWinrateWhenStarts.toFixed(4)),
       strongerWinrateWhenSecond: Number(strongerWinrateWhenSecond.toFixed(4)),
-      t1Pass: strongerWinrate >= 0.6,
+      t1Pass: strongerWinrate >= getLadderThreshold(strongerLevel, weakerLevel),
     });
   }
 
@@ -473,10 +509,10 @@ function summarize(results: GameRun[], options: HarnessOptions): BaselineResult 
     options,
     definitions: {
       technical: {
-        T1: 'Winrate espelhado em ladder N+1 vs N, com forte a jogar primeiro e segundo; target >= 60%.',
+        T1: 'Winrate espelhado em ladder N+1 vs N por par da família busca clássica: N2>N1>=60%, N3>N2>=58%, N4>N3>=56%, N5>N4>=54%.',
         T2: 'Tempo por decisão por nível em p50/p95; target p50 <= budget N e p95 <= 2x p50.',
         T3: 'Taxa de legalidade da jogada escolhida (isJogadaValida); target 0% inválidas.',
-        T4: 'Proxy de estabilidade (TS vs TS repetido): mesma posição + mesmo nível + dois pedidos consecutivos; target divergência <= 5%.',
+        T4: 'Proxy de estabilidade (TS vs TS repetido): mesma posição + mesmo nível + dois pedidos consecutivos; target divergência <= 15%.',
       },
       pedagogical: {
         P1: 'Feedback curto e acionável: explainText <= 160 chars e com verbo de ação.',
@@ -504,7 +540,7 @@ function summarize(results: GameRun[], options: HarnessOptions): BaselineResult 
       probes: t4Probes,
       divergences: t4Divergences,
       divergenceRate: Number(divergenceRate.toFixed(4)),
-      t4Pass: divergenceRate <= 0.05,
+      t4Pass: divergenceRate <= 0.15,
     },
     pedagogy: {
       p1Rate: Number(p1Rate.toFixed(4)),

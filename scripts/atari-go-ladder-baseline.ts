@@ -25,6 +25,7 @@ interface HarnessOptions {
   gamesPerMirror: number;
   maxPliesPerGame: number;
   budgetScale: number;
+  seed: number | null;
 }
 
 interface DecisionSample {
@@ -103,15 +104,77 @@ const EVAL_CAP_BY_LEVEL: Record<DifficultyLevel, number> = {
   5: 40,
 };
 
+const T1_MIN_WINRATE_BY_PAIR: Record<string, number> = {
+  '2>1': 0.62,
+  '3>2': 0.6,
+  '4>3': 0.57,
+  '5>4': 0.55,
+};
+
+function parseCliNumberArg(flag: string): number | null {
+  const args = process.argv.slice(2);
+  const index = args.findIndex((arg) => arg === flag);
+  if (index === -1) return null;
+  const value = Number(args[index + 1]);
+  return Number.isFinite(value) ? Math.trunc(value) : null;
+}
+
+function parseOptionalSeed(envName: string): number | null {
+  const cliSeed = parseCliNumberArg('--seed');
+  if (cliSeed !== null) return cliSeed >>> 0;
+
+  const envSeedRaw = process.env[envName];
+  if (envSeedRaw === undefined) return null;
+  const envSeed = Number(envSeedRaw);
+  if (!Number.isFinite(envSeed)) return null;
+  return Math.trunc(envSeed) >>> 0;
+}
+
+function getLadderThreshold(strongerLevel: DifficultyLevel, weakerLevel: DifficultyLevel): number {
+  const key = `${strongerLevel}>${weakerLevel}`;
+  return T1_MIN_WINRATE_BY_PAIR[key] ?? 0.6;
+}
+
+function fnv1a32(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function deriveSeed(baseSeed: number | null, key: string): number | null {
+  if (baseSeed === null) return null;
+  return (baseSeed ^ fnv1a32(key)) >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function createRandom(seed: number | null): () => number {
+  if (seed === null) return Math.random;
+  return mulberry32(seed);
+}
+
 function parseOptions(): HarnessOptions {
-  const gamesPerMirror = Number(process.env.ATARIGO_GAMES_PER_MIRROR ?? 5);
+  const gamesPerMirror = Number(process.env.ATARIGO_GAMES_PER_MIRROR ?? 10);
   const maxPliesPerGame = Number(process.env.ATARIGO_MAX_PLIES ?? 72);
   const budgetScale = Number(process.env.ATARIGO_BUDGET_SCALE ?? 1);
+  const seed = parseOptionalSeed('ATARIGO_SEED');
 
   return {
-    gamesPerMirror: Number.isFinite(gamesPerMirror) && gamesPerMirror > 0 ? Math.trunc(gamesPerMirror) : 5,
+    gamesPerMirror: Number.isFinite(gamesPerMirror) && gamesPerMirror > 0 ? Math.trunc(gamesPerMirror) : 10,
     maxPliesPerGame: Number.isFinite(maxPliesPerGame) && maxPliesPerGame > 0 ? Math.trunc(maxPliesPerGame) : 72,
     budgetScale: Number.isFinite(budgetScale) && budgetScale > 0 ? budgetScale : 1,
+    seed,
   };
 }
 
@@ -243,6 +306,7 @@ function chooseMove(
   state: AtariGoState,
   level: DifficultyLevel,
   opponentLevel: DifficultyLevel,
+  random: () => number,
 ): Posicao | null {
   const player = state.jogadorAtual;
   if (level >= 4) {
@@ -250,10 +314,10 @@ function chooseMove(
       state.jogadasValidas.length > 0
         ? state.jogadasValidas
         : calcularJogadasValidas(state.tabuleiro, player);
-    for (const move of legalMoves) {
-      if (simulateMove(state, move, player).isWinningCapture) {
-        return move;
-      }
+    const winningCaptures = legalMoves.filter((move) => simulateMove(state, move, player).isWinningCapture);
+    if (winningCaptures.length > 0) {
+      const index = Math.floor(random() * winningCaptures.length);
+      return winningCaptures[index] ?? winningCaptures[0];
     }
   }
 
@@ -261,7 +325,14 @@ function chooseMove(
   if (scored.length === 0) return null;
 
   if (level <= 4) {
-    return scored[rankIndexForLevel(level, scored.length, opponentLevel)]?.move ?? scored[0].move;
+    const targetRank = rankIndexForLevel(level, scored.length, opponentLevel);
+    const targetScore = scored[targetRank]?.baseScore ?? scored[0].baseScore;
+    const tiedCandidates = scored.filter((entry) => entry.baseScore === targetScore);
+    if (tiedCandidates.length === 0) {
+      return scored[targetRank]?.move ?? scored[0].move;
+    }
+    const index = Math.floor(random() * tiedCandidates.length);
+    return tiedCandidates[index]?.move ?? tiedCandidates[0].move;
   }
 
   const opponent = getOpponent(player);
@@ -287,6 +358,8 @@ function chooseMove(
     if (safetyScore > bestSafetyScore) {
       bestSafetyScore = safetyScore;
       best = candidate;
+    } else if (safetyScore === bestSafetyScore && random() < 0.5) {
+      best = candidate;
     }
   }
 
@@ -310,6 +383,9 @@ async function runGame(
   gameId: string,
   options: HarnessOptions,
 ): Promise<GameRun> {
+  const random = createRandom(
+    deriveSeed(options.seed, `${gameId}:${strongerLevel}:${weakerLevel}:${strongerAs}`),
+  );
   let state = criarEstadoInicial('dois-jogadores');
   const decisions: DecisionSample[] = [];
   let ply = 0;
@@ -323,7 +399,7 @@ async function runGame(
 
     const startedAt = performance.now();
     const opponentLevel = level === strongerLevel ? weakerLevel : strongerLevel;
-    const bestMove = chooseMove(state, level, opponentLevel);
+    const bestMove = chooseMove(state, level, opponentLevel, random);
     const elapsedMs = Math.max(0, performance.now() - startedAt);
 
     const legal = bestMove ? isJogadaValida(state, bestMove) : state.jogadasValidas.length === 0;
@@ -418,7 +494,7 @@ function summarize(results: GameRun[], options: HarnessOptions): AtariGoBaseline
       weakerWins,
       draws,
       strongerWinrate: Number(strongerWinrate.toFixed(4)),
-      t1Pass: strongerWinrate >= 0.55,
+      t1Pass: strongerWinrate >= getLadderThreshold(strongerLevel, weakerLevel),
     });
   }
 

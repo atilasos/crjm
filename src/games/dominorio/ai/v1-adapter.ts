@@ -45,6 +45,7 @@ export class DominorioV1Adapter {
     const stableSearchState = applyTopLevelStabilityPolicy(request.level, request.state);
     const bestMove = await this.client.getBestMove(stableSearchState, difficulty, {
       timeBudgetMs,
+      seed: request.seed,
     });
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(topMoves);

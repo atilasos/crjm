@@ -25,6 +25,34 @@ export interface AIClientOptions {
 
 export interface AIComputeOverrides {
   timeBudgetMs?: number;
+  seed?: number;
+}
+
+function fnv1a32(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function createRandom(seed: number | undefined, key: string): () => number {
+  if (typeof seed !== 'number' || !Number.isFinite(seed)) {
+    return Math.random;
+  }
+  const mixedSeed = ((Math.trunc(seed) >>> 0) ^ fnv1a32(key)) >>> 0;
+  return mulberry32(mixedSeed);
 }
 
 export class DominorioAIClient {
@@ -49,7 +77,8 @@ export class DominorioAIClient {
     occupiedLow: number,
     occupiedHigh: number,
     sideToMove: Side,
-    plyCount: number
+    plyCount: number,
+    random: () => number,
   ): number | null {
     if (plyCount > (openingBook.maxPly || 6)) {
       return null;
@@ -59,7 +88,7 @@ export class DominorioAIClient {
     const entries = (openingBook.entries as Record<string, number[]>)[key];
     
     if (entries && entries.length > 0) {
-      const idx = Math.floor(Math.random() * entries.length);
+      const idx = Math.floor(random() * entries.length);
       return entries[idx];
     }
     
@@ -76,7 +105,8 @@ export class DominorioAIClient {
     timeBudgetMs: number,
     maxDepth: number,
     topN: number,
-    scoreDelta: number
+    scoreDelta: number,
+    random: () => number,
   ): Promise<AIResponse> {
     const startTime = performance.now();
     const deadline = startTime + timeBudgetMs;
@@ -217,7 +247,7 @@ export class DominorioAIClient {
       );
       
       if (candidates.length > 1) {
-        const idx = Math.floor(Math.random() * candidates.length);
+        const idx = Math.floor(random() * candidates.length);
         bestMove = candidates[idx].move;
         bestScore = candidates[idx].score;
       }
@@ -249,12 +279,17 @@ export class DominorioAIClient {
     const side = bitboard.playerToSide(state.jogadorAtual);
     const plyCount = state.dominosColocados.length;
     
+    const random = createRandom(
+      overrides.seed,
+      `${occupiedLow}:${occupiedHigh}:${side}:${plyCount}:${difficulty}`,
+    );
+    
     // Update metrics to show thinking
     this.currentMetrics = { ...this.currentMetrics, isThinking: true };
     this.options.onMetricsUpdate?.(this.currentMetrics);
     
     // Check opening book first
-    const bookMove = this.checkOpeningBook(occupiedLow, occupiedHigh, side, plyCount);
+    const bookMove = this.checkOpeningBook(occupiedLow, occupiedHigh, side, plyCount, random);
     
     if (bookMove !== null) {
       const response: AIResponse = {
@@ -288,7 +323,8 @@ export class DominorioAIClient {
       timeBudgetMs,
       params.maxDepth,
       params.topN,
-      params.scoreDelta
+      params.scoreDelta,
+      random,
     );
     
     this.updateMetrics(response);

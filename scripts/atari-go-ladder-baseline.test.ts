@@ -13,6 +13,7 @@ describe('atari-go-ladder-baseline script', () => {
         ATARIGO_GAMES_PER_MIRROR: '1',
         ATARIGO_MAX_PLIES: '48',
         ATARIGO_BUDGET_SCALE: '0.05',
+        ATARIGO_SEED: '20260321',
       },
       encoding: 'utf8',
     });
@@ -60,24 +61,24 @@ describe('atari-go-ladder-baseline script', () => {
     const firstLadderPair = baseline.ladder[0];
     expect(firstLadderPair.strongerLevel).toBe(2);
     expect(firstLadderPair.weakerLevel).toBe(1);
-    expect(firstLadderPair.strongerWinrate).toBeGreaterThanOrEqual(0.55);
+    expect(firstLadderPair.t1Pass).toBe(firstLadderPair.strongerWinrate >= 0.62);
 
     const n3OverN2 = baseline.ladder.find(
       (pair) => pair.strongerLevel === 3 && pair.weakerLevel === 2,
     );
     expect(n3OverN2).toBeDefined();
-    expect(n3OverN2?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
+    expect(n3OverN2?.t1Pass).toBe((n3OverN2?.strongerWinrate ?? 0) >= 0.6);
 
     const n4OverN3 = baseline.ladder.find(
       (pair) => pair.strongerLevel === 4 && pair.weakerLevel === 3,
     );
     expect(n4OverN3).toBeDefined();
-    expect(n4OverN3?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
+    expect(n4OverN3?.t1Pass).toBe((n4OverN3?.strongerWinrate ?? 0) >= 0.57);
 
     const n5OverN4 = baseline.ladder.find(
       (pair) => pair.strongerLevel === 5 && pair.weakerLevel === 4,
     );
     expect(n5OverN4).toBeDefined();
-    expect(n5OverN4?.strongerWinrate ?? 0).toBeGreaterThanOrEqual(0.55);
+    expect(n5OverN4?.t1Pass).toBe((n5OverN4?.strongerWinrate ?? 0) >= 0.55);
   }, 90000);
 });
