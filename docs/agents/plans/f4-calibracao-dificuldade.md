@@ -187,18 +187,36 @@
 - [x] Review curto com before/after de `N2>N1`, `N3>N2`, `nC2Pass`, `nC3Pass` e decisão para novo gate final
 
 #### NEXT-F4.2.9 — Reexecutar gate final F4 (hardening consolidado pós-F4.2.8)
+**Status (evidência já em `main`):** concluída — commit `d1c3db4`, review `docs/agents/reviews/f4-final-review.md`, decisão: **FAIL**.
+
 **Files:**
 - Run: `scripts/hardening-f3_2.ts` (ou sucessor)
 - Write: `docs/agents/reviews/f4-final-review.md`
 
 **Checks:**
-- [ ] Executar benchmark/hardening consolidado com baseline pós-F4.2.8
-- [ ] Revalidar critérios de pronto da F4 (T1 e T4) com decisão explícita PASS/FAIL
-- [ ] Se PASS: marcar F4 como concluída no roadmap
-- [ ] Se FAIL: manter F4 ativa e abrir próxima unidade mínima com foco no gap remanescente
+- [x] Executar benchmark/hardening consolidado com baseline pós-F4.2.8
+- [x] Revalidar critérios de pronto da F4 (T1 e T4) com decisão explícita PASS/FAIL
+- [ ] Se PASS: marcar F4 como concluída no roadmap (não aplicável neste ciclo)
+- [x] Se FAIL: manter F4 ativa e abrir próxima unidade mínima com foco no gap remanescente
 
 **Artefacto esperado:**
-- [ ] Review atualizado do gate final F4 com evidência consolidada e decisão PASS/FAIL
+- [x] Review atualizado do gate final F4 com evidência consolidada e decisão PASS/FAIL
+
+#### NEXT-F4.2.10 — Tornar o gate final menos ruidoso e reexecutar hardening F4
+**Files:**
+- Modify: `scripts/hardening-f3_2.ts` (ou sucessor)
+- Run: `bun run hardening:f3.2`
+- Write/update: `docs/agents/reviews/f4-final-review.md`
+
+**Checks:**
+- [ ] Ajustar parâmetros do gate para reduzir ruído (`gamesPerMirror=2`, `maxPliesPerGame=48`) mantendo execução viável
+- [ ] Reexecutar gate final F4 com parâmetros atualizados
+- [ ] Revalidar critérios F4 (T1/T4) e nC2/nC3 com decisão explícita PASS/FAIL
+- [ ] Se PASS: marcar F4 como concluída no roadmap
+- [ ] Se FAIL: manter F4 ativa e abrir próxima unidade mínima estritamente focada no gap remanescente
+
+**Artefacto esperado:**
+- [ ] Review final F4 atualizado com before/after dos parâmetros do gate e decisão de progressão
 
 ### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 
