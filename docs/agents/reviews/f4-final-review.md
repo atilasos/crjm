@@ -64,3 +64,17 @@ Referência: `docs/agents/ROADMAP-CRJM.md` (T1>=60%, T4<=15%).
 ## Próxima unidade mínima proposta
 
 Abrir `NEXT-F4.2.11` focado apenas no gap remanescente de topo em Atari Go (`N4>N3` e `N5>N4`) com ajuste mínimo de ladder, preservando `N2>N1` e `N3>N2`.
+
+---
+
+## Addendum — F4 cirurgia Phase A (2026-03-21)
+
+- Gate/hardening alinhado com `EVALUATION-MATRIX` por família:
+  - Dominório T1 por par: `60/58/56/54`
+  - Atari Go T1 por par: `62/60/57/55`
+  - T4 Dominório no baseline atualizado para `<=15%`
+- Protocolo com seed fixa adicionado ao hardening e baselines (`DOMINORIO_SEED`, `ATARIGO_SEED`; Atari Go também com `--seed`).
+- `gamesPerMirror` default do gate aumentado para `10` (mantendo override por env para execução rápida local).
+
+Nota de ambiguidade resolvida:
+- A exigência de seed no caminho Dominório foi aplicada via `seed` no contrato `AIRequestV1` propagado pelo baseline/hardening (em vez de criar novo modo dedicado), por ser a opção mais alinhada com a KB e com patch mínimo.

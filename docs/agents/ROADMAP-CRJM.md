@@ -28,11 +28,15 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 ## Fases ativas
 
 ### F4 — Calibração de dificuldade e estabilidade 🔧
-**Objetivo:** a escada N1–N5 deve ser claramente observável nos benchmarks.
-**Plano:** `docs/agents/plans/f4-calibracao-dificuldade.md`
-**Critério de saída:**
-- T1 (nível N vs N-1 win rate >= 60%) PASS em todos os pares para Dominório e Atari Go
-- T4 (estabilidade/repetibilidade) <= 15% divergência
+**Objetivo:** a escada N1–N5 deve ser claramente observável nos benchmarks, com protocolo alinhado com a KB e não com gates ad-hoc.
+**Plano ativo:** `docs/agents/plans/f4-cirurgia-gate-fix.md`
+**Plano anterior (histórico):** `docs/agents/plans/f4-calibracao-dificuldade.md`
+**Critério de saída (revisto, alinhado com `repo-docs/EVALUATION-MATRIX.md`):**
+- **Dominório (busca clássica):** N2>N1 >= 60%, N3>N2 >= 58%, N4>N3 >= 56%, N5>N4 >= 54%
+- **Atari Go (captura / conexão / MCTS-family):** N2>N1 >= 62%, N3>N2 >= 60%, N4>N3 >= 57%, N5>N4 >= 55%
+- T4 (estabilidade/repetibilidade) <= 15% divergência com **seed fixa**
+- B1: diferença start/second <= 10 p.p.
+- Protocolo de gate: **seed fixa** e `gamesPerMirror >= 10` por baseline no hardening
 - Baseline atualizado e publicado
 
 **Estado atual (2026-03-20):**
@@ -57,10 +61,8 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 
 **Progressão de sub-blocos (F4 permanece ativa):**
 - **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
-- **F4.2 (ativa):** após F4.2.10, próximo passo é corrigir apenas o topo do ladder Atari Go preservando ganhos já consolidados.
-  - próxima unidade executável: `NEXT-F4.2.11` (recuperar `N4>N3` e `N5>N4` com ajuste mínimo)
-  - files: `scripts/atari-go-ladder-baseline.ts` + `scripts/atari-go-ladder-baseline.test.ts` + `docs/agents/reviews/f4-2-11-atarigo-topo-fix.md`
-  - artifact: review F4.2.11 com before/after dos pares de topo e estado `nC2`/`nC3`
+- **F4.2 (histórico):** ciclo de micro-iterações congelado; substituído pelo plano cirúrgico `docs/agents/plans/f4-cirurgia-gate-fix.md`.
+- **Fase atual executável:** F4 cirurgia, **Phase A concluída** (gate/protocolo alinhados); próximo passo é **Phase B** (alinhamento dos motores), sem reabrir F4.2.x.
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.

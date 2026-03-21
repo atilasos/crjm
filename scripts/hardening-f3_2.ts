@@ -220,22 +220,28 @@ async function writeSummary(summary: HardeningSummary): Promise<void> {
 
 async function main(): Promise<void> {
   const checks: CheckResult[] = [];
+  const dominorioGamesPerMirror = process.env.DOMINORIO_GAMES_PER_MIRROR ?? '10';
+  const atariGoGamesPerMirror = process.env.ATARIGO_GAMES_PER_MIRROR ?? '10';
+  const dominorioSeed = process.env.DOMINORIO_SEED ?? '20260321';
+  const atariGoSeed = process.env.ATARIGO_SEED ?? '20260321';
 
   checks.push(runCheck('dominorio-v1-adapter-tests', 'bun', ['test', 'src/games/dominorio/ai/v1-adapter.test.ts']));
   checks.push(runCheck('atari-go-v1-adapter-tests', 'bun', ['test', 'src/games/atari-go/ai/v1-adapter.test.ts']));
   checks.push(
     runCheck('dominorio-baseline-lite', 'bun', ['run', 'baseline:dominorio'], {
-      DOMINORIO_GAMES_PER_MIRROR: '2',
+      DOMINORIO_GAMES_PER_MIRROR: dominorioGamesPerMirror,
       DOMINORIO_BUDGET_SCALE: '0.05',
       DOMINORIO_T4_PROBE_EVERY_PLY: '12',
       DOMINORIO_MAX_PLIES: '48',
+      DOMINORIO_SEED: dominorioSeed,
     }),
   );
   checks.push(
     runCheck('atari-go-baseline-lite', 'bun', ['run', 'baseline:atari-go'], {
-      ATARIGO_GAMES_PER_MIRROR: '2',
+      ATARIGO_GAMES_PER_MIRROR: atariGoGamesPerMirror,
       ATARIGO_BUDGET_SCALE: '0.05',
       ATARIGO_MAX_PLIES: '48',
+      ATARIGO_SEED: atariGoSeed,
     }),
   );
 
