@@ -53,13 +53,14 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 - F4.2.7 concluída (`bd48a88`, review `docs/agents/reviews/f4-2-7-atarigo-n2n1-fix.md`, objetivo `N2>N1` recuperado)
 - F4.2.8 concluída (`caaae81`, review `docs/agents/reviews/f4-2-8-atarigo-nc3-l4-fix.md`, objetivo `nC3Pass` no nível 4 recuperado preservando `N2>N1` e `N3>N2`)
 - F4.2.9 concluída (`d1c3db4`, review `docs/agents/reviews/f4-final-review.md`), decisão do gate final F4: **FAIL** com ruído elevado no gate lite
+- F4.2.10 concluída (review `docs/agents/reviews/f4-final-review.md`), gate lite ajustado (`gamesPerMirror=2`, `maxPliesPerGame=48`) e decisão do gate final F4: **FAIL**
 
 **Progressão de sub-blocos (F4 permanece ativa):**
 - **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
-- **F4.2 (ativa):** após F4.2.9, próximo passo é reduzir ruído do gate final e revalidar hardening consolidado.
-  - próxima unidade executável: `NEXT-F4.2.10` (ajustar parâmetros do gate no hardening e reexecutar gate final F4)
-  - files: `scripts/hardening-f3_2.ts` (ou sucessor) + `docs/agents/reviews/f4-final-review.md`
-  - artifact: review final atualizado com before/after dos parâmetros do gate e decisão explícita PASS/FAIL
+- **F4.2 (ativa):** após F4.2.10, próximo passo é corrigir apenas o topo do ladder Atari Go preservando ganhos já consolidados.
+  - próxima unidade executável: `NEXT-F4.2.11` (recuperar `N4>N3` e `N5>N4` com ajuste mínimo)
+  - files: `scripts/atari-go-ladder-baseline.ts` + `scripts/atari-go-ladder-baseline.test.ts` + `docs/agents/reviews/f4-2-11-atarigo-topo-fix.md`
+  - artifact: review F4.2.11 com before/after dos pares de topo e estado `nC2`/`nC3`
 
 ### F5 — Classroom-ready gate 🔒
 **Objetivo:** definir e validar critérios formais para teste com alunos reais.

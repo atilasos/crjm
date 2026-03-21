@@ -1,7 +1,18 @@
-# F4 Gate Final — Reexecução pós-F4.2.8 (NEXT-F4.2.9)
+# F4 Gate Final — Reexecução pós-ajuste de ruído (NEXT-F4.2.10)
 
-Data: 2026-03-21T00:15Z
-Task: NEXT-F4.2.9 (`docs/agents/plans/f4-calibracao-dificuldade.md`)
+Data: 2026-03-21T04:17Z  
+Task: NEXT-F4.2.10 (`docs/agents/plans/f4-calibracao-dificuldade.md`)
+
+## Mudança de parâmetros do gate (before/after)
+
+Fonte do before: `scripts/hardening-f3_2.ts` em `91cec70`.
+
+- `gamesPerMirror`: **1 -> 2**
+- `maxPliesPerGame`: **32 -> 48**
+
+Aplicado em ambos os baselines lite do hardening:
+- Dominório (`DOMINORIO_GAMES_PER_MIRROR`, `DOMINORIO_MAX_PLIES`)
+- Atari Go (`ATARIGO_GAMES_PER_MIRROR`, `ATARIGO_MAX_PLIES`)
 
 ## Evidência de execução
 
@@ -12,9 +23,9 @@ bun run hardening:f3.2
 ```
 
 Snapshot deste gate:
-- `artifacts/hardening/f3.2/latest/summary.json` (`generatedAt=2026-03-21T00:15:33.462Z`)
-- `artifacts/dominorio-baseline/latest/baseline.md` (`generatedAt=2026-03-21T00:15:18.004Z`)
-- `artifacts/atari-go-baseline/latest/baseline.json` (`generatedAt=2026-03-21T00:15:33.444Z`)
+- `artifacts/hardening/f3.2/latest/summary.json` (`generatedAt=2026-03-21T04:17:13.103Z`)
+- `artifacts/dominorio-baseline/latest/baseline.md` (`generatedAt=2026-03-21T04:16:49.139Z`)
+- `artifacts/atari-go-baseline/latest/baseline.json` (`generatedAt=2026-03-21T04:17:13.077Z`)
 
 Checks do pipeline:
 - `aggregate.ok=true` (4/4 checks pass na execução técnica)
@@ -25,35 +36,31 @@ Checks do pipeline:
 
 Referência: `docs/agents/ROADMAP-CRJM.md` (T1>=60%, T4<=15%).
 
-### Dominório (evidência explícita T1 e T4)
-- T1 (`N2>N1`, `N3>N2`, `N4>N3`, `N5>N4` >= 60%): **FAIL**
-  - `N2>N1=50.0%` (FAIL)
+### Dominório (T1/T4)
+- T1: **FAIL**
+  - `N2>N1=100.0%` (PASS)
   - `N3>N2=100.0%` (PASS)
   - `N4>N3=100.0%` (PASS)
-  - `N5>N4=50.0%` (FAIL)
-  - Fonte: `artifacts/dominorio-baseline/latest/baseline.md` + `dominorioBaseline.t1.failedPairs=["N2>N1","N5>N4"]`
-- T4 (estabilidade <= 15% divergência): **FAIL**
-  - `T4=45.83%` divergência (`t4Pass=false`)
-  - Fonte: `artifacts/dominorio-baseline/latest/baseline.md` + `dominorioBaseline.t4Pass=false`
+  - `N5>N4=0.0%` (FAIL)
+  - Fonte: `artifacts/dominorio-baseline/latest/baseline.md`
+- T4: **FAIL**
+  - `T4=50.0%` divergência (`t4Pass=false`)
+  - Fonte: `artifacts/dominorio-baseline/latest/baseline.md`
 
-### Atari Go (ladder consolidado)
+### Atari Go (ladder)
 - T1 ladder >= 60%: **FAIL**
   - `N2>N1=100%` (PASS)
   - `N3>N2=100%` (PASS)
-  - `N4>N3=0%` (FAIL — 2 draws)
-  - `N5>N4=0%` (FAIL — 2 draws)
-  - Fonte: `artifacts/atari-go-baseline/latest/baseline.json` + `atariGoBaseline.t1.failedPairs=["N4>N3","N5>N4"]`
+  - `N4>N3=0%` (FAIL)
+  - `N5>N4=0%` (FAIL)
+  - Fonte: `artifacts/atari-go-baseline/latest/baseline.json`
 - nC2: **FAIL**
-- nC3: **FAIL** (`failedLevels=[5]`)
+- nC3: **FAIL** (contagem monotónica cumpre mínimo, mas `passAll=false` por níveis em FAIL)
 
 ## Decisão explícita do gate F4
 
-**FAIL — gate final F4 não aprovado nesta reexecução.**
+**FAIL — gate final F4 continua não aprovado após redução de ruído do gate lite.**
 
-Justificativa objetiva:
-1. T1 global falha (Dominório: `N2>N1`, `N5>N4`; Atari Go: `N4>N3`, `N5>N4`)
-2. T4 global falha em Dominório (`45.83%` > `15%`)
+## Próxima unidade mínima proposta
 
-## Próxima unidade mínima
-
-Manter F4 ativa e abrir unidade focada no gap remanescente de robustez do gate lite (amostra curta e timeout em níveis altos), preservando escopo incremental.
+Abrir `NEXT-F4.2.11` focado apenas no gap remanescente de topo em Atari Go (`N4>N3` e `N5>N4`) com ajuste mínimo de ladder, preservando `N2>N1` e `N3>N2`.

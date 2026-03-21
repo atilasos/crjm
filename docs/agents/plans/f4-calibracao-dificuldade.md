@@ -203,20 +203,37 @@
 - [x] Review atualizado do gate final F4 com evidência consolidada e decisão PASS/FAIL
 
 #### NEXT-F4.2.10 — Tornar o gate final menos ruidoso e reexecutar hardening F4
+**Status (evidência já em `main`):** concluída — review `docs/agents/reviews/f4-final-review.md`, decisão: **FAIL**.
+
 **Files:**
 - Modify: `scripts/hardening-f3_2.ts` (ou sucessor)
 - Run: `bun run hardening:f3.2`
 - Write/update: `docs/agents/reviews/f4-final-review.md`
 
 **Checks:**
-- [ ] Ajustar parâmetros do gate para reduzir ruído (`gamesPerMirror=2`, `maxPliesPerGame=48`) mantendo execução viável
-- [ ] Reexecutar gate final F4 com parâmetros atualizados
-- [ ] Revalidar critérios F4 (T1/T4) e nC2/nC3 com decisão explícita PASS/FAIL
-- [ ] Se PASS: marcar F4 como concluída no roadmap
-- [ ] Se FAIL: manter F4 ativa e abrir próxima unidade mínima estritamente focada no gap remanescente
+- [x] Ajustar parâmetros do gate para reduzir ruído (`gamesPerMirror=2`, `maxPliesPerGame=48`) mantendo execução viável
+- [x] Reexecutar gate final F4 com parâmetros atualizados
+- [x] Revalidar critérios F4 (T1/T4) e nC2/nC3 com decisão explícita PASS/FAIL
+- [ ] Se PASS: marcar F4 como concluída no roadmap (não aplicável neste ciclo)
+- [x] Se FAIL: manter F4 ativa e abrir próxima unidade mínima estritamente focada no gap remanescente
 
 **Artefacto esperado:**
-- [ ] Review final F4 atualizado com before/after dos parâmetros do gate e decisão de progressão
+- [x] Review final F4 atualizado com before/after dos parâmetros do gate e decisão de progressão
+
+#### NEXT-F4.2.11 — Recuperar topo Atari Go (`N4>N3` e `N5>N4`) com ajuste mínimo
+**Files:**
+- Modify: `scripts/atari-go-ladder-baseline.ts`
+- Test: `scripts/atari-go-ladder-baseline.test.ts`
+- Write: `docs/agents/reviews/f4-2-11-atarigo-topo-fix.md`
+
+**Checks:**
+- [ ] Ajustar separação de topo com mudança mínima focada em `N4>N3` e `N5>N4`
+- [ ] Preservar `N2>N1 >= 0.60` e `N3>N2 >= 0.60`
+- [ ] Revalidar `nC2`/`nC3` no baseline Atari Go pós-ajuste
+- [ ] Produzir decisão explícita para novo gate final F4
+
+**Artefacto esperado:**
+- [ ] Review curto com before/after de pares T1 de topo + estado `nC2`/`nC3`
 
 ### F4.1 (executada) — Recalibração Dominório para fechar T1/T4
 

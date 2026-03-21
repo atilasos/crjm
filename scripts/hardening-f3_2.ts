@@ -225,17 +225,17 @@ async function main(): Promise<void> {
   checks.push(runCheck('atari-go-v1-adapter-tests', 'bun', ['test', 'src/games/atari-go/ai/v1-adapter.test.ts']));
   checks.push(
     runCheck('dominorio-baseline-lite', 'bun', ['run', 'baseline:dominorio'], {
-      DOMINORIO_GAMES_PER_MIRROR: '1',
+      DOMINORIO_GAMES_PER_MIRROR: '2',
       DOMINORIO_BUDGET_SCALE: '0.05',
       DOMINORIO_T4_PROBE_EVERY_PLY: '12',
-      DOMINORIO_MAX_PLIES: '32',
+      DOMINORIO_MAX_PLIES: '48',
     }),
   );
   checks.push(
     runCheck('atari-go-baseline-lite', 'bun', ['run', 'baseline:atari-go'], {
-      ATARIGO_GAMES_PER_MIRROR: '1',
+      ATARIGO_GAMES_PER_MIRROR: '2',
       ATARIGO_BUDGET_SCALE: '0.05',
-      ATARIGO_MAX_PLIES: '32',
+      ATARIGO_MAX_PLIES: '48',
     }),
   );
 
