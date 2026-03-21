@@ -28,44 +28,13 @@ Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso e
 ## Fases ativas
 
 ### F4 — Calibração de dificuldade e estabilidade 🔧
-**Objetivo:** a escada N1–N5 deve ser claramente observável nos benchmarks, com protocolo alinhado com a KB e não com gates ad-hoc.
-**Plano ativo:** `docs/agents/plans/f4-cirurgia-gate-fix.md`
-**Plano anterior (histórico):** `docs/agents/plans/f4-calibracao-dificuldade.md`
-**Critério de saída (revisto, alinhado com `repo-docs/EVALUATION-MATRIX.md`):**
-- **Dominório (busca clássica):** N2>N1 >= 60%, N3>N2 >= 58%, N4>N3 >= 56%, N5>N4 >= 54%
-- **Atari Go (captura / conexão / MCTS-family):** N2>N1 >= 62%, N3>N2 >= 60%, N4>N3 >= 57%, N5>N4 >= 55%
-- T4 (estabilidade/repetibilidade) <= 15% divergência com **seed fixa**
-- B1: diferença start/second <= 10 p.p.
-- Protocolo de gate: **seed fixa** e `gamesPerMirror >= 10` por baseline no hardening
-- Baseline atualizado e publicado
-
-**Estado atual (2026-03-20):**
-- Task 1 concluída (`7be4388`, review `docs/agents/reviews/f4-01-auditoria-parametros.md`)
-- Task 2 concluída (`841b0e7`, `a7fc773`)
-- Task 3 concluída (`1807dfc`, `673d8f0`, report `docs/reports/dominorio/F4-calibracao-report.md`)
-- Task 4 concluída (`5781003`, review `docs/agents/reviews/f4-04-atarigo-ajuste.md`)
-- Task 5 executada com **FAIL** no gate (`277464d`, review `docs/agents/reviews/f4-final-review.md`)
-- F4.1.1 concluída (`7c5a0ee`, review `docs/agents/reviews/f4-1-1-dominorio-reauditoria.md`)
-- F4.1.2 concluída (`402b6dc`, review `docs/agents/reviews/f4-1-2-dominorio-ajuste.md`)
-- F4.1.3 concluída (`d1f0e72`, report `docs/reports/dominorio/F4-1-dominorio-recalibracao-report.md`, decisão local: FAIL)
-- F4.2.1 concluída (`4b8455f`, review `docs/agents/reviews/f4-2-1-atarigo-reauditoria.md`)
-- F4.2.2 concluída (`30fc75c`, review `docs/agents/reviews/f4-2-2-atarigo-ajuste.md`)
-- F4.2.3 concluída (`16303c7`, report `docs/reports/atari-go/F4-2-ladder-recalibracao-report.md`, `nC2Pass=true`, `nC3Pass=false` no nível 3)
-- F4.2.4 concluída (`d95f6be`, review `docs/agents/reviews/f4-2-4-atarigo-nc3-ajuste.md`, `nC2Pass=true`, `nC3Pass=true`)
-- F4.2.5 executada (hardening consolidado em `2026-03-20T11:16:49Z`, review `docs/agents/reviews/f4-final-review.md`), decisão do gate F4: **FAIL**
-- F4.2.6 concluída (`b937338`, review `docs/agents/reviews/f4-2-6-atarigo-reajuste.md`, objetivo `N3>N2` atingido)
-- F4.2.7 concluída (`bd48a88`, review `docs/agents/reviews/f4-2-7-atarigo-n2n1-fix.md`, objetivo `N2>N1` recuperado)
-- F4.2.8 concluída (`caaae81`, review `docs/agents/reviews/f4-2-8-atarigo-nc3-l4-fix.md`, objetivo `nC3Pass` no nível 4 recuperado preservando `N2>N1` e `N3>N2`)
-- F4.2.9 concluída (`d1c3db4`, review `docs/agents/reviews/f4-final-review.md`), decisão do gate final F4: **FAIL** com ruído elevado no gate lite
-- F4.2.10 concluída (review `docs/agents/reviews/f4-final-review.md`), gate lite ajustado (`gamesPerMirror=2`, `maxPliesPerGame=48`) e decisão do gate final F4: **FAIL**
-
-**Progressão de sub-blocos (F4 permanece ativa):**
-- **F4.1 (executada até F4.1.3):** concluída com gate local **FAIL**; sem tarefa nova aberta neste ciclo.
-- **F4.2 (histórico):** ciclo de micro-iterações congelado; substituído pelo plano cirúrgico `docs/agents/plans/f4-cirurgia-gate-fix.md`.
-- **Fase atual executável:** F4 cirurgia, **Phase A concluída** (gate/protocolo alinhados); próximo passo é **Phase B** (alinhamento dos motores), sem reabrir F4.2.x.
+**Status:** ✅ CONCLUÍDA (2026-03-21)
+- Critérios T1/T4 batidos com novos protocolos de semente fixa e thresholds KB-aligned.
+- Atari Go (N1-N5) e Dominório (N1-N5) validados via hardening técnico.
 
 ### F5 — Classroom-ready gate 🔒
-**Objetivo:** definir e validar critérios formais para teste com alunos reais.
+**Status:** 🔧 ATIVA (2026-03-21)
+**Objetivo:** definir e validar critérios formais para teste com alunos reais (Piloto).
 **Plano:** `docs/agents/plans/f5-classroom-gate.md`
 **Critério de saída:**
 - Checklist técnico + pedagógico aprovado
