@@ -1,0 +1,2720 @@
+{
+  "generatedAt": "2026-03-20T20:20:19.409Z",
+  "options": {
+    "gamesPerMirror": 1,
+    "t4ProbeEveryPly": 12,
+    "maxPliesPerGame": 32,
+    "budgetScale": 0.05
+  },
+  "definitions": {
+    "technical": {
+      "T1": "Winrate espelhado em ladder N+1 vs N, com forte a jogar primeiro e segundo; target >= 60%.",
+      "T2": "Tempo por decisão por nível em p50/p95; target p50 <= budget N e p95 <= 2x p50.",
+      "T3": "Taxa de legalidade da jogada escolhida (isJogadaValida); target 0% inválidas.",
+      "T4": "Proxy de estabilidade (TS vs TS repetido): mesma posição + mesmo nível + dois pedidos consecutivos; target divergência <= 5%."
+    },
+    "pedagogical": {
+      "P1": "Feedback curto e acionável: explainText <= 160 chars e com verbo de ação.",
+      "P5": "Transparência mínima: explainText contém marcador de causa (ameaça/paridade/corredor/mobilidade/final/espaço/zona).",
+      "P6": "Turning points proxy: buildQuickReviewItems(history) retorna 1..3 itens.",
+      "P7": "Próximo passo claro proxy: bestMove presente + topMoves não vazio + explainText não vazio."
+    }
+  },
+  "totals": {
+    "games": 8,
+    "decisions": 232
+  },
+  "ladder": [
+    {
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "games": 2,
+      "strongerWins": 1,
+      "weakerWins": 1,
+      "draws": 0,
+      "strongerWinrate": 0.5,
+      "strongerWinrateWhenStarts": 0,
+      "strongerWinrateWhenSecond": 1,
+      "t1Pass": false
+    },
+    {
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "games": 2,
+      "strongerWins": 2,
+      "weakerWins": 0,
+      "draws": 0,
+      "strongerWinrate": 1,
+      "strongerWinrateWhenStarts": 1,
+      "strongerWinrateWhenSecond": 1,
+      "t1Pass": true
+    },
+    {
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "games": 2,
+      "strongerWins": 2,
+      "weakerWins": 0,
+      "draws": 0,
+      "strongerWinrate": 1,
+      "strongerWinrateWhenStarts": 1,
+      "strongerWinrateWhenSecond": 1,
+      "t1Pass": true
+    },
+    {
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "games": 2,
+      "strongerWins": 1,
+      "weakerWins": 1,
+      "draws": 0,
+      "strongerWinrate": 0.5,
+      "strongerWinrateWhenStarts": 0,
+      "strongerWinrateWhenSecond": 1,
+      "t1Pass": false
+    }
+  ],
+  "t2ByLevel": {
+    "1": {
+      "p50": 4.54,
+      "p95": 6.38,
+      "budgetMs": 100,
+      "t2Pass": true
+    },
+    "2": {
+      "p50": 8.19,
+      "p95": 14.06,
+      "budgetMs": 250,
+      "t2Pass": true
+    },
+    "3": {
+      "p50": 25.16,
+      "p95": 26.19,
+      "budgetMs": 500,
+      "t2Pass": true
+    },
+    "4": {
+      "p50": 50.13,
+      "p95": 51.4,
+      "budgetMs": 1000,
+      "t2Pass": true
+    },
+    "5": {
+      "p50": 100.14,
+      "p95": 101.08,
+      "budgetMs": 2000,
+      "t2Pass": true
+    }
+  },
+  "t3": {
+    "invalidMoves": 0,
+    "totalDecisions": 232,
+    "invalidRate": 0,
+    "t3Pass": true
+  },
+  "t4": {
+    "mode": "ts-repeatability-proxy",
+    "notes": "WASM ainda não está ativo no adapter V1 do piloto; T4 mede divergência em repetição TS para manter cobertura até ativação WASM.",
+    "probes": 23,
+    "divergences": 8,
+    "divergenceRate": 0.3478,
+    "t4Pass": false
+  },
+  "pedagogy": {
+    "p1Rate": 1,
+    "p5Rate": 1,
+    "p6Rate": 1,
+    "p7Rate": 1,
+    "p1Pass": true,
+    "p5Pass": true,
+    "p6Pass": true,
+    "p7Pass": true
+  },
+  "gameRuns": [
+    {
+      "gameId": "2v1-A-1",
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "strongerAs": "jogador1",
+      "winner": "weaker",
+      "plies": 28,
+      "decisions": [
+        {
+          "level": 2,
+          "elapsedMs": 4.410249,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 6.475930999999996,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.357450999999998,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.2672019999999975,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.369439,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.647879000000003,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.200812000000013,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.233138999999994,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.196919000000008,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.1568419999999975,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 14.230648000000002,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.43686000000001,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 12.798744,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.126942999999983,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.966122999999982,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 4.542138999999992,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.9393269999999916,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 3.3276329999999916,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 1.549617000000012,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.7008809999999812,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.5833959999999934,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.4826229999999896,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.3811199999999815,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.2550019999999904,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.18847499999998263,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.09600100000000111,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.06438999999997463,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.06920400000001337,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 2,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 2,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 2,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "2v1-B-1",
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 30,
+      "decisions": [
+        {
+          "level": 1,
+          "elapsedMs": 0.185908999999981,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 14.144916999999992,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.2839910000000145,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.593331000000006,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 6.376069000000001,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.728210999999988,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 6.180787000000009,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.256346000000008,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.275271000000032,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.177952000000005,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.179719000000034,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.15360899999996,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.195356000000004,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 8.409244999999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.10075599999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.8793470000000525,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 4.10145,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 2.0378220000000056,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 1.6595540000000142,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 1.8989210000000298,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 1.057170000000042,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.9953289999999697,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.7411660000000211,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.47694699999999557,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.2727799999999547,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.21849299999996674,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.11214000000001079,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.09492399999999179,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 0.0663380000000302,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.05332900000001928,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 1,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 1,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 1,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "3v2-A-1",
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "strongerAs": "jogador1",
+      "winner": "stronger",
+      "plies": 29,
+      "decisions": [
+        {
+          "level": 3,
+          "elapsedMs": 0.15693899999996574,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.293067000000008,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.25974599999995,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.201323000000002,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.160517999999968,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.225638000000004,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.23397,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.191379999999981,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.17509100000001,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.170457999999996,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 26.63207299999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.285620999999992,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 26.044090000000097,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 9.85156399999994,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.242389000000003,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 10.125523000000044,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.537388999999962,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.6220650000000205,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.231015999999954,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 2.2036280000000943,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 16.054658000000018,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.9920419999999694,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 6.2493480000000545,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.2754660000000513,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.6230219999999917,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.12776400000007015,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.13992400000006455,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.0362440000000106,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.03199300000005678,
+          "legal": true,
+          "explainText": "Entraste no final com risco alto. Prioriza jogadas que mantenham duas respostas para o próximo turno.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 3,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 3,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 3,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "3v2-B-1",
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 24,
+      "decisions": [
+        {
+          "level": 2,
+          "elapsedMs": 0.14509099999997943,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 27.108231000000046,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.760155999999938,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.251943000000097,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 14.056668999999943,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.280287000000044,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.285209000000009,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.16720799999996,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.192815999999993,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.15695299999993,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.273701000000074,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.174896000000103,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 13.02915500000006,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.168065999999953,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 8.193168000000014,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.247447999999963,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.909472000000051,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 26.098162000000002,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 1.444968999999901,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.135926000000154,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.610636999999997,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 8.307314000000133,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 0.08618400000000292,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.09513200000014876,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 2,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 2,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "4v3-A-1",
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "strongerAs": "jogador1",
+      "winner": "stronger",
+      "plies": 31,
+      "decisions": [
+        {
+          "level": 4,
+          "elapsedMs": 50.349144000000024,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.361442000000125,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.196670999999924,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.222847,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 52.09314599999993,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.204599000000144,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 51.096892000000025,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.249064999999973,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.17556600000012,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.19319600000017,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 51.57416399999988,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.150822999999946,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.794317999999976,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.1541279999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.114642,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.135551000000078,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.36352099999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.118381,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.93982200000005,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 19.32541399999991,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.12797099999989,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 10.96929299999988,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.097281000000066,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 6.928192000000308,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 13.015531999999894,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 1.491125000000011,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 3.8653220000001056,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.3412950000001729,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.3494570000002568,
+          "legal": true,
+          "explainText": "Entraste no final com risco alto. Prioriza jogadas que mantenham duas respostas para o próximo turno.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.08812999999963722,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.032457000000249536,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 4,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 4,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 4,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "4v3-B-1",
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 30,
+      "decisions": [
+        {
+          "level": 3,
+          "elapsedMs": 0.2466620000000148,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.20924100000002,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.16599300000007,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.17092700000012,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.309560000000147,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.24322800000027,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.209522000000106,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.135601999999835,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.160593000000063,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.11790999999994,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 26.186139999999796,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.26492899999994,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.152650999999878,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 51.00193900000022,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.098099999999704,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.12630799999988,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.1589469999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.099207000000206,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.106878999999935,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.12883000000011,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 18.96350900000016,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.08660899999995,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 7.2072519999996985,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 26.08243900000025,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 3.674329999999827,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 6.161629000000175,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.4473649999999907,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.5282160000001568,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 0.09931700000015553,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.06091599999990649,
+          "legal": true,
+          "explainText": "Entraste no final com risco alto. Prioriza jogadas que mantenham duas respostas para o próximo turno.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 3,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 3,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 3,
+          "sameMove": false,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "5v4-A-1",
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "strongerAs": "jogador1",
+      "winner": "weaker",
+      "plies": 30,
+      "decisions": [
+        {
+          "level": 5,
+          "elapsedMs": 100.24008900000035,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.21952800000008,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.21187599999985,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.16745800000035,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.14462000000003,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.902076999999736,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.16030199999977,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.13044200000013,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.12939900000038,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.145022000000154,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.20742400000017,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.18516700000009,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.13025599999992,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.10539400000016,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.79644499999995,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.091732000000775,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.21019299999989,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 51.40395999999964,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 101.08166900000015,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.0741280000002,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.09958199999983,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.08632000000034,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 34.18624,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 12.014973000000282,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 6.147825999999441,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 3.520346999999674,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 0.8615559999998368,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.29498399999920366,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 0.11532099999931233,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.030520000000251457,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 5,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 5,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 5,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    },
+    {
+      "gameId": "5v4-B-1",
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 30,
+      "decisions": [
+        {
+          "level": 4,
+          "elapsedMs": 50.27106599999934,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.1883200000002,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.22193999999945,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.14534399999957,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.71120599999995,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.14431299999978,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.6344710000003,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.18584699999974,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.132619999999406,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 101.72855199999958,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 51.39886999999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 101.04414699999961,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.776576999999634,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.13962599999923,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.144562999999835,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.11454800000047,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.477335000000494,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.09594399999969,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.09171400000014,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.09359600000062,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 50.75473099999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 100.61630000000059,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 38.046479000000545,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 29.018118999999388,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 7.97168099999999,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 6.483070999999654,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.9242190000004484,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 0.5115390000000843,
+          "legal": true,
+          "explainText": "A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 0.14066000000002532,
+          "legal": true,
+          "explainText": "Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 0.05262499999935244,
+          "legal": true,
+          "explainText": "Entraste no final com risco alto. Prioriza jogadas que mantenham duas respostas para o próximo turno.",
+          "bestMoveExists": true,
+          "p1": true,
+          "p5": true,
+          "p7": true
+        }
+      ],
+      "t4Probes": [
+        {
+          "ply": 0,
+          "level": 4,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 12,
+          "level": 4,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        },
+        {
+          "ply": 24,
+          "level": 4,
+          "sameMove": true,
+          "primaryEngine": "ts-fallback",
+          "repeatEngine": "ts-fallback"
+        }
+      ],
+      "p6Passed": true
+    }
+  ]
+}

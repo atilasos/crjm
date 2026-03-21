@@ -1,0 +1,1492 @@
+{
+  "generatedAt": "2026-03-21T08:21:57.432Z",
+  "options": {
+    "gamesPerMirror": 1,
+    "maxPliesPerGame": 48,
+    "budgetScale": 0.05
+  },
+  "totals": {
+    "games": 8,
+    "decisions": 256
+  },
+  "ladder": [
+    {
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "games": 2,
+      "strongerWins": 2,
+      "weakerWins": 0,
+      "draws": 0,
+      "strongerWinrate": 1,
+      "t1Pass": true
+    },
+    {
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "games": 2,
+      "strongerWins": 2,
+      "weakerWins": 0,
+      "draws": 0,
+      "strongerWinrate": 1,
+      "t1Pass": true
+    },
+    {
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "games": 2,
+      "strongerWins": 2,
+      "weakerWins": 0,
+      "draws": 0,
+      "strongerWinrate": 1,
+      "t1Pass": true
+    },
+    {
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "games": 2,
+      "strongerWins": 2,
+      "weakerWins": 0,
+      "draws": 0,
+      "strongerWinrate": 1,
+      "t1Pass": true
+    }
+  ],
+  "t2ByLevel": {
+    "1": {
+      "p50": 2.7,
+      "p95": 5.73,
+      "budgetMs": 5,
+      "t2Pass": true
+    },
+    "2": {
+      "p50": 4.07,
+      "p95": 8.99,
+      "budgetMs": 13,
+      "t2Pass": true
+    },
+    "3": {
+      "p50": 14.61,
+      "p95": 59.53,
+      "budgetMs": 25,
+      "t2Pass": false
+    },
+    "4": {
+      "p50": 149.61,
+      "p95": 544.96,
+      "budgetMs": 50,
+      "t2Pass": false
+    },
+    "5": {
+      "p50": 790.76,
+      "p95": 2000.04,
+      "budgetMs": 100,
+      "t2Pass": false
+    }
+  },
+  "nC2": {
+    "failedPairs": [],
+    "passAll": true
+  },
+  "nC3": {
+    "failedLevels": [
+      3,
+      4,
+      5
+    ],
+    "monotonicSteps": [
+      {
+        "fromLevel": 1,
+        "toLevel": 2,
+        "fromP50": 2.7,
+        "toP50": 4.07,
+        "pass": true
+      },
+      {
+        "fromLevel": 2,
+        "toLevel": 3,
+        "fromP50": 4.07,
+        "toP50": 14.61,
+        "pass": true
+      },
+      {
+        "fromLevel": 3,
+        "toLevel": 4,
+        "fromP50": 14.61,
+        "toP50": 149.61,
+        "pass": true
+      },
+      {
+        "fromLevel": 4,
+        "toLevel": 5,
+        "fromP50": 149.61,
+        "toP50": 790.76,
+        "pass": true
+      }
+    ],
+    "monotonicPassCount": 4,
+    "monotonicPassRequired": 3,
+    "passAll": false
+  },
+  "gameRuns": [
+    {
+      "gameId": "2v1-A-1",
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "strongerAs": "jogador1",
+      "winner": "stronger",
+      "plies": 15,
+      "decisions": [
+        {
+          "level": 2,
+          "elapsedMs": 14.184079,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.727898000000003,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 8.988149,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 6.843506999999995,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 10.807524999999998,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.8326449999999994,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.258677999999989,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.7197850000000017,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.2842919999999935,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.6953510000000023,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.607645000000005,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.4392990000000054,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.019171,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.4087379999999996,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.5565019999999947,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "2v1-B-1",
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 28,
+      "decisions": [
+        {
+          "level": 1,
+          "elapsedMs": 2.917133000000007,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.5476369999999946,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.1887449999999973,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.9414950000000033,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.845794000000012,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 6.447073000000017,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.4535549999999944,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.772377999999975,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.2776489999999967,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.634982000000008,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.146160000000009,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.386986000000007,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.0481479999999976,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.7826450000000023,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.925512999999995,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.0484989999999925,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 3.036104999999992,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.180925000000002,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.539003000000008,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.357283999999993,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.834514999999982,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.503928999999999,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 3.1144939999999792,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.444534000000004,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.5109999999999957,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.9337869999999953,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.243593000000004,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.069838000000004,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "3v2-A-1",
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "strongerAs": "jogador1",
+      "winner": "stronger",
+      "plies": 11,
+      "decisions": [
+        {
+          "level": 3,
+          "elapsedMs": 4.260600000000011,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.3376049999999964,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.438172000000009,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.847915,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.736530999999985,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.8073409999999797,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.634728999999993,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.131374999999991,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.945459999999997,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.5063220000000115,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 6.1784770000000435,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "3v2-B-1",
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 10,
+      "decisions": [
+        {
+          "level": 2,
+          "elapsedMs": 3.397831999999994,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.372762000000023,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.4153009999999995,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.201547000000005,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.532321999999965,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.944067000000018,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.720393999999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.928817999999978,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.9109940000000165,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.753670999999997,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "4v3-A-1",
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "strongerAs": "jogador1",
+      "winner": "stronger",
+      "plies": 48,
+      "decisions": [
+        {
+          "level": 4,
+          "elapsedMs": 41.81267200000002,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.419947999999977,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 38.81038699999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.901996999999994,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 39.38997499999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.14669600000002,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 42.794070999999974,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.7531079999999974,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 46.39061700000002,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 7.312812000000008,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 55.24485900000002,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 8.358605000000011,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 61.86106499999994,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 10.333181999999965,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 73.91418599999997,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 11.86427900000001,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 89.13176199999998,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 12.743274000000042,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 92.78238900000008,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 15.502863000000048,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 106.26591500000006,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 17.88728500000002,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 117.58088999999995,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 20.095763000000034,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 130.211593,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 22.416085000000066,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 146.21035399999982,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 25.45277699999997,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 155.47948799999995,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 28.59560599999986,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 179.97152099999994,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 33.63206600000012,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 195.75401100000022,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 38.224289000000226,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 210.15585999999985,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 43.960225000000264,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 229.67156000000023,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 47.94744500000024,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 250.42656799999986,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 51.04291699999976,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 261.3705500000001,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 54.25214499999993,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 280.209202,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 57.19424000000026,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 272.3695029999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 59.53186000000005,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 274.29235400000016,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 61.41314799999964,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "4v3-B-1",
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 48,
+      "decisions": [
+        {
+          "level": 3,
+          "elapsedMs": 5.030303999999887,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 40.4646929999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.991312999999536,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 42.66787199999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.916654999999992,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 40.06257600000026,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.890683000000536,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 44.60151000000042,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 6.1247999999995955,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 49.34367199999997,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 8.744827000000441,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 57.17641000000003,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 9.591393000000608,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 63.855945999999676,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 10.775793999999223,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 76.14479500000016,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 12.245985000000474,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 87.84730500000023,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 14.611445999999887,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 95.18432200000007,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 15.327450000000681,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 107.68492700000024,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 18.56615200000033,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 119.30987499999992,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 21.11279999999988,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 135.6928169999992,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 24.640979000000698,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 149.6080920000004,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 26.103188999999475,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 159.97620199999983,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 29.76133800000025,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 184.1949139999997,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 35.02950300000066,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 198.70505800000046,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 38.84097099999963,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 217.70519000000058,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 42.7605309999999,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 231.2030789999999,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 46.60048899999947,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 286.3475990000006,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 63.32884699999977,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 272.3876170000003,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 58.16826800000035,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 280.71746600000006,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 58.63510899999983,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 273.7470549999998,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 60.22919299999921,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 272.8973420000002,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "5v4-A-1",
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "strongerAs": "jogador1",
+      "winner": "stronger",
+      "plies": 48,
+      "decisions": [
+        {
+          "level": 5,
+          "elapsedMs": 176.1971279999998,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 39.280713000000105,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 176.79680700000063,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 42.916729999999006,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 182.78406200000063,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 46.54191499999979,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 205.15265200000067,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 51.54724100000021,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 229.04138600000078,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 56.22475999999915,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 251.70028399999865,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 65.57862699999896,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 303.3637069999986,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 76.05163200000061,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 349.7975830000014,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 88.16411599999992,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 401.2617030000001,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 104.92048700000123,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 465.82029599999987,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 121.62099800000033,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 541.6549290000003,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 131.26468099999875,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 568.9005249999991,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 147.66336500000034,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 643.4476869999999,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 169.0928270000004,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 733.3752559999994,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 191.38872900000024,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1467.7386650000008,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 513.4332959999992,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1740.231706999999,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 399.2140330000002,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1671.9770199999984,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 440.6824369999995,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1832.1651390000006,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 490.43699600000036,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1968.0670879999998,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 507.2455889999983,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 2094.8007670000006,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 547.8221550000017,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1999.262912000002,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 522.0677770000002,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 2035.081384000001,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 544.9646370000046,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 2022.1960699999981,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 554.3441810000004,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1849.374545999999,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 504.82301699999516,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "5v4-B-1",
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "strongerAs": "jogador2",
+      "winner": "stronger",
+      "plies": 48,
+      "decisions": [
+        {
+          "level": 4,
+          "elapsedMs": 77.59103499999765,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 295.2589139999982,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 68.91078900000139,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 294.64616699999897,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 72.15576599999622,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 316.78375300000334,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 75.88680800000293,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 348.8995769999965,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 87.29593799999566,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 391.5647459999964,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 97.30218199999945,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 442.7116309999983,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 113.42991500000062,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 521.8026690000042,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 132.31223599999794,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 602.5571250000066,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 151.37354400000186,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 676.7879759999996,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 175.11168799999723,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 790.761274000004,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 209.03797300000588,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 912.1459849999956,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 220.60109899999952,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 964.5945160000047,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 241.74111700000503,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1079.815251,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 283.437788999996,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1226.2625960000005,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 322.48381200000586,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1368.4053550000026,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 355.47794799999974,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1509.8634389999934,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 404.3010779999968,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1687.4209599999958,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 456.8332650000011,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1854.8141990000004,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 489.7116559999995,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1973.620308999998,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 528.3152410000039,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1939.0455169999987,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 565.4350380000033,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1969.2723369999949,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 533.9379090000075,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 2000.043439000001,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 545.9119409999985,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1968.028105999998,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 561.3062720000016,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 1776.3460379999888,
+          "legal": true
+        }
+      ]
+    }
+  ]
+}

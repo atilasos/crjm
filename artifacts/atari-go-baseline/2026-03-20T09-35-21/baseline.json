@@ -1,0 +1,535 @@
+{
+  "generatedAt": "2026-03-20T09:35:21.406Z",
+  "options": {
+    "gamesPerMirror": 1,
+    "maxPliesPerGame": 8,
+    "budgetScale": 0.05
+  },
+  "totals": {
+    "games": 8,
+    "decisions": 64
+  },
+  "ladder": [
+    {
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "games": 2,
+      "strongerWins": 0,
+      "weakerWins": 0,
+      "draws": 2,
+      "strongerWinrate": 0,
+      "t1Pass": false
+    },
+    {
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "games": 2,
+      "strongerWins": 0,
+      "weakerWins": 0,
+      "draws": 2,
+      "strongerWinrate": 0,
+      "t1Pass": false
+    },
+    {
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "games": 2,
+      "strongerWins": 0,
+      "weakerWins": 0,
+      "draws": 2,
+      "strongerWinrate": 0,
+      "t1Pass": false
+    },
+    {
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "games": 2,
+      "strongerWins": 0,
+      "weakerWins": 0,
+      "draws": 2,
+      "strongerWinrate": 0,
+      "t1Pass": false
+    }
+  ],
+  "t2ByLevel": {
+    "1": {
+      "p50": 3.35,
+      "p95": 5.45,
+      "budgetMs": 5,
+      "t2Pass": true
+    },
+    "2": {
+      "p50": 4.63,
+      "p95": 9.52,
+      "budgetMs": 13,
+      "t2Pass": true
+    },
+    "3": {
+      "p50": 5.17,
+      "p95": 7.1,
+      "budgetMs": 25,
+      "t2Pass": true
+    },
+    "4": {
+      "p50": 9.45,
+      "p95": 12,
+      "budgetMs": 50,
+      "t2Pass": true
+    },
+    "5": {
+      "p50": 148.56,
+      "p95": 179.82,
+      "budgetMs": 100,
+      "t2Pass": false
+    }
+  },
+  "nC2": {
+    "failedPairs": [
+      "N2>N1",
+      "N3>N2",
+      "N4>N3",
+      "N5>N4"
+    ],
+    "passAll": false
+  },
+  "nC3": {
+    "failedLevels": [
+      5
+    ],
+    "monotonicSteps": [
+      {
+        "fromLevel": 1,
+        "toLevel": 2,
+        "fromP50": 3.35,
+        "toP50": 4.63,
+        "pass": true
+      },
+      {
+        "fromLevel": 2,
+        "toLevel": 3,
+        "fromP50": 4.63,
+        "toP50": 5.17,
+        "pass": true
+      },
+      {
+        "fromLevel": 3,
+        "toLevel": 4,
+        "fromP50": 5.17,
+        "toP50": 9.45,
+        "pass": true
+      },
+      {
+        "fromLevel": 4,
+        "toLevel": 5,
+        "fromP50": 9.45,
+        "toP50": 148.56,
+        "pass": true
+      }
+    ],
+    "monotonicPassCount": 4,
+    "monotonicPassRequired": 3,
+    "passAll": false
+  },
+  "gameRuns": [
+    {
+      "gameId": "2v1-A-1",
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "strongerAs": "jogador1",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 2,
+          "elapsedMs": 13.595806,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 7.204294000000004,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 9.266095,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 5.449984999999998,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 9.523899000000007,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 4.710617999999997,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.632523000000006,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.840793000000005,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "2v1-B-1",
+      "strongerLevel": 2,
+      "weakerLevel": 1,
+      "strongerAs": "jogador2",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 1,
+          "elapsedMs": 2.537366000000006,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.254067000000006,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 2.420974000000001,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.131711999999993,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 3.347359999999995,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 7.145131000000006,
+          "legal": true
+        },
+        {
+          "level": 1,
+          "elapsedMs": 3.4624270000000053,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.832295000000002,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "3v2-A-1",
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "strongerAs": "jogador1",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 3,
+          "elapsedMs": 4.23807699999999,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.562369000000004,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.171243000000004,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.6781179999999836,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.8963930000000175,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.909099999999995,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.622748000000001,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 3.9773059999999987,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "3v2-B-1",
+      "strongerLevel": 3,
+      "weakerLevel": 2,
+      "strongerAs": "jogador2",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 2,
+          "elapsedMs": 3.436292000000009,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.273465999999985,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.319307000000009,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 7.101475999999991,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 5.025369000000012,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.576071999999982,
+          "legal": true
+        },
+        {
+          "level": 2,
+          "elapsedMs": 4.435490000000016,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.431134999999983,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "4v3-A-1",
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "strongerAs": "jogador1",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 4,
+          "elapsedMs": 9.045678999999978,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.4330699999999865,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 8.534404999999992,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.219752,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 9.315900999999997,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 6.269228999999996,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 10.041705000000007,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.304225000000031,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "4v3-B-1",
+      "strongerLevel": 4,
+      "weakerLevel": 3,
+      "strongerAs": "jogador2",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 3,
+          "elapsedMs": 4.5726190000000315,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 9.130072999999982,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 5.816460000000006,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 8.564757000000043,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 4.458432999999957,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 11.138398999999993,
+          "legal": true
+        },
+        {
+          "level": 3,
+          "elapsedMs": 7.264671999999962,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 10.894203000000005,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "5v4-A-1",
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "strongerAs": "jogador1",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 5,
+          "elapsedMs": 140.493046,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 10.235879000000011,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 144.76592500000004,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 8.702291999999943,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 157.595367,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 9.707754000000023,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 179.81501300000002,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 11.995754999999917,
+          "legal": true
+        }
+      ]
+    },
+    {
+      "gameId": "5v4-B-1",
+      "strongerLevel": 5,
+      "weakerLevel": 4,
+      "strongerAs": "jogador2",
+      "winner": "draw-timeout",
+      "plies": 8,
+      "decisions": [
+        {
+          "level": 4,
+          "elapsedMs": 8.70294899999999,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 148.55850400000008,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 9.445429999999988,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 147.29704800000013,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 12.83131400000002,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 162.115405,
+          "legal": true
+        },
+        {
+          "level": 4,
+          "elapsedMs": 10.756644000000051,
+          "legal": true
+        },
+        {
+          "level": 5,
+          "elapsedMs": 197.5315720000001,
+          "legal": true
+        }
+      ]
+    }
+  ]
+}

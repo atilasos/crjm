@@ -1,0 +1,97 @@
+{
+  "phase": "F3.2",
+  "generatedAt": "2026-03-20T20:19:56.456Z",
+  "checks": [
+    {
+      "id": "dominorio-v1-adapter-tests",
+      "command": "bun test src/games/dominorio/ai/v1-adapter.test.ts",
+      "durationMs": 83,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\n 10 pass\n 0 fail\n 41 expect() calls\nRan 10 tests across 1 file. [63.00ms]\n"
+    },
+    {
+      "id": "atari-go-v1-adapter-tests",
+      "command": "bun test src/games/atari-go/ai/v1-adapter.test.ts",
+      "durationMs": 329,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\n 5 pass\n 0 fail\n 27 expect() calls\nRan 5 tests across 1 file. [315.00ms]\n"
+    },
+    {
+      "id": "dominorio-baseline-lite",
+      "command": "bun run baseline:dominorio",
+      "durationMs": 6717,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[dominorio-baseline] starting {\n  gamesPerMirror: 1,\n  t4ProbeEveryPly: 12,\n  maxPliesPerGame: 32,\n  budgetScale: 0.05,\n}\n[dominorio-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/dominorio-baseline/2026-03-20T20-19-40\n[dominorio-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/dominorio-baseline/latest\n[dominorio-baseline] done: games=8, decisions=223, t1Fails=3, t2Fails=0, t3Pass=true, t4Pass=false\n",
+      "stderrTail": "$ bun run scripts/dominorio-baseline.ts\n"
+    },
+    {
+      "id": "atari-go-baseline-lite",
+      "command": "bun run baseline:atari-go",
+      "durationMs": 15756,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[atari-go-baseline] starting {\n  gamesPerMirror: 1,\n  maxPliesPerGame: 32,\n  budgetScale: 0.05,\n}\n[atari-go-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/atari-go-baseline/2026-03-20T20-19-56\n[atari-go-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/atari-go-baseline/latest\n[atari-go-baseline] done: games=8, decisions=192, nC2Pass=false, nC3Pass=false\n",
+      "stderrTail": "$ bun run scripts/atari-go-ladder-baseline.ts\n"
+    }
+  ],
+  "aggregate": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "ok": true
+  },
+  "dominorioBaseline": {
+    "generatedAt": "2026-03-20T20:19:40.663Z",
+    "games": 8,
+    "decisions": 223,
+    "t1": {
+      "failedPairs": [
+        "N2>N1",
+        "N4>N3",
+        "N5>N4"
+      ],
+      "passAll": false
+    },
+    "t2": {
+      "failedLevels": [],
+      "passAll": true
+    },
+    "t3Pass": true,
+    "t4Pass": false,
+    "pedagogy": {
+      "p1Pass": true,
+      "p5Pass": true,
+      "p6Pass": true,
+      "p7Pass": true
+    }
+  },
+  "atariGoBaseline": {
+    "generatedAt": "2026-03-20T20:19:56.429Z",
+    "games": 8,
+    "decisions": 192,
+    "t1": {
+      "failedPairs": [
+        "N4>N3",
+        "N5>N4"
+      ],
+      "passAll": false
+    },
+    "t2": {
+      "failedLevels": [
+        5
+      ],
+      "passAll": false
+    },
+    "t2Monotonic": {
+      "failedSteps": [],
+      "passCount": 4,
+      "passRequired": 3,
+      "passAll": false
+    }
+  }
+}

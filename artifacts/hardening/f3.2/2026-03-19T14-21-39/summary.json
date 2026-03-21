@@ -1,0 +1,107 @@
+{
+  "phase": "F3.2",
+  "generatedAt": "2026-03-19T14:21:39.509Z",
+  "checks": [
+    {
+      "id": "dominorio-v1-adapter-tests",
+      "command": "bun test src/games/dominorio/ai/v1-adapter.test.ts",
+      "durationMs": 72,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\nsrc/games/dominorio/ai/v1-adapter.test.ts:\n(pass) DominorioV1Adapter > maps initial state into AIResponseV1 with mandatory fields [8.39ms]\n(pass) DominorioV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [1.95ms]\n(pass) DominorioV1Adapter > emits a minimal critical threat on low-mobility positions [0.78ms]\n(pass) DominorioV1Adapter > classifies endgame instability as E-DO-03 [2.64ms]\n(pass) DominorioV1Adapter > maps core levels to legacy difficulty buckets [0.51ms]\n\n 5 pass\n 0 fail\n 33 expect() calls\nRan 5 tests across 1 file. [51.00ms]\n"
+    },
+    {
+      "id": "atari-go-v1-adapter-tests",
+      "command": "bun test src/games/atari-go/ai/v1-adapter.test.ts",
+      "durationMs": 216,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\nsrc/games/atari-go/ai/v1-adapter.test.ts:\n(pass) AtariGoV1Adapter > maps state into AIResponseV1 mandatory fields [107.20ms]\n(pass) AtariGoV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [2.19ms]\n(pass) AtariGoV1Adapter > emits critical threat and turning point when opponent has immediate capture [68.79ms]\n(pass) AtariGoV1Adapter > maps core levels to legacy difficulty buckets [0.11ms]\n\n 4 pass\n 0 fail\n 25 expect() calls\nRan 4 tests across 1 file. [203.00ms]\n"
+    },
+    {
+      "id": "dominorio-baseline-lite",
+      "command": "bun run baseline:dominorio",
+      "durationMs": 6381,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[dominorio-baseline] starting {\n  gamesPerMirror: 1,\n  t4ProbeEveryPly: 12,\n  maxPliesPerGame: 32,\n  budgetScale: 0.05,\n}\n[dominorio-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/dominorio-baseline/2026-03-19T14-21-10\n[dominorio-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/dominorio-baseline/latest\n[dominorio-baseline] done: games=8, decisions=243, t1Fails=3, t2Fails=1, t3Pass=true, t4Pass=false\n",
+      "stderrTail": "$ bun run scripts/dominorio-baseline.ts\n"
+    },
+    {
+      "id": "atari-go-baseline-lite",
+      "command": "bun run baseline:atari-go",
+      "durationMs": 28811,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[atari-go-baseline] starting {\n  gamesPerMirror: 1,\n  maxPliesPerGame: 32,\n  budgetScale: 0.05,\n}\n[atari-go-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/atari-go-baseline/2026-03-19T14-21-39\n[atari-go-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/atari-go-baseline/latest\n[atari-go-baseline] done: games=8, decisions=256, nC2Pass=false, nC3Pass=false\n",
+      "stderrTail": "$ bun run scripts/atari-go-ladder-baseline.ts\n"
+    }
+  ],
+  "aggregate": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "ok": true
+  },
+  "dominorioBaseline": {
+    "generatedAt": "2026-03-19T14:21:10.675Z",
+    "games": 8,
+    "decisions": 243,
+    "t1": {
+      "failedPairs": [
+        "N3>N2",
+        "N4>N3",
+        "N5>N4"
+      ],
+      "passAll": false
+    },
+    "t2": {
+      "failedLevels": [
+        2
+      ],
+      "passAll": false
+    },
+    "t3Pass": true,
+    "t4Pass": false,
+    "pedagogy": {
+      "p1Pass": true,
+      "p5Pass": true,
+      "p6Pass": true,
+      "p7Pass": true
+    }
+  },
+  "atariGoBaseline": {
+    "generatedAt": "2026-03-19T14:21:39.484Z",
+    "games": 8,
+    "decisions": 256,
+    "t1": {
+      "failedPairs": [
+        "N2>N1",
+        "N3>N2",
+        "N4>N3",
+        "N5>N4"
+      ],
+      "passAll": false
+    },
+    "t2": {
+      "failedLevels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "passAll": false
+    },
+    "t2Monotonic": {
+      "failedSteps": [
+        "N4>=N3"
+      ],
+      "passCount": 3,
+      "passRequired": 3,
+      "passAll": false
+    }
+  }
+}

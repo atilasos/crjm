@@ -96,12 +96,18 @@ interface MoveScore {
   baseScore: number;
 }
 
-const EVAL_CAP_BY_LEVEL: Record<DifficultyLevel, number> = {
-  1: 6,
-  2: 10,
-  3: 13,
-  4: 24,
-  5: 40,
+interface LevelPolicy {
+  evalCap: number;
+  blunderRate: number;
+  safetyLookahead: 0 | 1 | 2;
+}
+
+const LEVEL_POLICY: Record<DifficultyLevel, LevelPolicy> = {
+  1: { evalCap: 6, blunderRate: 0.55, safetyLookahead: 0 },
+  2: { evalCap: 10, blunderRate: 0.35, safetyLookahead: 0 },
+  3: { evalCap: 13, blunderRate: 0.2, safetyLookahead: 0 },
+  4: { evalCap: 24, blunderRate: 0.08, safetyLookahead: 1 },
+  5: { evalCap: 40, blunderRate: 0.02, safetyLookahead: 2 },
 };
 
 const T1_MIN_WINRATE_BY_PAIR: Record<string, number> = {
@@ -243,19 +249,14 @@ function distanceToCenter(move: Posicao): number {
 function scoreMoves(
   state: AtariGoState,
   player: AtariGoState['jogadorAtual'],
-  level: DifficultyLevel,
+  evalCapInput: number,
 ): MoveScore[] {
   const legalMoves =
     state.jogadasValidas.length > 0
       ? state.jogadasValidas
       : calcularJogadasValidas(state.tabuleiro, player);
 
-  const baseCap = EVAL_CAP_BY_LEVEL[level] ?? legalMoves.length;
-  const adjustedCap = baseCap;
-  const evalCap = Math.max(
-    1,
-    Math.min(legalMoves.length, adjustedCap),
-  );
+  const evalCap = Math.max(1, Math.min(legalMoves.length, evalCapInput));
 
   const scored = legalMoves.map((move, index) => {
     if (index >= evalCap) {
@@ -283,49 +284,92 @@ function scoreMoves(
 function rankIndexForLevel(
   level: DifficultyLevel,
   total: number,
-  opponentLevel: DifficultyLevel,
+  random: () => number,
 ): number {
   if (total <= 1) return 0;
-  if (level <= 1) return Math.min(total - 1, 3);
-  if (level === 2) {
-    const targetRank = opponentLevel === 3 ? 3 : 1;
-    return Math.min(total - 1, targetRank);
+  const policy = LEVEL_POLICY[level];
+
+  if (random() >= policy.blunderRate) {
+    return 0;
   }
-  if (level === 3) {
-    const targetRank = opponentLevel >= 4 ? total - 1 : 0;
-    return Math.min(total - 1, targetRank);
+
+  const mistakeWindow = level <= 1 ? 4 : level === 2 ? 3 : level === 3 ? 2 : 1;
+  const maxMistakeRank = Math.min(total - 1, mistakeWindow);
+  if (maxMistakeRank <= 0) return 0;
+  return 1 + Math.floor(random() * maxMistakeRank);
+}
+
+function evaluateCandidateSafety(
+  state: AtariGoState,
+  player: AtariGoState['jogadorAtual'],
+  level: DifficultyLevel,
+  candidate: MoveScore,
+  lookahead: 0 | 1 | 2,
+  random: () => number,
+): number {
+  const simulation = simulateMove(state, candidate.move, player);
+  if (simulation.isWinningCapture) {
+    return 100_000;
   }
-  if (level === 4) {
-    const targetRank = opponentLevel >= 5 ? total - 1 : 0;
-    return Math.min(total - 1, targetRank);
+
+  if (lookahead === 0) {
+    return candidate.baseScore;
   }
-  return 0;
+
+  const opponent = getOpponent(player);
+  const opponentMoves =
+    simulation.next.jogadasValidas.length > 0
+      ? simulation.next.jogadasValidas
+      : calcularJogadasValidas(simulation.next.tabuleiro, opponent);
+
+  if (opponentMoves.length === 0) {
+    return candidate.baseScore + 60;
+  }
+
+  let worstLineForUs = Number.POSITIVE_INFINITY;
+
+  for (const opponentMove of opponentMoves) {
+    const opponentSimulation = simulateMove(simulation.next, opponentMove, opponent);
+    if (opponentSimulation.isWinningCapture) {
+      worstLineForUs = Math.min(worstLineForUs, candidate.baseScore - 900);
+      continue;
+    }
+
+    if (lookahead === 1) {
+      const lineScore = candidate.baseScore - opponentSimulation.capturedCount * 180;
+      worstLineForUs = Math.min(worstLineForUs, lineScore);
+      continue;
+    }
+
+    const ourReplyScores = scoreMoves(
+      opponentSimulation.next,
+      player,
+      LEVEL_POLICY[level].evalCap,
+    );
+    const bestReply = ourReplyScores[0]?.baseScore ?? (candidate.baseScore - 120);
+    const lineScore = bestReply - opponentSimulation.capturedCount * 120;
+    worstLineForUs = Math.min(worstLineForUs, lineScore);
+  }
+
+  if (!Number.isFinite(worstLineForUs)) {
+    return candidate.baseScore;
+  }
+
+  return worstLineForUs + random() * 0.001;
 }
 
 function chooseMove(
   state: AtariGoState,
   level: DifficultyLevel,
-  opponentLevel: DifficultyLevel,
   random: () => number,
 ): Posicao | null {
   const player = state.jogadorAtual;
-  if (level >= 4) {
-    const legalMoves =
-      state.jogadasValidas.length > 0
-        ? state.jogadasValidas
-        : calcularJogadasValidas(state.tabuleiro, player);
-    const winningCaptures = legalMoves.filter((move) => simulateMove(state, move, player).isWinningCapture);
-    if (winningCaptures.length > 0) {
-      const index = Math.floor(random() * winningCaptures.length);
-      return winningCaptures[index] ?? winningCaptures[0];
-    }
-  }
-
-  const scored = scoreMoves(state, player, level);
+  const policy = LEVEL_POLICY[level];
+  const scored = scoreMoves(state, player, policy.evalCap);
   if (scored.length === 0) return null;
 
-  if (level <= 4) {
-    const targetRank = rankIndexForLevel(level, scored.length, opponentLevel);
+  if (policy.safetyLookahead === 0) {
+    const targetRank = rankIndexForLevel(level, scored.length, random);
     const targetScore = scored[targetRank]?.baseScore ?? scored[0].baseScore;
     const tiedCandidates = scored.filter((entry) => entry.baseScore === targetScore);
     if (tiedCandidates.length === 0) {
@@ -335,30 +379,23 @@ function chooseMove(
     return tiedCandidates[index]?.move ?? tiedCandidates[0].move;
   }
 
-  const opponent = getOpponent(player);
   let best = scored[0];
   let bestSafetyScore = Number.NEGATIVE_INFINITY;
+  const frontier = scored.slice(0, Math.min(scored.length, level >= 5 ? 8 : 6));
 
-  for (const candidate of scored.slice(0, 4)) {
-    const simulation = simulateMove(state, candidate.move, player);
-    if (simulation.isWinningCapture) {
-      return candidate.move;
-    }
-
-    const opponentMoves =
-      simulation.next.jogadasValidas.length > 0
-        ? simulation.next.jogadasValidas
-        : calcularJogadasValidas(simulation.next.tabuleiro, opponent);
-
-    const opponentCanWinImmediately = opponentMoves.some(
-      (move) => simulateMove(simulation.next, move, opponent).isWinningCapture,
+  for (const candidate of frontier) {
+    const safetyScore = evaluateCandidateSafety(
+      state,
+      player,
+      level,
+      candidate,
+      policy.safetyLookahead,
+      random,
     );
-
-    const safetyScore = candidate.baseScore - (opponentCanWinImmediately ? 900 : 0);
     if (safetyScore > bestSafetyScore) {
       bestSafetyScore = safetyScore;
       best = candidate;
-    } else if (safetyScore === bestSafetyScore && random() < 0.5) {
+    } else if (Math.abs(safetyScore - bestSafetyScore) < 1e-9 && random() < 0.5) {
       best = candidate;
     }
   }
@@ -398,8 +435,7 @@ async function runGame(
         : weakerLevel;
 
     const startedAt = performance.now();
-    const opponentLevel = level === strongerLevel ? weakerLevel : strongerLevel;
-    const bestMove = chooseMove(state, level, opponentLevel, random);
+    const bestMove = chooseMove(state, level, random);
     const elapsedMs = Math.max(0, performance.now() - startedAt);
 
     const legal = bestMove ? isJogadaValida(state, bestMove) : state.jogadasValidas.length === 0;
