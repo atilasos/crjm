@@ -230,7 +230,7 @@ async function main(): Promise<void> {
   checks.push(
     runCheck('dominorio-baseline-lite', 'bun', ['run', 'baseline:dominorio'], {
       DOMINORIO_GAMES_PER_MIRROR: dominorioGamesPerMirror,
-      DOMINORIO_BUDGET_SCALE: '0.05',
+      DOMINORIO_BUDGET_SCALE: '0.2',
       DOMINORIO_T4_PROBE_EVERY_PLY: '12',
       DOMINORIO_MAX_PLIES: '48',
       DOMINORIO_SEED: dominorioSeed,
