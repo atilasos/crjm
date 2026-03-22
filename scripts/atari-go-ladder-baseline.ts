@@ -430,9 +430,9 @@ async function runGame(
   gameId: string,
   options: HarnessOptions,
 ): Promise<GameRun> {
-  const random = createRandom(
-    deriveSeed(options.seed, `${gameId}:${strongerLevel}:${weakerLevel}:${strongerAs}`),
-  );
+  const baseSeedKey = `${gameId}:${strongerLevel}:${weakerLevel}:${strongerAs}`;
+  const randomJ1 = createRandom(deriveSeed(options.seed, `${baseSeedKey}:j1`));
+  const randomJ2 = createRandom(deriveSeed(options.seed, `${baseSeedKey}:j2`));
   let state = criarEstadoInicial('dois-jogadores');
   const decisions: DecisionSample[] = [];
   let ply = 0;
@@ -444,6 +444,7 @@ async function runGame(
         ? strongerLevel
         : weakerLevel;
 
+    const random = isJogador1Turn ? randomJ1 : randomJ2;
     const startedAt = performance.now();
     const bestMove = chooseMove(state, level, random);
     const elapsedMs = Math.max(0, performance.now() - startedAt);
