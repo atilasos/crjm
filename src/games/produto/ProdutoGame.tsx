@@ -1,19 +1,25 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
+import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
-import { ProdutoState, Posicao, gerarPosicoesValidas, posToKey, LADO_TABULEIRO } from './types';
+import { gerarPosicoesValidas, posToKey, LADO_TABULEIRO } from './types';
+import type { ProdutoState, Posicao, JogadaDupla } from './types';
 import {
   criarEstadoInicial,
   colocarPeca,
   cancelarJogadaEmCurso,
   jogadaComputador,
 } from './logic';
-import { GameMode, Player } from '../../types';
+import type { GameMode, Player } from '../../types';
 import { ProdutoAIClient, decodeMove } from './ai/ai-client';
 import type { AIDifficulty } from './ai/types';
 import { DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
+import { ProdutoV1Adapter } from './ai/v1-adapter';
+import { TutorHintCard } from './components/TutorHintCard';
+import { TopMovesRail } from './components/TopMovesRail';
 
 interface ProdutoGameProps {
   onVoltar: () => void;
@@ -30,6 +36,44 @@ const REGRAS = [
   'O jogo termina quando o tabuleiro estiver cheio.',
 ];
 
+function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
+  if (difficulty === 'easy') return 1;
+  if (difficulty === 'medium') return 2;
+  if (difficulty === 'hard') return 3;
+  if (difficulty === 'very-hard') return 4;
+  return 5;
+}
+
+function formatPos(pos: Posicao): string {
+  return `(${pos.q},${pos.r})`;
+}
+
+function formatMove(move: JogadaDupla): string {
+  const first = `${move.cor1} ${formatPos(move.pos1)}`;
+  if (!move.pos2 || !move.cor2) return first;
+  return `${first} + ${move.cor2} ${formatPos(move.pos2)}`;
+}
+
+function getSuggestedAction(
+  response: AIResponseV1<JogadaDupla, ProdutoState> | null,
+): string {
+  if (!response?.bestMove) {
+    return 'Compara o teu produto com o do adversário antes de escolher as duas peças.';
+  }
+  return `Treina a linha ${formatMove(response.bestMove)} e confirma se ficas com dois grupos úteis.`;
+}
+
+function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
+  if (severity === 'high') return 'border-red-300 bg-red-50 text-red-900';
+  if (severity === 'medium') return 'border-amber-300 bg-amber-50 text-amber-900';
+  return 'border-slate-300 bg-slate-50 text-slate-800';
+}
+
+function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H3' | undefined {
+  if (!level || level === 'H0') return undefined;
+  return level;
+}
+
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const [state, setState] = useState<ProdutoState>(() =>
     criarEstadoInicial('vs-computador')
@@ -39,7 +83,11 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const [corSelecionada, setCorSelecionada] = useState<'preta' | 'branca'>('preta');
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
   const [aiMetrics, setAiMetrics] = useState(() => ({ ...INITIAL_METRICS }));
+  const [tutorResponse, setTutorResponse] =
+    useState<AIResponseV1<JogadaDupla, ProdutoState> | null>(null);
+  const [tutorLoading, setTutorLoading] = useState(false);
   const aiClientRef = useMemo(() => new ProdutoAIClient({ onMetricsUpdate: setAiMetrics }), []);
+  const tutorAdapterRef = useMemo(() => new ProdutoV1Adapter(), []);
 
   // Gerar posições do tabuleiro uma vez
   const posicoes = useMemo(() => gerarPosicoesValidas(), []);
@@ -128,6 +176,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const novoJogo = useCallback(() => {
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
+    setTutorResponse(null);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -135,17 +184,66 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setHumanPlayer('jogador1');
+    setTutorResponse(null);
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
+    setTutorResponse(null);
   }, []);
 
   useEffect(() => {
     return () => aiClientRef.terminate();
   }, [aiClientRef]);
+
+  useEffect(() => {
+    return () => tutorAdapterRef.terminate();
+  }, [tutorAdapterRef]);
+
+  useEffect(() => {
+    if (state.modo !== 'vs-computador' || state.estado !== 'a-jogar' || state.jogadorAtual !== humanPlayer) {
+      setTutorLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const request: AIRequestV1<ProdutoState, JogadaDupla> = {
+      version: '1.0',
+      requestId: `produto-tutor-${Date.now()}`,
+      gameId: 'produto',
+      mode: 'tutor',
+      level: mapDifficultyToLevel(aiDifficulty),
+      state,
+      locale: 'pt-PT',
+    };
+
+    setTutorLoading(true);
+
+    void tutorAdapterRef
+      .compute(request)
+      .then((response) => {
+        if (!cancelled) {
+          setTutorResponse(response);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('[ProdutoGame] Tutor error:', error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTutorLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      tutorAdapterRef.cancel();
+    };
+  }, [aiDifficulty, humanPlayer, state, tutorAdapterRef]);
 
   // Converter coordenadas axiais para posição no ecrã (pointy-top orientation)
   const hexToPixel = (q: number, r: number, size: number) => {
@@ -221,6 +319,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     state.modo === 'vs-computador' &&
     state.estado === 'a-jogar' &&
     state.jogadorAtual !== humanPlayer;
+  const criticalThreat = tutorResponse?.criticalThreats?.[0];
 
   return (
     <GameLayout titulo="Produto" regras={REGRAS} onVoltar={onVoltar}>
@@ -239,6 +338,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        <TrainingPathCard gameId="produto" />
 
         {/* Configuração de IA (só no modo vs-computador) */}
         {state.modo === 'vs-computador' && (
@@ -261,6 +362,31 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
               <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
               <span>{aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback'}</span>
             </div>
+          </div>
+        )}
+
+        {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
+          <div className="space-y-3">
+            <TutorHintCard
+              insight={
+                tutorResponse?.explainText ??
+                'Procura duas peças que criem grupos teus e, se possível, prejudiquem o produto adversário.'
+              }
+              suggestedAction={getSuggestedAction(tutorResponse)}
+              hintLevel={normalizeHintLevel(tutorResponse?.pedagogy?.hintLevelSuggested)}
+              errorCode={tutorResponse?.pedagogy?.errorCode}
+              isLoading={tutorLoading}
+            />
+            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+            {criticalThreat && (
+              <section className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}>
+                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
+                <p className="mt-1">{criticalThreat.description}</p>
+                {criticalThreat.counterMove && (
+                  <p className="mt-1 font-medium">Resposta mínima: {formatMove(criticalThreat.counterMove)}</p>
+                )}
+              </section>
+            )}
           </div>
         )}
 

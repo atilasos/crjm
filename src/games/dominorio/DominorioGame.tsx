@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
+import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { DominorioState, Posicao, Domino } from './types';
@@ -78,17 +79,17 @@ function getSuggestedAction(
   }
 
   if (hintLevel === 'H1') {
-    return 'Procura a zona com mais espaço livre para preservar mobilidade.';
+    return 'Escolhe a opção que te deixe mais respostas simples no próximo turno.';
   }
 
   if (hintLevel === 'H2') {
     if (response.criticalThreats?.[0]) {
-      return 'Foca-te em bloquear a ameaça crítica antes de expandir.';
+      return 'Resolve primeiro a ameaça crítica e só depois volta a abrir espaço.';
     }
-    return 'Prioriza uma jogada que mantenha pelo menos duas respostas no próximo turno.';
+    return 'Começa pela opção que te deixa pelo menos duas respostas no próximo turno.';
   }
 
-  return `Prioriza a jogada ${formatMove(response.bestMove)}.`;
+  return 'Se estiveres perdido, segue primeiro a opção #1 mostrada abaixo.';
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
@@ -443,6 +444,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
+
+        <TrainingPathCard gameId="dominorio" />
 
         {/* Tabuleiro */}
         <div className="game-container">

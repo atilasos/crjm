@@ -37,10 +37,10 @@ export function TutorHintCard({
       ) : (
         <div className="mt-2 space-y-2">
           <p>
-            <strong>O que deves procurar:</strong> {insight}
+            <strong>Insight:</strong> {insight}
           </p>
           <p>
-            <strong>Próximo passo:</strong> {suggestedAction}
+            <strong>Ação sugerida:</strong> {suggestedAction}
           </p>
         </div>
       )}

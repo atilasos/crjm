@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
+import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
-import { NexState, Posicao, TipoAcao, LADO_TABULEIRO, posToKey } from './types';
+import { LADO_TABULEIRO, posToKey } from './types';
+import type { NexState, Posicao, TipoAcao } from './types';
 import { 
   criarEstadoInicial, 
   executarColocacao,
@@ -19,9 +22,13 @@ import {
   getCorJogador,
   jogadaComputador,
 } from './logic';
-import { GameMode, Player } from '../../types';
+import type { GameMode, Player } from '../../types';
 import { NexAIClient, type AIDifficulty, type AIMetrics, DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai';
 import { withTimeout } from '../../utils/withTimeout';
+import type { NexAiAction } from './ai/types';
+import { NexV1Adapter } from './ai/v1-adapter';
+import { TutorHintCard } from './components/TutorHintCard';
+import { TopMovesRail } from './components/TopMovesRail';
 
 interface NexGameProps {
   onVoltar: () => void;
@@ -38,6 +45,46 @@ const REGRAS = [
   'Ganha quem conectar primeiro as suas duas margens!',
 ];
 
+function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
+  if (difficulty === 'easy') return 1;
+  if (difficulty === 'medium') return 2;
+  if (difficulty === 'hard') return 3;
+  return 5;
+}
+
+function formatPos(pos: Posicao): string {
+  return `(${pos.x + 1},${pos.y + 1})`;
+}
+
+function formatAction(action: NexAiAction): string {
+  if (action.type === 'swap') return 'fazer swap';
+  if (action.type === 'recusar_swap') return 'recusar swap';
+  if (action.type === 'substituir') {
+    return `substituir ${formatPos(action.n1)} + ${formatPos(action.n2)} / ${formatPos(action.sacrifice)}`;
+  }
+  return `colocar própria em ${formatPos(action.own)} e neutra em ${formatPos(action.neutral)}`;
+}
+
+function getSuggestedAction(
+  response: AIResponseV1<NexAiAction, NexState> | null,
+): string {
+  if (!response?.bestMove) {
+    return 'Compara a tua distância de ligação com a do adversário antes de agir.';
+  }
+  return `Treina a linha ${formatAction(response.bestMove)}.`;
+}
+
+function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
+  if (severity === 'high') return 'border-red-300 bg-red-50 text-red-900';
+  if (severity === 'medium') return 'border-amber-300 bg-amber-50 text-amber-900';
+  return 'border-slate-300 bg-slate-50 text-slate-800';
+}
+
+function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H3' | undefined {
+  if (!level || level === 'H0') return undefined;
+  return level;
+}
+
 export function NexGame({ onVoltar }: NexGameProps) {
   const [state, setState] = useState<NexState>(() => 
     criarEstadoInicial('vs-computador')
@@ -48,7 +95,11 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
+  const [tutorResponse, setTutorResponse] =
+    useState<AIResponseV1<NexAiAction, NexState> | null>(null);
+  const [tutorLoading, setTutorLoading] = useState(false);
   const aiClientRef = useRef<NexAIClient | null>(null);
+  const tutorAdapterRef = useRef<NexV1Adapter | null>(null);
   
   // Estado para pan/drag do tabuleiro
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -65,6 +116,12 @@ export function NexGame({ onVoltar }: NexGameProps) {
     });
     aiClientRef.current = client;
     return () => client.terminate();
+  }, []);
+
+  useEffect(() => {
+    const adapter = new NexV1Adapter();
+    tutorAdapterRef.current = adapter;
+    return () => adapter.terminate();
   }, []);
 
   const aplicarAcaoIA = useCallback((prev: NexState, action: any): NexState => {
@@ -161,6 +218,51 @@ export function NexGame({ onVoltar }: NexGameProps) {
     }
   }, [state.swapDisponivel, state.modo, state.jogadorAtual, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
 
+  useEffect(() => {
+    if (!tutorAdapterRef.current) return;
+    if (state.modo !== 'vs-computador' || state.estado !== 'a-jogar' || state.jogadorAtual !== humanPlayer) {
+      setTutorLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const adapter = tutorAdapterRef.current;
+    const request: AIRequestV1<NexState, NexAiAction> = {
+      version: '1.0',
+      requestId: `nex-tutor-${Date.now()}`,
+      gameId: 'nex',
+      mode: 'tutor',
+      level: mapDifficultyToLevel(aiDifficulty),
+      state,
+      locale: 'pt-PT',
+    };
+
+    setTutorLoading(true);
+
+    void adapter
+      .compute(request)
+      .then((response) => {
+        if (!cancelled) {
+          setTutorResponse(response);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('[NexGame] Tutor error:', error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTutorLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      adapter.cancel();
+    };
+  }, [aiDifficulty, humanPlayer, state]);
+
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
     if (state.estado !== 'a-jogar') {
@@ -229,6 +331,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -238,6 +341,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setMostrarVencedor(false);
     setHumanPlayer('jogador1');
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -246,6 +350,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
   }, []);
 
   // Handlers para pan/drag do tabuleiro
@@ -410,6 +515,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
   const podeFazerColocacao = podeColocar(state.tabuleiro);
   const podeFazerSubstituicao = podeSubstituir(state.tabuleiro, state.jogadorAtual, state.swapEfetuado);
+  const criticalThreat = tutorResponse?.criticalThreats?.[0];
 
   // Determinar o que está em falta na ação
   const getInstrucaoAcao = () => {
@@ -445,6 +551,33 @@ export function NexGame({ onVoltar }: NexGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        <TrainingPathCard gameId="nex" />
+
+        {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
+          <div className="space-y-3">
+            <TutorHintCard
+              insight={
+                tutorResponse?.explainText ??
+                'Compara a tua distância de ligação com a do adversário e usa a neutra como bloqueio ativo.'
+              }
+              suggestedAction={getSuggestedAction(tutorResponse)}
+              hintLevel={normalizeHintLevel(tutorResponse?.pedagogy?.hintLevelSuggested)}
+              errorCode={tutorResponse?.pedagogy?.errorCode}
+              isLoading={tutorLoading}
+            />
+            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+            {criticalThreat && (
+              <section className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}>
+                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
+                <p className="mt-1">{criticalThreat.description}</p>
+                {criticalThreat.counterMove && (
+                  <p className="mt-1 font-medium">Resposta mínima: {formatAction(criticalThreat.counterMove)}</p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
 
         {/* Configuração de IA (só no modo vs-computador) */}
         {state.modo === 'vs-computador' && (

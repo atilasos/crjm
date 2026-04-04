@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
+import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { AtariGoState, Posicao, TAMANHO_TABULEIRO } from './types';
@@ -397,6 +398,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        <TrainingPathCard gameId="atari-go" />
 
         {/* Aviso de vitória na primeira captura */}
         <div className="bg-red-100 border-2 border-red-400 rounded-xl p-3 text-center">

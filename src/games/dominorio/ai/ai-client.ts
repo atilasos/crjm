@@ -23,6 +23,12 @@ export interface AIClientOptions {
   onReady?: () => void;
 }
 
+export interface AIRuntimeInfo {
+  engine: 'ts-fallback';
+  usedWasm: false;
+  fromBook: boolean;
+}
+
 export interface AIComputeOverrides {
   timeBudgetMs?: number;
   seed?: number;
@@ -394,6 +400,14 @@ export class DominorioAIClient {
    */
   get metrics(): AIMetrics {
     return this.currentMetrics;
+  }
+
+  get runtimeInfo(): AIRuntimeInfo {
+    return {
+      engine: 'ts-fallback',
+      usedWasm: false,
+      fromBook: this.currentMetrics.fromBook,
+    };
   }
 }
 

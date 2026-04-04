@@ -368,9 +368,13 @@ function unpackMove(packed: number): Posicao {
  */
 export function computeBestMove(
   state: GatosCaesState,
-  difficulty: number
+  difficulty: number,
+  overrides: Partial<AIConfig> = {}
 ): { move: Posicao | null; stats: SearchStats } {
-  const config = DIFFICULTY_CONFIGS[difficulty] ?? DIFFICULTY_CONFIGS[3];
+  const config = {
+    ...(DIFFICULTY_CONFIGS[difficulty] ?? DIFFICULTY_CONFIGS[3]),
+    ...overrides,
+  };
 
   // Initialize search state
   tt = new TranspositionTable(config.ttSize);

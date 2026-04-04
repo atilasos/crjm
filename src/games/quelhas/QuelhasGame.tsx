@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
+import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { QuelhasState, Posicao } from './types';
 import { 
@@ -16,7 +18,18 @@ import {
   decidirTrocaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
-import { QuelhasAIClient, DIFFICULTY_PRESETS, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai';
+import {
+  QuelhasAIClient,
+  QuelhasV1Adapter,
+  buildQuickReviewItems,
+  resolveHintLevel,
+  DIFFICULTY_PRESETS,
+  INITIAL_METRICS,
+  type AIDifficulty,
+  type AIMetrics,
+} from './ai';
+import { TutorHintCard } from './components/TutorHintCard';
+import { TopMovesRail } from './components/TopMovesRail';
 import { withTimeout } from '../../utils/withTimeout';
 
 interface QuelhasGameProps {
@@ -35,6 +48,45 @@ const REGRAS = [
   'Se não tiveres jogadas no teu turno, GANHAS (o adversário foi o último a jogar).',
 ];
 
+function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
+  if (difficulty === 'easy') return 2;
+  if (difficulty === 'medium') return 3;
+  return 5;
+}
+
+function formatSegmento(segmento: QuelhasState['jogadasValidas'][number]): string {
+  return `L${segmento.inicio.linha + 1} C${segmento.inicio.coluna + 1}, ${segmento.orientacao}, ${segmento.comprimento} casas`;
+}
+
+function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
+  if (severity === 'high') {
+    return 'border-rose-300 bg-rose-50 text-rose-900';
+  }
+  if (severity === 'medium') {
+    return 'border-amber-300 bg-amber-50 text-amber-900';
+  }
+  return 'border-sky-300 bg-sky-50 text-sky-900';
+}
+
+function getSuggestedAction(
+  response: AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState> | null,
+  hintLevel: 'H1' | 'H2' | 'H3',
+): string {
+  if (response?.bestMove) {
+    const anchor = formatSegmento(response.bestMove);
+    if (hintLevel === 'H3') {
+      return `Segue esta jogada: ${anchor}.`;
+    }
+    return `Procura um segmento parecido com ${anchor}.`;
+  }
+
+  if (hintLevel === 'H3') {
+    return 'Escolhe um segmento curto e evita fechar demasiado o tabuleiro agora.';
+  }
+
+  return 'Mantém opções abertas para não ficares preso ao fim da partida.';
+}
+
 export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   const [state, setState] = useState<QuelhasState>(() => 
     criarEstadoInicial('vs-computador')
@@ -45,7 +97,15 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   const [difficulty, setDifficulty] = useState<AIDifficulty>('hard');
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
+  const [tutorResponse, setTutorResponse] =
+    useState<AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState> | null>(null);
+  const [tutorHistory, setTutorHistory] = useState<
+    Array<AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState>>
+  >([]);
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
   const aiClientRef = useRef<QuelhasAIClient | null>(null);
+  const tutorAdapterRef = useRef<QuelhasV1Adapter | null>(null);
 
   // Inicializar cliente de IA (Worker) uma vez
   useEffect(() => {
@@ -54,7 +114,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       onReady: () => setAiReady(true),
     });
     aiClientRef.current = client;
-    return () => client.terminate();
+    tutorAdapterRef.current = new QuelhasV1Adapter({ client });
+    return () => {
+      tutorAdapterRef.current = null;
+      client.terminate();
+    };
   }, []);
 
   // Verificar se é a vez do humano jogar
@@ -132,6 +196,59 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     }
   }, [state.jogadorAtual, state.modo, state.estado, state.trocaDisponivel, humanPlayer, difficulty, state]);
 
+  useEffect(() => {
+    if (state.modo !== 'vs-computador') {
+      setTutorLoading(false);
+      return;
+    }
+    if (state.estado !== 'a-jogar' || state.trocaDisponivel || !isVezDoHumano()) {
+      setTutorLoading(false);
+      return;
+    }
+    if (!tutorAdapterRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    const adapter = tutorAdapterRef.current;
+    const request: AIRequestV1<QuelhasState, QuelhasState['jogadasValidas'][number]> = {
+      version: '1.0',
+      requestId: `quelhas-tutor-${Date.now()}`,
+      gameId: 'quelhas',
+      mode: 'tutor',
+      level: mapDifficultyToLevel(difficulty),
+      state,
+      timeBudgetMs: Math.min(DIFFICULTY_PRESETS[difficulty].timeBudgetMs, 5000),
+      locale: 'pt-PT',
+    };
+
+    setTutorLoading(true);
+
+    void adapter
+      .compute(request)
+      .then((response) => {
+        if (cancelled) return;
+        setTutorResponse(response);
+        setTutorHistory((prev) => [...prev.slice(-5), response]);
+        setHintLevel((current) => resolveHintLevel(response, current));
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('[QuelhasGame] Tutor error:', error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTutorLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      adapter.cancel();
+    };
+  }, [difficulty, isVezDoHumano, state]);
+
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
     if (state.estado !== 'a-jogar') {
@@ -199,6 +316,10 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setMostrarVencedor(false);
     setPosicaoInicial(null);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -208,6 +329,10 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setMostrarVencedor(false);
     setPosicaoInicial(null);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -217,6 +342,10 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setMostrarVencedor(false);
     setPosicaoInicial(null);
     setAiMetrics(INITIAL_METRICS);
+    setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, []);
 
   const handleChangeDifficulty = useCallback((d: AIDifficulty) => {
@@ -278,6 +407,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     state.estado === 'a-jogar' &&
     getOrientacaoJogador(state, state.jogadorAtual) === 'horizontal' &&
     (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer);
+  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const quickReviewItems = buildQuickReviewItems(tutorHistory);
 
   // Determinar nomes dos jogadores baseado nas orientações atuais
   const getNomeJogador = (jogador: 'jogador1' | 'jogador2') => {
@@ -306,6 +437,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
+
+        <TrainingPathCard gameId="quelhas" />
 
         {/* UI de decisão de troca */}
         {mostrarUiTroca && (
@@ -404,6 +537,62 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
             )}
           </div>
         </div>
+
+        {state.estado === 'a-jogar' && !state.trocaDisponivel && isVezDoHumano() && (
+          <div className="space-y-3">
+            <TutorHintCard
+              insight={
+                tutorResponse?.explainText ||
+                'Escolhe um segmento curto que não feche demasiado o tabuleiro já.'
+              }
+              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+              hintLevel={hintLevel}
+              errorCode={tutorResponse?.pedagogy?.errorCode}
+              isLoading={tutorLoading}
+            />
+
+            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+
+            {criticalThreat && (
+              <section
+                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+              >
+                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
+                <p className="mt-1">{criticalThreat.description}</p>
+                {criticalThreat.counterMove && (
+                  <p className="mt-1 font-medium">
+                    Resposta mínima: {formatSegmento(criticalThreat.counterMove)}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+
+        {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold">Revisão rápida pós-jogo</p>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                2-4 min
+              </span>
+            </div>
+            <p className="mt-1 text-emerald-800">
+              Revê até 2 momentos e tenta repetir a alternativa mais segura.
+            </p>
+            <div className="mt-2 space-y-2">
+              {quickReviewItems.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                >
+                  <p className="font-medium text-emerald-900">{item.title}</p>
+                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Anúncio de vencedor */}

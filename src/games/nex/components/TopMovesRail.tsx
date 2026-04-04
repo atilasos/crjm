@@ -1,17 +1,22 @@
 import type { AIMoveCandidate } from '../../../ai-core';
-import type { Domino } from '../types';
+import type { NexAiAction } from '../ai/types';
 
 interface TopMovesRailProps {
-  moves: AIMoveCandidate<Domino>[];
+  moves: AIMoveCandidate<NexAiAction>[];
   isLoading?: boolean;
 }
 
-function formatMove(move: Domino): string {
-  const l1 = move.pos1.linha + 1;
-  const c1 = move.pos1.coluna + 1;
-  const l2 = move.pos2.linha + 1;
-  const c2 = move.pos2.coluna + 1;
-  return `(${l1},${c1})-(${l2},${c2})`;
+function formatPos(pos: { x: number; y: number }): string {
+  return `(${pos.x + 1},${pos.y + 1})`;
+}
+
+function formatMove(move: NexAiAction): string {
+  if (move.type === 'swap') return 'Fazer swap';
+  if (move.type === 'recusar_swap') return 'Recusar swap';
+  if (move.type === 'substituir') {
+    return `Substituir ${formatPos(move.n1)} + ${formatPos(move.n2)} / ${formatPos(move.sacrifice)}`;
+  }
+  return `Própria ${formatPos(move.own)} + neutra ${formatPos(move.neutral)}`;
 }
 
 export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
@@ -38,10 +43,7 @@ export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
             key={`${candidate.rank}-${formatMove(candidate.move)}`}
             className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-700"
           >
-            <p className="font-semibold text-slate-900">Opção #{candidate.rank}</p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Segmento: {formatMove(candidate.move)}
-            </p>
+            <p className="font-semibold text-slate-900">#{candidate.rank} {formatMove(candidate.move)}</p>
             {candidate.reasonShort && <p className="mt-1">{candidate.reasonShort}</p>}
           </div>
         ))}

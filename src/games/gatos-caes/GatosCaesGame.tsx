@@ -1,15 +1,28 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import type { AIRequestV1, AIResponseV1 } from '../../ai-core';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
+import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
-import { GatosCaesState, Posicao, CASAS_CENTRAIS } from './types';
+import { CASAS_CENTRAIS } from './types';
+import type { GatosCaesState, Posicao } from './types';
 import {
   criarEstadoInicial,
   colocarPeca,
   isJogadaValida,
 } from './logic';
-import { GameMode, Player } from '../../types';
-import { initAI, computeMove, cancelComputation, terminateAI } from './ai';
+import type { GameMode, Player } from '../../types';
+import {
+  initAI,
+  computeMove,
+  cancelComputation,
+  terminateAI,
+  GatosCaesV1Adapter,
+  buildQuickReviewItems,
+  resolveHintLevel,
+} from './ai';
+import { TutorHintCard } from './components/TutorHintCard';
+import { TopMovesRail } from './components/TopMovesRail';
 
 interface GatosCaesGameProps {
   onVoltar: () => void;
@@ -26,6 +39,38 @@ const REGRAS = [
   'Se não tiveres casas legais no teu turno, PERDES.',
 ];
 
+function formatMove(move: Posicao): string {
+  return `L${move.linha + 1} C${move.coluna + 1}`;
+}
+
+function getSuggestedAction(
+  response: AIResponseV1<Posicao, GatosCaesState> | null,
+  hintLevel: 'H1' | 'H2' | 'H3',
+): string {
+  if (response?.bestMove) {
+    if (hintLevel === 'H3') {
+      return `Segue primeiro a casa ${formatMove(response.bestMove)}.`;
+    }
+    return `Procura uma casa parecida com ${formatMove(response.bestMove)}.`;
+  }
+
+  if (hintLevel === 'H3') {
+    return 'Escolhe uma casa que te deixe mais espaço livre à volta.';
+  }
+
+  return 'Evita encostar cedo ao adversário para não perderes mobilidade.';
+}
+
+function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
+  if (severity === 'high') {
+    return 'border-rose-300 bg-rose-50 text-rose-900';
+  }
+  if (severity === 'medium') {
+    return 'border-amber-300 bg-amber-50 text-amber-900';
+  }
+  return 'border-sky-300 bg-sky-50 text-sky-900';
+}
+
 export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   const [state, setState] = useState<GatosCaesState>(() =>
     criarEstadoInicial('vs-computador')
@@ -34,13 +79,21 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [difficulty, setDifficulty] = useState(3);
   const [aiThinking, setAiThinking] = useState(false);
+  const [tutorResponse, setTutorResponse] =
+    useState<AIResponseV1<Posicao, GatosCaesState> | null>(null);
+  const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<Posicao, GatosCaesState>>>([]);
+  const [tutorLoading, setTutorLoading] = useState(false);
+  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const tutorAdapterRef = useRef<GatosCaesV1Adapter | null>(null);
 
   // Initialize AI on mount
   useEffect(() => {
     initAI();
+    tutorAdapterRef.current = new GatosCaesV1Adapter();
     return () => {
       cancelComputation();
       terminateAI();
+      tutorAdapterRef.current = null;
     };
   }, []);
 
@@ -55,16 +108,6 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       state.estado === 'a-jogar' &&
       !aiComputingRef.current;
 
-    console.log('[GatosCaes] AI check:', {
-      shouldPlayAI,
-      modo: state.modo,
-      jogadorAtual: state.jogadorAtual,
-      humanPlayer,
-      estado: state.estado,
-      aiComputing: aiComputingRef.current,
-      jogadasValidas: state.jogadasValidas.length,
-    });
-
     if (shouldPlayAI) {
       let cancelled = false;
       aiComputingRef.current = true;
@@ -74,26 +117,15 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
         // Small delay for better UX
         await new Promise(resolve => setTimeout(resolve, 300));
 
-        if (cancelled) {
-          console.log('[GatosCaes] AI cancelled before compute');
-          return;
-        }
+        if (cancelled) return;
 
         try {
-          console.log('[GatosCaes] Calling computeMove...');
-          const { move, stats } = await computeMove(state, difficulty);
-          console.log('[GatosCaes] computeMove returned:', { move, stats });
+          const { move } = await computeMove(state, difficulty);
 
-          if (cancelled) {
-            console.log('[GatosCaes] AI cancelled after compute');
-            return;
-          }
+          if (cancelled) return;
 
           if (move) {
-            console.log('[GatosCaes] Applying AI move:', move);
             setState(prev => colocarPeca(prev, move));
-          } else {
-            console.log('[GatosCaes] AI returned null move - no valid moves?');
           }
         } catch (error) {
           console.error('[GatosCaes] AI computation error:', error);
@@ -108,7 +140,6 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       makeAIMove();
 
       return () => {
-        console.log('[GatosCaes] Cleanup - cancelling AI');
         cancelled = true;
         cancelComputation();
         aiComputingRef.current = false;
@@ -116,6 +147,54 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       };
     }
   }, [state, humanPlayer, difficulty]);
+
+  const isVezDoHumano =
+    state.estado === 'a-jogar' &&
+    (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer);
+
+  useEffect(() => {
+    if (state.modo !== 'vs-computador' || !isVezDoHumano || aiThinking || !tutorAdapterRef.current) {
+      setTutorLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const request: AIRequestV1<GatosCaesState, Posicao> = {
+      version: '1.0',
+      requestId: `gatos-tutor-${Date.now()}`,
+      gameId: 'gatos-caes',
+      mode: 'tutor',
+      level: Math.max(1, Math.min(5, difficulty)) as 1 | 2 | 3 | 4 | 5,
+      state,
+      locale: 'pt-PT',
+    };
+
+    setTutorLoading(true);
+
+    void tutorAdapterRef.current
+      .compute(request)
+      .then((response) => {
+        if (cancelled) return;
+        setTutorResponse(response);
+        setTutorHistory((prev) => [...prev.slice(-5), response]);
+        setHintLevel((current) => resolveHintLevel(response, current));
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error('[GatosCaes] Tutor error:', error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setTutorLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      tutorAdapterRef.current?.cancel();
+    };
+  }, [aiThinking, difficulty, isVezDoHumano, state]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -136,6 +215,10 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   const novoJogo = useCallback(() => {
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
+    setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -143,12 +226,20 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setHumanPlayer('jogador1'); // Reset ao trocar modo
+    setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
+    setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, []);
 
   // Verificar se é casa central
@@ -163,7 +254,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
   // Obter classe CSS para cada célula
   const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+    const celula = state.tabuleiro[linha]?.[coluna] ?? 'vazia';
     const central = isCasaCentral(linha, coluna);
     const jogadaValida = isJogadaValidaPos(linha, coluna);
     
@@ -192,6 +283,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     state.modo === 'vs-computador' &&
     state.estado === 'a-jogar' &&
     (state.jogadorAtual !== humanPlayer || aiThinking);
+  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const quickReviewItems = buildQuickReviewItems(tutorHistory);
 
   return (
     <GameLayout titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
@@ -210,6 +303,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
         />
+
+        <TrainingPathCard gameId="gatos-caes" />
 
         {/* Difficulty selector (only in vs computer mode) */}
         {state.modo === 'vs-computador' && (
@@ -306,6 +401,62 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
             )}
           </div>
         </div>
+
+        {state.estado === 'a-jogar' && state.modo === 'vs-computador' && isVezDoHumano && (
+          <div className="space-y-3">
+            <TutorHintCard
+              insight={
+                tutorResponse?.explainText ||
+                'Procura uma casa que te deixe várias respostas simples para o turno seguinte.'
+              }
+              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+              hintLevel={hintLevel}
+              errorCode={tutorResponse?.pedagogy?.errorCode}
+              isLoading={tutorLoading}
+            />
+
+            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+
+            {criticalThreat && (
+              <section
+                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+              >
+                <p className="font-semibold">Atenção: {criticalThreat.title}</p>
+                <p className="mt-1">{criticalThreat.description}</p>
+                {criticalThreat.counterMove && (
+                  <p className="mt-1 font-medium">
+                    Resposta mínima: {formatMove(criticalThreat.counterMove)}
+                  </p>
+                )}
+              </section>
+            )}
+          </div>
+        )}
+
+        {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold">Revisão rápida pós-jogo</p>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                2-3 min
+              </span>
+            </div>
+            <p className="mt-1 text-emerald-800">
+              Revê os momentos em que perdeste mais espaço e experimenta a alternativa sugerida.
+            </p>
+            <div className="mt-2 space-y-2">
+              {quickReviewItems.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                >
+                  <p className="font-medium text-emerald-900">{item.title}</p>
+                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
 
       {/* Anúncio de vencedor */}

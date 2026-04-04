@@ -16,11 +16,22 @@ export interface AIClientOptions {
   onMetricsUpdate?: (m: AIMetrics) => void;
 }
 
+export interface AIRequestOverrides {
+  timeBudgetMs?: number;
+}
+
 export class QuelhasAIClient {
   private worker: Worker | null = null;
   private isReady = false;
   private nextId = 1;
-  private pending = new Map<number, { resolve: (m: Segmento | null) => void; reject: (e: Error) => void }>();
+  private pending = new Map<
+    number,
+    {
+      resolve: (m: Segmento | null) => void;
+      reject: (e: Error) => void;
+      runInline: () => Segmento | null;
+    }
+  >();
   private currentMetrics: AIMetrics = { ...INITIAL_METRICS };
   private options: AIClientOptions;
 
@@ -63,8 +74,14 @@ export class QuelhasAIClient {
     this.worker = null;
     this.isReady = true;
 
-    // Limpar pendentes para não ficar preso em "A pensar..."
-    this.cancel();
+    for (const [id, pending] of this.pending) {
+      this.pending.delete(id);
+      try {
+        pending.resolve(pending.runInline());
+      } catch (error) {
+        pending.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+    }
 
     // Opcional: manter log só em ambientes com consola
     console.warn?.('[QuelhasAI] Falling back to inline engine:', reason);
@@ -91,6 +108,8 @@ export class QuelhasAIClient {
         lastTTHitRate: msg.ttHitRate,
         lastScore: msg.score,
         fromBook: msg.fromBook,
+        lastEngine: msg.engine,
+        lastUsedWasm: msg.usedWasm,
       };
       this.options.onMetricsUpdate?.(this.currentMetrics);
 
@@ -111,7 +130,11 @@ export class QuelhasAIClient {
     }
   }
 
-  async getBestMove(state: QuelhasState, difficulty: AIDifficulty = 'hard'): Promise<Segmento | null> {
+  async getBestMove(
+    state: QuelhasState,
+    difficulty: AIDifficulty = 'hard',
+    overrides: AIRequestOverrides = {},
+  ): Promise<Segmento | null> {
     const minhaOrientacao = getOrientacaoJogador(state, state.jogadorAtual);
     const orientacaoAdv = getOrientacaoJogador(
       state,
@@ -122,9 +145,16 @@ export class QuelhasAIClient {
     this.options.onMetricsUpdate?.(this.currentMetrics);
 
     const preset = DIFFICULTY_PRESETS[difficulty];
+    const timeBudgetMs =
+      typeof overrides.timeBudgetMs === 'number' && Number.isFinite(overrides.timeBudgetMs)
+        ? Math.max(1, Math.trunc(overrides.timeBudgetMs))
+        : preset.timeBudgetMs;
 
     if (!this.worker) {
-      const result = searchBestMove(state.tabuleiro, minhaOrientacao, preset);
+      const result = searchBestMove(state.tabuleiro, minhaOrientacao, {
+        ...preset,
+        timeBudgetMs,
+      });
       this.currentMetrics = {
         isThinking: false,
         lastDepth: result.depthReached,
@@ -133,6 +163,8 @@ export class QuelhasAIClient {
         lastTTHitRate: result.ttHitRate,
         lastScore: result.score,
         fromBook: result.fromBook,
+        lastEngine: 'ts-fallback',
+        lastUsedWasm: false,
       };
       this.options.onMetricsUpdate?.(this.currentMetrics);
       return result.bestMove;
@@ -145,11 +177,34 @@ export class QuelhasAIClient {
       tabuleiro: state.tabuleiro,
       orientacaoIA: minhaOrientacao,
       orientacaoAdv,
+      timeBudgetMs,
       difficulty,
     };
 
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, {
+        resolve,
+        reject,
+        runInline: () => {
+          const result = searchBestMove(state.tabuleiro, minhaOrientacao, {
+            ...preset,
+            timeBudgetMs,
+          });
+          this.currentMetrics = {
+            isThinking: false,
+            lastDepth: result.depthReached,
+            lastNodes: result.nodesSearched,
+            lastTimeMs: result.elapsedMs,
+            lastTTHitRate: result.ttHitRate,
+            lastScore: result.score,
+            fromBook: result.fromBook,
+            lastEngine: 'ts-fallback',
+            lastUsedWasm: false,
+          };
+          this.options.onMetricsUpdate?.(this.currentMetrics);
+          return result.bestMove;
+        },
+      });
       this.worker!.postMessage(req);
     });
   }

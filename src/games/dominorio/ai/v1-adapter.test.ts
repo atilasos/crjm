@@ -10,6 +10,8 @@ import {
 } from './v1-adapter';
 import { DIFFICULTY_PRESETS } from './types';
 
+const VAGUE_JARGON = /\b(zona|corredor|paridade|região)\b/i;
+
 function buildRequest(
   state: DominorioState,
   level: DifficultyLevel = 3,
@@ -46,6 +48,12 @@ describe('DominorioV1Adapter', () => {
     expect(response.stats.elapsedMs).toBeGreaterThanOrEqual(0);
     expect(response.stats.usedWasm).toBe(false);
     expect(response.stats.engine).toBe('ts-fallback');
+    expect(response.warnings).toContain('engine:inline-ts');
+    expect(response.explainTags).toContain('trust:inline-ts');
+    expect(response.explainText).not.toMatch(VAGUE_JARGON);
+    expect(response.topMoves.every((move) => !move.reasonShort || !VAGUE_JARGON.test(move.reasonShort))).toBe(
+      true,
+    );
   });
 
   test('returns null bestMove and empty topMoves when no legal moves exist', async () => {
@@ -102,6 +110,7 @@ describe('DominorioV1Adapter', () => {
     expect(response.criticalThreats?.[0].counterMove).toEqual(response.topMoves[0].move);
     expect(response.pedagogy?.errorCode).toBe('E-DO-02');
     expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
+    expect(response.explainText).not.toMatch(VAGUE_JARGON);
   });
 
   test('classifies endgame instability as E-DO-03', async () => {
@@ -133,19 +142,32 @@ describe('DominorioV1Adapter', () => {
 
     expect(response.pedagogy?.errorCode).toBe('E-DO-03');
     expect(response.explainText).toContain('final');
+    expect(response.explainText).not.toMatch(VAGUE_JARGON);
+  });
+
+  test('flags opening-book decisions as trust signals without vague wording', async () => {
+    const adapter = new DominorioV1Adapter();
+    const state = criarEstadoInicial('vs-computador');
+
+    const response = await adapter.compute(buildRequest(state, 1));
+    adapter.terminate();
+
+    expect(response.warnings).toContain('opening-book');
+    expect(response.explainTags).toContain('opening-book');
+    expect(response.explainText).not.toMatch(VAGUE_JARGON);
   });
 
   test('maps core levels to legacy difficulty buckets', () => {
-    expect(mapLevelToLegacyDifficulty(1)).toBe('easy');
+    expect(mapLevelToLegacyDifficulty(1)).toBe('beginner');
     expect(mapLevelToLegacyDifficulty(2)).toBe('easy');
     expect(mapLevelToLegacyDifficulty(3)).toBe('medium');
     expect(mapLevelToLegacyDifficulty(4)).toBe('hard');
     expect(mapLevelToLegacyDifficulty(5)).toBe('hardPlus');
   });
 
-  test('keeps easy levels separated', () => {
+  test('keeps beginner and easy levels separated', () => {
     expect(resolveLegacyTimeBudgetMs(2, 'easy')).toBeGreaterThan(
-      resolveLegacyTimeBudgetMs(1, 'easy'),
+      resolveLegacyTimeBudgetMs(1, 'beginner'),
     );
   });
 

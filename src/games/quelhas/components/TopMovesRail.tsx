@@ -1,17 +1,13 @@
 import type { AIMoveCandidate } from '../../../ai-core';
-import type { Domino } from '../types';
+import type { Segmento } from '../types';
 
 interface TopMovesRailProps {
-  moves: AIMoveCandidate<Domino>[];
+  moves: AIMoveCandidate<Segmento>[];
   isLoading?: boolean;
 }
 
-function formatMove(move: Domino): string {
-  const l1 = move.pos1.linha + 1;
-  const c1 = move.pos1.coluna + 1;
-  const l2 = move.pos2.linha + 1;
-  const c2 = move.pos2.coluna + 1;
-  return `(${l1},${c1})-(${l2},${c2})`;
+function formatMove(move: Segmento): string {
+  return `L${move.inicio.linha + 1} C${move.inicio.coluna + 1} • ${move.orientacao} • ${move.comprimento}`;
 }
 
 export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
@@ -38,9 +34,8 @@ export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
             key={`${candidate.rank}-${formatMove(candidate.move)}`}
             className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-700"
           >
-            <p className="font-semibold text-slate-900">Opção #{candidate.rank}</p>
-            <p className="mt-1 text-[11px] text-slate-500">
-              Segmento: {formatMove(candidate.move)}
+            <p className="font-semibold text-slate-900">
+              #{candidate.rank} {formatMove(candidate.move)}
             </p>
             {candidate.reasonShort && <p className="mt-1">{candidate.reasonShort}</p>}
           </div>

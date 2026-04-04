@@ -7,7 +7,7 @@ import type {
   AIPedagogyV1,
 } from '../../../ai-core';
 import type { DominorioState, Domino } from '../types';
-import { DominorioAIClient, type AIClientOptions } from './ai-client';
+import { DominorioAIClient, type AIClientOptions, type AIRuntimeInfo } from './ai-client';
 import { DIFFICULTY_PRESETS, type AIDifficulty } from './types';
 import { squareIndex } from './types';
 import * as bitboard from './bitboard';
@@ -55,6 +55,7 @@ export class DominorioV1Adapter {
       this.client.metrics.lastTimeMs,
       performance.now() - startedAt,
     );
+    const runtimeInfo = this.client.runtimeInfo;
 
     return {
       version: '1.0',
@@ -63,7 +64,8 @@ export class DominorioV1Adapter {
       mode: request.mode,
       bestMove,
       topMoves,
-      explainText: buildExplainText(bestMove, topMoves, pedagogy),
+      explainText: buildExplainText(bestMove, topMoves, pedagogy, runtimeInfo.fromBook),
+      explainTags: buildExplainTags(runtimeInfo),
       confidence: topMoves[0]?.confidence,
       criticalThreats,
       pedagogy,
@@ -71,9 +73,10 @@ export class DominorioV1Adapter {
         elapsedMs,
         depth: this.client.metrics.lastDepth || undefined,
         nodes: this.client.metrics.lastNodes || undefined,
-        usedWasm: false,
-        engine: 'ts-fallback',
+        usedWasm: runtimeInfo.usedWasm,
+        engine: runtimeInfo.engine,
       },
+      warnings: buildWarnings(runtimeInfo),
     };
   }
 
@@ -101,7 +104,8 @@ export async function computeDominorioV1(
 }
 
 export function mapLevelToLegacyDifficulty(level: DifficultyLevel): AIDifficulty {
-  if (level <= 2) return 'easy';
+  if (level === 1) return 'beginner';
+  if (level === 2) return 'easy';
   if (level === 3) return 'medium';
   if (level === 4) return 'hard';
   return 'hardPlus';
@@ -234,12 +238,21 @@ function buildTopMoves(
       rank: (idx + 1) as 1 | 2 | 3,
       score,
       confidence,
-      reasonShort:
-        idx === 0
-          ? 'Mantém mais mobilidade imediata.'
-          : 'Alternativa sólida para continuar a pressão.',
+      reasonShort: buildReasonShort(idx, topAnchors.length),
     };
   });
+}
+
+function buildReasonShort(index: number, totalMoves: number): string {
+  if (index === 0) {
+    return totalMoves <= 2
+      ? 'É a opção mais segura para não ficares sem resposta no próximo turno.'
+      : 'É a opção que melhor preserva escolhas para a tua próxima jogada.';
+  }
+
+  return totalMoves <= 2
+    ? 'Serve de plano B se quiseres manter uma resposta válida.'
+    : 'É uma alternativa estável caso não escolhas a opção principal.';
 }
 
 function normalizeConfidence(score: number, maxScore: number, minScore: number): number {
@@ -331,20 +344,45 @@ function buildExplainText(
   bestMove: Domino | null,
   topMoves: AIMoveCandidate<Domino>[],
   pedagogy: AIPedagogyV1,
+  fromBook: boolean,
 ): string {
   if (!bestMove) {
     return 'Sem jogadas válidas nesta posição. Tenta proteger mais espaço no turno anterior.';
   }
 
+  if (fromBook) {
+    return 'Estás no início da partida. Escolhe uma jogada simples que te deixe várias respostas para o turno seguinte.';
+  }
+
   if (pedagogy.errorCode === 'E-DO-03') {
-    return 'Entraste no final com risco alto. Prioriza jogadas que mantenham duas respostas para o próximo turno.';
+    return 'Estás a entrar no final. Escolhe a jogada que te deixe pelo menos duas respostas no próximo turno.';
   }
 
   if (pedagogy.errorCode === 'E-DO-02') {
-    return 'Estás a entregar demasiado corredor ao adversário. Fecha a zona mais aberta antes de expandir.';
+    return topMoves.length <= 1
+      ? 'Tens pouca margem neste turno. Escolhe primeiro a jogada que te mantém vivo no turno seguinte.'
+      : 'Tens poucas opções fortes. Fecha primeiro a abertura mais perigosa antes de alargares o tabuleiro.';
   }
 
   return topMoves.length <= 1
-    ? 'A posição ficou apertada para ti. Joga para manter mobilidade no turno seguinte.'
-    : 'A paridade desta região pode virar contra ti. Mantém o número de opções equilibrado entre zonas.';
+    ? 'A posição está apertada. Joga para garantir uma resposta válida no turno seguinte.'
+    : 'Escolhe uma jogada que te deixe várias respostas simples no turno seguinte.';
+}
+
+function buildWarnings(runtimeInfo: AIRuntimeInfo): string[] | undefined {
+  const warnings: string[] = [];
+
+  if (runtimeInfo.fromBook) {
+    warnings.push('opening-book');
+  }
+
+  if (runtimeInfo.engine === 'ts-fallback') {
+    warnings.push('engine:inline-ts');
+  }
+
+  return warnings.length > 0 ? warnings : undefined;
+}
+
+function buildExplainTags(runtimeInfo: AIRuntimeInfo): string[] | undefined {
+  return runtimeInfo.fromBook ? ['opening-book', 'trust:inline-ts'] : ['trust:inline-ts'];
 }

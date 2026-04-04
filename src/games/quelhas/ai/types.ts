@@ -23,6 +23,8 @@ export interface AIMetrics {
   lastTTHitRate: number;
   lastScore: number;
   fromBook: boolean;
+  lastEngine?: 'rust-wasm' | 'ts-fallback';
+  lastUsedWasm?: boolean;
 }
 
 export const INITIAL_METRICS: AIMetrics = {
@@ -57,6 +59,8 @@ export type AIResponse =
       ttHitRate: number;
       score: number;
       fromBook: boolean;
+      engine: 'rust-wasm' | 'ts-fallback';
+      usedWasm: boolean;
     }
   | {
       type: 'error';

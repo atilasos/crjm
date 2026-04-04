@@ -10,6 +10,10 @@ import type { GatosCaesState, Posicao } from '../types';
 import type { SearchStats } from './types';
 import { computeBestMove } from './engine';
 
+export interface AIComputeOverrides {
+  timeLimitMs?: number;
+}
+
 let isReady = false;
 
 /**
@@ -27,23 +31,17 @@ export function initAI(): Promise<void> {
  */
 export async function computeMove(
   state: GatosCaesState,
-  difficulty: number = 3
+  difficulty: number = 3,
+  overrides: AIComputeOverrides = {}
 ): Promise<{ move: Posicao | null; stats: SearchStats }> {
-  console.log('[GatosCaesAI] computeMove called', {
-    jogadorAtual: state.jogadorAtual,
-    estado: state.estado,
-    difficulty,
-  });
-
   // Small yield to prevent UI blocking
   await new Promise(resolve => setTimeout(resolve, 0));
 
   // Run computation directly
-  const result = computeBestMove(state, difficulty);
-  console.log('[GatosCaesAI] computeMove result', {
-    move: result.move,
-    nodes: result.stats.nodes,
-    depth: result.stats.depth,
+  const result = computeBestMove(state, difficulty, {
+    ...(typeof overrides.timeLimitMs === 'number' && Number.isFinite(overrides.timeLimitMs)
+      ? { timeLimit: Math.max(1, Math.trunc(overrides.timeLimitMs)) }
+      : {}),
   });
   return result;
 }

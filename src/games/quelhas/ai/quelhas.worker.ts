@@ -178,6 +178,8 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
       ttHitRate: result.ttHitRate,
       score: result.score,
       fromBook: result.fromBook,
+      engine: useWasm ? 'rust-wasm' : 'ts-fallback',
+      usedWasm: useWasm,
     });
   } catch (e) {
     post({
