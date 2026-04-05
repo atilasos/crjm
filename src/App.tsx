@@ -3,6 +3,7 @@ import "./index.css";
 import { Header } from './components/Header';
 import { GameCard } from './components/GameCard';
 import { CampeonatoPage } from './components/CampeonatoPage';
+import { PerfilPage } from './components/PerfilPage';
 import { AchievementPopup } from './components/gamification/AchievementPopup';
 import { GameProgressBars } from './components/gamification/GameProgressBars';
 import { GamificationProvider, useGamification } from './components/gamification/GamificationProvider';
@@ -13,7 +14,7 @@ import { AtariGoGame } from './games/atari-go/AtariGoGame';
 import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
 
-type Pagina = 'inicio' | 'campeonato' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+type Pagina = 'inicio' | 'perfil' | 'campeonato' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
 
 export function App() {
   return (
@@ -31,6 +32,10 @@ function AppContent() {
 
   if (paginaAtual === 'campeonato') {
     return <CampeonatoPage onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'perfil') {
+    return <PerfilPage onVoltar={voltarInicio} />;
   }
 
   if (paginaAtual === 'gatos-caes') {
@@ -77,6 +82,13 @@ function AppContent() {
           <p className="text-lg text-white/75 max-w-xl mx-auto">
             Pratica todos os jogos oficiais do campeonato — do 1.º Ciclo ao Secundário!
           </p>
+          <button
+            type="button"
+            onClick={() => setPaginaAtual('perfil')}
+            className="mt-6 rounded-2xl border border-white/30 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/20"
+          >
+            Ver perfil e progresso
+          </button>
         </section>
 
         {/* Cartões dos jogos */}
