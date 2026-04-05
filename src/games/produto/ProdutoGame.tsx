@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
+import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { HintLegend } from '../../components/tutor/HintLegend';
@@ -78,6 +79,7 @@ function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H
 }
 
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
+  const { recordGameCompleted } = useGamification();
   const [state, setState] = useState<ProdutoState>(() =>
     criarEstadoInicial('vs-computador')
   );
@@ -91,6 +93,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const [tutorLoading, setTutorLoading] = useState(false);
   const aiClientRef = useMemo(() => new ProdutoAIClient({ onMetricsUpdate: setAiMetrics }), []);
   const tutorAdapterRef = useMemo(() => new ProdutoV1Adapter(), []);
+  const awardedResultRef = useRef<string | null>(null);
 
   // Gerar posições do tabuleiro uma vez
   const posicoes = useMemo(() => gerarPosicoesValidas(), []);
@@ -158,6 +161,22 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       setMostrarVencedor(true);
     }
   }, [state.estado]);
+
+  useEffect(() => {
+    if (state.estado === 'a-jogar') {
+      awardedResultRef.current = null;
+      return;
+    }
+    if (awardedResultRef.current === state.estado) return;
+
+    const humanWon =
+      state.modo === 'vs-computador' &&
+      ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
+        (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
+
+    recordGameCompleted('produto', humanWon);
+    awardedResultRef.current = state.estado;
+  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   // Atualizar cor selecionada baseado no jogador atual
   useEffect(() => {

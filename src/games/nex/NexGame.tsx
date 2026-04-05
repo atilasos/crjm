@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
+import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { HintLegend } from '../../components/tutor/HintLegend';
@@ -102,6 +103,7 @@ function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H
 }
 
 export function NexGame({ onVoltar }: NexGameProps) {
+  const { recordGameCompleted } = useGamification();
   const [state, setState] = useState<NexState>(() => 
     criarEstadoInicial('vs-computador')
   );
@@ -116,6 +118,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const [tutorLoading, setTutorLoading] = useState(false);
   const aiClientRef = useRef<NexAIClient | null>(null);
   const tutorAdapterRef = useRef<NexV1Adapter | null>(null);
+  const awardedResultRef = useRef<string | null>(null);
   
   // Estado para pan/drag do tabuleiro
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -285,6 +288,22 @@ export function NexGame({ onVoltar }: NexGameProps) {
       setMostrarVencedor(true);
     }
   }, [state.estado]);
+
+  useEffect(() => {
+    if (state.estado === 'a-jogar') {
+      awardedResultRef.current = null;
+      return;
+    }
+    if (awardedResultRef.current === state.estado) return;
+
+    const humanWon =
+      state.modo === 'vs-computador' &&
+      ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
+        (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
+
+    recordGameCompleted('nex', humanWon);
+    awardedResultRef.current = state.estado;
+  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;

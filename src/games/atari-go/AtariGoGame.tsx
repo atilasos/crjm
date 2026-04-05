@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
+import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { HintLegend } from '../../components/tutor/HintLegend';
@@ -84,6 +85,7 @@ function getPostGameTurningPoint(
 }
 
 export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
+  const { recordGameCompleted, recordReviewCompleted } = useGamification();
   const [state, setState] = useState<AtariGoState>(() =>
     criarEstadoInicial('vs-computador')
   );
@@ -98,6 +100,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
   const aiRef = useRef<AtariGoAIClient | null>(null);
   const tutorAdapterRef = useRef<AtariGoV1Adapter | null>(null);
   const tutorRequestSeqRef = useRef(0);
+  const awardedResultRef = useRef<string | null>(null);
+  const [reviewRewarded, setReviewRewarded] = useState(false);
 
   useEffect(() => {
     aiRef.current = new AtariGoAIClient({
@@ -247,6 +251,23 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       setMostrarVencedor(true);
     }
   }, [state.estado]);
+
+  useEffect(() => {
+    if (state.estado === 'a-jogar') {
+      awardedResultRef.current = null;
+      setReviewRewarded(false);
+      return;
+    }
+    if (awardedResultRef.current === state.estado) return;
+
+    const humanWon =
+      state.modo === 'vs-computador' &&
+      ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
+        (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
+
+    recordGameCompleted('atari-go', humanWon);
+    awardedResultRef.current = state.estado;
+  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
@@ -553,6 +574,18 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
             <p className="mt-1 font-medium">
               Jogada recomendada: {formatMove(postGameTurningPoint.bestMove ?? postGameTurningPoint.playedMove)}
             </p>
+            <button
+              type="button"
+              disabled={reviewRewarded}
+              onClick={() => {
+                if (reviewRewarded) return;
+                recordReviewCompleted('atari-go');
+                setReviewRewarded(true);
+              }}
+              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+            </button>
           </section>
         )}
       </div>

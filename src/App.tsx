@@ -3,6 +3,9 @@ import "./index.css";
 import { Header } from './components/Header';
 import { GameCard } from './components/GameCard';
 import { CampeonatoPage } from './components/CampeonatoPage';
+import { AchievementPopup } from './components/gamification/AchievementPopup';
+import { GameProgressBars } from './components/gamification/GameProgressBars';
+import { GamificationProvider, useGamification } from './components/gamification/GamificationProvider';
 import { GatosCaesGame } from './games/gatos-caes/GatosCaesGame';
 import { DominorioGame } from './games/dominorio/DominorioGame';
 import { QuelhasGame } from './games/quelhas/QuelhasGame';
@@ -13,7 +16,16 @@ import { NexGame } from './games/nex/NexGame';
 type Pagina = 'inicio' | 'campeonato' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
 
 export function App() {
+  return (
+    <GamificationProvider>
+      <AppContent />
+    </GamificationProvider>
+  );
+}
+
+function AppContent() {
   const [paginaAtual, setPaginaAtual] = useState<Pagina>('inicio');
+  const { activePopup, dismissPopup, profile } = useGamification();
 
   const voltarInicio = () => setPaginaAtual('inicio');
 
@@ -48,6 +60,7 @@ export function App() {
   return (
     <div className="min-h-screen">
       <Header />
+      <AchievementPopup achievement={activePopup} onClose={dismissPopup} />
       
       <main className="max-w-5xl mx-auto px-4 py-8">
         {/* Hero Section */}
@@ -132,6 +145,10 @@ export function App() {
               onClick={() => setPaginaAtual('nex')}
             />
           </div>
+        </section>
+
+        <section className="mb-12">
+          <GameProgressBars gameProgress={profile.gameProgress} />
         </section>
 
         {/* Informações */}

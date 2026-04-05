@@ -34,6 +34,13 @@ export const STARTER_ACHIEVEMENTS: AchievementDefinition[] = [
     xp: 10,
   },
   {
+    id: 'first_win',
+    title: 'Primeira Vitória',
+    description: 'Ganha a tua primeira partida contra o desafio proposto.',
+    category: 'onboarding',
+    xp: 12,
+  },
+  {
     id: 'first_review',
     title: 'Primeira Revisão',
     description: 'Termina uma revisão pós-jogo completa.',

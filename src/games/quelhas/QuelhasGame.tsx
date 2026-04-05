@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
+import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { HintLegend } from '../../components/tutor/HintLegend';
@@ -91,6 +92,7 @@ function getSuggestedAction(
 }
 
 export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
+  const { recordGameCompleted, recordReviewCompleted } = useGamification();
   const [state, setState] = useState<QuelhasState>(() => 
     criarEstadoInicial('vs-computador')
   );
@@ -109,6 +111,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
   const aiClientRef = useRef<QuelhasAIClient | null>(null);
   const tutorAdapterRef = useRef<QuelhasV1Adapter | null>(null);
+  const awardedResultRef = useRef<string | null>(null);
+  const [reviewRewarded, setReviewRewarded] = useState(false);
 
   // Inicializar cliente de IA (Worker) uma vez
   useEffect(() => {
@@ -258,6 +262,23 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       setMostrarVencedor(true);
     }
   }, [state.estado]);
+
+  useEffect(() => {
+    if (state.estado === 'a-jogar') {
+      awardedResultRef.current = null;
+      setReviewRewarded(false);
+      return;
+    }
+    if (awardedResultRef.current === state.estado) return;
+
+    const humanWon =
+      state.modo === 'vs-computador' &&
+      ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
+        (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
+
+    recordGameCompleted('quelhas', humanWon);
+    awardedResultRef.current = state.estado;
+  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   // Limpar posição inicial quando muda o jogador
   useEffect(() => {
@@ -608,6 +629,18 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
                 </div>
               ))}
             </div>
+            <button
+              type="button"
+              disabled={reviewRewarded}
+              onClick={() => {
+                if (reviewRewarded) return;
+                recordReviewCompleted('quelhas');
+                setReviewRewarded(true);
+              }}
+              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+            </button>
           </section>
         )}
       </div>
