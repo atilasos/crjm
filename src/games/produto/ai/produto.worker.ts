@@ -1,5 +1,6 @@
 import type { AIRequest, AIResponse, ProdutoPackedMove } from './types';
 import { DIFFICULTY_PRESETS } from './types';
+import { chooseFallbackPackedMove } from './fallback-engine';
 
 function post(msg: AIResponse) {
   self.postMessage(msg);
@@ -33,40 +34,6 @@ async function init(): Promise<void> {
     initDone = true;
     post({ type: 'ready', usedWasm: useWasm });
   }
-}
-
-function randomFallbackMove(req: Extract<AIRequest, { type: 'choose' }>): ProdutoPackedMove | null {
-  // Fallback simples: escolhe posições aleatórias válidas e cores aleatórias.
-  // (a UI aplica a jogada e valida a abertura via regras existentes)
-  const preset = DIFFICULTY_PRESETS[req.difficulty];
-  void preset; // reservado para evoluir a estratégia de fallback
-
-  // Reconstruir lista de vazios a partir das máscaras (61 bits)
-  const black = (BigInt(req.state.blackHi) << 32n) | BigInt(req.state.blackLo);
-  const white = (BigInt(req.state.whiteHi) << 32n) | BigInt(req.state.whiteLo);
-  const occupied = black | white;
-  const FULL = (1n << 61n) - 1n;
-  const empty = FULL & ~occupied;
-  if (empty === 0n) return null;
-
-  const empties: number[] = [];
-  for (let i = 0; i < 61; i++) {
-    if (((empty >> BigInt(i)) & 1n) === 1n) empties.push(i);
-  }
-  const rand = () => Math.random();
-
-  const posA = empties[Math.floor(rand() * empties.length)];
-  const colorA = (rand() < 0.5 ? 0 : 1) as 0 | 1;
-
-  if (req.state.primeiraJogada) {
-    return { posA, colorA, posB: -1, colorB: colorA };
-  }
-
-  if (empties.length < 2) return null;
-  let posB = empties[Math.floor(rand() * (empties.length - 1))];
-  if (posB === posA) posB = empties[empties.length - 1];
-  const colorB = (rand() < 0.5 ? 0 : 1) as 0 | 1;
-  return { posA, colorA, posB, colorB };
 }
 
 const initPromise = init().catch(e => console.error('[ProdutoAI] init failed:', e));
@@ -106,13 +73,14 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
         explain,
       });
     } else {
-      const mv = randomFallbackMove(req);
+      const mv = chooseFallbackPackedMove(req.state, req.difficulty, req.seed ?? (Date.now() >>> 0));
       post({
         type: 'result',
         id: req.id,
         move: mv,
         elapsedMs: performance.now() - start,
         usedWasm: false,
+        explain: mv ? 'Fallback estratégico TypeScript' : 'Sem jogada estratégica disponível',
       });
     }
   } catch (e) {

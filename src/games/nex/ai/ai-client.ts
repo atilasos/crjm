@@ -1,6 +1,7 @@
 import type { NexState } from '../types';
 import type { AIDifficulty, AIRequest, AIResponse, AIMetrics, NexAiAction } from './types';
 import { DIFFICULTY_PRESETS, INITIAL_METRICS, isValidAiAction, packState } from './types';
+import { chooseFallbackActionFromState } from './fallback-engine';
 
 export interface AIClientOptions {
   onReady?: () => void;
@@ -91,9 +92,11 @@ export class NexAIClient {
     void preset;
 
     if (!this.worker) {
+      const fallbackAction = chooseFallbackActionFromState(state, difficulty);
       this.currentMetrics = { ...INITIAL_METRICS };
+      this.currentMetrics.lastExplain = 'Fallback estratégico local';
       this.options.onMetricsUpdate?.(this.currentMetrics);
-      return null;
+      return fallbackAction;
     }
 
     const id = this.nextId++;
@@ -138,4 +141,3 @@ export class NexAIClient {
     return this.currentMetrics;
   }
 }
-

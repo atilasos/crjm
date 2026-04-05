@@ -2,6 +2,7 @@ import type { ProdutoState, Posicao } from '../types';
 import { gerarPosicoesValidas, posToKey } from '../types';
 import type { AIRequest, AIResponse, AIDifficulty, AIMetrics, ProdutoPackedMove } from './types';
 import { buildIndexMaps, packState, DIFFICULTY_PRESETS, INITIAL_METRICS } from './types';
+import { chooseFallbackMoveFromState, packMove } from './fallback-engine';
 
 export interface AIClientOptions {
   onReady?: () => void;
@@ -116,12 +117,14 @@ export class ProdutoAIClient {
 
     const preset = DIFFICULTY_PRESETS[difficulty];
     void preset; // reservado para presets adicionais no futuro
+    const requestSeed = (Date.now() >>> 0) + this.nextId;
 
     if (!this.worker) {
-      // Fallback mínimo: sem worker, sem WASM (deixar o jogo usar `jogadaComputador`)
+      const fallbackMove = chooseFallbackMoveFromState(state, difficulty, requestSeed);
       this.currentMetrics = { ...INITIAL_METRICS };
+      this.currentMetrics.lastExplain = 'Fallback estratégico local';
       this.options.onMetricsUpdate?.(this.currentMetrics);
-      return null;
+      return fallbackMove ? packMove(fallbackMove) : null;
     }
 
     const id = this.nextId++;
@@ -130,7 +133,7 @@ export class ProdutoAIClient {
       id,
       state: packState(state, INDEX_MAPS.keyToIdx),
       difficulty,
-      seed: (Date.now() >>> 0) + id,
+      seed: requestSeed,
     };
 
     return new Promise((resolve, reject) => {

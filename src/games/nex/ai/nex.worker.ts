@@ -1,5 +1,6 @@
 import type { AIRequest, AIResponse, NexAiAction } from './types';
 import { DIFFICULTY_PRESETS } from './types';
+import { chooseFallbackActionFromPacked } from './fallback-engine';
 
 function post(msg: AIResponse) {
   self.postMessage(msg);
@@ -52,12 +53,14 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
         usedWasm: true,
       });
     } else {
+      const action = chooseFallbackActionFromPacked(req.state, req.difficulty);
       post({
         type: 'result',
         id: req.id,
-        action: null,
+        action,
         elapsedMs: performance.now() - start,
         usedWasm: false,
+        explain: action ? 'Fallback estratégico TypeScript' : 'Sem ação estratégica disponível',
       });
     }
   } catch (e) {
