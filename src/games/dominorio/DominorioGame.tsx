@@ -8,7 +8,7 @@ import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
-import { DominorioState, Posicao, Domino } from './types';
+import type { DominorioState, Posicao, Domino } from './types';
 import {
   criarEstadoInicial,
   atualizarPreview,
@@ -16,7 +16,7 @@ import {
   getDominoPreview,
   jogadaComputador,
 } from './logic';
-import { GameMode, Player } from '../../types';
+import type { GameMode, Player } from '../../types';
 import {
   DominorioAIClient,
   DominorioV1Adapter,
@@ -106,6 +106,20 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   }
 
   return 'border-slate-300 bg-slate-50 text-slate-800';
+}
+
+function isPartOfDomino(move: Domino | null | undefined, linha: number, coluna: number): boolean {
+  if (!move) return false;
+  return (
+    (move.pos1.linha === linha && move.pos1.coluna === coluna) ||
+    (move.pos2.linha === linha && move.pos2.coluna === coluna)
+  );
+}
+
+function normalizeDifficultyForPlayerInfo(level: AIDifficulty): 'easy' | 'medium' | 'hard' {
+  if (level === 'beginner' || level === 'easy') return 'easy';
+  if (level === 'medium') return 'medium';
+  return 'hard';
 }
 
 export function DominorioGame({ onVoltar }: DominorioGameProps) {
@@ -419,7 +433,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
   // Obter cor da célula
   const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+    const celula = state.tabuleiro[linha]?.[coluna] ?? 'vazia';
     const preview = isPreview(linha, coluna);
     const recommended = tutorResponse?.bestMove && isPartOfDomino(tutorResponse.bestMove, linha, coluna);
     const threatMove = criticalThreat?.counterMove;
@@ -472,8 +486,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
           // AI props
-          difficulty={difficulty}
-          onChangeDifficulty={handleChangeDifficulty}
+          difficulty={normalizeDifficultyForPlayerInfo(difficulty)}
+          onChangeDifficulty={(level) => handleChangeDifficulty(level === 'easy' ? 'easy' : level === 'medium' ? 'medium' : 'hard')}
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
@@ -496,7 +510,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
                     className={getCelulaClasses(linhaIdx, colunaIdx)}
                   >
                     {/* Ponto do dominó */}
-                    {state.tabuleiro[linhaIdx][colunaIdx] !== 'vazia' && (
+                    {(state.tabuleiro[linhaIdx]?.[colunaIdx] ?? 'vazia') !== 'vazia' && (
                       <div className="w-2 h-2 rounded-full bg-white/50"></div>
                     )}
                   </button>
