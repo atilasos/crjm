@@ -2,8 +2,11 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
+import { HintLegend } from '../../components/tutor/HintLegend';
+import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { DominorioState, Posicao, Domino } from './types';
 import {
   criarEstadoInicial,
@@ -397,6 +400,9 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha][coluna];
     const preview = isPreview(linha, coluna);
+    const recommended = tutorResponse?.bestMove && isPartOfDomino(tutorResponse.bestMove, linha, coluna);
+    const threatMove = criticalThreat?.counterMove;
+    const threatened = threatMove && isPartOfDomino(threatMove, linha, coluna);
 
     let classes =
       'aspect-square rounded-md flex items-center justify-center transition-all duration-150 ';
@@ -414,6 +420,12 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       classes += 'bg-pink-500';
     } else {
       classes += 'bg-cyan-500';
+    }
+
+    if (recommended) {
+      classes += ' ring-4 ring-amber-400 ring-offset-2 ring-offset-white ';
+    } else if (threatened) {
+      classes += ' ring-4 ring-rose-400 ring-offset-2 ring-offset-white ';
     }
 
     return classes;
@@ -505,6 +517,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
         {state.estado === 'a-jogar' && !isVezDaIA && (
           <div className="space-y-3">
+            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
               insight={
                 tutorResponse?.explainText ||

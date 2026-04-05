@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
+import { HintLegend } from '../../components/tutor/HintLegend';
+import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { gerarPosicoesValidas, posToKey, LADO_TABULEIRO } from './types';
 import type { ProdutoState, Posicao, JogadaDupla } from './types';
@@ -287,14 +290,23 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
     const isVazia = celula === 'vazia';
     const podeCelula = isVazia && state.estado === 'a-jogar' && isVezDoHumano;
+    const isRecommended =
+      tutorResponse?.bestMove &&
+      (posToKey(tutorResponse.bestMove.pos1) === key ||
+        (tutorResponse.bestMove.pos2 && posToKey(tutorResponse.bestMove.pos2) === key));
+    const threatMove = criticalThreat?.counterMove;
+    const isThreat =
+      threatMove &&
+      (posToKey(threatMove.pos1) === key ||
+        (threatMove.pos2 && posToKey(threatMove.pos2) === key));
 
     return (
       <g key={key} onClick={() => podeCelula && handleCellClick(pos)} style={{ cursor: podeCelula ? 'pointer' : 'default' }}>
         <polygon
           points={pontos.join(' ')}
           fill={celula === 'vazia' ? '#f5f5f5' : celula === 'preta' ? '#1f2937' : '#f9fafb'}
-          stroke={isPrimeiraJogadaEmCurso ? '#10b981' : '#9ca3af'}
-          strokeWidth={isPrimeiraJogadaEmCurso ? 3 : 1.5}
+          stroke={isRecommended ? '#f59e0b' : isThreat ? '#f43f5e' : isPrimeiraJogadaEmCurso ? '#10b981' : '#9ca3af'}
+          strokeWidth={isRecommended || isThreat ? 4 : isPrimeiraJogadaEmCurso ? 3 : 1.5}
           className={podeCelula ? 'hover:fill-gray-200 transition-colors' : ''}
         />
         {celula !== 'vazia' && (
@@ -367,6 +379,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
           <div className="space-y-3">
+            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
               insight={
                 tutorResponse?.explainText ??

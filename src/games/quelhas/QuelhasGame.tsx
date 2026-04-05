@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
+import { HintLegend } from '../../components/tutor/HintLegend';
+import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { QuelhasState, Posicao } from './types';
 import { 
@@ -382,6 +385,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     const celula = state.tabuleiro[linha][coluna];
     const preview = isPreview(linha, coluna);
     const inicioSelecionado = isPosicaoInicialSelecionada(linha, coluna);
+    const recommended = tutorResponse?.bestMove
+      ? getCelulasSegmento(tutorResponse.bestMove).some((cell) => cell.linha === linha && cell.coluna === coluna)
+      : false;
+    const threatened = criticalThreat?.counterMove
+      ? getCelulasSegmento(criticalThreat.counterMove).some((cell) => cell.linha === linha && cell.coluna === coluna)
+      : false;
     
     let classes = 'aspect-square rounded-sm flex items-center justify-center transition-all duration-150 text-xs font-bold ';
     
@@ -397,6 +406,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         : 'bg-cyan-400 ring-2 ring-cyan-300 cursor-pointer';
     } else {
       classes += 'bg-gray-200 hover:bg-gray-300 cursor-pointer';
+    }
+
+    if (recommended) {
+      classes += ' ring-4 ring-amber-400 ring-offset-1 ring-offset-white ';
+    } else if (threatened) {
+      classes += ' ring-4 ring-rose-400 ring-offset-1 ring-offset-white ';
     }
     
     return classes;
@@ -540,6 +555,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
 
         {state.estado === 'a-jogar' && !state.trocaDisponivel && isVezDoHumano() && (
           <div className="space-y-3">
+            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
               insight={
                 tutorResponse?.explainText ||

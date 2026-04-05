@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
+import { HintLegend } from '../../components/tutor/HintLegend';
+import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { AtariGoState, Posicao, TAMANHO_TABULEIRO } from './types';
@@ -296,6 +299,10 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     const ultimaJogada = isUltimaJogada(linha, coluna);
     const jogadaValida = isJogadaValidaPos(linha, coluna);
     const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
+    const recommended =
+      tutorResponse?.bestMove?.linha === linha && tutorResponse.bestMove.coluna === coluna;
+    const threatened =
+      criticalThreat?.counterMove?.linha === linha && criticalThreat.counterMove.coluna === coluna;
 
     // Calcular posição das linhas do grid
     const isTop = linha === 0;
@@ -372,6 +379,20 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
               w-[40%] h-[40%] rounded-full bg-green-400 opacity-40 z-10
               hover:opacity-70 transition-opacity"
+          />
+        )}
+
+        {celula === 'vazia' && recommended && (
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+              w-[62%] h-[62%] rounded-full border-4 border-amber-400 z-10"
+          />
+        )}
+
+        {celula === 'vazia' && !recommended && threatened && (
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
+              w-[62%] h-[62%] rounded-full border-4 border-rose-400 z-10"
           />
         )}
       </button>
@@ -496,6 +517,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         {state.estado === 'a-jogar' && !isVezDaIA && (
           <div className="space-y-3">
+            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
               insight={
                 tutorResponse?.explainText ||

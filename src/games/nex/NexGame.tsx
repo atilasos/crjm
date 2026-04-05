@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
+import { HintLegend } from '../../components/tutor/HintLegend';
+import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { LADO_TABULEIRO, posToKey } from './types';
 import type { NexState, Posicao, TipoAcao } from './types';
@@ -78,6 +81,19 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'high') return 'border-red-300 bg-red-50 text-red-900';
   if (severity === 'medium') return 'border-amber-300 bg-amber-50 text-amber-900';
   return 'border-slate-300 bg-slate-50 text-slate-800';
+}
+
+function actionTouchesPos(action: NexAiAction | undefined | null, pos: Posicao): boolean {
+  if (!action) return false;
+  if (action.type === 'swap' || action.type === 'recusar_swap') return false;
+  if (action.type === 'colocar') {
+    return (action.own.x === pos.x && action.own.y === pos.y) || (action.neutral.x === pos.x && action.neutral.y === pos.y);
+  }
+  return (
+    (action.n1.x === pos.x && action.n1.y === pos.y) ||
+    (action.n2.x === pos.x && action.n2.y === pos.y) ||
+    (action.sacrifice.x === pos.x && action.sacrifice.y === pos.y)
+  );
 }
 
 function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H3' | undefined {
@@ -556,6 +572,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
           <div className="space-y-3">
+            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
               insight={
                 tutorResponse?.explainText ??
@@ -807,6 +825,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
                     const celula = state.tabuleiro[col][row];
                     const posicao = { x: col, y: row };
                     const selecionada = isPosicaoSelecionada(posicao);
+                    const recomendada = actionTouchesPos(tutorResponse?.bestMove, posicao);
+                    const ameacada = actionTouchesPos(criticalThreat?.counterMove, posicao);
                     
                     // Determinar cor de preenchimento
                     let fill = '#fef3c7'; // amber-100 - vazia
@@ -822,6 +842,14 @@ export function NexGame({ onVoltar }: NexGameProps) {
                     } else if (celula === 'neutra') {
                       fill = '#9ca3af'; // gray-400
                       stroke = '#6b7280';
+                    }
+
+                    if (recomendada) {
+                      stroke = '#f59e0b';
+                      strokeWidth = 3;
+                    } else if (ameacada) {
+                      stroke = '#f43f5e';
+                      strokeWidth = 3;
                     }
                     
                     return (

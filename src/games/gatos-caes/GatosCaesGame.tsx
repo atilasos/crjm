@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1 } from '../../ai-core';
+import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { GameLayout } from '../../components/GameLayout';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
+import { HintLegend } from '../../components/tutor/HintLegend';
+import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { CASAS_CENTRAIS } from './types';
 import type { GatosCaesState, Posicao } from './types';
@@ -252,6 +255,12 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     return state.jogadasValidas.some(j => j.linha === linha && j.coluna === coluna);
   };
 
+  const isTutorRecommended = (linha: number, coluna: number): boolean =>
+    tutorResponse?.bestMove?.linha === linha && tutorResponse.bestMove.coluna === coluna;
+
+  const isTutorThreat = (linha: number, coluna: number): boolean =>
+    criticalThreat?.counterMove?.linha === linha && criticalThreat.counterMove.coluna === coluna;
+
   // Obter classe CSS para cada célula
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha]?.[coluna] ?? 'vazia';
@@ -274,6 +283,12 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       classes += 'ring-3 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
     } else if (celula === 'vazia') {
       classes += 'cursor-not-allowed opacity-70 ';
+    }
+
+    if (isTutorRecommended(linha, coluna)) {
+      classes += 'ring-4 ring-amber-400 ring-offset-2 ring-offset-white ';
+    } else if (isTutorThreat(linha, coluna)) {
+      classes += 'ring-4 ring-rose-400 ring-offset-2 ring-offset-white ';
     }
     
     return classes;
@@ -404,6 +419,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && isVezDoHumano && (
           <div className="space-y-3">
+            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative={false} />
             <TutorHintCard
               insight={
                 tutorResponse?.explainText ||
