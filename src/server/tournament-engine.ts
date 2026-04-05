@@ -573,6 +573,36 @@ function planBracket(tournament: Tournament): void {
     grandFinal.nextMatchIfLose = grandFinalReset.matchNumber; // Se winner do winners perder
     tournament.grandFinalReset = grandFinalReset;
     allMatches.push(grandFinalReset);
+  } else if (n === 2 && winnersChampionMatch) {
+    const grandFinal = createMatch({
+      bracket: 'grandFinal',
+      round: 999,
+      matchNumber: matchNumber++,
+      sourceMatch1: winnersChampionMatch.matchNumber,
+      sourceMatch2: winnersChampionMatch.matchNumber,
+      sourceLabel1: `Vencedor do Jogo #${winnersChampionMatch.matchNumber}`,
+      sourceLabel2: `Perdedor do Jogo #${winnersChampionMatch.matchNumber}`,
+    });
+
+    winnersChampionMatch.nextMatchIfWin = grandFinal.matchNumber;
+    winnersChampionMatch.nextMatchIfLose = grandFinal.matchNumber;
+
+    tournament.grandFinal = grandFinal;
+    allMatches.push(grandFinal);
+
+    const grandFinalReset = createMatch({
+      bracket: 'grandFinalReset',
+      round: 1000,
+      matchNumber: matchNumber++,
+      sourceMatch1: grandFinal.matchNumber,
+      sourceMatch2: grandFinal.matchNumber,
+      sourceLabel1: 'Vencedor da Grand Final',
+      sourceLabel2: 'Perdedor da Grand Final',
+    });
+
+    grandFinal.nextMatchIfLose = grandFinalReset.matchNumber;
+    tournament.grandFinalReset = grandFinalReset;
+    allMatches.push(grandFinalReset);
   }
 
   // ========================================
@@ -603,15 +633,11 @@ function seedPlayersWithByes(
   players: (TournamentPlayer | null)[],
   bracketSize: number
 ): (TournamentPlayer | null)[] {
-  const result: (TournamentPlayer | null)[] = new Array(bracketSize).fill(null);
   const actualPlayers = players.filter(p => p !== null) as TournamentPlayer[];
+  const result: (TournamentPlayer | null)[] = [...actualPlayers];
 
-  // Colocar jogadores em posições de seed padrão
-  // Para um bracket de 8: posições [0,7,3,4,1,6,2,5] para melhor distribuição
-  const seedOrder = generateSeedOrder(bracketSize);
-
-  for (let i = 0; i < actualPlayers.length; i++) {
-    result[seedOrder[i]] = actualPlayers[i];
+  while (result.length < bracketSize) {
+    result.push(null);
   }
 
   return result;
@@ -864,6 +890,22 @@ function assignPlayerToMatch(
 ): void {
   const playerInfo = { id: player.id, name: player.name, classId: player.classId };
 
+  if (
+    match.sourceMatch1 === sourceMatch.matchNumber &&
+    match.sourceMatch2 === sourceMatch.matchNumber
+  ) {
+    if (!match.player1) {
+      match.player1 = playerInfo;
+      match.sourceLabel1 = `Vencedor: ${sourceMatch.player1?.name ?? player.name} vs ${sourceMatch.player2?.name ?? player.name}`;
+      return;
+    }
+    if (!match.player2 && match.player1.id !== player.id) {
+      match.player2 = playerInfo;
+      match.sourceLabel2 = `Perdedor: ${sourceMatch.player1?.name ?? player.name} vs ${sourceMatch.player2?.name ?? player.name}`;
+      return;
+    }
+  }
+
   // Determinar qual slot (player1 ou player2) baseado na fonte
   if (match.sourceMatch1 === sourceMatch.matchNumber) {
     match.player1 = playerInfo;
@@ -911,7 +953,51 @@ export function startTournament(tournament: Tournament): boolean {
   // Pré-planear todas as partidas do torneio
   planBracket(tournament);
 
+  const initialWinners = tournament.winnersMatches.filter((match) => match.round === 1 && match.result !== 'bye');
+  const roundOneByeWinners = tournament.winnersMatches
+    .filter((match) => match.round === 1 && match.result === 'bye' && match.winnerId)
+    .map((match) => match.winnerId!)
+    .filter(Boolean);
+
+  tournament.winnersMatches = initialWinners;
+  tournament.losersMatches = [];
+  tournament.winnersWaiting = [...roundOneByeWinners];
+  tournament.losersWaiting = [];
+  tournament.grandFinal = null;
+  tournament.grandFinalReset = null;
+
   return true;
+}
+
+function isMatchVisible(tournament: Tournament, match: TournamentMatch): boolean {
+  return (
+    tournament.winnersMatches.some((item) => item.id === match.id) ||
+    tournament.losersMatches.some((item) => item.id === match.id) ||
+    tournament.grandFinal?.id === match.id ||
+    tournament.grandFinalReset?.id === match.id
+  );
+}
+
+function removeWaitingPlayer(tournament: Tournament, playerId: string): void {
+  tournament.winnersWaiting = tournament.winnersWaiting.filter((id) => id !== playerId);
+  tournament.losersWaiting = tournament.losersWaiting.filter((id) => id !== playerId);
+}
+
+function revealMatch(tournament: Tournament, match: TournamentMatch): void {
+  if (isMatchVisible(tournament, match)) return;
+
+  if (match.round === 999) {
+    tournament.grandFinal = match;
+  } else if (match.round === 1000) {
+    tournament.grandFinalReset = match;
+  } else if (match.bracket === 'winners') {
+    tournament.winnersMatches.push(match);
+  } else {
+    tournament.losersMatches.push(match);
+  }
+
+  if (match.player1?.id) removeWaitingPlayer(tournament, match.player1.id);
+  if (match.player2?.id) removeWaitingPlayer(tournament, match.player2.id);
 }
 
 // ============================================================================
@@ -940,6 +1026,10 @@ function advancePlayerToNextMatch(
   // Verificar se o próximo match tem ambos jogadores e pode começar
   // (ou se é um bye automático)
   checkAndResolveBye(tournament, nextMatch);
+
+  if (nextMatch.player1 && nextMatch.player2 && nextMatch.phase === 'waiting') {
+    revealMatch(tournament, nextMatch);
+  }
 
   return nextMatch;
 }
@@ -976,13 +1066,20 @@ export function processMatchResult(
   // ========================================
   if (tournament.grandFinal && tournament.grandFinal.id === matchId) {
     // Se o campeão da losers (player2) ganhou, ativar o Grand Final Reset
-    if (winnerId === match.player2!.id && tournament.grandFinalReset) {
+    if (winnerId === match.player2!.id) {
+      const reset =
+        tournament.grandFinalReset ??
+        (match.nextMatchIfLose ? tournament.matchByNumber.get(match.nextMatchIfLose) ?? null : null);
+      if (!reset) {
+        return { affectedPlayerIds, newMatches: [], isGrandFinal: true, isTournamentEnd: true };
+      }
+
       // Ativar o Grand Final Reset pré-criado
-      const reset = tournament.grandFinalReset;
       reset.player1 = { id: winner.id, name: winner.name, classId: winner.classId };
       reset.player2 = { id: loser.id, name: loser.name, classId: loser.classId };
       reset.sourceLabel1 = winner.name;
       reset.sourceLabel2 = loser.name;
+      tournament.grandFinalReset = reset;
       matchesNowReady.push(reset);
       return { affectedPlayerIds, newMatches: matchesNowReady, isGrandFinal: true, isTournamentEnd: false };
     } else {
@@ -1013,6 +1110,8 @@ export function processMatchResult(
   const nextWinMatch = advancePlayerToNextMatch(tournament, match, winner, true);
   if (nextWinMatch && nextWinMatch.player1 && nextWinMatch.player2 && nextWinMatch.phase === 'waiting') {
     matchesNowReady.push(nextWinMatch);
+  } else if (match.nextMatchIfWin) {
+    tournament.winnersWaiting.push(winnerId);
   }
 
   // Se é winners bracket, perdedor vai para losers bracket
@@ -1023,6 +1122,8 @@ export function processMatchResult(
       if (!matchesNowReady.includes(nextLoseMatch)) {
         matchesNowReady.push(nextLoseMatch);
       }
+    } else if (match.nextMatchIfLose) {
+      tournament.losersWaiting.push(loserId);
     }
   }
 
