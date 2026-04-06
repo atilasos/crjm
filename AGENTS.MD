@@ -4,27 +4,27 @@ This file is generated for a live OMX team worker run and is disposable.
 
 ## Worker Identity
 - Team: 1-architect-1-executor-1-criti
-- Worker: worker-3
+- Worker: worker-1
 - Role: executor
 - Leader cwd: /Users/igor/dev/crjm
-- Worktree root: /Users/igor/dev/crjm/.omx/team/1-architect-1-executor-1-criti/worktrees/worker-3
+- Worktree root: /Users/igor/dev/crjm/.omx/team/1-architect-1-executor-1-criti/worktrees/worker-1
 - Team state root: /Users/igor/dev/crjm/.omx/state
-- Inbox path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-3/inbox.md
-- Mailbox path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/mailbox/worker-3.json
+- Inbox path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-1/inbox.md
+- Mailbox path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/mailbox/worker-1.json
 - Leader mailbox path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/mailbox/leader-fixed.json
 - Task directory: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/tasks
-- Worker status path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-3/status.json
-- Worker identity path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-3/identity.json
+- Worker status path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-1/status.json
+- Worker identity path: /Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-1/identity.json
 
 ## Protocol
-1. Read your inbox at `/Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-3/inbox.md`.
+1. Read your inbox at `/Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/workers/worker-1/inbox.md`.
 2. Load the worker skill from the first existing path:
    - `${CODEX_HOME:-~/.codex}/skills/worker/SKILL.md`
    - `/Users/igor/dev/crjm/.codex/skills/worker/SKILL.md`
    - `/Users/igor/dev/crjm/skills/worker/SKILL.md`
 3. Send startup ACK before task work:
 
-   `omx team api send-message --input "{"team_name":"1-architect-1-executor-1-criti","from_worker":"worker-3","to_worker":"leader-fixed","body":"ACK: worker-3 initialized"}" --json`
+   `omx team api send-message --input "{"team_name":"1-architect-1-executor-1-criti","from_worker":"worker-1","to_worker":"leader-fixed","body":"ACK: worker-1 initialized"}" --json`
 
 4. Resolve canonical team state root in this order: `OMX_TEAM_STATE_ROOT` env -> worker identity `team_state_root` -> config/manifest `team_state_root` -> local cwd fallback.
 5. Read task files from `/Users/igor/dev/crjm/.omx/state/team/1-architect-1-executor-1-criti/tasks/task-<id>.json` using bare `task_id` values in APIs.
@@ -33,13 +33,13 @@ This file is generated for a live OMX team worker run and is disposable.
    - `omx team api transition-task-status --json`
    - `omx team api release-task-claim --json` only for rollback to pending
 7. Use mailbox delivery flow:
-   - `omx team api mailbox-list --input "{"team_name":"1-architect-1-executor-1-criti","worker":"worker-3"}" --json`
-   - `omx team api mailbox-mark-delivered --input "{"team_name":"1-architect-1-executor-1-criti","worker":"worker-3","message_id":"<MESSAGE_ID>"}" --json`
+   - `omx team api mailbox-list --input "{"team_name":"1-architect-1-executor-1-criti","worker":"worker-1"}" --json`
+   - `omx team api mailbox-mark-delivered --input "{"team_name":"1-architect-1-executor-1-criti","worker":"worker-1","message_id":"<MESSAGE_ID>"}" --json`
 8. Preserve leader steering via inbox/mailbox nudges; task payload stays in inbox/task JSON, not this file.
 9. Do not pass `workingDirectory` to legacy team_* MCP tools; use `omx team api` CLI interop.
 
 ## Message Protocol
-- Always include `from_worker: "worker-3"`
+- Always include `from_worker: "worker-1"`
 - Send leader messages to `to_worker: "leader-fixed"`
 
 ## Scope Rules
