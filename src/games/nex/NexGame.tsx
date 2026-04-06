@@ -31,6 +31,7 @@ import { NexAIClient, type AIDifficulty, type AIMetrics, DIFFICULTY_PRESETS, INI
 import { withTimeout } from '../../utils/withTimeout';
 import type { NexAiAction } from './ai/types';
 import { NexV1Adapter } from './ai/v1-adapter';
+import { buildQuickReviewItems, resolveHintLevel } from './ai/pedagogy-mvp';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
 
@@ -97,13 +98,8 @@ function actionTouchesPos(action: NexAiAction | undefined | null, pos: Posicao):
   );
 }
 
-function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H3' | undefined {
-  if (!level || level === 'H0') return undefined;
-  return level;
-}
-
 export function NexGame({ onVoltar }: NexGameProps) {
-  const { recordGameCompleted } = useGamification();
+  const { recordGameCompleted, recordReviewCompleted } = useGamification();
   const [state, setState] = useState<NexState>(() => 
     criarEstadoInicial('vs-computador')
   );
@@ -115,10 +111,13 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const [aiReady, setAiReady] = useState(false);
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<NexAiAction, NexState> | null>(null);
+  const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<NexAiAction, NexState>>>([]);
   const [tutorLoading, setTutorLoading] = useState(false);
+  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
   const aiClientRef = useRef<NexAIClient | null>(null);
   const tutorAdapterRef = useRef<NexV1Adapter | null>(null);
   const awardedResultRef = useRef<string | null>(null);
+  const [reviewRewarded, setReviewRewarded] = useState(false);
   
   // Estado para pan/drag do tabuleiro
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
@@ -263,6 +262,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
       .then((response) => {
         if (!cancelled) {
           setTutorResponse(response);
+          setTutorHistory((prev) => [...prev, response]);
+          setHintLevel((current) => resolveHintLevel(response, current));
         }
       })
       .catch((error) => {
@@ -292,6 +293,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   useEffect(() => {
     if (state.estado === 'a-jogar') {
       awardedResultRef.current = null;
+      setReviewRewarded(false);
       return;
     }
     if (awardedResultRef.current === state.estado) return;
@@ -367,6 +369,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setMostrarVencedor(false);
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -377,6 +382,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setHumanPlayer('jogador1');
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -386,6 +394,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setMostrarVencedor(false);
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
+    setTutorHistory([]);
+    setTutorLoading(false);
+    setHintLevel('H2');
   }, []);
 
   // Handlers para pan/drag do tabuleiro
@@ -551,6 +562,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const podeFazerColocacao = podeColocar(state.tabuleiro);
   const podeFazerSubstituicao = podeSubstituir(state.tabuleiro, state.jogadorAtual, state.swapEfetuado);
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const quickReviewItems = buildQuickReviewItems(tutorHistory);
 
   // Determinar o que está em falta na ação
   const getInstrucaoAcao = () => {
@@ -599,7 +611,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
                 'Compara a tua distância de ligação com a do adversário e usa a neutra como bloqueio ativo.'
               }
               suggestedAction={getSuggestedAction(tutorResponse)}
-              hintLevel={normalizeHintLevel(tutorResponse?.pedagogy?.hintLevelSuggested)}
+              hintLevel={hintLevel}
               errorCode={tutorResponse?.pedagogy?.errorCode}
               isLoading={tutorLoading}
             />
@@ -918,6 +930,43 @@ export function NexGame({ onVoltar }: NexGameProps) {
             </div>
           </div>
         </div>
+
+        {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold">Revisão rápida pós-jogo</p>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                2-4 min
+              </span>
+            </div>
+            <p className="mt-1 text-emerald-800">
+              Revê até 2 momentos e confirma onde podias encurtar a tua ligação ou bloquear melhor a do adversário.
+            </p>
+            <div className="mt-2 space-y-2">
+              {quickReviewItems.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                >
+                  <p className="font-medium text-emerald-900">{item.title}</p>
+                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={reviewRewarded}
+              onClick={() => {
+                if (reviewRewarded) return;
+                recordReviewCompleted('nex');
+                setReviewRewarded(true);
+              }}
+              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+            </button>
+          </section>
+        )}
       </div>
 
       {/* Anúncio de vencedor */}
