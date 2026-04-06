@@ -69,3 +69,5 @@ target-test/
 .omx/notepad.md
 .omx/tmux-hook.json
 .omx/setup-scope.json
+.omx/team/
+.playwright-mcp/
