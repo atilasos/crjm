@@ -62,3 +62,10 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # local cargo scratch dirs (dev only)
 target-nex/
 target-test/
+.omx/state/
+.omx/logs/
+.omx/hud-config.json
+.omx/metrics.json
+.omx/notepad.md
+.omx/tmux-hook.json
+.omx/setup-scope.json
