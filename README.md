@@ -145,6 +145,26 @@ Notas sobre o build:
 - O `build.ts` tenta compilar WASM para algumas IAs (ex.: Dominório/Quelhas/Produto). Se não tiveres toolchain Rust, o build continua com fallback TypeScript.
 - Para desativar a parte de WASM: `bun run build -- --skip-wasm`
 
+### Atualizar screenshots do README
+
+As imagens em `docs/screenshots/` podem ser regeneradas com Playwright:
+
+```bash
+# Captura contra a app publicada no URL configurado em BASE_URL
+bun run screenshots
+
+# Captura contra uma instância local em http://localhost:3000
+bun run screenshots:local
+```
+
+## Known Limitations
+
+Resumo operacional atualizado a partir de [`docs/agents/ALL-GAMES-MATURITY-MATRIX.md`](docs/agents/ALL-GAMES-MATURITY-MATRIX.md):
+
+- **Dominório N5>N4** e **Atari Go N4/N5**: o fallback TypeScript não garante ordering monotónico de topo; para esses níveis, a referência é build com WASM ativo no adapter V1.
+- **T4 estabilidade (Dominório)**: repetição TS sem seed ainda diverge acima do alvo; é um artefacto conhecido da ausência de WASM na stack de topo.
+- **Produto e Nex**: o fallback TS é heurístico; os níveis altos mantêm utilidade pedagógica, mas não equivalem à força do motor WASM.
+
 ## 🏆 Servidor de Torneios
 
 O projeto inclui um servidor de torneios que permite organizar campeonatos online com sistema de dupla eliminação.
