@@ -1,0 +1,101 @@
+{
+  "phase": "F3.2",
+  "generatedAt": "2026-03-21T10:23:25.396Z",
+  "checks": [
+    {
+      "id": "dominorio-v1-adapter-tests",
+      "command": "bun test src/games/dominorio/ai/v1-adapter.test.ts",
+      "durationMs": 45,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": " empty topMoves when no legal moves exist [1.09ms]\n(pass) DominorioV1Adapter > emits a minimal critical threat on low-mobility positions [0.71ms]\n(pass) DominorioV1Adapter > classifies endgame instability as E-DO-03 [1.90ms]\n(pass) DominorioV1Adapter > maps core levels to legacy difficulty buckets [0.21ms]\n(pass) DominorioV1Adapter > keeps easy levels separated [0.03ms]\n(pass) DominorioV1Adapter > separates hard budgets between level 4 and 5\n(pass) DominorioV1Adapter > keeps explicit request time budget when provided [0.02ms]\n(pass) DominorioV1Adapter > keeps non-top levels unchanged for stability policy [0.07ms]\n(pass) DominorioV1Adapter > inflates top-level ply count to skip early opening-book randomness [0.07ms]\n\n 10 pass\n 0 fail\n 41 expect() calls\nRan 10 tests across 1 file. [34.00ms]\n"
+    },
+    {
+      "id": "atari-go-v1-adapter-tests",
+      "command": "bun test src/games/atari-go/ai/v1-adapter.test.ts",
+      "durationMs": 297,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "bun test v1.3.4 (5eb2145b)\n",
+      "stderrTail": "\nsrc/games/atari-go/ai/v1-adapter.test.ts:\n(pass) AtariGoV1Adapter > maps state into AIResponseV1 mandatory fields [85.69ms]\n(pass) AtariGoV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [2.83ms]\n(pass) AtariGoV1Adapter > emits critical threat and turning point when opponent has immediate capture [51.70ms]\n(pass) AtariGoV1Adapter > maps core levels to legacy difficulty buckets [5.79ms]\n(pass) AtariGoV1Adapter > forwards separated difficulty buckets for N2 and N3 [111.51ms]\n\n 5 pass\n 0 fail\n 27 expect() calls\nRan 5 tests across 1 file. [285.00ms]\n"
+    },
+    {
+      "id": "dominorio-baseline-lite",
+      "command": "bun run baseline:dominorio",
+      "durationMs": 66314,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[dominorio-baseline] starting {\n  gamesPerMirror: 10,\n  t4ProbeEveryPly: 12,\n  maxPliesPerGame: 48,\n  budgetScale: 0.05,\n  seed: 20260321,\n}\n[dominorio-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/dominorio-baseline/2026-03-21T10-07-41\n[dominorio-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/dominorio-baseline/latest\n[dominorio-baseline] done: games=80, decisions=2376, t1Fails=2, t2Fails=1, t3Pass=true, t4Pass=true\n",
+      "stderrTail": "$ bun run scripts/dominorio-baseline.ts\n"
+    },
+    {
+      "id": "atari-go-baseline-lite",
+      "command": "bun run baseline:atari-go",
+      "durationMs": 943840,
+      "status": "pass",
+      "exitCode": 0,
+      "stdoutTail": "[atari-go-baseline] starting {\n  gamesPerMirror: 10,\n  maxPliesPerGame: 48,\n  budgetScale: 0.05,\n  seed: 20260321,\n}\n[atari-go-baseline] artifacts written to /Users/igor/dev/crjm/artifacts/atari-go-baseline/2026-03-21T10-23-25\n[atari-go-baseline] latest snapshot updated at /Users/igor/dev/crjm/artifacts/atari-go-baseline/latest\n[atari-go-baseline] done: games=80, decisions=2839, nC2Pass=true, nC3Pass=false\n",
+      "stderrTail": "$ bun run scripts/atari-go-ladder-baseline.ts\n"
+    }
+  ],
+  "aggregate": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "ok": true
+  },
+  "dominorioBaseline": {
+    "generatedAt": "2026-03-21T10:23:13.094Z",
+    "games": 40,
+    "decisions": 1186,
+    "t1": {
+      "failedPairs": [
+        "N2>N1",
+        "N5>N4"
+      ],
+      "passAll": false
+    },
+    "t2": {
+      "failedLevels": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "passAll": false
+    },
+    "t3Pass": true,
+    "t4Pass": false,
+    "pedagogy": {
+      "p1Pass": true,
+      "p5Pass": true,
+      "p6Pass": true,
+      "p7Pass": true
+    }
+  },
+  "atariGoBaseline": {
+    "generatedAt": "2026-03-21T10:23:25.345Z",
+    "games": 80,
+    "decisions": 2839,
+    "t1": {
+      "failedPairs": [],
+      "passAll": true
+    },
+    "t2": {
+      "failedLevels": [
+        3,
+        4,
+        5
+      ],
+      "passAll": false
+    },
+    "t2Monotonic": {
+      "failedSteps": [],
+      "passCount": 4,
+      "passRequired": 3,
+      "passAll": false
+    }
+  }
+}
