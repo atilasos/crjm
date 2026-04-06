@@ -731,6 +731,22 @@ console.log(`\n✅ Build completed in ${buildTime}ms\n`);
 // ============================================================================
 
 try {
+  const aiDominorioOut = path.join(outdir, "ai", "dominorio");
+  await mkdir(aiDominorioOut, { recursive: true });
+
+  // Build Dominório worker bundle to dist/ai/dominorio/dominorio.worker.js
+  await buildWorker(path.join(process.cwd(), "src", "games", "dominorio", "ai", "dominorio.worker.ts"), aiDominorioOut);
+
+  // Copy WASM pkg to dist/ai/dominorio/wasm/pkg (worker imports "./wasm/pkg/...")
+  await copyDirIfExists(
+    path.join(process.cwd(), "src", "games", "dominorio", "ai", "wasm", "pkg"),
+    path.join(aiDominorioOut, "wasm", "pkg")
+  );
+} catch (e) {
+  console.log(`⚠️  Failed to build/copy Dominório worker assets: ${e instanceof Error ? e.message : String(e)}\n`);
+}
+
+try {
   const aiQuelhasOut = path.join(outdir, "ai", "quelhas");
   await mkdir(aiQuelhasOut, { recursive: true });
 
