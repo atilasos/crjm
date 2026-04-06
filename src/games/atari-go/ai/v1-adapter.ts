@@ -125,7 +125,7 @@ function buildTopMoves(
     return {
       move,
       score:
-        simulation.isWinningCapture * 1000 +
+        Number(simulation.isWinningCapture) * 1000 +
         simulation.capturedCount * 350 +
         simulation.opponentAtariCount * 40 +
         simulation.ownLiberties * 6 -
@@ -141,8 +141,8 @@ function buildTopMoves(
     return a.move.coluna - b.move.coluna;
   });
 
-  const maxScore = scored[0].score;
-  const minScore = scored[scored.length - 1].score;
+  const maxScore = scored[0]?.score ?? 0;
+  const minScore = scored[scored.length - 1]?.score ?? maxScore;
   const selected: typeof scored = [];
 
   if (bestMove) {

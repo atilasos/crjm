@@ -126,8 +126,8 @@ describe('AtariGoV1Adapter', () => {
 
   test('emits critical threat and turning point when opponent has immediate capture', async () => {
     const state = criarEstadoInicial('vs-computador');
-    state.tabuleiro[0][0] = 'preta';
-    state.tabuleiro[1][0] = 'branca';
+    state.tabuleiro[0]![0] = 'preta';
+    state.tabuleiro[1]![0] = 'branca';
     state.jogadorAtual = 'jogador1';
     state.jogadasValidas = calcularJogadasValidas(state.tabuleiro, state.jogadorAtual);
 
@@ -135,10 +135,10 @@ describe('AtariGoV1Adapter', () => {
     const response = await adapter.compute(buildRequest(state));
 
     expect(response.criticalThreats?.length).toBe(1);
-    expect(response.criticalThreats?.[0].id).toBe('opponent-immediate-capture');
-    expect(response.criticalThreats?.[0].counterMove).toEqual({ linha: 0, coluna: 1 });
+    expect(response.criticalThreats?.[0]?.id).toBe('opponent-immediate-capture');
+    expect(response.criticalThreats?.[0]?.counterMove).toEqual({ linha: 0, coluna: 1 });
     expect(response.turningPoints?.length).toBe(1);
-    expect(response.turningPoints?.[0].patternId).toBe('TP-ATARI-DEFENSE');
+    expect(response.turningPoints?.[0]?.patternId).toBe('TP-ATARI-DEFENSE');
   });
 
   test('maps core levels to legacy difficulty buckets', () => {

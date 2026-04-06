@@ -74,7 +74,7 @@ export function packBoard(tabuleiro: Celula[][]): Uint8Array {
   let k = 0;
   for (let linha = 0; linha < 9; linha++) {
     for (let coluna = 0; coluna < 9; coluna++) {
-      const c = tabuleiro[linha][coluna];
+      const c = tabuleiro[linha]?.[coluna] ?? 'vazia';
       out[k++] = c === 'vazia' ? 0 : c === 'preta' ? 1 : 2;
     }
   }

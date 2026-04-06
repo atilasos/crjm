@@ -41,10 +41,10 @@ async function init(): Promise<void> {
 function unpackBoard(board: Uint8Array): Celula[][] {
   const out: Celula[][] = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => 'vazia' as Celula));
   for (let i = 0; i < 81; i++) {
-    const v = board[i];
+    const v = board[i] ?? 0;
     const linha = Math.floor(i / 9);
     const coluna = i % 9;
-    out[linha][coluna] = v === 1 ? 'preta' : v === 2 ? 'branca' : 'vazia';
+    out[linha]![coluna] = v === 1 ? 'preta' : v === 2 ? 'branca' : 'vazia';
   }
   return out;
 }
