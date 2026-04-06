@@ -1,13 +1,15 @@
 /**
  * AI Client - Interface between UI and AI Worker
- * 
- * Uses inline search (non-blocking via yielding) instead of Web Worker
- * due to Bun dev server limitations. Still runs the TypeScript engine
- * with the same API, and can be upgraded to Worker when needed.
+ *
+ * Uses the Dominório worker when available so the adapter can activate the
+ * Rust/WASM engine in production, while preserving the inline TypeScript
+ * fallback for dev / restricted environments.
  */
 
 import type { 
+  AIError,
   AIRequest, 
+  AIReady,
   AIResponse, 
   AIDifficulty, 
   AIMetrics, 
@@ -24,8 +26,8 @@ export interface AIClientOptions {
 }
 
 export interface AIRuntimeInfo {
-  engine: 'ts-fallback';
-  usedWasm: false;
+  engine: 'rust-wasm' | 'ts-fallback';
+  usedWasm: boolean;
   fromBook: boolean;
 }
 
@@ -70,18 +72,109 @@ function createRandom(
 }
 
 export class DominorioAIClient {
+  private worker: Worker | null = null;
   private isReady = false;
+  private nextId = 1;
   private options: AIClientOptions;
   private currentMetrics: AIMetrics = { ...INITIAL_METRICS };
   private searchAborted = false;
+  private pending = new Map<
+    number,
+    {
+      side: Side;
+      resolve: (move: Domino | null) => void;
+      reject: (error: Error) => void;
+      runInline: () => Promise<Domino | null>;
+    }
+  >();
   
   constructor(options: AIClientOptions = {}) {
     this.options = options;
-    // Signal ready immediately (no worker to initialize)
-    setTimeout(() => {
+    this.initWorker();
+  }
+
+  private initWorker(): void {
+    try {
+      try {
+        this.worker = new Worker(new URL('./ai/dominorio/dominorio.worker.js', import.meta.url), {
+          type: 'module',
+        });
+      } catch {
+        this.worker = new Worker(new URL('./dominorio.worker.ts', import.meta.url), {
+          type: 'module',
+        });
+      }
+
+      this.worker.onmessage = (event: MessageEvent<AIResponse | AIError | AIReady>) =>
+        this.onMessage(event.data);
+      this.worker.onerror = () => this.fallbackToInline('worker-error');
+      this.isReady = false;
+    } catch {
+      this.worker = null;
       this.isReady = true;
       this.options.onReady?.();
-    }, 0);
+    }
+  }
+
+  private fallbackToInline(reason: string): void {
+    if (!this.worker) {
+      this.isReady = true;
+      this.options.onReady?.();
+      return;
+    }
+
+    try {
+      this.worker.terminate();
+    } catch {
+      // ignore
+    }
+
+    this.worker = null;
+    this.isReady = true;
+    console.warn?.('[DominorioAI] Falling back to inline engine:', reason);
+
+    for (const [id, request] of this.pending) {
+      this.pending.delete(id);
+      void request
+        .runInline()
+        .then(request.resolve)
+        .catch((error) => {
+          request.reject(error instanceof Error ? error : new Error(String(error)));
+        });
+    }
+
+    this.options.onReady?.();
+  }
+
+  private onMessage(message: AIResponse | AIError | AIReady): void {
+    if (message.type === 'ready') {
+      this.isReady = true;
+      this.currentMetrics = { ...this.currentMetrics, usedWasm: message.usedWasm };
+      this.options.onMetricsUpdate?.(this.currentMetrics);
+      this.options.onReady?.();
+      return;
+    }
+
+    if (message.type === 'result') {
+      const request = this.pending.get(message.id);
+      if (!request) return;
+      this.pending.delete(message.id);
+
+      this.updateMetrics(message);
+      request.resolve(
+        message.bestMove >= 0 ? bitboard.anchorToDomino(message.bestMove, request.side) : null,
+      );
+      return;
+    }
+
+    if (message.type === 'error' && message.id !== undefined) {
+      const request = this.pending.get(message.id);
+      if (!request) return;
+      this.pending.delete(message.id);
+      this.currentMetrics = { ...INITIAL_METRICS };
+      this.options.onMetricsUpdate?.(this.currentMetrics);
+      request.reject(new Error(message.message));
+    }
   }
   
   /**

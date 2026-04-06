@@ -36,6 +36,7 @@ interface WasmEngine {
 // State
 let wasmEngine: WasmEngine | null = null;
 let useWasm = false;
+let initDone = false;
 
 // TypeScript fallback engine state
 interface TSEngineState {
@@ -58,11 +59,43 @@ async function init(): Promise<void> {
   } catch (e) {
     console.warn('[DominorioAI] WASM not available, using TypeScript fallback:', e);
     useWasm = false;
+  } finally {
+    initDone = true;
   }
   
   // Signal ready
-  const ready: AIReady = { type: 'ready' };
+  const ready: AIReady = { type: 'ready', usedWasm: useWasm };
   self.postMessage(ready);
+}
+
+function fnv1a32(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function createRandom(
+  seed: number | undefined,
+  key: string,
+): () => number {
+  if (typeof seed !== 'number' || !Number.isFinite(seed)) {
+    return Math.random;
+  }
+  const mixedSeed = ((Math.trunc(seed) >>> 0) ^ fnv1a32(key)) >>> 0;
+  return mulberry32(mixedSeed);
 }
 
 /**
@@ -72,7 +105,8 @@ function checkOpeningBook(
   occupiedLow: number,
   occupiedHigh: number,
   sideToMove: Side,
-  plyCount: number
+  plyCount: number,
+  random: () => number,
 ): number | null {
   if (plyCount > (openingBook.maxPly || 6)) {
     return null;
@@ -82,8 +116,7 @@ function checkOpeningBook(
   const entries = (openingBook.entries as Record<string, number[]>)[key];
   
   if (entries && entries.length > 0) {
-    // Pick randomly from book moves
-    const idx = Math.floor(Math.random() * entries.length);
+    const idx = Math.floor(random() * entries.length);
     return entries[idx];
   }
   
@@ -94,10 +127,12 @@ function checkOpeningBook(
  * TypeScript fallback search implementation
  */
 function searchTS(
+  requestId: number,
   occupiedLow: number,
   occupiedHigh: number,
   side: Side,
-  params: DifficultyParams
+  params: DifficultyParams,
+  random: () => number,
 ): AIResponse {
   const startTime = performance.now();
   const state: TSEngineState = {
@@ -119,6 +154,7 @@ function searchTS(
   if (moves.length === 0) {
     return {
       type: 'result',
+      id: requestId,
       bestMove: -1,
       depthReached: 0,
       nodesSearched: 0,
@@ -127,6 +163,7 @@ function searchTS(
       ttHitRate: 0,
       score: -MATE,
       fromBook: false,
+      usedWasm: false,
     };
   }
   
@@ -237,7 +274,7 @@ function searchTS(
     );
     
     if (candidates.length > 1) {
-      const idx = Math.floor(Math.random() * candidates.length);
+      const idx = Math.floor(random() * candidates.length);
       bestMove = candidates[idx].move;
       bestScore = candidates[idx].score;
     }
@@ -245,6 +282,7 @@ function searchTS(
   
   return {
     type: 'result',
+    id: requestId,
     bestMove,
     depthReached,
     nodesSearched: state.nodes,
@@ -253,6 +291,7 @@ function searchTS(
     ttHitRate: 0, // No TT in TS fallback
     score: bestScore,
     fromBook: false,
+    usedWasm: false,
   };
 }
 
@@ -260,6 +299,7 @@ function searchTS(
  * Search using WASM engine
  */
 function searchWASM(
+  requestId: number,
   occupiedLow: number,
   occupiedHigh: number,
   side: Side,
@@ -286,6 +326,7 @@ function searchWASM(
   
   return {
     type: 'result',
+    id: requestId,
     bestMove: result.best_move,
     depthReached: result.depth_reached,
     nodesSearched: Number(result.nodes_searched),
@@ -294,6 +335,7 @@ function searchWASM(
     ttHitRate: ttProbes > 0 ? ttHits / ttProbes : 0,
     score: result.score,
     fromBook: false,
+    usedWasm: true,
   };
 }
 
@@ -302,18 +344,24 @@ function searchWASM(
  */
 function handleSearch(request: AIRequest): AIResponse {
   const params = DIFFICULTY_PRESETS[request.difficulty];
+  const random = createRandom(
+    request.seed,
+    `${request.occupiedLow}:${request.occupiedHigh}:${request.sideToMove}:${request.plyCount}:${request.difficulty}`,
+  );
   
   // Check opening book first
   const bookMove = checkOpeningBook(
     request.occupiedLow,
     request.occupiedHigh,
     request.sideToMove,
-    request.plyCount
+    request.plyCount,
+    random,
   );
   
   if (bookMove !== null) {
     return {
       type: 'result',
+      id: request.id,
       bestMove: bookMove,
       depthReached: 0,
       nodesSearched: 0,
@@ -322,6 +370,7 @@ function handleSearch(request: AIRequest): AIResponse {
       ttHitRate: 0,
       score: 0,
       fromBook: true,
+      usedWasm: false,
     };
   }
   
@@ -334,6 +383,7 @@ function handleSearch(request: AIRequest): AIResponse {
   // Use WASM if available, otherwise TypeScript fallback
   if (useWasm && wasmEngine) {
     return searchWASM(
+      request.id,
       request.occupiedLow,
       request.occupiedHigh,
       request.sideToMove,
@@ -341,10 +391,12 @@ function handleSearch(request: AIRequest): AIResponse {
     );
   } else {
     return searchTS(
+      request.id,
       request.occupiedLow,
       request.occupiedHigh,
       request.sideToMove,
-      effectiveParams
+      effectiveParams,
+      random,
     );
   }
 }
@@ -353,28 +405,36 @@ function handleSearch(request: AIRequest): AIResponse {
  * Message handler
  */
 self.onmessage = (event: MessageEvent<AIRequest>) => {
-  try {
-    const request = event.data;
-    
-    if (request.type === 'search') {
-      const response = handleSearch(request);
-      self.postMessage(response);
+  void (async () => {
+    if (!initDone) {
+      await initPromise;
     }
-  } catch (e) {
-    const error: AIError = {
-      type: 'error',
-      message: e instanceof Error ? e.message : String(e),
-    };
-    self.postMessage(error);
-  }
+
+    try {
+      const request = event.data;
+      
+      if (request.type === 'search') {
+        const response = handleSearch(request);
+        self.postMessage(response);
+      }
+    } catch (e) {
+      const request = event.data;
+      const error: AIError = {
+        type: 'error',
+        id: request?.id,
+        message: e instanceof Error ? e.message : String(e),
+      };
+      self.postMessage(error);
+    }
+  })();
 };
 
 // Initialize on load
-init().catch(e => {
+const initPromise = init().catch(e => {
   console.error('[DominorioAI] Initialization failed:', e);
   // Still signal ready so fallback can work
-  const ready: AIReady = { type: 'ready' };
+  initDone = true;
+  const ready: AIReady = { type: 'ready', usedWasm: false };
   self.postMessage(ready);
 });
-
 

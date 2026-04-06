@@ -70,6 +70,8 @@ export type Side = 0 | 1;
 /** Request sent from UI to Worker */
 export interface AIRequest {
   type: 'search';
+  /** Request id for worker correlation */
+  id: number;
   /** 64-bit occupied mask as two 32-bit numbers [low, high] */
   occupiedLow: number;
   occupiedHigh: number;
@@ -81,11 +83,15 @@ export interface AIRequest {
   difficulty: AIDifficulty;
   /** Number of half-moves played (for opening book) */
   plyCount: number;
+  /** Optional deterministic seed for book / fallback tie-breaks */
+  seed?: number;
 }
 
 /** Response sent from Worker to UI */
 export interface AIResponse {
   type: 'result';
+  /** Request id for worker correlation */
+  id: number;
   /** Anchor square of best move (0-63), or -1 if no move */
   bestMove: number;
   /** Search depth reached */
@@ -102,17 +108,21 @@ export interface AIResponse {
   score: number;
   /** Whether move came from opening book */
   fromBook: boolean;
+  /** Whether the WASM engine was used */
+  usedWasm: boolean;
 }
 
 /** Error response from Worker */
 export interface AIError {
   type: 'error';
+  id?: number;
   message: string;
 }
 
 /** Ready notification from Worker */
 export interface AIReady {
   type: 'ready';
+  usedWasm: boolean;
 }
 
 export type WorkerMessage = AIResponse | AIError | AIReady;
@@ -206,6 +216,7 @@ export interface AIMetrics {
   lastTTHitRate: number;
   lastScore: number;
   fromBook: boolean;
+  usedWasm: boolean;
 }
 
 export const INITIAL_METRICS: AIMetrics = {
@@ -216,4 +227,5 @@ export const INITIAL_METRICS: AIMetrics = {
   lastTTHitRate: 0,
   lastScore: 0,
   fromBook: false,
+  usedWasm: false,
 };
