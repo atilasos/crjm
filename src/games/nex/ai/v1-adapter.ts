@@ -377,15 +377,15 @@ function buildExplainText(
   }
 
   if (move.type === 'swap') {
-    return 'Faz swap: a abertura atual fica mais forte se assumires a cor rival.';
+    return 'A abertura favorece a cor rival. Confirma se trocar te dá o caminho mais curto entre margens.';
   }
   if (move.type === 'recusar_swap') {
-    return 'Recusa o swap: a tua cor atual ainda tem o melhor caminho de ligação.';
+    return 'A tua cor atual ainda conserva a rota mais limpa. Confirma se o swap só ajudaria o adversário.';
   }
   if (move.type === 'substituir') {
-    return `Substitui ${formatPos(move.n1)} e ${formatPos(move.n2)} para reforçar a ligação, deixando ${formatPos(move.sacrifice)} como neutra.`;
+    return 'Procura uma substituição que encurte a tua ligação sem abrir de imediato a ponte rival.';
   }
-  return `Coloca em ${formatPos(move.own)} e usa a neutra em ${formatPos(move.neutral)} para cortar a melhor rota adversária.`;
+  return 'Procura uma colocação em que a tua peça avance a ligação e a neutra corte a rota rival mais curta.';
 }
 
 function formatPos(pos: Posicao): string {

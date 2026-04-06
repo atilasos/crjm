@@ -96,6 +96,7 @@ describe('AtariGoV1Adapter', () => {
     expect(response.topMoves.length).toBeLessThanOrEqual(3);
     expect(response.explainText.length).toBeGreaterThan(0);
     expect(response.explainText.length).toBeLessThanOrEqual(160);
+    expect(response.pedagogy?.hintLevelSuggested).toBeDefined();
     expect(response.stats.elapsedMs).toBeGreaterThanOrEqual(0);
     expect(response.stats.engine).toBe('ts-fallback');
     expect(response.warnings).toEqual(['A análise desta dica usou o fallback atual do Atari Go.']);
@@ -139,6 +140,7 @@ describe('AtariGoV1Adapter', () => {
     expect(response.criticalThreats?.[0]?.counterMove).toEqual({ linha: 0, coluna: 1 });
     expect(response.turningPoints?.length).toBe(1);
     expect(response.turningPoints?.[0]?.patternId).toBe('TP-ATARI-DEFENSE');
+    expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
   });
 
   test('maps core levels to legacy difficulty buckets', () => {

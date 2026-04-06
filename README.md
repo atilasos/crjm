@@ -1,10 +1,18 @@
 # Jogos Matemáticos - CRJM
 
-Site de treino para o **Campeonato Regional de Jogos Matemáticos da Madeira** (CRJM).
+Produto final de treino para o **Campeonato Regional de Jogos Matemáticos da Madeira** (CRJM).
 
-Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do **1.º Ciclo ao Secundário**.
+O repositório inclui os **6 jogos oficiais** do campeonato, um **modo campeonato online**, perfil com progresso e uma camada pedagógica comum com tutor visual, hints graduais e revisão pós-jogo.
 
 ![Homepage](docs/screenshots/homepage.png)
+
+## Estado atual do produto
+
+- **Jogos oficiais completos:** Gatos & Cães, Dominório, Quelhas, Produto, Atari Go e Nex
+- **Cobertura pedagógica nos 6 jogos:** hints H1/H2/H3, contexto visual de turno, top jogadas e alertas de ameaça
+- **Revisão e progresso:** quick review/turning point pós-jogo com XP, missões, conquistas e perfil persistido em `localStorage`
+- **Competição escolar:** modo campeonato com dupla eliminação e cliente/servidor dedicados
+- **Estado técnico atual:** Dominório e Atari Go estão em nível de **piloto maduro**; Quelhas, Gatos & Cães, Produto e Nex estão **consolidados** segundo a matriz em [`docs/agents/ALL-GAMES-MATURITY-MATRIX.md`](docs/agents/ALL-GAMES-MATURITY-MATRIX.md)
 
 ### Jogos disponíveis
 
@@ -17,7 +25,7 @@ Este projeto contém todos os **6 jogos oficiais** do campeonato, abrangendo do 
 | ⚫⚪ **Atari Go** | 3.º, Sec. | Variante simplificada do Go. A primeira captura vence o jogo! |
 | 🔗 **Nex** | Sec. | Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário! |
 
-## Exemplos dos Jogos
+## Screenshots do produto
 
 <table>
 <tr>
@@ -81,9 +89,21 @@ Sistema de torneios online com dupla eliminação para competições escolares.
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
 - **Modo Campeonato**: Torneios online com sistema de dupla eliminação (suporta os **6 jogos oficiais**)
+- **Tutor visual por turno** com highlights no tabuleiro, contexto de leitura e top jogadas
+- **Perfil do jogador** com XP, streak, missões, conquistas e barras de progresso por jogo
+- **Caminhos de evolução** por jogo e revisão pós-jogo com recompensa
 - Regras oficiais do CRJM
 - Interface em **Português de Portugal** (PT-PT)
-- Totalmente responsivo (funciona em computador e tablet)
+- Responsivo para computador, tablet e mobile
+
+## Pedagogia
+
+O produto foi afinado para servir treino real de campeonato, não apenas jogo livre.
+
+- **Hints H1/H2/H3:** cada jogo usa três níveis de ajuda. H1 aponta o princípio a procurar, H2 orienta a decisão com mais contexto e H3 ajuda a destravar a posição sem transformar a dica num “resolver por ti”.
+- **Leitura visual do turno:** a UI combina contexto textual com marcação visual da jogada recomendada, alternativas e respostas críticas diretamente no tabuleiro.
+- **Aprendizagem por revisão:** no fim da partida, cada jogo regista um momento de revisão rápida — ou um turning point no Atari Go — para reforçar o raciocínio logo após a experiência.
+- **Progressão observável:** XP, missões, achievements e caminhos de evolução dão continuidade ao treino entre sessões, em vez de cada jogo começar do zero.
 
 ## 🚀 Começar
 

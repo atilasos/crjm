@@ -93,7 +93,7 @@ function getSuggestedAction(
     return 'Começa pela opção que te deixa pelo menos duas respostas no próximo turno.';
   }
 
-  return 'Se estiveres perdido, segue primeiro a opção #1 mostrada abaixo.';
+  return 'Se estiveres perdido, compara primeiro a opção #1 com o número de respostas que te deixa no turno seguinte.';
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {

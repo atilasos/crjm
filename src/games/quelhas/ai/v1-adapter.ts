@@ -233,14 +233,13 @@ function buildExplainText(
     return 'Procura um segmento curto que não feche demasiado o tabuleiro já.';
   }
 
-  const anchor = formatSegment(move);
   if (state.jogadasValidas.length <= 2) {
-    return `Joga em ${anchor}. É a saída mais segura para não ficares preso ao fim da partida.`;
+    return 'Entra no fim com um segmento que te mantenha vivo e não feche a última faixa útil cedo demais.';
   }
 
   if (move.comprimento <= 2) {
-    return `Joga em ${anchor}. Assim fechas pouco espaço e guardas mais opções para o final.`;
+    return 'Dá prioridade a um segmento curto numa faixa ainda aberta; assim guardas mais opções para o final.';
   }
 
-  return `Começa em ${anchor}. Avanças nesta faixa sem gastar logo todas as casas úteis.`;
+  return 'Avança numa faixa que prolongue o teu plano sem consumir logo demasiadas casas úteis.';
 }

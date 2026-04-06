@@ -72,11 +72,30 @@ function formatAction(action: NexAiAction): string {
 
 function getSuggestedAction(
   response: AIResponseV1<NexAiAction, NexState> | null,
+  hintLevel: 'H1' | 'H2' | 'H3',
 ): string {
   if (!response?.bestMove) {
     return 'Compara a tua distância de ligação com a do adversário antes de agir.';
   }
-  return `Treina a linha ${formatAction(response.bestMove)}.`;
+
+  if (hintLevel === 'H1') {
+    return 'Prioriza a ação que encurta a tua ligação e obriga o adversário a gastar um turno na defesa.';
+  }
+
+  if (hintLevel === 'H2') {
+    if (response.criticalThreats?.[0]) {
+      return 'Defende primeiro a rota rival mais curta e só depois volta a crescer a tua ponte.';
+    }
+    if (response.bestMove.type === 'swap' || response.bestMove.type === 'recusar_swap') {
+      return 'Confirma primeiro qual cor fica com a abertura mais promissora antes de decidir a torta.';
+    }
+    if (response.bestMove.type === 'substituir') {
+      return 'Procura uma substituição que transforme duas neutras em avanço real sem abrir a tua ponte.';
+    }
+    return 'Procura uma colocação em que a tua peça avance e a neutra corte a melhor resposta rival.';
+  }
+
+  return 'Se estiveres indeciso, testa primeiro a ação destacada e verifica quem fica com a rota mais curta depois dela.';
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
@@ -610,7 +629,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
                 tutorResponse?.explainText ??
                 'Compara a tua distância de ligação com a do adversário e usa a neutra como bloqueio ativo.'
               }
-              suggestedAction={getSuggestedAction(tutorResponse)}
+              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
               hintLevel={hintLevel}
               errorCode={tutorResponse?.pedagogy?.errorCode}
               isLoading={tutorLoading}
@@ -805,7 +824,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
             {/* Container com overflow e pan */}
             <div 
               ref={boardContainerRef}
-              className="overflow-auto"
+              className="overflow-auto w-full flex justify-center"
               style={{ 
                 maxHeight: '70vh',
                 cursor: isDragging ? 'grabbing' : 'default',
@@ -817,7 +836,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
             >
               <div 
                 ref={boardDraggableRef}
-                className="relative inline-block p-12"
+                className="relative inline-block p-4 sm:p-8 md:p-12 w-full max-w-[650px] min-w-[320px]"
                 style={{
                   transform: panOffset.x !== 0 || panOffset.y !== 0 
                     ? `translate(${panOffset.x}px, ${panOffset.y}px)` 
@@ -832,17 +851,15 @@ export function NexGame({ onVoltar }: NexGameProps) {
               >
                 {/* Indicadores de canto - fora do tabuleiro, nos cantos da área */}
                 {/* Pretas: superior-esquerdo e inferior-direito */}
-                <div className="absolute top-0 left-0 w-7 h-7 rounded-full bg-gray-800 z-10"></div>
-                <div className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-gray-800 z-10"></div>
+                <div className="absolute top-0 left-0 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-gray-800 z-10"></div>
+                <div className="absolute bottom-0 right-0 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-gray-800 z-10"></div>
                 {/* Brancas: superior-direito e inferior-esquerdo */}
-                <div className="absolute top-0 right-0 w-7 h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
-                <div className="absolute bottom-0 left-0 w-7 h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
+                <div className="absolute top-0 right-0 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
+                <div className="absolute bottom-0 left-0 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
                 
                 <svg 
-                  width={dimensoes.width} 
-                  height={dimensoes.height}
                   viewBox={`${-HEX_SIZE * 2} ${-dimensoes.centerY} ${dimensoes.width} ${dimensoes.height}`}
-                  className="block"
+                  className="block w-full h-auto"
                 >
                 
                 {/* Hexágonos do tabuleiro */}

@@ -1,0 +1,211 @@
+- generic [ref=e3]:
+  - banner [ref=e4]:
+    - generic [ref=e5]:
+      - generic [ref=e7]:
+        - generic [ref=e8]: 🎲
+        - heading "Jogos Matemáticos" [level=1] [ref=e9]
+      - generic [ref=e10]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: 🏅
+          - generic [ref=e14]:
+            - paragraph [ref=e15]: Perfil
+            - paragraph [ref=e16]: Explorador · Nível 1
+        - generic [ref=e17]:
+          - generic [ref=e18]:
+            - generic [ref=e19]: "XP total: 0"
+            - generic [ref=e20]: +0 sessão
+          - generic [ref=e22]: 0 / 50 XP para o próximo nível
+        - generic [ref=e23]:
+          - paragraph [ref=e24]: Missão diária
+          - paragraph [ref=e25]: Joga 2 partidas
+          - paragraph [ref=e27]: 0/2 · +6 XP
+  - main [ref=e28]:
+    - generic [ref=e29]:
+      - generic [ref=e30]: 🎯
+      - heading "Treino para o CRJM" [level=1] [ref=e31]
+      - paragraph [ref=e32]: Campeonato Regional de Jogos Matemáticos da Madeira
+      - paragraph [ref=e33]: Pratica todos os jogos oficiais do campeonato — do 1.º Ciclo ao Secundário!
+      - button "Ver perfil e progresso" [ref=e34]
+    - generic [ref=e35]:
+      - heading "Escolhe um jogo para começar" [level=2] [ref=e36]
+      - button "🏆 🏆 Modo Campeonato Participa no campeonato interno da escola! Liga-te ao servidor, compete contra colegas em dupla eliminação e representa a escola no CRJM. Jogar agora 🏆" [ref=e38] [cursor=pointer]:
+        - generic [ref=e39]:
+          - generic [ref=e40]: 🏆
+          - heading "🏆 Modo Campeonato" [level=2] [ref=e41]
+          - paragraph [ref=e42]: Participa no campeonato interno da escola! Liga-te ao servidor, compete contra colegas em dupla eliminação e representa a escola no CRJM.
+          - generic [ref=e43]:
+            - generic [ref=e44]: Jogar agora
+            - img [ref=e45]
+        - generic [ref=e48]: 🏆
+      - generic [ref=e49]:
+        - 'button "🐱🐶 Gatos & Cães Jogo de colocação: coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada! Jogar agora 🐱🐶" [ref=e50] [cursor=pointer]':
+          - generic [ref=e51]:
+            - generic [ref=e52]: 🐱🐶
+            - heading "Gatos & Cães" [level=2] [ref=e53]
+            - paragraph [ref=e54]: "Jogo de colocação: coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada!"
+            - generic [ref=e55]:
+              - generic [ref=e56]: Jogar agora
+              - img [ref=e57]
+          - generic [ref=e60]: 🐱🐶
+        - 'button "🁓 Dominório Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça! Jogar agora 🁓" [ref=e61] [cursor=pointer]':
+          - generic [ref=e62]:
+            - generic [ref=e63]: 🁓
+            - heading "Dominório" [level=2] [ref=e64]
+            - paragraph [ref=e65]: "Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça!"
+            - generic [ref=e66]:
+              - generic [ref=e67]: Jogar agora
+              - img [ref=e68]
+          - generic [ref=e71]: 🁓
+        - 'button "▮ Quelhas Coloca segmentos no tabuleiro: um joga na vertical, outro na horizontal. ATENÇÃO: Perde quem fizer a última jogada! Jogar agora ▮" [ref=e72] [cursor=pointer]':
+          - generic [ref=e73]:
+            - generic [ref=e74]: ▮
+            - heading "Quelhas" [level=2] [ref=e75]
+            - paragraph [ref=e76]: "Coloca segmentos no tabuleiro: um joga na vertical, outro na horizontal. ATENÇÃO: Perde quem fizer a última jogada!"
+            - generic [ref=e77]:
+              - generic [ref=e78]: Jogar agora
+              - img [ref=e79]
+          - generic [ref=e82]: ▮
+        - button "✖️ Produto Maximiza a pontuação dos teus grupos num tabuleiro hexagonal. Sabota o adversário unindo os grupos dele! Jogar agora ✖️" [ref=e83] [cursor=pointer]:
+          - generic [ref=e84]:
+            - generic [ref=e85]: ✖️
+            - heading "Produto" [level=2] [ref=e86]
+            - paragraph [ref=e87]: Maximiza a pontuação dos teus grupos num tabuleiro hexagonal. Sabota o adversário unindo os grupos dele!
+            - generic [ref=e88]:
+              - generic [ref=e89]: Jogar agora
+              - img [ref=e90]
+          - generic [ref=e93]: ✖️
+        - 'button "⚫⚪ Atari Go Variante simplificada do Go: rodeia as pedras adversárias. A primeira captura vence o jogo! Jogar agora ⚫⚪" [ref=e94] [cursor=pointer]':
+          - generic [ref=e95]:
+            - generic [ref=e96]: ⚫⚪
+            - heading "Atari Go" [level=2] [ref=e97]
+            - paragraph [ref=e98]: "Variante simplificada do Go: rodeia as pedras adversárias. A primeira captura vence o jogo!"
+            - generic [ref=e99]:
+              - generic [ref=e100]: Jogar agora
+              - img [ref=e101]
+          - generic [ref=e104]: ⚫⚪
+        - button "🔗 Nex Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário! Jogar agora 🔗" [ref=e105] [cursor=pointer]:
+          - generic [ref=e106]:
+            - generic [ref=e107]: 🔗
+            - heading "Nex" [level=2] [ref=e108]
+            - paragraph [ref=e109]: Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário!
+            - generic [ref=e110]:
+              - generic [ref=e111]: Jogar agora
+              - img [ref=e112]
+          - generic [ref=e115]: 🔗
+    - generic [ref=e117]:
+      - paragraph [ref=e118]: Progresso por jogo
+      - generic [ref=e119]:
+        - generic [ref=e120]:
+          - generic [ref=e121]:
+            - paragraph [ref=e122]: Gatos & Cães
+            - generic [ref=e123]: 0 partidas · 0 revisões
+          - generic [ref=e124]:
+            - generic [ref=e126]:
+              - generic [ref=e127]: Regras
+              - generic [ref=e128]: 0/5
+            - generic [ref=e131]:
+              - generic [ref=e132]: Estratégia
+              - generic [ref=e133]: 0/5
+            - generic [ref=e136]:
+              - generic [ref=e137]: Mestria
+              - generic [ref=e138]: 0/5
+        - generic [ref=e140]:
+          - generic [ref=e141]:
+            - paragraph [ref=e142]: Dominório
+            - generic [ref=e143]: 0 partidas · 0 revisões
+          - generic [ref=e144]:
+            - generic [ref=e146]:
+              - generic [ref=e147]: Regras
+              - generic [ref=e148]: 0/5
+            - generic [ref=e151]:
+              - generic [ref=e152]: Estratégia
+              - generic [ref=e153]: 0/5
+            - generic [ref=e156]:
+              - generic [ref=e157]: Mestria
+              - generic [ref=e158]: 0/5
+        - generic [ref=e160]:
+          - generic [ref=e161]:
+            - paragraph [ref=e162]: Quelhas
+            - generic [ref=e163]: 0 partidas · 0 revisões
+          - generic [ref=e164]:
+            - generic [ref=e166]:
+              - generic [ref=e167]: Regras
+              - generic [ref=e168]: 0/5
+            - generic [ref=e171]:
+              - generic [ref=e172]: Estratégia
+              - generic [ref=e173]: 0/5
+            - generic [ref=e176]:
+              - generic [ref=e177]: Mestria
+              - generic [ref=e178]: 0/5
+        - generic [ref=e180]:
+          - generic [ref=e181]:
+            - paragraph [ref=e182]: Produto
+            - generic [ref=e183]: 0 partidas · 0 revisões
+          - generic [ref=e184]:
+            - generic [ref=e186]:
+              - generic [ref=e187]: Regras
+              - generic [ref=e188]: 0/5
+            - generic [ref=e191]:
+              - generic [ref=e192]: Estratégia
+              - generic [ref=e193]: 0/5
+            - generic [ref=e196]:
+              - generic [ref=e197]: Mestria
+              - generic [ref=e198]: 0/5
+        - generic [ref=e200]:
+          - generic [ref=e201]:
+            - paragraph [ref=e202]: Atari Go
+            - generic [ref=e203]: 0 partidas · 0 revisões
+          - generic [ref=e204]:
+            - generic [ref=e206]:
+              - generic [ref=e207]: Regras
+              - generic [ref=e208]: 0/5
+            - generic [ref=e211]:
+              - generic [ref=e212]: Estratégia
+              - generic [ref=e213]: 0/5
+            - generic [ref=e216]:
+              - generic [ref=e217]: Mestria
+              - generic [ref=e218]: 0/5
+        - generic [ref=e220]:
+          - generic [ref=e221]:
+            - paragraph [ref=e222]: Nex
+            - generic [ref=e223]: 0 partidas · 0 revisões
+          - generic [ref=e224]:
+            - generic [ref=e226]:
+              - generic [ref=e227]: Regras
+              - generic [ref=e228]: 0/5
+            - generic [ref=e231]:
+              - generic [ref=e232]: Estratégia
+              - generic [ref=e233]: 0/5
+            - generic [ref=e236]:
+              - generic [ref=e237]: Mestria
+              - generic [ref=e238]: 0/5
+    - generic [ref=e240]:
+      - heading "ℹ️ Sobre este site" [level=2] [ref=e241]:
+        - generic [ref=e242]: ℹ️
+        - text: Sobre este site
+      - generic [ref=e243]:
+        - paragraph [ref=e244]: Este site permite praticar todos os jogos oficiais do Campeonato Regional de Jogos Matemáticos da Madeira (CRJM), abrangendo do 1.º Ciclo ao Secundário.
+        - paragraph [ref=e245]: Podes jogar sozinho contra o computador ou com um amigo no mesmo computador. As regras de cada jogo seguem as regras oficiais do campeonato.
+        - paragraph [ref=e247]:
+          - strong [ref=e248]: "📚 Jogos por ciclo:"
+          - text: "• 1.º Ciclo: Gatos & Cães, Dominório, Quelhas"
+          - text: "• 2.º Ciclo: Dominório, Quelhas, Produto"
+          - text: "• 3.º Ciclo: Quelhas, Produto, Atari Go"
+          - text: "• Secundário: Produto, Atari Go, Nex"
+        - paragraph [ref=e250]:
+          - strong [ref=e251]: "💡 Dica importante:"
+          - text: O Quelhas é um jogo
+          - strong [ref=e252]: misère
+          - text: — perde quem faz a última jogada! Nos outros jogos, ganha quem faz a última jogada (exceto Atari Go, onde a primeira captura vence).
+        - paragraph [ref=e253]:
+          - text: "Para mais informações sobre o CRJM, visita:"
+          - link "projetosdre.madeira.gov.pt/crjmram/jogos" [ref=e254] [cursor=pointer]:
+            - /url: https://projetosdre.madeira.gov.pt/crjmram/jogos/
+  - contentinfo [ref=e255]:
+    - paragraph [ref=e256]: Jogos Matemáticos - Treino para o CRJM 2025
+    - paragraph [ref=e257]:
+      - link "Código fonte no GitHub" [ref=e258] [cursor=pointer]:
+        - /url: https://github.com/atilasos/crjm
+        - img [ref=e259]
+        - text: Código fonte no GitHub
+      - text: · Uso educativo gratuito

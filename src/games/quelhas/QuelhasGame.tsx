@@ -76,19 +76,19 @@ function getSuggestedAction(
   response: AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState> | null,
   hintLevel: 'H1' | 'H2' | 'H3',
 ): string {
-  if (response?.bestMove) {
-    const anchor = formatSegmento(response.bestMove);
-    if (hintLevel === 'H3') {
-      return `Segue esta jogada: ${anchor}.`;
-    }
-    return `Procura um segmento parecido com ${anchor}.`;
+  if (hintLevel === 'H1') {
+    return 'Compara segmentos curtos em zonas abertas e evita fechar cedo a faixa central.';
   }
 
-  if (hintLevel === 'H3') {
-    return 'Escolhe um segmento curto e evita fechar demasiado o tabuleiro agora.';
+  if (hintLevel === 'H2') {
+    return response?.criticalThreats?.[0]
+      ? 'Defende primeiro a faixa onde podes ficar preso e só depois alarga o teu plano.'
+      : 'Procura um segmento que te deixe outra faixa útil disponível para a jogada seguinte.';
   }
 
-  return 'Mantém opções abertas para não ficares preso ao fim da partida.';
+  return response?.bestMove
+    ? 'Se estiveres preso, testa primeiro o segmento destacado e confirma que ainda sobram outras faixas úteis.'
+    : 'Escolhe um segmento curto e evita fechar demasiado o tabuleiro agora.';
 }
 
 export function QuelhasGame({ onVoltar }: QuelhasGameProps) {

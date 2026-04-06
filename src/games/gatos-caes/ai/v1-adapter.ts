@@ -250,12 +250,12 @@ function buildExplainText(
 
   const simulated = simulateMove(state, move);
   if (simulated.estado !== 'a-jogar') {
-    return `Joga em L${move.linha + 1} C${move.coluna + 1}. O adversário fica sem qualquer casa válida.`;
+    return 'Há uma casa que corta todas as respostas do adversário. Confirma qual fecha o turno sem quebrar a regra de adjacência.';
   }
 
   if (state.totalGatos + state.totalCaes < 6) {
-    return `Joga em L${move.linha + 1} C${move.coluna + 1}. Guardas o centro e manténs várias saídas para o ciclo seguinte.`;
+    return 'Privilegia uma casa central segura que te mantenha várias saídas legais para o ciclo seguinte.';
   }
 
-  return `Joga em L${move.linha + 1} C${move.coluna + 1}. Assim reduzes as respostas do adversário sem perder mobilidade própria.`;
+  return 'Escolhe uma casa que reduza as respostas do adversário sem te roubar mobilidade no turno seguinte.';
 }

@@ -328,18 +328,18 @@ function buildExplainText(
   }
 
   if (state.primeiraJogada || move.pos2 === null) {
-    return `Abre em ${formatPos(move.pos1)}. O objetivo é começares com uma peça central que permita dois grupos fortes mais tarde.`;
-  }
-
-  if (workerExplain && workerExplain.trim().length > 0 && workerExplain.length <= 160) {
-    return workerExplain.trim();
+    return 'Abre com uma peça que mantenha o centro flexível e te deixe espaço para formar dois grupos mais tarde.';
   }
 
   if (move.cor1 !== move.cor2) {
-    return `Joga em ${formatPos(move.pos1)} e ${formatPos(move.pos2!)} com cores diferentes. Cresces a tua estrutura e atrapalhas a do adversário no mesmo turno.`;
+    return 'Procura um turno em que uma peça faça crescer a tua estrutura e a outra atrase a melhor cadeia rival.';
   }
 
-  return `Joga em ${formatPos(move.pos1)} e ${formatPos(move.pos2!)}. Manténs dois grupos úteis em vez de fundir tudo cedo demais.`;
+  if (workerExplain && workerExplain.trim().length > 0 && workerExplain.length <= 160) {
+    return 'Confirma se a dupla sugerida preserva dois grupos teus sem fundir cedo demais a tua melhor estrutura.';
+  }
+
+  return 'Dá prioridade a duas colocações que preservem dois grupos teus em vez de os fundires cedo demais.';
 }
 
 function formatPos(pos: Posicao): string {

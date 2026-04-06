@@ -50,16 +50,33 @@ function formatMove(move: Posicao): string {
 
 function getSuggestedAction(
   response: AIResponseV1<Posicao, AtariGoState> | null,
+  hintLevel: 'H1' | 'H2' | 'H3',
 ): string {
   if (!response?.bestMove) {
     return 'Mantém grupos com mais de uma liberdade para evitar captura imediata.';
   }
 
-  if (response.criticalThreats?.[0]) {
-    return `Defende já em ${formatMove(response.bestMove)} para bloquear ameaça imediata.`;
+  if (hintLevel === 'H1') {
+    return 'Prioriza a jogada que aumenta as tuas liberdades e reduz as respostas locais do adversário.';
   }
 
-  return `Joga em ${formatMove(response.bestMove)} para aumentar pressão tática.`;
+  if (hintLevel === 'H2') {
+    return response.criticalThreats?.[0]
+      ? 'Defende primeiro o grupo mais exposto e só depois procura contra-atacar.'
+      : 'Procura uma jogada que aperte o grupo rival sem deixares o teu em atari.';
+  }
+
+  return response.criticalThreats?.[0]
+    ? 'Se estiveres em dúvida, começa pela interseção destacada e confirma que o adversário deixa de ter captura imediata.'
+    : 'Se estiveres em dúvida, começa pela interseção destacada e verifica se ficas com mais liberdades do que antes.';
+}
+
+function resolveHintLevel(
+  response: AIResponseV1<Posicao, AtariGoState> | null,
+  fallback: 'H1' | 'H2' | 'H3' = 'H2',
+): 'H1' | 'H2' | 'H3' {
+  const suggested = response?.pedagogy?.hintLevelSuggested;
+  return suggested === 'H1' || suggested === 'H2' || suggested === 'H3' ? suggested : fallback;
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
@@ -97,6 +114,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     useState<AIResponseV1<Posicao, AtariGoState> | null>(null);
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<Posicao, AtariGoState>>>([]);
+  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
   const aiRef = useRef<AtariGoAIClient | null>(null);
   const tutorAdapterRef = useRef<AtariGoV1Adapter | null>(null);
   const tutorRequestSeqRef = useRef(0);
@@ -157,6 +175,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         if (cancelled) return;
         setTutorResponse(response);
         setTutorHistory((prev) => [...prev.slice(-11), response]);
+        setHintLevel((current) => resolveHintLevel(response, current));
       })
       .catch(() => {
         if (cancelled) return;
@@ -283,6 +302,10 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     tutorAdapterRef.current?.cancel();
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
+    setTutorResponse(null);
+    setTutorLoading(false);
+    setTutorHistory([]);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -292,6 +315,10 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     setState(criarEstadoInicial(novoModo));
     setMostrarVencedor(false);
     setHumanPlayer('jogador1');
+    setTutorResponse(null);
+    setTutorLoading(false);
+    setTutorHistory([]);
+    setHintLevel('H2');
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -300,6 +327,10 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     setHumanPlayer(player);
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
+    setTutorResponse(null);
+    setTutorLoading(false);
+    setTutorHistory([]);
+    setHintLevel('H2');
   }, []);
 
   // Verificar se é última jogada
@@ -545,7 +576,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
                 tutorResponse?.explainText ||
                 'Mantém a leitura local de liberdades antes de atacar.'
               }
-              suggestedAction={getSuggestedAction(tutorResponse)}
+              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+              hintLevel={hintLevel}
               isLoading={tutorLoading}
             />
 

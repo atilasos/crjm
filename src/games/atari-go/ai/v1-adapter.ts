@@ -3,6 +3,7 @@ import type {
   AIResponseV1,
   AIMoveCandidate,
   AICriticalThreat,
+  AIPedagogyV1,
   AITurningPoint,
   DifficultyLevel,
 } from '../../../ai-core';
@@ -76,6 +77,7 @@ export class AtariGoV1Adapter {
       confidence: topMoves[0]?.confidence,
       criticalThreats,
       turningPoints,
+      pedagogy: buildPedagogy(topMoves, criticalThreats),
       stats: {
         elapsedMs,
         depth: this.client.metrics.lastStats?.depth,
@@ -228,6 +230,28 @@ function buildTurningPoints(
   }
 
   return [];
+}
+
+function buildPedagogy(
+  topMoves: AIMoveCandidate<Posicao>[],
+  threats: AICriticalThreat<Posicao>[],
+): AIPedagogyV1 {
+  const severeThreat = threats.some((threat) => threat.severity === 'high');
+  const confidence = topMoves[0]?.confidence ?? 0.5;
+
+  if (severeThreat || threats.length > 0 || topMoves.length <= 1) {
+    return {
+      errorCode: 'E-AG-01',
+      hintLevelSuggested: 'H3',
+      aeCompetency: ['leitura de liberdades', 'defesa local'],
+    };
+  }
+
+  return {
+    errorCode: 'E-AG-02',
+    hintLevelSuggested: confidence >= 0.72 ? 'H1' : 'H2',
+    aeCompetency: ['leitura de liberdades', 'pressão tática'],
+  };
 }
 
 function buildExplainText(

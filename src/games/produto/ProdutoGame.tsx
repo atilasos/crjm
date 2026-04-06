@@ -61,11 +61,23 @@ function formatMove(move: JogadaDupla): string {
 
 function getSuggestedAction(
   response: AIResponseV1<JogadaDupla, ProdutoState> | null,
+  hintLevel: 'H1' | 'H2' | 'H3',
 ): string {
   if (!response?.bestMove) {
     return 'Compara o teu produto com o do adversário antes de escolher as duas peças.';
   }
-  return `Treina a linha ${formatMove(response.bestMove)} e confirma se ficas com dois grupos úteis.`;
+
+  if (hintLevel === 'H1') {
+    return 'Compara primeiro jogadas que criem ou preservem dois grupos teus com valor próprio.';
+  }
+
+  if (hintLevel === 'H2') {
+    return response.criticalThreats?.[0]
+      ? 'Cria primeiro o teu segundo grupo útil antes de pensares em sabotar o rival.'
+      : 'Procura uma dupla em que uma peça aumente o teu produto e a outra limite o do adversário.';
+  }
+
+  return 'Se estiveres bloqueado, começa pela opção destacada e confirma que no fim do turno continuas com dois grupos úteis.';
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
@@ -420,7 +432,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 tutorResponse?.explainText ??
                 'Procura duas peças que criem grupos teus e, se possível, prejudiquem o produto adversário.'
               }
-              suggestedAction={getSuggestedAction(tutorResponse)}
+              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
               hintLevel={hintLevel}
               errorCode={tutorResponse?.pedagogy?.errorCode}
               isLoading={tutorLoading}
@@ -506,12 +518,10 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
         {/* Tabuleiro hexagonal */}
         <div className="game-container">
-          <div className="flex justify-center">
+          <div className="flex justify-center w-full">
             <svg
-              width={Math.min(boundingBox.width + 20, 400)}
-              height={Math.min(boundingBox.height + 20, 400)}
               viewBox={`-10 -10 ${boundingBox.width + 20} ${boundingBox.height + 20}`}
-              className="max-w-full"
+              className="w-full h-auto max-w-[400px]"
             >
               <defs>
                 <linearGradient id="gradPreta" x1="0%" y1="0%" x2="100%" y2="100%">

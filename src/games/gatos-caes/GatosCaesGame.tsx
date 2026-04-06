@@ -51,18 +51,19 @@ function getSuggestedAction(
   response: AIResponseV1<Posicao, GatosCaesState> | null,
   hintLevel: 'H1' | 'H2' | 'H3',
 ): string {
-  if (response?.bestMove) {
-    if (hintLevel === 'H3') {
-      return `Segue primeiro a casa ${formatMove(response.bestMove)}.`;
-    }
-    return `Procura uma casa parecida com ${formatMove(response.bestMove)}.`;
+  if (hintLevel === 'H1') {
+    return 'Compara primeiro as casas seguras que te deixam mais do que uma resposta no próximo ciclo.';
   }
 
-  if (hintLevel === 'H3') {
-    return 'Escolhe uma casa que te deixe mais espaço livre à volta.';
+  if (hintLevel === 'H2') {
+    return response?.criticalThreats?.[0]
+      ? 'Resolve primeiro a zona em que podes ficar sem respostas e só depois volta ao centro.'
+      : 'Procura uma casa segura que mantenha mobilidade e evite encostar cedo à cor oposta.';
   }
 
-  return 'Evita encostar cedo ao adversário para não perderes mobilidade.';
+  return response?.bestMove
+    ? 'Se estiveres indeciso, começa pela casa destacada e confirma que continuas com mais espaço útil do que o adversário.'
+    : 'Escolhe a casa que te deixe mais espaço livre à volta e pelo menos uma resposta clara a seguir.';
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
