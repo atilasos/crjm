@@ -83,6 +83,10 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
   if (!initDone) await initPromise;
 
   const preset = DIFFICULTY_PRESETS[req.difficulty];
+  const timeBudgetMs =
+    typeof req.timeBudgetMs === 'number' && Number.isFinite(req.timeBudgetMs)
+      ? Math.max(1, Math.trunc(req.timeBudgetMs))
+      : preset.timeMs;
   const start = performance.now();
 
   try {
@@ -90,7 +94,7 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
       const seed = req.seed ?? ((Date.now() >>> 0) as number);
       wasm.init(seed);
       wasm.set_position(req.state.board, req.state.toPlay);
-      const mv = wasm.best_move(preset.timeMs, preset.level);
+      const mv = wasm.best_move(timeBudgetMs, preset.level);
       const stats = wasm.stats?.();
       post({
         type: 'result',

@@ -34,6 +34,11 @@ export interface DifficultyPreset {
   level: 1 | 2 | 3 | 4;
 }
 
+export interface AIComputeOverrides {
+  timeBudgetMs?: number;
+  seed?: number;
+}
+
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
   easy: { timeMs: 3000, level: 1 },
   medium: { timeMs: 6000, level: 2 },
@@ -47,6 +52,7 @@ export type AIRequest =
       id: number;
       state: AtariGoPackedState;
       difficulty: AIDifficulty;
+      timeBudgetMs?: number;
       seed?: number;
     }
   | { type: 'cancel'; id: number };

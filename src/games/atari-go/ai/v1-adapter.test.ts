@@ -7,11 +7,12 @@ import {
   mapLevelToLegacyDifficulty,
   type AtariGoV1Client,
 } from './v1-adapter';
-import type { AIDifficulty, AIMetrics } from './types';
+import type { AIDifficulty, AIMetrics, AIComputeOverrides } from './types';
 
 class FakeClient implements AtariGoV1Client {
   readonly metrics: AIMetrics;
   private readonly moveIdx: number | null;
+  lastOverrides: AIComputeOverrides | undefined;
 
   constructor(moveIdx: number | null, metrics: Partial<AIMetrics> = {}) {
     this.moveIdx = moveIdx;
@@ -23,7 +24,12 @@ class FakeClient implements AtariGoV1Client {
     };
   }
 
-  async getBestMove(_state: AtariGoState, _difficulty: AIDifficulty): Promise<number | null> {
+  async getBestMove(
+    _state: AtariGoState,
+    _difficulty: AIDifficulty,
+    overrides?: AIComputeOverrides,
+  ): Promise<number | null> {
+    this.lastOverrides = overrides;
     return this.moveIdx;
   }
 
@@ -44,7 +50,10 @@ class CapturingClient implements AtariGoV1Client {
   };
   lastDifficulty: AIDifficulty | null = null;
 
-  async getBestMove(_state: AtariGoState, difficulty: AIDifficulty): Promise<number | null> {
+  async getBestMove(
+    _state: AtariGoState,
+    difficulty: AIDifficulty,
+  ): Promise<number | null> {
     this.lastDifficulty = difficulty;
     return 0;
   }
@@ -89,6 +98,7 @@ describe('AtariGoV1Adapter', () => {
     expect(response.explainText.length).toBeLessThanOrEqual(160);
     expect(response.stats.elapsedMs).toBeGreaterThanOrEqual(0);
     expect(response.stats.engine).toBe('ts-fallback');
+    expect(response.warnings).toEqual(['A análise desta dica usou o fallback atual do Atari Go.']);
     expect(response.turningPoints?.length ?? 0).toBeLessThanOrEqual(1);
   });
 
@@ -149,5 +159,22 @@ describe('AtariGoV1Adapter', () => {
 
     await adapter.compute(buildRequest(state, 3));
     expect(client.lastDifficulty).toBe('hard');
+  });
+
+  test('forwards optional seed and time budget to the AI client', async () => {
+    const state = criarEstadoInicial('vs-computador');
+    const client = new FakeClient(40, { usedWasm: true });
+    const adapter = new AtariGoV1Adapter({ client });
+
+    await adapter.compute({
+      ...buildRequest(state, 5),
+      seed: 20260406,
+      timeBudgetMs: 4321,
+    });
+
+    expect(client.lastOverrides).toEqual({
+      seed: 20260406,
+      timeBudgetMs: 4321,
+    });
   });
 });

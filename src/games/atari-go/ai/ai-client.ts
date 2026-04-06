@@ -1,5 +1,11 @@
 import type { AtariGoState, Posicao } from '../types';
-import type { AIRequest, AIResponse, AIDifficulty, AIMetrics } from './types';
+import type {
+  AIComputeOverrides,
+  AIRequest,
+  AIResponse,
+  AIDifficulty,
+  AIMetrics,
+} from './types';
 import { INITIAL_METRICS, packState } from './types';
 
 export interface AIClientOptions {
@@ -89,7 +95,11 @@ export class AtariGoAIClient {
     }
   }
 
-  async getBestMove(state: AtariGoState, difficulty: AIDifficulty = 'hard'): Promise<number | null> {
+  async getBestMove(
+    state: AtariGoState,
+    difficulty: AIDifficulty = 'hard',
+    overrides: AIComputeOverrides = {},
+  ): Promise<number | null> {
     this.currentMetrics = { ...this.currentMetrics, isThinking: true };
     this.options.onMetricsUpdate?.(this.currentMetrics);
 
@@ -100,12 +110,21 @@ export class AtariGoAIClient {
     }
 
     const id = this.nextId++;
+    const timeBudgetMs =
+      typeof overrides.timeBudgetMs === 'number' && Number.isFinite(overrides.timeBudgetMs)
+        ? Math.max(1, Math.trunc(overrides.timeBudgetMs))
+        : undefined;
+    const seed =
+      typeof overrides.seed === 'number' && Number.isFinite(overrides.seed)
+        ? Math.trunc(overrides.seed) >>> 0
+        : ((Date.now() >>> 0) + id) >>> 0;
     const req: AIRequest = {
       type: 'choose',
       id,
       state: packState(state),
       difficulty,
-      seed: (Date.now() >>> 0) + id,
+      timeBudgetMs,
+      seed,
     };
 
     return new Promise((resolve, reject) => {

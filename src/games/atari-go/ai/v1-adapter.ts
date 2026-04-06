@@ -14,7 +14,7 @@ import {
 } from '../logic';
 import type { AtariGoState, Posicao } from '../types';
 import { AtariGoAIClient, type AIClientOptions, idxToPos } from './ai-client';
-import type { AIDifficulty, AIMetrics } from './types';
+import type { AIDifficulty, AIMetrics, AIComputeOverrides } from './types';
 
 export interface AtariGoV1AdapterOptions {
   client?: AtariGoV1Client;
@@ -23,7 +23,11 @@ export interface AtariGoV1AdapterOptions {
 
 export interface AtariGoV1Client {
   readonly metrics: AIMetrics;
-  getBestMove(state: AtariGoState, difficulty: AIDifficulty): Promise<number | null>;
+  getBestMove(
+    state: AtariGoState,
+    difficulty: AIDifficulty,
+    overrides?: AIComputeOverrides,
+  ): Promise<number | null>;
   cancel(): void;
   terminate(): void;
 }
@@ -48,7 +52,10 @@ export class AtariGoV1Adapter {
   ): Promise<AIResponseV1<Posicao, AtariGoState>> {
     const startedAt = performance.now();
     const difficulty = mapLevelToLegacyDifficulty(request.level);
-    const bestMoveIdx = await this.client.getBestMove(request.state, difficulty);
+    const bestMoveIdx = await this.client.getBestMove(request.state, difficulty, {
+      timeBudgetMs: request.timeBudgetMs,
+      seed: request.seed,
+    });
     const bestMove = bestMoveIdx === null ? null : idxToPos(bestMoveIdx);
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(request.state, topMoves);
@@ -76,6 +83,9 @@ export class AtariGoV1Adapter {
         usedWasm: this.client.metrics.usedWasm,
         engine: this.client.metrics.usedWasm ? 'rust-wasm' : 'ts-fallback',
       },
+      warnings: this.client.metrics.usedWasm
+        ? undefined
+        : ['A análise desta dica usou o fallback atual do Atari Go.'],
     };
   }
 
