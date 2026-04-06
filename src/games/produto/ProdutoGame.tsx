@@ -22,6 +22,7 @@ import type { AIDifficulty } from './ai/types';
 import { DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
 import { ProdutoV1Adapter } from './ai/v1-adapter';
+import { buildQuickReviewItems, resolveHintLevel } from './ai/pedagogy-mvp';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
 
@@ -73,13 +74,8 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   return 'border-slate-300 bg-slate-50 text-slate-800';
 }
 
-function normalizeHintLevel(level?: 'H0' | 'H1' | 'H2' | 'H3'): 'H1' | 'H2' | 'H3' | undefined {
-  if (!level || level === 'H0') return undefined;
-  return level;
-}
-
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
-  const { recordGameCompleted } = useGamification();
+  const { recordGameCompleted, recordReviewCompleted } = useGamification();
   const [state, setState] = useState<ProdutoState>(() =>
     criarEstadoInicial('vs-computador')
   );
@@ -91,6 +87,9 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<JogadaDupla, ProdutoState> | null>(null);
   const [tutorLoading, setTutorLoading] = useState(false);
+  const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<JogadaDupla, ProdutoState>>>([]);
+  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const [reviewRewarded, setReviewRewarded] = useState(false);
   const aiClientRef = useMemo(() => new ProdutoAIClient({ onMetricsUpdate: setAiMetrics }), []);
   const tutorAdapterRef = useMemo(() => new ProdutoV1Adapter(), []);
   const awardedResultRef = useRef<string | null>(null);
@@ -165,6 +164,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
   useEffect(() => {
     if (state.estado === 'a-jogar') {
       awardedResultRef.current = null;
+      setReviewRewarded(false);
       return;
     }
     if (awardedResultRef.current === state.estado) return;
@@ -199,6 +199,10 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setState(criarEstadoInicial(state.modo));
     setMostrarVencedor(false);
     setTutorResponse(null);
+    setTutorLoading(false);
+    setTutorHistory([]);
+    setHintLevel('H2');
+    setReviewRewarded(false);
   }, [state.modo]);
 
   const trocarModo = useCallback(() => {
@@ -207,6 +211,10 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setMostrarVencedor(false);
     setHumanPlayer('jogador1');
     setTutorResponse(null);
+    setTutorLoading(false);
+    setTutorHistory([]);
+    setHintLevel('H2');
+    setReviewRewarded(false);
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -214,6 +222,10 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setState(criarEstadoInicial('vs-computador'));
     setMostrarVencedor(false);
     setTutorResponse(null);
+    setTutorLoading(false);
+    setTutorHistory([]);
+    setHintLevel('H2');
+    setReviewRewarded(false);
   }, []);
 
   useEffect(() => {
@@ -248,6 +260,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       .then((response) => {
         if (!cancelled) {
           setTutorResponse(response);
+          setTutorHistory((prev) => [...prev, response]);
+          setHintLevel((current) => resolveHintLevel(response, current));
         }
       })
       .catch((error) => {
@@ -351,6 +365,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     state.estado === 'a-jogar' &&
     state.jogadorAtual !== humanPlayer;
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const quickReviewItems = buildQuickReviewItems(tutorHistory);
 
   return (
     <GameLayout titulo="Produto" regras={REGRAS} onVoltar={onVoltar}>
@@ -406,7 +421,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 'Procura duas peças que criem grupos teus e, se possível, prejudiquem o produto adversário.'
               }
               suggestedAction={getSuggestedAction(tutorResponse)}
-              hintLevel={normalizeHintLevel(tutorResponse?.pedagogy?.hintLevelSuggested)}
+              hintLevel={hintLevel}
               errorCode={tutorResponse?.pedagogy?.errorCode}
               isLoading={tutorLoading}
             />
@@ -553,6 +568,42 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
             <strong>Dica:</strong> Podes colocar peças do adversário para unir os grupos dele e reduzir a pontuação a 0!
           </div>
         </div>
+        {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
+          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="flex items-center justify-between gap-3">
+              <p className="font-semibold">Revisão rápida pós-jogo</p>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+                2-4 min
+              </span>
+            </div>
+            <p className="mt-1 text-emerald-800">
+              Revê até 2 momentos e confirma onde podias melhorar o teu produto sem ajudar o adversário.
+            </p>
+            <div className="mt-2 space-y-2">
+              {quickReviewItems.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                >
+                  <p className="font-medium text-emerald-900">{item.title}</p>
+                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              disabled={reviewRewarded}
+              onClick={() => {
+                if (reviewRewarded) return;
+                recordReviewCompleted('produto');
+                setReviewRewarded(true);
+              }}
+              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+            >
+              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+            </button>
+          </section>
+        )}
       </div>
 
       {/* Anúncio de vencedor */}
