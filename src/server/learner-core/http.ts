@@ -1,12 +1,10 @@
 import type { Server } from 'bun';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { GameId } from '../../ai-core/types';
 import type { LearnerCommandResponse, LearnerDashboardPayload } from '../../types/learner-core';
 import { getLearnerCoreConfig } from './config';
 import { getLearnerCoreDb } from './db';
 import { LearnerCoreService } from './service';
-
-const config = getLearnerCoreConfig();
-const service = new LearnerCoreService(getLearnerCoreDb(config));
 
 function json(data: LearnerDashboardPayload | LearnerCommandResponse | Record<string, unknown>, init?: ResponseInit): Response {
   return Response.json(data, init);
@@ -26,7 +24,40 @@ function parseCookies(header: string | null): Record<string, string> {
   }, {});
 }
 
-function sessionCookie(value: string): string {
+function getRuntime() {
+  const config = getLearnerCoreConfig();
+  return {
+    config,
+    service: new LearnerCoreService(getLearnerCoreDb(config)),
+  };
+}
+
+function signSessionId(sessionId: string, secret: string): string {
+  return createHmac('sha256', secret).update(sessionId).digest('base64url');
+}
+
+function encodeSessionCookieValue(sessionId: string, secret: string): string {
+  return `${sessionId}.${signSessionId(sessionId, secret)}`;
+}
+
+function decodeSessionCookieValue(rawValue: string | undefined, secret: string): string | null {
+  if (!rawValue) return null;
+
+  const separator = rawValue.lastIndexOf('.');
+  if (separator <= 0 || separator === rawValue.length - 1) return null;
+
+  const sessionId = rawValue.slice(0, separator);
+  const signature = rawValue.slice(separator + 1);
+  const expectedSignature = signSessionId(sessionId, secret);
+
+  if (signature.length !== expectedSignature.length) return null;
+  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) return null;
+
+  return sessionId;
+}
+
+function sessionCookie(sessionId: string, config: ReturnType<typeof getLearnerCoreConfig>): string {
+  const value = encodeSessionCookieValue(sessionId, config.sessionSecret);
   return `${config.sessionCookieName}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${config.sessionCookieMaxAgeSeconds}`;
 }
 
@@ -35,14 +66,17 @@ async function readJson<T>(req: Request): Promise<T> {
 }
 
 function withSession(req: Request): { userId: string; headers: Headers } {
+  const { config, service } = getRuntime();
   const cookies = parseCookies(req.headers.get('cookie'));
-  const session = service.ensureSession(cookies[config.sessionCookieName] ?? null);
+  const sessionId = decodeSessionCookieValue(cookies[config.sessionCookieName], config.sessionSecret);
+  const session = service.ensureSession(sessionId);
   const headers = new Headers();
-  headers.append('Set-Cookie', sessionCookie(session.sessionId));
+  headers.append('Set-Cookie', sessionCookie(session.sessionId, config));
   return { userId: session.userId, headers };
 }
 
 export async function handleAppRequest(req: Request, _server: Server<unknown>): Promise<Response> {
+  const { service } = getRuntime();
   const url = new URL(req.url);
   if (url.pathname === '/api/health') {
     return json({ ok: true, service: 'learner-core-v1' });

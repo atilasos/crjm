@@ -76,7 +76,7 @@ Achievements, missões e training paths continuam como **catálogos/configuraç�
 A ADR-003 está cumprida quando o repositório fornece:
 1. backend capaz de servir bootstrap técnico de sessão e endpoints de learner dashboard/comandos sem partir o entrypoint atual;
 2. contrato partilhado para perfil, progresso por jogo e eventos de atividade;
-3. persistência canónica limitada a `users`, `learner_profiles`, `learner_game_progress` e `learner_activity_events` (ou equivalentes semânticos);
+3. persistência canónica limitada a `users`, `learner_profiles`, `learner_game_progress` e `learner_activity_events` (ou equivalentes semânticos), com `auth_sessions` e `learner_import_markers` admitidas apenas como infra operacional;
 4. dashboard/profile que já não dependem de `localStorage` como fonte de verdade;
 5. política explícita de import legado idempotente;
 6. ausência de tabelas/rotas V1 para matches/history/classrooms/teacher dashboards.

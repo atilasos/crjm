@@ -11,6 +11,7 @@ function createService(nowIso = '2026-04-07T09:00:00Z') {
     dbPath: tempDbPath,
     sessionCookieName: 'crjm_session',
     sessionCookieMaxAgeSeconds: 3600,
+    sessionSecret: 'test-secret',
   };
   const db = createLearnerCoreDb(config);
   let currentNow = new Date(nowIso);
@@ -66,7 +67,7 @@ describe('learner core service', () => {
     expect(afterReview.sessionXpDelta).toBeGreaterThan(0);
   });
 
-  test('imports a legacy profile idempotently and excludes V2/V3 tables', () => {
+  test('imports a legacy profile idempotently while keeping the V1 core strict', () => {
     const { db, service } = createService();
     const session = service.ensureSession(null);
     const legacy = {
@@ -104,6 +105,8 @@ describe('learner core service', () => {
     expect(tables).toContain('learner_profiles');
     expect(tables).toContain('learner_game_progress');
     expect(tables).toContain('learner_activity_events');
+    expect(tables).toContain('auth_sessions');
+    expect(tables).toContain('learner_import_markers');
     expect(tables).not.toContain('matches');
     expect(tables).not.toContain('classrooms');
     expect(tables).not.toContain('teacher_dashboards');

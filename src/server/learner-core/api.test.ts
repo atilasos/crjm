@@ -10,10 +10,12 @@ async function withTempDb() {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'crjm-learner-http-'));
   cleanup.push(dir);
   process.env.CRJM_LEARNER_DB_PATH = path.join(dir, 'learner.sqlite');
+  process.env.CRJM_SESSION_SECRET = 'test-session-secret';
 }
 
 afterEach(async () => {
   delete process.env.CRJM_LEARNER_DB_PATH;
+  delete process.env.CRJM_SESSION_SECRET;
   await Promise.all(cleanup.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
 });
 
@@ -35,5 +37,22 @@ describe('learner core HTTP routes', () => {
     expect(dashboard.profile.displayName).toBeTruthy();
     expect(dashboard.profile.locale).toBe('pt-PT');
     expect(dashboard.gameProgress.dominorio.played).toBe(0);
+  });
+
+  test('rejects tampered session cookies and issues a fresh signed session', async () => {
+    await withTempDb();
+    const server = {} as Parameters<typeof handleAppRequest>[1];
+
+    const sessionResponse = await handleAppRequest(new Request('http://localhost/api/auth/session'), server);
+    const cookie = sessionResponse.headers.get('set-cookie') ?? '';
+    const tamperedCookie = cookie.replace(/crjm_session=[^;]+/, 'crjm_session=invalid.signature');
+
+    const dashboardResponse = await handleAppRequest(
+      new Request('http://localhost/api/learner/dashboard', { headers: { cookie: tamperedCookie } }),
+      server,
+    );
+
+    expect(dashboardResponse.headers.get('set-cookie')).not.toBe(cookie);
+    expect(dashboardResponse.headers.get('set-cookie')).toContain('crjm_session=');
   });
 });
