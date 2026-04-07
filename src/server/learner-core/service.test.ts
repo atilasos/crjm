@@ -11,7 +11,6 @@ function createService(nowIso = '2026-04-07T09:00:00Z') {
     dbPath: tempDbPath,
     sessionCookieName: 'crjm_session',
     sessionCookieMaxAgeSeconds: 3600,
-    sessionSecret: 'test-secret',
   };
   const db = createLearnerCoreDb(config);
   let currentNow = new Date(nowIso);

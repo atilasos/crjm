@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   last_login_at TEXT NOT NULL
 );
 
+-- Infra operacional para bootstrap técnico de sessão; não faz parte do núcleo canónico ADR-003 V1.
 CREATE TABLE IF NOT EXISTS auth_sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -56,6 +57,7 @@ CREATE TABLE IF NOT EXISTS learner_activity_events (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Infra operacional para cutover/import idempotente; não faz parte do núcleo canónico ADR-003 V1.
 CREATE TABLE IF NOT EXISTS learner_import_markers (
   user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
   fingerprint TEXT NOT NULL,

@@ -10,7 +10,7 @@ O repositório inclui os **6 jogos oficiais** do campeonato, um **modo campeonat
 
 - **Jogos oficiais completos:** Gatos & Cães, Dominório, Quelhas, Produto, Atari Go e Nex
 - **Cobertura pedagógica nos 6 jogos:** hints H1/H2/H3, contexto visual de turno, top jogadas e alertas de ameaça
-- **Revisão e progresso:** quick review/turning point pós-jogo com XP, missões, conquistas e perfil persistido por sessão autenticada no backend learner-core V1
+- **Revisão e progresso:** quick review/turning point pós-jogo com XP, missões, conquistas e perfil persistido via bootstrap técnico de sessão no backend learner-core V1
 - **Competição escolar:** modo campeonato com dupla eliminação e cliente/servidor dedicados
 - **Estado técnico atual:** Dominório e Atari Go estão em nível de **piloto maduro**; Quelhas, Gatos & Cães, Produto e Nex estão **consolidados** segundo a matriz em [`docs/agents/ALL-GAMES-MATURITY-MATRIX.md`](docs/agents/ALL-GAMES-MATURITY-MATRIX.md)
 
@@ -138,11 +138,12 @@ Se precisares de mudar a porta:
 PORT=3001 bun run dev
 ```
 
-### Configuração opcional do learner core V1
+### Configuração opcional do bootstrap técnico do learner core V1
 
 ```bash
 CRJM_LEARNER_DB_PATH=.data/learner-core-v1.sqlite
-CRJM_SESSION_SECRET=dev-session-secret
+CRJM_SESSION_COOKIE_NAME=crjm_session
+CRJM_SESSION_COOKIE_MAX_AGE=2592000
 ```
 
 ### Testes

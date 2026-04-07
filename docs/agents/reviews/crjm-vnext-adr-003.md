@@ -6,7 +6,7 @@ Estado: aceite
 ## Contexto
 
 A ADR-002 definiu o recorte da V1 como:
-- autenticação funcional;
+- bootstrap técnico de sessão do aluno (sem decisão final de autenticação do learner-core);
 - utilizador/aluno;
 - progresso persistente por jogo;
 - dashboard básica do aluno.
@@ -36,10 +36,12 @@ Para a V1 do CRJM vNext, o modelo persistente canónico passa a ser **learner-ce
 
 Achievements, missões e training paths continuam como **catálogos/configuração** na V1. O estado visível no dashboard é **derivado** de `learner_profiles + learner_game_progress + learner_activity_events`, com cache não-canónica apenas se necessária por desempenho ou rollout.
 
+`auth_sessions` e `learner_import_markers` podem existir como **infra operacional** para bootstrap técnico/cutover idempotente, mas não contam como entidades semânticas adicionais do núcleo canónico V1.
+
 ## Guardrails
 
 ### In-scope na V1
-- autenticação e bootstrap do aluno;
+- bootstrap técnico de sessão do aluno;
 - perfil persistente do aluno;
 - progresso persistente por jogo;
 - XP, streak e dashboard do aluno;
@@ -64,7 +66,7 @@ Achievements, missões e training paths continuam como **catálogos/configuraç�
 ## Consequências
 
 - o frontend deixa de usar `localStorage` como fonte de verdade crítica para perfil/progresso do aluno;
-- o backend precisa de um bootstrap de sessão + perfil + progresso + eventos;
+- o backend precisa de um bootstrap técnico de sessão + perfil + progresso + eventos;
 - `recordGameCompleted` e `recordReviewCompleted` tornam-se comandos narrow sobre factos pedagógicos;
 - o dashboard passa a ser uma query derivada de perfil/progresso/eventos;
 - é necessário um caminho explícito de import/cutover para estado legado local, com fingerprint/marker idempotente.
@@ -72,7 +74,7 @@ Achievements, missões e training paths continuam como **catálogos/configuraç�
 ## Critérios de aceitação
 
 A ADR-003 está cumprida quando o repositório fornece:
-1. backend capaz de servir bootstrap de sessão e endpoints de learner dashboard/comandos sem partir o entrypoint atual;
+1. backend capaz de servir bootstrap técnico de sessão e endpoints de learner dashboard/comandos sem partir o entrypoint atual;
 2. contrato partilhado para perfil, progresso por jogo e eventos de atividade;
 3. persistência canónica limitada a `users`, `learner_profiles`, `learner_game_progress` e `learner_activity_events` (ou equivalentes semânticos);
 4. dashboard/profile que já não dependem de `localStorage` como fonte de verdade;
