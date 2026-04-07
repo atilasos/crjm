@@ -40,3 +40,4 @@ export interface QuelhasState extends GameState {
   pecasJogador2: number[];
 }
 
+export * from './learner-core';

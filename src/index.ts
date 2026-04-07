@@ -1,17 +1,19 @@
-import { serve } from "bun";
-import index from "./index.html";
+import { serve } from 'bun';
+import index from './index.html';
+import { handleAppRequest } from './server/learner-core/http';
 
-const port = parseInt(process.env.PORT || "3000");
+const port = parseInt(process.env.PORT || '3000', 10);
 
 const server = serve({
   port,
   routes: {
-    // Serve index.html for all routes (SPA)
-    "/*": index,
+    '/api/*': false,
+    '/*': index,
   },
-  // Note: HMR is handled by `bun --hot` flag, not here
-  // Setting both causes conflicts and WebSocket errors
-  development: process.env.NODE_ENV !== "production" && {
+  fetch(request, server) {
+    return handleAppRequest(request, server) as Promise<Response>;
+  },
+  development: process.env.NODE_ENV !== 'production' && {
     console: true,
   },
 });
