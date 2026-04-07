@@ -71,3 +71,6 @@ target-test/
 .omx/setup-scope.json
 .omx/team/
 .playwright-mcp/
+
+# local learner-core persistence
+.data/
