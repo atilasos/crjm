@@ -3,13 +3,12 @@ import type { GameId } from '../../ai-core/types';
 import {
   createInitialProfile,
   getMissionProgress,
-  hydrateProfileFromSnapshot,
   recordGameCompletion,
   recordReviewCompletion,
   sanitizeProfile,
   type GamificationEvent,
   type GamificationProfile,
-} from '../../ai-core/learner-gamification';
+} from '../../components/gamification/gamification-state';
 import type {
   LearnerActivityEventRecord,
   LearnerCommandResponse,
@@ -60,6 +59,25 @@ interface ProgressRow {
   mastery_level: number;
   last_played_at: string | null;
   updated_at: string;
+}
+
+function hydrateProfileFromSnapshot(snapshot: {
+  totalXp: number;
+  streakDays: number;
+  lastActiveDate: string | null;
+  gameProgress: GamificationProfile['gameProgress'];
+  recentEvents: GamificationEvent[];
+}): GamificationProfile {
+  const base = createInitialProfile();
+  return {
+    ...base,
+    totalXp: snapshot.totalXp,
+    sessionXp: 0,
+    streakDays: snapshot.streakDays,
+    lastActiveDate: snapshot.lastActiveDate,
+    gameProgress: snapshot.gameProgress,
+    recentEvents: snapshot.recentEvents,
+  };
 }
 
 export class LearnerCoreService {

@@ -4,7 +4,7 @@ import type {
   GameProgressSnapshot,
   GamificationEvent,
   MissionProgress,
-} from '../ai-core/learner-gamification';
+} from '../components/gamification/gamification-state';
 
 export interface LearnerProfileRecord {
   userId: string;
