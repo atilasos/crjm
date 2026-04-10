@@ -55,6 +55,12 @@ export async function bootstrapGamification(fetchImpl: FetchLike, localProfile: 
     legacyImportConsumed = Boolean(importResponse?.ok);
     if (legacyImportConsumed) {
       payload = await fetchDashboard(fetchImpl);
+    } else if (importResponse && !importResponse.ok) {
+      const refreshedPayload = await fetchDashboard(fetchImpl);
+      if (refreshedPayload.importFingerprint !== null) {
+        payload = refreshedPayload;
+        legacyImportConsumed = true;
+      }
     }
   } else if (localProfile && payload.importFingerprint !== null) {
     legacyImportConsumed = true;

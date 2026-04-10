@@ -140,6 +140,49 @@ describe('backend gamification client', () => {
     expect(result.legacyImportConsumed).toBe(false);
   });
 
+  test('consumes legacy profile after conflict when a refreshed dashboard shows import fingerprint', async () => {
+    let dashboardHits = 0;
+    const fetchMock: typeof fetch = (async (input) => {
+      const url = String(input);
+      if (url === '/api/auth/session') return makeResponse({ userId: 'learner-1' });
+      if (url === '/api/learner/import-local-profile') return makeResponse({ error: 'conflict' }, 409);
+
+      dashboardHits += 1;
+      return makeResponse({
+        profile: {
+          userId: 'learner-1',
+          displayName: 'Aluno',
+          locale: 'pt-PT',
+          cycleOrGrade: null,
+          totalXp: dashboardHits > 1 ? 32 : 0,
+          currentStreakDays: 0,
+          lastActiveOn: null,
+          createdAt: '2026-04-07T09:00:00Z',
+          updatedAt: '2026-04-07T09:00:00Z',
+        },
+        gameProgress: {
+          'gatos-caes': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          dominorio: { played: dashboardHits > 1 ? 1 : 0, wins: dashboardHits > 1 ? 1 : 0, reviews: 0, rules: dashboardHits > 1 ? 1 : 0, strategy: dashboardHits > 1 ? 1 : 0, mastery: 0 },
+          quelhas: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          produto: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          'atari-go': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          nex: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+        },
+        achievements: dashboardHits > 1 ? { first_game: { unlockedAt: '2026-04-07T09:00:00Z' } } : {},
+        missions: [],
+        recentEvents: dashboardHits > 1
+          ? [{ type: 'game_completed', gameId: 'dominorio', at: '2026-04-07T09:00:00Z', won: true }]
+          : [],
+        importFingerprint: dashboardHits > 1 ? 'abc' : null,
+      });
+    }) as typeof fetch;
+
+    const result = await bootstrapGamification(fetchMock, { totalXp: 8 });
+    expect(result.legacyImportConsumed).toBe(true);
+    expect(result.importFingerprint).toBe('abc');
+    expect(result.profile.totalXp).toBe(32);
+  });
+
   test('maps command payloads into popups and client profile', async () => {
     const payload = {
       dashboard: {
