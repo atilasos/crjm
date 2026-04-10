@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { GameId } from '../../ai-core/types';
 import type { AchievementDefinition } from '../../ai-core/gamification';
@@ -13,6 +13,7 @@ import {
   type MissionProgress,
 } from './gamification-state';
 import { bootstrapGamification, postGameCompleted, postReviewCompleted } from './backend-client';
+import { createCommandGate } from './command-gate';
 
 interface GamificationContextValue {
   profile: GamificationProfile;
@@ -50,10 +51,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<MissionProgress[]>([]);
   const [queue, setQueue] = useState<AchievementPopupState[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const commandGateRef = useRef(createCommandGate());
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
+    const bootstrapTask = (async () => {
       const legacyProfile = readLegacyProfile();
       try {
         const result = await bootstrapGamification(fetch, legacyProfile);
@@ -70,6 +72,8 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       }
     })();
 
+    commandGateRef.current.setBootstrap(bootstrapTask);
+
     return () => {
       cancelled = true;
     };
@@ -82,11 +86,11 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const recordGameCompletedHandler = useCallback((gameId: GameId, won: boolean) => {
-    void postGameCompleted(fetch, gameId, won).then(applyCommandResult).catch(() => undefined);
+    void commandGateRef.current.run(() => postGameCompleted(fetch, gameId, won)).then(applyCommandResult).catch(() => undefined);
   }, [applyCommandResult]);
 
   const recordReviewCompletedHandler = useCallback((gameId: GameId) => {
-    void postReviewCompleted(fetch, gameId).then(applyCommandResult).catch(() => undefined);
+    void commandGateRef.current.run(() => postReviewCompleted(fetch, gameId)).then(applyCommandResult).catch(() => undefined);
   }, [applyCommandResult]);
 
   const dismissPopup = useCallback(() => {
