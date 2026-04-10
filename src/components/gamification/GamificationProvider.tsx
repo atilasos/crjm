@@ -60,7 +60,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setProfile({ ...result.profile, sessionXp: 0 });
         setMissions(result.missions);
-        if (legacyProfile) clearLegacyProfile();
+        if (legacyProfile && result.legacyImportConsumed) clearLegacyProfile();
       } catch {
         if (cancelled) return;
         setProfile(createInitialProfile());

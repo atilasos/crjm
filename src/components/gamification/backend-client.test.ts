@@ -48,11 +48,48 @@ describe('backend gamification client', () => {
     const result = await bootstrapGamification(fetchMock, { totalXp: 8 });
     expect(result.profile.totalXp).toBe(32);
     expect(result.importFingerprint).toBe('abc');
+    expect(result.legacyImportConsumed).toBe(true);
     expect(calls).toEqual([
       'GET /api/auth/session',
       'POST /api/learner/import-local-profile',
       'GET /api/learner/dashboard',
     ]);
+  });
+
+  test('does not mark legacy profile as consumed when import fails but dashboard still loads', async () => {
+    const fetchMock: typeof fetch = (async (input) => {
+      const url = String(input);
+      if (url === '/api/auth/session') return makeResponse({ userId: 'learner-1' });
+      if (url === '/api/learner/import-local-profile') return makeResponse({ error: 'conflict' }, 409);
+      return makeResponse({
+        profile: {
+          userId: 'learner-1',
+          displayName: 'Aluno',
+          locale: 'pt-PT',
+          cycleOrGrade: null,
+          totalXp: 0,
+          currentStreakDays: 0,
+          lastActiveOn: null,
+          createdAt: '2026-04-07T09:00:00Z',
+          updatedAt: '2026-04-07T09:00:00Z',
+        },
+        gameProgress: {
+          'gatos-caes': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          dominorio: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          quelhas: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          produto: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          'atari-go': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          nex: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+        },
+        achievements: {},
+        missions: [],
+        recentEvents: [],
+        importFingerprint: null,
+      });
+    }) as typeof fetch;
+
+    const result = await bootstrapGamification(fetchMock, { totalXp: 8 });
+    expect(result.legacyImportConsumed).toBe(false);
   });
 
   test('maps command payloads into popups and client profile', async () => {

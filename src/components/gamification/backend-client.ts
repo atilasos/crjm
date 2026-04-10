@@ -7,6 +7,7 @@ export interface GamificationBootstrapResult {
   profile: GamificationProfile;
   missions: MissionProgress[];
   importFingerprint: string | null;
+  legacyImportConsumed: boolean;
 }
 
 function toClientProfile(payload: LearnerDashboardPayload, sessionXp = 0): GamificationProfile {
@@ -31,13 +32,17 @@ interface FetchLike {
 export async function bootstrapGamification(fetchImpl: FetchLike, localProfile: unknown): Promise<GamificationBootstrapResult> {
   await fetchImpl('/api/auth/session', { credentials: 'include' });
 
+  let legacyImportConsumed = false;
+
   if (localProfile) {
-    await fetchImpl('/api/learner/import-local-profile', {
+    const importResponse = await fetchImpl('/api/learner/import-local-profile', {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ profile: localProfile }),
     }).catch(() => undefined);
+
+    legacyImportConsumed = Boolean(importResponse?.ok);
   }
 
   const response = await fetchImpl('/api/learner/dashboard', { credentials: 'include' });
@@ -49,6 +54,7 @@ export async function bootstrapGamification(fetchImpl: FetchLike, localProfile: 
     profile: toClientProfile(payload, 0),
     missions: payload.missions,
     importFingerprint: payload.importFingerprint,
+    legacyImportConsumed,
   };
 }
 
