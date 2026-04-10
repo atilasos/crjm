@@ -26,7 +26,7 @@ export function App() {
 
 function AppContent() {
   const [paginaAtual, setPaginaAtual] = useState<Pagina>('inicio');
-  const { activePopup, dismissPopup, profile } = useGamification();
+  const { activePopup, dismissPopup, isReady, profile } = useGamification();
 
   const voltarInicio = () => setPaginaAtual('inicio');
 
@@ -160,7 +160,7 @@ function AppContent() {
         </section>
 
         <section className="mb-12">
-          <GameProgressBars gameProgress={profile.gameProgress} />
+          <GameProgressBars isReady={isReady} gameProgress={profile.gameProgress} />
         </section>
 
         {/* Informações */}

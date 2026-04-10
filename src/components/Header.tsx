@@ -9,7 +9,7 @@ interface HeaderProps {
 }
 
 export function Header({ titulo, onVoltar }: HeaderProps) {
-  const { level, levelTitle, missions, profile, xpWindow } = useGamification();
+  const { isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
 
   return (
     <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
@@ -38,14 +38,15 @@ export function Header({ titulo, onVoltar }: HeaderProps) {
           {onVoltar && <div className="w-20" />}
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <PlayerBadge level={level} title={levelTitle} streakDays={profile.streakDays} />
+          <PlayerBadge isReady={isReady} level={level} title={levelTitle} streakDays={profile.streakDays} />
           <SessionXpBar
+            isReady={isReady}
             currentXp={profile.totalXp}
             currentLevelXp={xpWindow.current}
             nextLevelXp={xpWindow.next}
             sessionXp={profile.sessionXp}
           />
-          <MissionWidget missions={missions} />
+          <MissionWidget isReady={isReady} missions={missions} />
         </div>
       </div>
     </header>
