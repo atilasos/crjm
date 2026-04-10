@@ -29,12 +29,22 @@ interface FetchLike {
   (input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
 }
 
+async function fetchDashboard(fetchImpl: FetchLike): Promise<LearnerDashboardPayload> {
+  const response = await fetchImpl('/api/learner/dashboard', { credentials: 'include' });
+  if (!response.ok) {
+    throw new Error(`dashboard bootstrap failed: ${response.status}`);
+  }
+
+  return (await response.json()) as LearnerDashboardPayload;
+}
+
 export async function bootstrapGamification(fetchImpl: FetchLike, localProfile: unknown): Promise<GamificationBootstrapResult> {
   await fetchImpl('/api/auth/session', { credentials: 'include' });
 
   let legacyImportConsumed = false;
+  let payload = await fetchDashboard(fetchImpl);
 
-  if (localProfile) {
+  if (localProfile && payload.importFingerprint === null) {
     const importResponse = await fetchImpl('/api/learner/import-local-profile', {
       method: 'POST',
       credentials: 'include',
@@ -43,13 +53,13 @@ export async function bootstrapGamification(fetchImpl: FetchLike, localProfile: 
     }).catch(() => undefined);
 
     legacyImportConsumed = Boolean(importResponse?.ok);
+    if (legacyImportConsumed) {
+      payload = await fetchDashboard(fetchImpl);
+    }
+  } else if (localProfile && payload.importFingerprint !== null) {
+    legacyImportConsumed = true;
   }
 
-  const response = await fetchImpl('/api/learner/dashboard', { credentials: 'include' });
-  if (!response.ok) {
-    throw new Error(`dashboard bootstrap failed: ${response.status}`);
-  }
-  const payload = (await response.json()) as LearnerDashboardPayload;
   return {
     profile: toClientProfile(payload, 0),
     missions: payload.missions,

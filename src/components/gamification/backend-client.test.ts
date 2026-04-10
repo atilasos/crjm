@@ -18,6 +18,57 @@ describe('backend gamification client', () => {
 
       if (url === '/api/auth/session') return makeResponse({ userId: 'learner-1' });
       if (url === '/api/learner/import-local-profile') return makeResponse({ ok: true });
+
+      const dashboardHit = calls.filter((call) => call === 'GET /api/learner/dashboard').length;
+      return makeResponse({
+        profile: {
+          userId: 'learner-1',
+          displayName: 'Aluno',
+          locale: 'pt-PT',
+          cycleOrGrade: null,
+          totalXp: dashboardHit >= 2 ? 32 : 0,
+          currentStreakDays: 2,
+          lastActiveOn: '2026-04-07',
+          createdAt: '2026-04-07T09:00:00Z',
+          updatedAt: '2026-04-07T09:00:00Z',
+        },
+        gameProgress: {
+          'gatos-caes': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          dominorio: { played: 1, wins: 1, reviews: 0, rules: 1, strategy: 1, mastery: 0 },
+          quelhas: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          produto: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          'atari-go': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+          nex: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+        },
+        achievements: dashboardHit >= 2 ? { first_game: { unlockedAt: '2026-04-07T09:00:00Z' } } : {},
+        missions: [],
+        recentEvents: dashboardHit >= 2
+          ? [{ type: 'game_completed', gameId: 'dominorio', at: '2026-04-07T09:00:00Z', won: true }]
+          : [],
+        importFingerprint: dashboardHit >= 2 ? 'abc' : null,
+      });
+    }) as typeof fetch;
+
+    const result = await bootstrapGamification(fetchMock, { totalXp: 8 });
+    expect(result.profile.totalXp).toBe(32);
+    expect(result.importFingerprint).toBe('abc');
+    expect(result.legacyImportConsumed).toBe(true);
+    expect(calls).toEqual([
+      'GET /api/auth/session',
+      'GET /api/learner/dashboard',
+      'POST /api/learner/import-local-profile',
+      'GET /api/learner/dashboard',
+    ]);
+  });
+
+  test('skips import when dashboard already has an import fingerprint', async () => {
+    const calls: string[] = [];
+    const fetchMock: typeof fetch = (async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? 'GET';
+      calls.push(`${method} ${url}`);
+
+      if (url === '/api/auth/session') return makeResponse({ userId: 'learner-1' });
       return makeResponse({
         profile: {
           userId: 'learner-1',
@@ -46,12 +97,9 @@ describe('backend gamification client', () => {
     }) as typeof fetch;
 
     const result = await bootstrapGamification(fetchMock, { totalXp: 8 });
-    expect(result.profile.totalXp).toBe(32);
-    expect(result.importFingerprint).toBe('abc');
     expect(result.legacyImportConsumed).toBe(true);
     expect(calls).toEqual([
       'GET /api/auth/session',
-      'POST /api/learner/import-local-profile',
       'GET /api/learner/dashboard',
     ]);
   });
