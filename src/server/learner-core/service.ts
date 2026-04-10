@@ -3,12 +3,13 @@ import type { GameId } from '../../ai-core/types';
 import {
   createInitialProfile,
   getMissionProgress,
+  hydrateProfileFromSnapshot,
   recordGameCompletion,
   recordReviewCompletion,
   sanitizeProfile,
   type GamificationEvent,
   type GamificationProfile,
-} from '../../components/gamification/gamification-state';
+} from '../../ai-core/learner-gamification';
 import type {
   LearnerActivityEventRecord,
   LearnerCommandResponse,
@@ -61,30 +62,25 @@ interface ProgressRow {
   updated_at: string;
 }
 
-function hydrateProfileFromSnapshot(snapshot: {
-  totalXp: number;
-  streakDays: number;
-  lastActiveDate: string | null;
-  gameProgress: GamificationProfile['gameProgress'];
-  recentEvents: GamificationEvent[];
-}): GamificationProfile {
-  const base = createInitialProfile();
-  return {
-    ...base,
-    totalXp: snapshot.totalXp,
-    sessionXp: 0,
-    streakDays: snapshot.streakDays,
-    lastActiveDate: snapshot.lastActiveDate,
-    gameProgress: snapshot.gameProgress,
-    recentEvents: snapshot.recentEvents,
-  };
-}
-
 export class LearnerCoreService {
   constructor(
     private readonly db: Database,
     private readonly now: () => Date = () => new Date(),
   ) {}
+
+  private runInTransaction<T>(work: () => T): T {
+    const savepoint = `learner_core_${crypto.randomUUID().replace(/-/g, '_')}`;
+    this.db.exec(`SAVEPOINT ${savepoint}`);
+    try {
+      const result = work();
+      this.db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+      return result;
+    } catch (error) {
+      this.db.exec(`ROLLBACK TO SAVEPOINT ${savepoint}`);
+      this.db.exec(`RELEASE SAVEPOINT ${savepoint}`);
+      throw error;
+    }
+  }
 
   ensureSession(sessionId: string | null): { sessionId: string; userId: string; created: boolean } {
     const nowIso = this.now().toISOString();
@@ -101,8 +97,7 @@ export class LearnerCoreService {
     const nextSessionId = crypto.randomUUID();
     const displayName = `Aluno ${userId.slice(0, 8)}`;
 
-    this.db.exec('BEGIN');
-    try {
+    this.runInTransaction(() => {
       this.db.query(
         'INSERT INTO users (id, auth_provider, auth_subject, role, created_at, last_login_at) VALUES (?, ?, ?, ?, ?, ?)',
       ).run(userId, 'dev-session', userId, 'learner', nowIso, nowIso);
@@ -115,11 +110,7 @@ export class LearnerCoreService {
         nowIso,
         nowIso,
       );
-      this.db.exec('COMMIT');
-    } catch (error) {
-      this.db.exec('ROLLBACK');
-      throw error;
-    }
+    });
 
     return { sessionId: nextSessionId, userId, created: true };
   }
@@ -133,15 +124,17 @@ export class LearnerCoreService {
     const before = this.reconstructProfile(userId);
     const now = this.now();
     const { profile: after } = recordGameCompletion(before, gameId, { won, now });
-    this.insertEvent(userId, {
-      id: crypto.randomUUID(),
-      game_id: gameId,
-      event_type: 'game_completed',
-      occurred_at: now.toISOString(),
-      won: won ? 1 : 0,
-      xp_delta: 10 + (won ? 8 : 0),
+    this.runInTransaction(() => {
+      this.insertEvent(userId, {
+        id: crypto.randomUUID(),
+        game_id: gameId,
+        event_type: 'game_completed',
+        occurred_at: now.toISOString(),
+        won: won ? 1 : 0,
+        xp_delta: 10 + (won ? 8 : 0),
+      });
+      this.syncSnapshotTables(userId, after);
     });
-    this.syncSnapshotTables(userId, after);
     return this.buildCommandResponse(userId, before, after);
   }
 
@@ -149,15 +142,17 @@ export class LearnerCoreService {
     const before = this.reconstructProfile(userId);
     const now = this.now();
     const { profile: after } = recordReviewCompletion(before, gameId, now);
-    this.insertEvent(userId, {
-      id: crypto.randomUUID(),
-      game_id: gameId,
-      event_type: 'review_completed',
-      occurred_at: now.toISOString(),
-      won: null,
-      xp_delta: 10,
+    this.runInTransaction(() => {
+      this.insertEvent(userId, {
+        id: crypto.randomUUID(),
+        game_id: gameId,
+        event_type: 'review_completed',
+        occurred_at: now.toISOString(),
+        won: null,
+        xp_delta: 10,
+      });
+      this.syncSnapshotTables(userId, after);
     });
-    this.syncSnapshotTables(userId, after);
     return this.buildCommandResponse(userId, before, after);
   }
 
@@ -175,8 +170,7 @@ export class LearnerCoreService {
 
     if (!existing) {
       const nowIso = this.now().toISOString();
-      this.db.exec('BEGIN');
-      try {
+      this.runInTransaction(() => {
         this.db.query(
           'INSERT INTO learner_import_markers (user_id, fingerprint, imported_at) VALUES (?, ?, ?)',
         ).run(userId, fingerprint, nowIso);
@@ -192,11 +186,7 @@ export class LearnerCoreService {
           });
         }
         this.syncSnapshotTables(userId, sanitized);
-        this.db.exec('COMMIT');
-      } catch (error) {
-        this.db.exec('ROLLBACK');
-        throw error;
-      }
+      });
     }
 
     return this.getDashboard(userId);

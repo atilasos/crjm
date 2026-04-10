@@ -65,6 +65,37 @@ describe('learner core service', () => {
     expect(afterReview.dashboard.achievements.first_review).toBeDefined();
     expect(afterReview.dashboard.missions.find((mission) => mission.id === 'daily-review-1')?.completed).toBe(true);
     expect(afterReview.sessionXpDelta).toBeGreaterThan(0);
+
+    const reloaded = service.getDashboard(session.userId);
+    expect(reloaded.achievements.first_game).toBeDefined();
+    expect(reloaded.achievements.first_win).toBeDefined();
+    expect(reloaded.achievements.first_review).toBeDefined();
+  });
+
+  test('rolls back learner events when snapshot sync fails', () => {
+    const { db, service, setNow } = createService();
+    const session = service.ensureSession(null);
+
+    db.exec(`
+      CREATE TRIGGER fail_profile_update
+      BEFORE UPDATE ON learner_profiles
+      BEGIN
+        SELECT RAISE(ABORT, 'fail_profile_update');
+      END;
+    `);
+
+    setNow('2026-04-07T10:00:00Z');
+    expect(() => service.recordGameCompleted(session.userId, 'dominorio', true)).toThrow('fail_profile_update');
+
+    const eventCount = db
+      .query<{ count: number }, [string]>('SELECT COUNT(*) AS count FROM learner_activity_events WHERE user_id = ?')
+      .get(session.userId);
+
+    expect(eventCount?.count).toBe(0);
+
+    const dashboard = service.getDashboard(session.userId);
+    expect(dashboard.profile.totalXp).toBe(0);
+    expect(dashboard.gameProgress.dominorio.played).toBe(0);
   });
 
   test('imports a legacy profile idempotently while keeping the V1 core strict', () => {
