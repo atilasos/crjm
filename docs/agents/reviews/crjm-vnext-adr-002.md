@@ -65,6 +65,10 @@ Nota:
 - o backend continua a ser nosso;
 - o auth é consumido como serviço, não como substituto da arquitetura.
 
+Nota de implementação atual:
+- o branch `crjm-vnext` ainda não materializa esta integração;
+- enquanto ADR-003 V1 está a ser fechado, o repositório usa apenas bootstrap técnico de sessão assinado para suportar learner persistence e cutover do estado legado.
+
 ## Framework de desenvolvimento obrigatória
 
 O desenvolvimento do CRJM vNext não deve seguir um fluxo ad-hoc.

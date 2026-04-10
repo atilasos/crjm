@@ -10,7 +10,7 @@ O repositório inclui os **6 jogos oficiais** do campeonato, um **modo campeonat
 
 - **Jogos oficiais completos:** Gatos & Cães, Dominório, Quelhas, Produto, Atari Go e Nex
 - **Cobertura pedagógica nos 6 jogos:** hints H1/H2/H3, contexto visual de turno, top jogadas e alertas de ameaça
-- **Revisão e progresso:** quick review/turning point pós-jogo com XP, missões, conquistas e perfil persistido via bootstrap técnico de sessão no spike learner-core V1
+- **Revisão e progresso:** quick review/turning point pós-jogo com XP, missões, conquistas e perfil persistido via bootstrap técnico de sessão no learner-core V1
 - **Competição escolar:** modo campeonato com dupla eliminação e cliente/servidor dedicados
 - **Estado técnico atual:** Dominório e Atari Go estão em nível de **piloto maduro**; Quelhas, Gatos & Cães, Produto e Nex estão **consolidados** segundo a matriz em [`docs/agents/ALL-GAMES-MATURITY-MATRIX.md`](docs/agents/ALL-GAMES-MATURITY-MATRIX.md)
 
@@ -144,6 +144,12 @@ PORT=3001 bun run dev
 CRJM_LEARNER_DB_PATH=.data/learner-core-v1.sqlite
 CRJM_SESSION_SECRET=dev-session-secret
 ```
+
+### Estado atual da autenticação no branch V1
+
+- O learner-core atual usa **bootstrap técnico de sessão assinado por cookie** para suportar perfil/progresso persistido do aluno durante a transição do browser para backend.
+- Isto **não** equivale ainda à integração final de auth recomendada em ADR-002.
+- A identidade/autenticação de produção continua uma decisão de stack separada; o branch atual fecha apenas o **seam de sessão técnica + learner persistence** necessário para ADR-003 V1.
 
 ### Testes
 

@@ -71,6 +71,14 @@ Achievements, missões e training paths continuam como **catálogos/configuraç�
 - o dashboard passa a ser uma query derivada de perfil/progresso/eventos;
 - é necessário um caminho explícito de import/cutover para estado legado local, com fingerprint/marker idempotente.
 
+## Posição de auth para o branch V1 atual
+
+Para remover ambiguidade no repositório:
+
+- o branch atual **não** implementa ainda a integração final de auth recomendada em ADR-002;
+- a implementação corrente assume apenas **bootstrap técnico de sessão assinado por cookie** para suportar a migração do learner-core V1;
+- `auth_sessions` existe como infraestrutura operacional desse bootstrap, não como encerramento da decisão final de auth do produto.
+
 ## Critérios de aceitação
 
 A ADR-003 está cumprida quando o repositório fornece:
