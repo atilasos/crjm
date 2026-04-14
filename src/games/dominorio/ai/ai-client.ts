@@ -233,6 +233,7 @@ export class DominorioAIClient {
     if (moves.length === 0) {
       return {
         type: 'result',
+        id: 0,
         bestMove: -1,
         depthReached: 0,
         nodesSearched: 0,
@@ -241,6 +242,7 @@ export class DominorioAIClient {
         ttHitRate: 0,
         score: -MATE,
         fromBook: false,
+        usedWasm: false,
       };
     }
     
@@ -362,6 +364,7 @@ export class DominorioAIClient {
     
     return {
       type: 'result',
+      id: 0,
       bestMove,
       depthReached,
       nodesSearched: nodes,
@@ -370,6 +373,7 @@ export class DominorioAIClient {
       ttHitRate: 0,
       score: bestScore,
       fromBook: false,
+      usedWasm: false,
     };
   }
   
@@ -405,6 +409,7 @@ export class DominorioAIClient {
     if (bookMove !== null) {
       const response: AIResponse = {
         type: 'result',
+        id: 0,
         bestMove: bookMove,
         depthReached: 0,
         nodesSearched: 0,
@@ -413,6 +418,7 @@ export class DominorioAIClient {
         ttHitRate: 0,
         score: 0,
         fromBook: true,
+        usedWasm: false,
       };
       
       this.updateMetrics(response);
@@ -425,27 +431,62 @@ export class DominorioAIClient {
       typeof overrides.timeBudgetMs === 'number' && Number.isFinite(overrides.timeBudgetMs)
         ? Math.max(1, Math.trunc(overrides.timeBudgetMs))
         : params.timeBudgetMs;
-    
-    // Run search
-    const response = await this.searchTS(
-      occupiedLow,
-      occupiedHigh,
-      side,
-      timeBudgetMs,
-      params.maxDepth,
-      params.topN,
-      params.scoreDelta,
-      random,
-    );
-    
-    this.updateMetrics(response);
-    
-    // Convert anchor to Domino
-    if (response.bestMove < 0) {
-      return null;
+
+    const runInline = async (): Promise<Domino | null> => {
+      const response = await this.searchTS(
+        occupiedLow,
+        occupiedHigh,
+        side,
+        timeBudgetMs,
+        params.maxDepth,
+        params.topN,
+        params.scoreDelta,
+        random,
+      );
+
+      this.updateMetrics(response);
+
+      if (response.bestMove < 0) {
+        return null;
+      }
+
+      return bitboard.anchorToDomino(response.bestMove, side);
+    };
+
+    if (this.worker) {
+      const requestId = this.nextId++;
+      const request: AIRequest = {
+        type: 'search',
+        id: requestId,
+        occupiedLow,
+        occupiedHigh,
+        sideToMove: side,
+        timeBudgetMs,
+        difficulty,
+        plyCount,
+        seed: overrides.seed,
+      };
+
+      return await new Promise<Domino | null>((resolve, reject) => {
+        this.pending.set(requestId, {
+          side,
+          resolve,
+          reject,
+          runInline,
+        });
+
+        try {
+          this.worker?.postMessage(request);
+        } catch (error) {
+          this.pending.delete(requestId);
+          void runInline().then(resolve).catch(reject);
+          this.fallbackToInline(error instanceof Error ? error.message : String(error));
+        }
+      });
     }
     
-    return bitboard.anchorToDomino(response.bestMove, side);
+    // Run search
+    return await runInline();
   }
   
   /**
@@ -460,6 +501,7 @@ export class DominorioAIClient {
       lastTTHitRate: response.ttHitRate,
       lastScore: response.score,
       fromBook: response.fromBook,
+      usedWasm: response.usedWasm,
     };
     this.options.onMetricsUpdate?.(this.currentMetrics);
   }
@@ -497,8 +539,8 @@ export class DominorioAIClient {
 
   get runtimeInfo(): AIRuntimeInfo {
     return {
-      engine: 'ts-fallback',
-      usedWasm: false,
+      engine: this.currentMetrics.usedWasm ? 'rust-wasm' : 'ts-fallback',
+      usedWasm: this.currentMetrics.usedWasm,
       fromBook: this.currentMetrics.fromBook,
     };
   }

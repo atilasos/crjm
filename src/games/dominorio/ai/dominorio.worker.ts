@@ -10,9 +10,28 @@ import { DIFFICULTY_PRESETS } from './types';
 import * as bitboard from './bitboard';
 import openingBook from './book.json';
 
+interface WasmSearchResult {
+  search(
+    occupied_low: number,
+    occupied_high: number,
+    side: number,
+    time_budget_ms: number,
+    max_depth: number,
+    top_n: number,
+    score_delta: number
+  ): {
+    best_move: number;
+    depth_reached: number;
+    nodes_searched: bigint;
+    elapsed_ms: number;
+    tt_hits: bigint;
+    tt_probes: bigint;
+    score: number;
+  };
+}
+
 // WASM module type (will be dynamically imported if available)
 interface WasmEngine {
-  new(tt_size_bits: number): WasmEngine;
   search(
     occupied_low: number,
     occupied_high: number,
@@ -33,6 +52,11 @@ interface WasmEngine {
   clear_tt(): void;
 }
 
+interface WasmModule {
+  default: (opts: { module_or_path: URL | string }) => Promise<unknown>;
+  DominorioEngine: new(tt_size_bits: number) => WasmEngine;
+}
+
 // State
 let wasmEngine: WasmEngine | null = null;
 let useWasm = false;
@@ -51,8 +75,9 @@ interface TSEngineState {
 async function init(): Promise<void> {
   try {
     // Try to load WASM module
-    const wasmModule = await import('./wasm/pkg/dominorio_ai.js');
-    await wasmModule.default();
+    const wasmModule = (await import('./wasm/pkg/dominorio_ai.js')) as WasmModule;
+    const wasmUrl = new URL('./wasm/pkg/dominorio_ai_bg.wasm', import.meta.url);
+    await wasmModule.default({ module_or_path: wasmUrl });
     wasmEngine = new wasmModule.DominorioEngine(18); // 256K entries TT
     useWasm = true;
     console.log('[DominorioAI] WASM engine initialized');
@@ -117,7 +142,7 @@ function checkOpeningBook(
   
   if (entries && entries.length > 0) {
     const idx = Math.floor(random() * entries.length);
-    return entries[idx];
+    return entries[idx] ?? null;
   }
   
   return null;
@@ -233,7 +258,7 @@ function searchTS(
     
     let alpha = -INF;
     const beta = INF;
-    let currentBest = orderedMoves[0];
+      let currentBest = orderedMoves[0] ?? -1;
     
     for (const mv of orderedMoves) {
       const [newLow, newHigh] = bitboard.applyMove(occupiedLow, occupiedHigh, mv, side);
@@ -269,14 +294,20 @@ function searchTS(
     
     scoredMoves.sort((a, b) => b.score - a.score);
     
-    const candidates = scoredMoves.filter(
-      s => scoredMoves[0].score - s.score <= params.scoreDelta
-    );
+    const topScore = scoredMoves[0]?.score;
+    const candidates = topScore === undefined
+      ? []
+      : scoredMoves.filter(
+        s => topScore - s.score <= params.scoreDelta
+      );
     
     if (candidates.length > 1) {
       const idx = Math.floor(random() * candidates.length);
-      bestMove = candidates[idx].move;
-      bestScore = candidates[idx].score;
+      const selected = candidates[idx];
+      if (selected) {
+        bestMove = selected.move;
+        bestScore = selected.score;
+      }
     }
   }
   
@@ -437,4 +468,3 @@ const initPromise = init().catch(e => {
   const ready: AIReady = { type: 'ready', usedWasm: false };
   self.postMessage(ready);
 });
-
