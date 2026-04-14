@@ -71,6 +71,7 @@ const ADMIN_KEY = process.env.ADMIN_KEY || 'admin123';
 interface ClientData {
   playerId: string | null;
   tournamentId: string | null;
+  isPrivilegedSpectator: boolean;
 }
 
 // Mapa de torneios ativos (por jogo, só um torneio por jogo de cada vez)
@@ -1023,14 +1024,17 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
     message: 'Nova conexão WebSocket',
   });
 
-  // Adicionar ao set de espectadores (será removido se se tornar jogador)
-  spectatorSockets.add(socket);
+  if (socket.data.isPrivilegedSpectator) {
+    spectatorSockets.add(socket);
+  }
 
   // Enviar lista de jogos activos imediatamente
-  for (const tournament of tournaments.values()) {
-    if (tournament.phase === 'running') {
-      broadcastActiveGamesList(tournament);
-      break; // Só precisa de enviar uma vez
+  if (socket.data.isPrivilegedSpectator) {
+    for (const tournament of tournaments.values()) {
+      if (tournament.phase === 'running') {
+        broadcastActiveGamesList(tournament);
+        break; // Só precisa de enviar uma vez
+      }
     }
   }
 }
@@ -1804,6 +1808,7 @@ const server = Bun.serve<ClientData>({
         data: {
           playerId: null,
           tournamentId: null,
+          isPrivilegedSpectator: isAdminAuthorized(req.headers.get('Authorization'), ADMIN_KEY),
         },
       });
 
