@@ -11,8 +11,11 @@ export function buildTutorContextItems<Move, State>(
   if (!response) return [];
 
   const items: TutorContextItem[] = [];
+  const fromBook = response.explainTags?.includes('opening-book') ?? false;
 
-  if (response.stats.engine === 'rust-wasm') {
+  if (fromBook) {
+    items.push({ label: 'Livro de abertura', tone: 'info' });
+  } else if (response.stats.engine === 'rust-wasm') {
     items.push({ label: 'Análise WASM', tone: 'success' });
   } else {
     items.push({ label: 'Fallback TS', tone: 'warning' });
