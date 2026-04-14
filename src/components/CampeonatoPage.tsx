@@ -31,6 +31,7 @@ import type { QuelhasState, Segmento as QuelhasSegmento } from '../games/quelhas
 import type { ProdutoState, JogadaDupla } from '../games/produto/types';
 import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
 import type { NexState, Acao as NexAcao } from '../games/nex/types';
+import { DEFAULT_TOURNAMENT_SERVER_URL, PRESET_TOURNAMENT_SERVERS } from '../tournament/server-config';
 
 interface CampeonatoPageProps {
   onVoltar: () => void;
@@ -94,7 +95,7 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
     : [];
 
   const championId: string | null = raw.championId ?? null;
-  const championPlayer = players.find(p => p.id === championId) ?? null;
+  const championPlayer = players.find((p: { id: string }) => p.id === championId) ?? null;
 
   return {
     tournamentId: raw.id ?? raw.tournamentId ?? 'unknown',
@@ -110,21 +111,9 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
   };
 }
 
-// Servidores de torneio predefinidos
-const PRESET_SERVERS = [
-  { label: 'CRJM MacBook Pro', url: 'wss://crjm-macbookpro.infantinho.xyz' },
-  { label: 'CIDH', url: 'wss://cidh.infantinho.xyz' },
-  { label: 'Servidor personalizado...', url: 'custom' },
-];
-
-// URL do servidor de torneio via variável de ambiente ou default
-const DEFAULT_SERVER_URL = typeof import.meta !== 'undefined'
-  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || PRESET_SERVERS[0].url)
-  : PRESET_SERVERS[0].url;
-
 export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   // Estado de conexão
-  const [serverUrl, setServerUrl] = useState(DEFAULT_SERVER_URL);
+  const [serverUrl, setServerUrl] = useState(DEFAULT_TOURNAMENT_SERVER_URL);
   const [useMockServer, setUseMockServer] = useState(false); // Default to real server with preset
   const [playerName, setPlayerName] = useState('');
   const [classId, setClassId] = useState('');
@@ -305,10 +294,6 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       }
 
       case 'game_end': {
-        // DEBUG: Log the received message
-        console.log('[DEBUG CLIENT] game_end received:', JSON.stringify(message));
-        console.log('[DEBUG CLIENT] matchScore in message:', message.matchScore);
-
         // Converte estado de rede para local se necessário
         const gameIdForEnd = currentGameIdRef.current || 'gatos-caes';
         try {
@@ -320,10 +305,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         }
         // Novo protocolo inclui matchScore
         if (message.matchScore) {
-          console.log('[DEBUG CLIENT] Setting matchScore to:', message.matchScore);
           setMatchScore(message.matchScore);
-        } else {
-          console.log('[DEBUG CLIENT] WARNING: matchScore is missing from message!');
         }
 
         // Ativar estado de anúncio de fim de partida
@@ -830,7 +812,7 @@ function ConnectForm({
                   Servidor do torneio
                 </label>
                 <select
-                  value={PRESET_SERVERS.find(s => s.url === serverUrl)?.url || 'custom'}
+                  value={PRESET_TOURNAMENT_SERVERS.find(s => s.url === serverUrl)?.url || 'custom'}
                   onChange={e => {
                     const selected = e.target.value;
                     if (selected === 'custom') {
@@ -842,14 +824,14 @@ function ConnectForm({
                   className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50 text-sm mb-2"
                   disabled={isConnecting}
                 >
-                  {PRESET_SERVERS.map(server => (
+                  {PRESET_TOURNAMENT_SERVERS.map(server => (
                     <option key={server.url} value={server.url} className="bg-gray-800">
                       {server.label}
                     </option>
                   ))}
                 </select>
                 {/* Show custom URL input if 'custom' is selected or URL doesn't match presets */}
-                {!PRESET_SERVERS.some(s => s.url === serverUrl && s.url !== 'custom') && (
+                {!PRESET_TOURNAMENT_SERVERS.some(s => s.url === serverUrl && s.url !== 'custom') && (
                   <input
                     type="text"
                     value={serverUrl}
@@ -1329,9 +1311,6 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const opponent = mySeatInMatch === 'player1' ? match.player2 : match.player1;
   const myScore = mySeatInMatch === 'player1' ? matchScore.player1Wins : matchScore.player2Wins;
   const opponentScore = mySeatInMatch === 'player1' ? matchScore.player2Wins : matchScore.player1Wins;
-
-  // DEBUG: Log score values
-  console.log('[DEBUG RENDER] matchScore:', matchScore, 'mySeatInMatch:', mySeatInMatch, 'myScore:', myScore, 'opponentScore:', opponentScore, 'gameMyRole:', gameMyRole);
 
   // Determinar se eu ganhei a última partida
   const iWonLastGame = lastGameWinnerId === playerId;

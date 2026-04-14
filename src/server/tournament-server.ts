@@ -750,16 +750,11 @@ function handleSubmitMove(
       message: `Jogo ${gameNumber} terminou. Vencedor: ${winnerName}`,
     });
 
-    // DEBUG: Log the score being sent
-    console.log('[DEBUG] Score após endGame:', JSON.stringify(match.score));
-
     // Criar cópia do score para enviar (evitar problemas de referência)
     const scoreToSend = {
       player1Wins: match.score.player1Wins,
       player2Wins: match.score.player2Wins
     };
-
-    console.log('[DEBUG] Score a enviar:', JSON.stringify(scoreToSend));
 
     // Notificar fim do jogo com campos completos
     sendToPlayer(match.player1!.id, {
@@ -1125,6 +1120,10 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       },
       { headers: corsHeaders }
     );
+  }
+
+  if (url.pathname === '/favicon.ico') {
+    return new Response(null, { status: 204, headers: corsHeaders });
   }
 
   // Admin page
