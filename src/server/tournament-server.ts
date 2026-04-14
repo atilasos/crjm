@@ -164,6 +164,7 @@ function broadcastActiveGamesList(tournament: Tournament): void {
     if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
 
     return {
+      gameId: tournament.gameId,
       matchId: match.id,
       bracket,
       round: match.round,
@@ -198,6 +199,7 @@ function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMa
 
   const message: ServerMessage = {
     type: 'spectator_game_state',
+    gameId: tournament.gameId,
     matchId: match.id,
     gameNumber: match.currentGame,
     gameState: match.gameState,

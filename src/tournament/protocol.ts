@@ -254,6 +254,7 @@ export interface InfoMessage {
 /** Atualização de estado de jogo para espectadores */
 export interface SpectatorGameStateMessage {
   type: 'spectator_game_state';
+  gameId: GameId;
   matchId: string;
   gameNumber: number;
   gameState: unknown;
@@ -269,6 +270,7 @@ export interface SpectatorGameStateMessage {
 export interface ActiveGamesListMessage {
   type: 'active_games_list';
   games: Array<{
+    gameId: GameId;
     matchId: string;
     bracket: BracketType | 'grandFinal' | 'grandFinalReset';
     round: number;

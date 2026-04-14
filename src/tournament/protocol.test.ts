@@ -9,6 +9,8 @@ import type {
   TournamentState,
   Match,
   MatchSummary,
+  ActiveGamesListMessage,
+  SpectatorGameStateMessage,
   WelcomeMessage,
   TournamentStateUpdateMessage,
   MatchAssignedMessage,
@@ -91,6 +93,7 @@ describe('Server Messages', () => {
       playerId: 'p1',
       playerName: 'João',
       tournamentId: 't1',
+      reconnectionCode: 'ABC123',
       tournamentState: {
         tournamentId: 't1',
         gameId: 'gatos-caes',
@@ -129,7 +132,7 @@ describe('Server Messages', () => {
     
     expect(msg.gameId).toBe('dominorio');
     expect(msg.players).toHaveLength(2);
-    expect(msg.players[1].isBot).toBe(true);
+    expect(msg.players[1]?.isBot).toBe(true);
   });
 
   test('MatchAssignedMessage includes opponentName', () => {
@@ -142,6 +145,9 @@ describe('Server Messages', () => {
         player1: { id: 'p1', name: 'João' },
         player2: { id: 'p2', name: 'Maria' },
         score: { player1Wins: 0, player2Wins: 0 },
+        bestOf: 3,
+        currentGame: 1,
+        whoStartsCurrentGame: 'player1',
         phase: 'waiting',
         winnerId: null,
       },
@@ -151,6 +157,42 @@ describe('Server Messages', () => {
     
     expect(msg.opponentName).toBe('Maria');
     expect(msg.yourRole).toBe('player1');
+  });
+
+  test('SpectatorGameStateMessage carries gameId for board selection', () => {
+    const msg: SpectatorGameStateMessage = {
+      type: 'spectator_game_state',
+      gameId: 'dominorio',
+      matchId: 'm1',
+      gameNumber: 1,
+      gameState: {},
+      bracket: 'winners',
+      round: 1,
+      player1Name: 'João',
+      player2Name: 'Maria',
+      score: { player1Wins: 0, player2Wins: 0 },
+      whoseTurn: 'player1',
+    };
+
+    expect(msg.gameId).toBe('dominorio');
+  });
+
+  test('ActiveGamesListMessage carries gameId per active match', () => {
+    const msg: ActiveGamesListMessage = {
+      type: 'active_games_list',
+      games: [{
+        gameId: 'gatos-caes',
+        matchId: 'm1',
+        bracket: 'winners',
+        round: 1,
+        player1Name: 'João',
+        player2Name: 'Maria',
+        score: { player1Wins: 1, player2Wins: 0 },
+        gameNumber: 2,
+      }],
+    };
+
+    expect(msg.games[0]?.gameId).toBe('gatos-caes');
   });
 
   test('GameStartMessage includes yourRole', () => {
@@ -258,9 +300,9 @@ describe('Server Messages', () => {
     };
     
     expect(msg.tournamentId).toBe('t1');
-    expect(msg.finalStandings[0].rank).toBe(1);
-    expect(msg.finalStandings[0].playerId).toBe('p1');
-    expect(msg.finalStandings[0].playerName).toBe('João');
+    expect(msg.finalStandings[0]?.rank).toBe(1);
+    expect(msg.finalStandings[0]?.playerId).toBe('p1');
+    expect(msg.finalStandings[0]?.playerName).toBe('João');
   });
 });
 

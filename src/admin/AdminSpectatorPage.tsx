@@ -17,6 +17,7 @@ import {
 
 // Tipos para os estados
 interface ActiveGameInfo {
+  gameId: GameId;
   matchId: string;
   bracket: BracketType | 'grandFinal' | 'grandFinalReset';
   round: number;
@@ -27,6 +28,7 @@ interface ActiveGameInfo {
 }
 
 interface SpectatorMatchState {
+  gameId: GameId;
   matchId: string;
   gameNumber: number;
   gameState: unknown;
@@ -79,6 +81,7 @@ function AdminSpectatorPage() {
             // Actualiza se for o match selecionado ou se nenhum está selecionado ainda
             if (msg.matchId === selectedMatchId || !selectedMatchId) {
               setMatchState({
+                gameId: msg.gameId,
                 matchId: msg.matchId,
                 gameNumber: msg.gameNumber,
                 gameState: msg.gameState,
@@ -93,12 +96,8 @@ function AdminSpectatorPage() {
               if (!selectedMatchId) {
                 setSelectedMatchId(msg.matchId);
               }
+              setGameId(msg.gameId);
             }
-          }
-
-          // Extrair gameId do tournament_state_update
-          if (msg.type === 'tournament_state_update' && msg.gameId) {
-            setGameId(msg.gameId);
           }
         } catch (e) {
           console.error('Erro ao processar mensagem:', e);
@@ -217,7 +216,10 @@ function AdminSpectatorPage() {
               {activeGames.map((game) => (
                 <button
                   key={game.matchId}
-                  onClick={() => setSelectedMatchId(game.matchId)}
+                  onClick={() => {
+                    setSelectedMatchId(game.matchId);
+                    setGameId(game.gameId);
+                  }}
                   className={`w-full text-left p-2 rounded-lg transition-all ${
                     selectedMatchId === game.matchId
                       ? 'bg-blue-500/20 border border-blue-500/50'
