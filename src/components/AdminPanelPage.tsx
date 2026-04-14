@@ -50,6 +50,9 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
               <p className="text-white/60 text-sm mt-2">
                 O painel abre sempre no mesmo servidor onde os alunos estão a jogar em tempo real.
               </p>
+              <p className="text-white/50 text-sm mt-2">
+                Ao abrir o painel, o browser vai pedir a palavra-passe de administração configurada no servidor de torneio.
+              </p>
             </div>
           </div>
         </section>

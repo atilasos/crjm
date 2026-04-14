@@ -82,6 +82,8 @@ PORT=4000
 ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE
 ```
 
+> Esta chave protege o painel `/admin` e os endpoints de administração. O browser vai pedir autenticação quando o professor abrir o painel.
+
 ## 4. Arranque manual inicial
 
 Testa primeiro manualmente.
@@ -294,6 +296,7 @@ sudo systemctl start crjm-main.service
 ### Para o professor
 
 - abre `https://torneios.escola.pt/admin`
+- introduz a palavra-passe de administração do servidor (`ADMIN_KEY`)
 - cria o torneio
 - inicia as rondas
 - pode abrir `https://torneios.escola.pt/admin/spectator` para projeção

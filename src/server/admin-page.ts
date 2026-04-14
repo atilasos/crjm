@@ -11,7 +11,7 @@
  * - Modo fullscreen para projeção
  */
 
-export function getAdminPageHtml(adminKey: string): string {
+export function getAdminPageHtml(): string {
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -1183,7 +1183,6 @@ Pedro Costa"></textarea>
   <button class="btn-primary refresh-btn" onclick="refresh()" title="Atualizar">🔄</button>
   
   <script>
-    const ADMIN_KEY = '${adminKey}';
     let autoRefreshEnabled = true;
     let refreshInterval = null;
     let currentView = 'list';
@@ -1215,7 +1214,6 @@ Pedro Costa"></textarea>
       try {
         const res = await fetch(endpoint, {
           method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + ADMIN_KEY },
         });
         return await res.json();
       } catch (e) {
@@ -1917,9 +1915,7 @@ Pedro Costa"></textarea>
 
     async function doExportTournament(gameId) {
       try {
-        const res = await fetch('/api/tournaments/' + gameId + '/export', {
-          headers: { 'Authorization': 'Bearer ' + ADMIN_KEY },
-        });
+        const res = await fetch('/api/tournaments/' + gameId + '/export');
         
         if (!res.ok) {
           const error = await res.json();
@@ -1979,7 +1975,6 @@ Pedro Costa"></textarea>
           const res = await fetch('/api/tournaments/' + targetGameId + '/import', {
             method: 'POST',
             headers: {
-              'Authorization': 'Bearer ' + ADMIN_KEY,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(data),
@@ -2280,7 +2275,6 @@ Pedro Costa"></textarea>
         const res = await fetch('/api/tournaments/' + gameId + '/create-with-players', {
           method: 'POST',
           headers: {
-            'Authorization': 'Bearer ' + ADMIN_KEY,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ players }),

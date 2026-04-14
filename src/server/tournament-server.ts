@@ -55,6 +55,7 @@ import {
   getCurrentGamePlayer,
 } from './game-adapter';
 import { getAdminPageHtml } from './admin-page';
+import { adminChallengeHeaders, isAdminAuthorized } from './admin-auth';
 
 // ============================================================================
 // Configuração
@@ -1094,6 +1095,7 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
 
 async function handleHttpRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
+  const authHeader = req.headers.get('Authorization');
 
   // CORS headers
   const corsHeaders = {
@@ -1128,7 +1130,14 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Admin page
   if (url.pathname === '/' || url.pathname === '/admin') {
-    return new Response(getAdminPageHtml(ADMIN_KEY), {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return new Response('Admin authentication required', {
+        status: 401,
+        headers: adminChallengeHeaders(corsHeaders),
+      });
+    }
+
+    return new Response(getAdminPageHtml(), {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',
         ...corsHeaders,
@@ -1138,6 +1147,13 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Admin spectator page
   if (url.pathname === '/admin/spectator') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return new Response('Admin authentication required', {
+        status: 401,
+        headers: adminChallengeHeaders(corsHeaders),
+      });
+    }
+
     try {
       // Try to serve from dist first (production)
       const distPath = './dist/admin/spectator.html';
@@ -1169,6 +1185,10 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Listar torneios
   if (url.pathname === '/api/tournaments') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
     return Response.json(
       Array.from(tournaments.entries()).map(([gameId, t]) => ({
         gameId,
@@ -1191,9 +1211,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Iniciar torneio (requer admin key)
   if (url.pathname.startsWith('/api/tournaments/') && url.pathname.endsWith('/start') && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = url.pathname.split('/')[3] as GameId;
@@ -1269,9 +1288,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Reset torneio (requer admin key)
   if (url.pathname.startsWith('/api/tournaments/') && url.pathname.endsWith('/reset') && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = url.pathname.split('/')[3] as GameId;
@@ -1289,9 +1307,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/players/:playerId/eliminate
   const eliminateMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/eliminate$/);
   if (eliminateMatch && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = eliminateMatch[1] as GameId;
@@ -1337,9 +1354,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/players/:playerId/suspend
   const suspendMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/suspend$/);
   if (suspendMatch && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = suspendMatch[1] as GameId;
@@ -1398,9 +1414,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // GET /api/tournaments/:gameId/players/:playerId/code
   const codeMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/code$/);
   if (codeMatch && req.method === 'GET') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = codeMatch[1] as GameId;
@@ -1428,9 +1443,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // GET /api/tournaments/:gameId/export
   const exportMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/export$/);
   if (exportMatch && req.method === 'GET') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = exportMatch[1] as GameId;
@@ -1460,9 +1474,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/import
   const importMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/import$/);
   if (importMatch && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = importMatch[1] as GameId;
@@ -1521,9 +1534,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/create-with-players
   const createWithPlayersMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/create-with-players$/);
   if (createWithPlayersMatch && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = createWithPlayersMatch[1] as GameId;
@@ -1598,6 +1610,10 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Logs
   if (url.pathname === '/api/logs') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
     return Response.json(eventLog, { headers: corsHeaders });
   }
 
@@ -1605,9 +1621,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/matches/:matchId/restart-game
   const restartGameMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/restart-game$/);
   if (restartGameMatch && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = restartGameMatch[1] as GameId;
@@ -1670,9 +1685,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/matches/:matchId/restart-match
   const restartMatchPattern = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/restart-match$/);
   if (restartMatchPattern && req.method === 'POST') {
-    const authHeader = req.headers.get('Authorization');
-    if (authHeader !== `Bearer ${ADMIN_KEY}`) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: corsHeaders });
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
     const gameId = restartMatchPattern[1] as GameId;
