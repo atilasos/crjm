@@ -42,9 +42,11 @@ export class QuelhasAIClient {
 
   private initWorker(): void {
     try {
-      // Em produção (GitHub Pages), o worker é gerado no build para `dist/ai/quelhas/quelhas.worker.js`.
-      // Em dev (`bun --hot`), isto pode falhar porque o server serve sempre index.html; nesse caso faz fallback inline.
-      this.worker = new Worker(new URL('./ai/quelhas/quelhas.worker.js', import.meta.url), { type: 'module' });
+      try {
+        this.worker = new Worker(new URL('./ai/quelhas/quelhas.worker.js', import.meta.url), { type: 'module' });
+      } catch {
+        this.worker = new Worker(new URL('./quelhas.worker.ts', import.meta.url), { type: 'module' });
+      }
       this.worker.onmessage = (event: MessageEvent<AIResponse>) => this.onMessage(event.data);
       this.worker.onerror = () => this.fallbackToInline('worker-error');
       // Considerar pronto imediatamente: o worker sinaliza "ready" cedo e usa TS fallback se o WASM ainda estiver a carregar.
