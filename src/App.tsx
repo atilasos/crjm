@@ -5,6 +5,7 @@ import { GameCard } from './components/GameCard';
 import { CampeonatoPage } from './components/CampeonatoPage';
 import { PerfilPage } from './components/PerfilPage';
 import { AchievementPopup } from './components/gamification/AchievementPopup';
+import { AdminPanelPage } from './components/AdminPanelPage';
 import { GameProgressBars } from './components/gamification/GameProgressBars';
 import { GamificationProvider, useGamification } from './components/gamification/GamificationProvider';
 import { GatosCaesGame } from './games/gatos-caes/GatosCaesGame';
@@ -14,7 +15,7 @@ import { AtariGoGame } from './games/atari-go/AtariGoGame';
 import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
 
-type Pagina = 'inicio' | 'perfil' | 'campeonato' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+type Pagina = 'inicio' | 'perfil' | 'campeonato' | 'admin' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
 
 export function App() {
   return (
@@ -36,6 +37,10 @@ function AppContent() {
 
   if (paginaAtual === 'perfil') {
     return <PerfilPage onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'admin') {
+    return <AdminPanelPage onVoltar={voltarInicio} />;
   }
 
   if (paginaAtual === 'gatos-caes') {
@@ -89,6 +94,15 @@ function AppContent() {
           >
             Ver perfil e progresso
           </button>
+          <div className="mt-4">
+            <button
+              type="button"
+              onClick={() => setPaginaAtual('admin')}
+              className="rounded-2xl border border-cyan-300/40 bg-cyan-500/15 px-5 py-3 font-semibold text-cyan-50 transition hover:bg-cyan-500/25"
+            >
+              Painel do professor e administração
+            </button>
+          </div>
         </section>
 
         {/* Cartões dos jogos */}
@@ -107,6 +121,25 @@ function AppContent() {
               onClick={() => setPaginaAtual('campeonato')}
             />
           </div>
+
+          <section className="mb-8 rounded-3xl border border-cyan-300/25 bg-gradient-to-br from-cyan-500/15 to-blue-500/15 p-6 text-white">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-sm uppercase tracking-wide text-cyan-100/80 mb-2">Área do professor</p>
+                <h3 className="text-2xl font-bold mb-2">Gerir torneios, projeção e ligações da turma</h3>
+                <p className="text-white/80">
+                  O painel de administração abre o servidor do campeonato já existente, sem misturar as ferramentas do professor com a área dos alunos.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPaginaAtual('admin')}
+                className="self-start md:self-auto rounded-2xl bg-cyan-400/90 px-5 py-3 font-semibold text-slate-950 transition hover:bg-cyan-300"
+              >
+                Abrir painel do professor
+              </button>
+            </div>
+          </section>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <GameCard
