@@ -4,10 +4,14 @@ import type { GameId } from '../../ai-core/types';
 import type { AchievementDefinition } from '../../ai-core/gamification';
 import {
   createInitialProfile,
+  getMissionProgress,
   getLevelFromXp,
   getLevelTitle,
   getXpWindow,
   GAMIFICATION_STORAGE_KEY,
+  recordGameCompletion,
+  recordReviewCompletion,
+  sanitizeProfile,
   type AchievementPopupState,
   type GamificationProfile,
   type MissionProgress,
@@ -46,27 +50,72 @@ function clearLegacyProfile(): void {
   localStorage.removeItem(GAMIFICATION_STORAGE_KEY);
 }
 
+function writeLegacyProfile(profile: GamificationProfile): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(GAMIFICATION_STORAGE_KEY, JSON.stringify(profile));
+}
+
+function shouldUseLearnerApi(): boolean {
+  const runtimeConfig = globalThis as typeof globalThis & {
+    __CRJM_ENABLE_LEARNER_API__?: boolean;
+  };
+
+  return runtimeConfig.__CRJM_ENABLE_LEARNER_API__ === true;
+}
+
+function buildOfflineBootstrap(localProfile: unknown): {
+  profile: GamificationProfile;
+  missions: MissionProgress[];
+} {
+  const profile = sanitizeProfile(localProfile);
+  return {
+    profile: { ...profile, sessionXp: 0 },
+    missions: getMissionProgress(profile, new Date()),
+  };
+}
+
 export function GamificationProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<GamificationProfile>(() => createInitialProfile());
   const [missions, setMissions] = useState<MissionProgress[]>([]);
   const [queue, setQueue] = useState<AchievementPopupState[]>([]);
   const [isReady, setIsReady] = useState(false);
   const commandGateRef = useRef(createCommandGate());
+  const profileRef = useRef(profile);
+  const learnerApiEnabled = shouldUseLearnerApi();
+
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  const applyOfflineProfile = useCallback((nextProfile: GamificationProfile, popups: AchievementPopupState[] = []) => {
+    profileRef.current = nextProfile;
+    setProfile(nextProfile);
+    setMissions(getMissionProgress(nextProfile, new Date()));
+    if (popups.length > 0) {
+      setQueue((prev) => [...prev, ...popups]);
+    }
+    writeLegacyProfile(nextProfile);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     const bootstrapTask = (async () => {
       const legacyProfile = readLegacyProfile();
       try {
-        const result = await bootstrapGamification(fetch, legacyProfile);
+        const result = learnerApiEnabled
+          ? await bootstrapGamification(fetch, legacyProfile)
+          : buildOfflineBootstrap(legacyProfile);
         if (cancelled) return;
         setProfile({ ...result.profile, sessionXp: 0 });
         setMissions(result.missions);
-        if (legacyProfile && result.legacyImportConsumed) clearLegacyProfile();
+        if (learnerApiEnabled && legacyProfile && 'legacyImportConsumed' in result && result.legacyImportConsumed) {
+          clearLegacyProfile();
+        }
       } catch {
         if (cancelled) return;
-        setProfile(createInitialProfile());
-        setMissions([]);
+        const offline = buildOfflineBootstrap(legacyProfile);
+        setProfile(offline.profile);
+        setMissions(offline.missions);
       } finally {
         if (!cancelled) setIsReady(true);
       }
@@ -86,12 +135,24 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const recordGameCompletedHandler = useCallback((gameId: GameId, won: boolean) => {
-    void commandGateRef.current.run(() => postGameCompleted(fetch, gameId, won)).then(applyCommandResult).catch(() => undefined);
-  }, [applyCommandResult]);
+    if (learnerApiEnabled) {
+      void commandGateRef.current.run(() => postGameCompleted(fetch, gameId, won)).then(applyCommandResult).catch(() => undefined);
+      return;
+    }
+
+    const result = recordGameCompletion(profileRef.current, gameId, { won, now: new Date() });
+    applyOfflineProfile(result.profile, result.popups);
+  }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
   const recordReviewCompletedHandler = useCallback((gameId: GameId) => {
-    void commandGateRef.current.run(() => postReviewCompleted(fetch, gameId)).then(applyCommandResult).catch(() => undefined);
-  }, [applyCommandResult]);
+    if (learnerApiEnabled) {
+      void commandGateRef.current.run(() => postReviewCompleted(fetch, gameId)).then(applyCommandResult).catch(() => undefined);
+      return;
+    }
+
+    const result = recordReviewCompletion(profileRef.current, gameId, new Date());
+    applyOfflineProfile(result.profile, result.popups);
+  }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
   const dismissPopup = useCallback(() => {
     setQueue((prev) => prev.slice(1));

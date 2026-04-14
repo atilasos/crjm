@@ -1,4 +1,5 @@
 import { serve } from 'bun';
+import path from 'node:path';
 import index from './index.html';
 import { handleAppRequest } from './server/learner-core/http';
 
@@ -8,9 +9,24 @@ const server = serve({
   port,
   routes: {
     '/api/*': false,
-    '/*': index,
+    '/ai/*': false,
+    '/runtime-config.js': new Response('window.__CRJM_ENABLE_LEARNER_API__ = true;\n', {
+      headers: {
+        'Content-Type': 'application/javascript; charset=utf-8',
+      },
+    }),
+    '/': index,
   },
-  fetch(request, server) {
+  async fetch(request, server) {
+    const url = new URL(request.url);
+
+    if (url.pathname.startsWith('/ai/')) {
+      const asset = Bun.file(path.join(process.cwd(), 'dist', url.pathname.slice(1)));
+      if (await asset.exists()) {
+        return new Response(asset);
+      }
+    }
+
     return handleAppRequest(request, server) as Promise<Response>;
   },
   development: process.env.NODE_ENV !== 'production' && {

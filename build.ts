@@ -724,6 +724,11 @@ const outputTable = mainResult.outputs.map(output => ({
 console.table(outputTable);
 const buildTime = (end - start).toFixed(2);
 
+await copyFile(
+  path.join(process.cwd(), 'src', 'runtime-config.js'),
+  path.join(outdir, 'runtime-config.js'),
+);
+
 console.log(`\n✅ Build completed in ${buildTime}ms\n`);
 
 // ============================================================================
