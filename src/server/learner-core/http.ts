@@ -58,7 +58,8 @@ function decodeSessionCookieValue(rawValue: string | undefined, secret: string):
 
 function sessionCookie(sessionId: string, config: ReturnType<typeof getLearnerCoreConfig>): string {
   const value = encodeSessionCookieValue(sessionId, config.sessionSecret);
-  return `${config.sessionCookieName}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${config.sessionCookieMaxAgeSeconds}`;
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  return `${config.sessionCookieName}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${config.sessionCookieMaxAgeSeconds}`;
 }
 
 async function readJson<T>(req: Request): Promise<T> {

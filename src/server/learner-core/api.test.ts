@@ -74,6 +74,7 @@ describe('learner core HTTP routes', () => {
 
     expect(sessionResponse.status).toBe(200);
     expect(cookie).toContain('crjm_session=');
+    expect(cookie).toContain('Secure');
 
     const dashboardResponse = await handleAppRequest(
       new Request('http://localhost/api/learner/dashboard', { headers: { cookie } }),
