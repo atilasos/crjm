@@ -282,6 +282,20 @@ Este repositório já inclui um workflow em `.github/workflows/deploy.yml` que f
 1. Executar `bun run build`
 2. Publicar a pasta `dist/` num hosting estático (GitHub Pages, Netlify, Cloudflare Pages, etc.)
 
+> **Nota importante:** esta publicação estática é útil para treino local/offline e preview. A versão com servidor Bun, progresso persistido e operação completa para alunos/professor deve seguir um deployment VPS + Cloudflare.
+
+### Painel de administração
+
+- O painel do professor para campeonatos existe no **servidor de torneios** em `/admin`
+- O modo espectador existe em `/admin/spectator`
+- A app principal inclui uma entrada para abrir estes painéis sem reimplementar a lógica do servidor
+
+### Guia de produção com VPS + Cloudflare
+
+Para publicar uma versão funcional para alunos com Bun, SQLite persistente, painel de administração e Cloudflare, consulta:
+
+- [`docs/deployment/vps-cloudflare-bun.md`](./docs/deployment/vps-cloudflare-bun.md)
+
 ## 📜 Regras dos Jogos
 
 As regras completas de cada jogo estão disponíveis no site oficial do CRJM:
