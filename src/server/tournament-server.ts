@@ -55,7 +55,7 @@ import {
   getCurrentGamePlayer,
 } from './game-adapter';
 import { getAdminPageHtml } from './admin-page';
-import { adminChallengeHeaders, isAdminAuthorized } from './admin-auth';
+import { adminChallengeHeaders, adminSessionCookie, isAdminAuthorized } from './admin-auth';
 
 // ============================================================================
 // Configuração
@@ -135,6 +135,54 @@ function sendToSocket(socket: ServerWebSocket<ClientData>, message: ServerMessag
   }
 }
 
+function sendActiveGamesListToSocket(socket: ServerWebSocket<ClientData>, tournament: Tournament): void {
+  const activeMatches = getActiveMatchesWithGameState(tournament);
+
+  const games = activeMatches.map(({ match }) => {
+    let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
+    if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
+    if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
+
+    return {
+      gameId: tournament.gameId,
+      matchId: match.id,
+      bracket,
+      round: match.round,
+      player1Name: match.player1?.name || 'TBD',
+      player2Name: match.player2?.name || 'TBD',
+      score: match.score,
+      gameNumber: match.currentGame,
+    };
+  });
+
+  sendToSocket(socket, {
+    type: 'active_games_list',
+    games,
+  });
+}
+
+function sendSpectatorGameStateToSocket(socket: ServerWebSocket<ClientData>, tournament: Tournament, match: TournamentMatch): void {
+  if (!match.gameState || match.phase !== 'playing') return;
+
+  let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
+  if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
+  if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
+
+  sendToSocket(socket, {
+    type: 'spectator_game_state',
+    gameId: tournament.gameId,
+    matchId: match.id,
+    gameNumber: match.currentGame,
+    gameState: match.gameState,
+    bracket,
+    round: match.round,
+    player1Name: match.player1?.name || 'TBD',
+    player2Name: match.player2?.name || 'TBD',
+    score: match.score,
+    whoseTurn: match.whoseTurn,
+  });
+}
+
 function broadcastToTournament(tournament: Tournament, message: ServerMessage): void {
   for (const player of tournament.players) {
     if (player.isConnected) {
@@ -156,36 +204,19 @@ function broadcastTournamentState(tournament: Tournament): void {
 
 /** Envia a lista de jogos em curso para todos os jogadores e espectadores */
 function broadcastActiveGamesList(tournament: Tournament): void {
-  const activeMatches = getActiveMatchesWithGameState(tournament);
-
-  const games = activeMatches.map(({ match }) => {
-    let bracket: 'winners' | 'losers' | 'grandFinal' | 'grandFinalReset' = match.bracket;
-    if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
-    if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
-
-    return {
-      gameId: tournament.gameId,
-      matchId: match.id,
-      bracket,
-      round: match.round,
-      player1Name: match.player1?.name || 'TBD',
-      player2Name: match.player2?.name || 'TBD',
-      score: match.score,
-      gameNumber: match.currentGame,
-    };
-  });
-
-  const message: ServerMessage = {
-    type: 'active_games_list',
-    games,
-  };
-
   // Enviar para jogadores do torneio
-  broadcastToTournament(tournament, message);
+  for (const player of tournament.players) {
+    if (player.isConnected) {
+      const socket = playerSockets.get(player.id);
+      if (socket) {
+        sendActiveGamesListToSocket(socket, tournament);
+      }
+    }
+  }
 
   // Enviar também para espectadores/admin
   for (const socket of spectatorSockets) {
-    sendToSocket(socket, message);
+    sendActiveGamesListToSocket(socket, tournament);
   }
 }
 
@@ -197,30 +228,19 @@ function broadcastSpectatorGameState(tournament: Tournament, match: TournamentMa
   if (tournament.grandFinal?.id === match.id) bracket = 'grandFinal';
   if (tournament.grandFinalReset?.id === match.id) bracket = 'grandFinalReset';
 
-  const message: ServerMessage = {
-    type: 'spectator_game_state',
-    gameId: tournament.gameId,
-    matchId: match.id,
-    gameNumber: match.currentGame,
-    gameState: match.gameState,
-    bracket,
-    round: match.round,
-    player1Name: match.player1?.name || 'TBD',
-    player2Name: match.player2?.name || 'TBD',
-    score: match.score,
-    whoseTurn: match.whoseTurn,
-  };
-
   // Envia para todos os jogadores conectados (exceto os do próprio match que já recebem game_state_update)
   for (const player of tournament.players) {
     if (player.isConnected && player.id !== match.player1?.id && player.id !== match.player2?.id) {
-      sendToPlayer(player.id, message);
+      const socket = playerSockets.get(player.id);
+      if (socket) {
+        sendSpectatorGameStateToSocket(socket, tournament, match);
+      }
     }
   }
 
   // Enviar também para espectadores/admin
   for (const socket of spectatorSockets) {
-    sendToSocket(socket, message);
+    sendSpectatorGameStateToSocket(socket, tournament, match);
   }
 }
 
@@ -1040,8 +1060,11 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
   if (socket.data.isPrivilegedSpectator) {
     for (const tournament of tournaments.values()) {
       if (tournament.phase === 'running') {
-        broadcastActiveGamesList(tournament);
-        break; // Só precisa de enviar uma vez
+        sendActiveGamesListToSocket(socket, tournament);
+        const activeMatches = getActiveMatchesWithGameState(tournament);
+        for (const { match } of activeMatches) {
+          sendSpectatorGameStateToSocket(socket, tournament, match);
+        }
       }
     }
   }
@@ -1108,6 +1131,7 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
 async function handleHttpRequest(req: Request): Promise<Response> {
   const url = new URL(req.url);
   const authHeader = req.headers.get('Authorization');
+  const cookieHeader = req.headers.get('cookie');
 
   // CORS headers
   const corsHeaders = {
@@ -1142,24 +1166,27 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Admin page
   if (url.pathname === '/' || url.pathname === '/admin') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return new Response('Admin authentication required', {
         status: 401,
         headers: adminChallengeHeaders(corsHeaders),
       });
     }
 
+    const headers = new Headers({
+      'Content-Type': 'text/html; charset=utf-8',
+      ...corsHeaders,
+    });
+    headers.append('Set-Cookie', adminSessionCookie(ADMIN_KEY));
+
     return new Response(getAdminPageHtml(), {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        ...corsHeaders,
-      },
+      headers,
     });
   }
 
   // Admin spectator page
   if (url.pathname === '/admin/spectator') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return new Response('Admin authentication required', {
         status: 401,
         headers: adminChallengeHeaders(corsHeaders),
@@ -1170,11 +1197,13 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       const distPath = './dist/admin/spectator.html';
       const file = Bun.file(distPath);
       if (await file.exists()) {
+        const headers = new Headers({
+          'Content-Type': 'text/html; charset=utf-8',
+          ...corsHeaders,
+        });
+        headers.append('Set-Cookie', adminSessionCookie(ADMIN_KEY));
         return new Response(await file.text(), {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            ...corsHeaders,
-          },
+          headers,
         });
       }
 
@@ -1189,7 +1218,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Listar torneios
   if (url.pathname === '/api/tournaments') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1215,7 +1244,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Iniciar torneio (requer admin key)
   if (url.pathname.startsWith('/api/tournaments/') && url.pathname.endsWith('/start') && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1292,7 +1321,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Reset torneio (requer admin key)
   if (url.pathname.startsWith('/api/tournaments/') && url.pathname.endsWith('/reset') && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1311,7 +1340,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/players/:playerId/eliminate
   const eliminateMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/eliminate$/);
   if (eliminateMatch && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1358,7 +1387,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/players/:playerId/suspend
   const suspendMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/suspend$/);
   if (suspendMatch && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1418,7 +1447,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // GET /api/tournaments/:gameId/players/:playerId/code
   const codeMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/players\/([^/]+)\/code$/);
   if (codeMatch && req.method === 'GET') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1447,7 +1476,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // GET /api/tournaments/:gameId/export
   const exportMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/export$/);
   if (exportMatch && req.method === 'GET') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1478,7 +1507,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/import
   const importMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/import$/);
   if (importMatch && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1538,7 +1567,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/create-with-players
   const createWithPlayersMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/create-with-players$/);
   if (createWithPlayersMatch && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1614,7 +1643,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
 
   // Logs
   if (url.pathname === '/api/logs') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1625,7 +1654,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/matches/:matchId/restart-game
   const restartGameMatch = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/restart-game$/);
   if (restartGameMatch && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1689,7 +1718,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // POST /api/tournaments/:gameId/matches/:matchId/restart-match
   const restartMatchPattern = url.pathname.match(/^\/api\/tournaments\/([^/]+)\/matches\/([^/]+)\/restart-match$/);
   if (restartMatchPattern && req.method === 'POST') {
-    if (!isAdminAuthorized(authHeader, ADMIN_KEY)) {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
@@ -1808,7 +1837,7 @@ const server = Bun.serve<ClientData>({
         data: {
           playerId: null,
           tournamentId: null,
-          isPrivilegedSpectator: isAdminAuthorized(req.headers.get('Authorization'), ADMIN_KEY),
+          isPrivilegedSpectator: isAdminAuthorized(req.headers.get('Authorization'), ADMIN_KEY, req.headers.get('cookie')),
         },
       });
 
