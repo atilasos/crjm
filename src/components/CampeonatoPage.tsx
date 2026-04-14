@@ -842,7 +842,7 @@ function ConnectForm({
                   />
                 )}
                 <p className="text-white/40 text-xs mt-1">
-                  Escolhe o servidor ou introduz um endereço personalizado.
+                  Introduz o endereço da escola ou usa o servidor configurado no ambiente, se existir.
                 </p>
               </div>
             </div>

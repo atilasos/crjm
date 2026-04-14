@@ -62,7 +62,7 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
             <div>
               <h2 className="text-2xl font-bold text-white mb-2">Ligação ao servidor do torneio</h2>
               <p className="text-white/75">
-                Escolhe o servidor da escola ou escreve um endereço manual. Este endereço é o mesmo usado no modo campeonato.
+                Introduz o servidor da escola ou usa o valor configurado no ambiente. Este endereço é o mesmo usado no modo campeonato.
               </p>
             </div>
 

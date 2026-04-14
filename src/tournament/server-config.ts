@@ -3,15 +3,18 @@ export interface TournamentServerPreset {
   url: string;
 }
 
+const configuredTournamentServerUrl = typeof import.meta !== 'undefined'
+  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '')
+  : '';
+
 export const PRESET_TOURNAMENT_SERVERS: TournamentServerPreset[] = [
-  { label: 'CRJM MacBook Pro', url: 'wss://crjm-macbookpro.infantinho.xyz' },
-  { label: 'CIDH', url: 'wss://cidh.infantinho.xyz' },
+  ...(configuredTournamentServerUrl
+    ? [{ label: 'Servidor configurado da escola', url: configuredTournamentServerUrl }]
+    : []),
   { label: 'Servidor personalizado...', url: 'custom' },
 ];
 
-export const DEFAULT_TOURNAMENT_SERVER_URL = typeof import.meta !== 'undefined'
-  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || PRESET_TOURNAMENT_SERVERS[0]?.url || '')
-  : (PRESET_TOURNAMENT_SERVERS[0]?.url || '');
+export const DEFAULT_TOURNAMENT_SERVER_URL = configuredTournamentServerUrl;
 
 export function normalizeTournamentServerUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, '');
