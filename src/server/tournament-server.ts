@@ -62,7 +62,13 @@ import { adminChallengeHeaders, isAdminAuthorized } from './admin-auth';
 // ============================================================================
 
 const PORT = parseInt(process.env.PORT || '4000', 10);
-const ADMIN_KEY = process.env.ADMIN_KEY || 'admin123';
+const adminKeyFromEnv = process.env.ADMIN_KEY?.trim();
+
+if (!adminKeyFromEnv) {
+  throw new Error('ADMIN_KEY must be set before starting the tournament server');
+}
+
+const ADMIN_KEY = adminKeyFromEnv;
 
 // ============================================================================
 // Estado global do servidor

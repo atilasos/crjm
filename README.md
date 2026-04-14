@@ -260,8 +260,8 @@ O servidor aceita variáveis de ambiente:
 # Porta do servidor (default: 4000)
 PORT=4000 bun run tournament
 
-# Chave de administração (default: admin123)
-ADMIN_KEY=minha-chave-secreta bun run tournament
+# Chave de administração (obrigatória)
+ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament
 ```
 
 ### Guia Completo

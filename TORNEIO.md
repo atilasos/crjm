@@ -225,8 +225,8 @@ No topo do painel de administração:
 # Porta do servidor (default: 4000)
 PORT=4000 bun run tournament
 
-# Chave de administração (default: admin123)
-ADMIN_KEY=minha-chave-secreta bun run tournament
+# Chave de administração (obrigatória)
+ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament
 ```
 
 ### Configurar URL no Frontend (build)
@@ -271,37 +271,37 @@ curl http://localhost:4000/api/tournaments
 
 # Iniciar torneio (requer chave admin)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/start \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Reiniciar torneio completo (todos os dados perdidos)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/reset \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Reiniciar apenas o jogo atual de um match (mantém score do match)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/matches/MATCH_ID/restart-game \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Reiniciar match completo (score volta a 0-0)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/matches/MATCH_ID/restart-match \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Suspender jogador (pausa o match se estiver a jogar)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/players/PLAYER_ID/suspend \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Eliminar jogador (oponente ganha automaticamente)
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/players/PLAYER_ID/eliminate \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Criar torneio com pré-registo de jogadores
 curl -X POST http://localhost:4000/api/tournaments/gatos-caes/create-with-players \
-  -H "Authorization: Bearer admin123" \
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE" \
   -H "Content-Type: application/json" \
   -d '{"players": [{"name": "Ana", "classId": "5A"}, {"name": "Bruno", "classId": "5B"}]}'
 
 # Exportar para JSON
 curl http://localhost:4000/api/tournaments/gatos-caes/export \
-  -H "Authorization: Bearer admin123"
+-H "Authorization: Bearer MUDA_PARA_A_TUA_CHAVE"
 
 # Ver logs
 curl http://localhost:4000/api/logs
