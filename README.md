@@ -214,15 +214,15 @@ Atualmente, o servidor e a UI do modo campeonato suportam **todos os 6 jogos**:
 
 ```bash
 # Iniciar servidor de torneios
-bun run tournament
+ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament
 
 # Modo desenvolvimento (com hot reload)
-bun run tournament:dev
+ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament:dev
 ```
 
 O servidor estará disponível em `http://localhost:4000` com:
 - **WebSocket**: `ws://localhost:4000/ws` - Para ligações dos clientes
-- **Painel Admin**: `http://localhost:4000/admin` - Para gerir o torneio
+- **Painel Admin**: `http://localhost:4000/admin` - Para gerir o torneio (o browser pede utilizador `admin` + `ADMIN_KEY`)
 - **API HTTP**: `http://localhost:4000/api/*` - Endpoints de administração
   - `GET /health` - Health check rápido
 

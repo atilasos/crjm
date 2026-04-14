@@ -70,7 +70,7 @@ cd /caminho/para/jogosmatematicos
 bun install
 
 # Iniciar o servidor de torneios
-bun run tournament
+ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament
 ```
 
 Deves ver algo como:
@@ -97,6 +97,11 @@ Forwarding  https://abc123.ngrok.io -> http://localhost:4000
 ```
 
 Anota o URL `https://abc123.ngrok.io` - este é o URL que os alunos vão usar!
+
+Quando abrires `http://localhost:4000/admin` (ou o URL público equivalente), o browser vai pedir:
+
+- **utilizador**: `admin`
+- **palavra-passe**: o valor de `ADMIN_KEY`
 
 #### Opção B: Cloudflare Tunnel (mais estável)
 ```bash
