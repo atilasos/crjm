@@ -213,10 +213,10 @@ Atualmente, o servidor e a UI do modo campeonato suportam **todos os 6 jogos**:
 ### Iniciar o Servidor
 
 ```bash
-# Iniciar servidor de torneios
+# Iniciar servidor de torneios (o script prepara também os assets do modo espectador)
 ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament
 
-# Modo desenvolvimento (com hot reload)
+# Modo desenvolvimento (com hot reload, após gerar os assets do espectador)
 ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament:dev
 ```
 

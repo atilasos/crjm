@@ -69,7 +69,7 @@ cd /caminho/para/jogosmatematicos
 # Instalar dependências (se ainda não feito)
 bun install
 
-# Iniciar o servidor de torneios
+# Iniciar o servidor de torneios (o script prepara também os assets do modo espectador)
 ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE bun run tournament
 ```
 

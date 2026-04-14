@@ -1167,9 +1167,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     }
 
     try {
-      // Try to serve from dist first (production)
       const distPath = './dist/admin/spectator.html';
-      const srcPath = './src/admin/spectator.html';
       const file = Bun.file(distPath);
       if (await file.exists()) {
         return new Response(await file.text(), {
@@ -1179,17 +1177,11 @@ async function handleHttpRequest(req: Request): Promise<Response> {
           },
         });
       }
-      // Fallback to src (development)
-      const srcFile = Bun.file(srcPath);
-      if (await srcFile.exists()) {
-        return new Response(await srcFile.text(), {
-          headers: {
-            'Content-Type': 'text/html; charset=utf-8',
-            ...corsHeaders,
-          },
-        });
-      }
-      return new Response('Admin spectator page not found', { status: 404 });
+
+      return new Response('Admin spectator assets missing. Run bun run build before starting the tournament server.', {
+        status: 500,
+        headers: corsHeaders,
+      });
     } catch (e) {
       return new Response('Error loading admin spectator page', { status: 500 });
     }

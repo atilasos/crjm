@@ -14,8 +14,8 @@
     "baseline:atari-go": "bun run scripts/atari-go-ladder-baseline.ts",
     "hardening:f3.1": "bun run scripts/hardening-f3_1.ts",
     "hardening:f3.2": "bun run scripts/hardening-f3_2.ts",
-    "tournament": "bun run src/server/tournament-server.ts",
-    "tournament:dev": "bun --hot src/server/tournament-server.ts",
+    "tournament": "bun run build && bun run src/server/tournament-server.ts",
+    "tournament:dev": "bun run build && bun --hot src/server/tournament-server.ts",
     "screenshots": "bun run scripts/capture-screenshots.ts",
     "screenshots:local": "BASE_URL=http://localhost:3000 bun run scripts/capture-screenshots.ts"
   },
