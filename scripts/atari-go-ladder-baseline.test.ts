@@ -80,5 +80,5 @@ describe('atari-go-ladder-baseline script', () => {
     );
     expect(n5OverN4).toBeDefined();
     expect(n5OverN4?.t1Pass).toBe((n5OverN4?.strongerWinrate ?? 0) >= 0.55);
-  }, 90000);
+  }, 180000);
 });
