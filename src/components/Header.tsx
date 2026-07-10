@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import { loadStudentSession, STUDENT_SESSION_CHANGED_EVENT, type StudentSession } from '../utils/student-session';
 import { useGamification } from './gamification/GamificationProvider';
 import { MissionWidget } from './gamification/MissionWidget';
 import { PlayerBadge } from './gamification/PlayerBadge';
@@ -11,6 +13,17 @@ interface HeaderProps {
 
 export function Header({ titulo, onVoltar }: HeaderProps) {
   const { isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
+  const [session, setSession] = useState<StudentSession | null>(() => loadStudentSession());
+
+  useEffect(() => {
+    const atualizar = () => setSession(loadStudentSession());
+    window.addEventListener(STUDENT_SESSION_CHANGED_EVENT, atualizar);
+    window.addEventListener('storage', atualizar);
+    return () => {
+      window.removeEventListener(STUDENT_SESSION_CHANGED_EVENT, atualizar);
+      window.removeEventListener('storage', atualizar);
+    };
+  }, []);
 
   return (
     <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
@@ -40,6 +53,14 @@ export function Header({ titulo, onVoltar }: HeaderProps) {
           <div className="flex w-20 items-center justify-end text-white">
             <ThemeToggle />
           </div>
+        </div>
+        <div className="mt-2 flex justify-end">
+          <a
+            href="#/entrar"
+            className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70 transition hover:bg-white/15 hover:text-white"
+          >
+            {session ? `👤 ${session.name}${session.className ? ` · ${session.className}` : ''}` : 'Entrar'}
+          </a>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <PlayerBadge isReady={isReady} level={level} title={levelTitle} streakDays={profile.streakDays} />

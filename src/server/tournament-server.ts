@@ -56,6 +56,7 @@ import {
 } from './game-adapter';
 import { getAdminPageHtml } from './admin-page';
 import { adminChallengeHeaders, adminSessionCookie, isAdminAuthorized } from './admin-auth';
+import { ClassStore } from './class-store';
 
 // ============================================================================
 // Configuração
@@ -69,6 +70,9 @@ if (!adminKeyFromEnv) {
 }
 
 const ADMIN_KEY = adminKeyFromEnv;
+
+const CLASS_STORE_PATH = process.env.CLASS_STORE_PATH || 'data/classes.json';
+const classStore = new ClassStore(CLASS_STORE_PATH);
 
 // ============================================================================
 // Estado global do servidor
@@ -1136,7 +1140,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
   // CORS headers
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
   };
 
@@ -1776,6 +1780,152 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     broadcastTournamentState(tournament);
 
     return Response.json({ success: true, message: 'Match reiniciado (0-0)' }, { headers: corsHeaders });
+  }
+
+  // ============================================================================
+  // API de turmas e login de alunos
+  // ============================================================================
+
+  // Listar turmas (requer admin key)
+  if (url.pathname === '/api/classes' && req.method === 'GET') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
+    return Response.json({ classes: classStore.listClasses() }, { headers: corsHeaders });
+  }
+
+  // Criar turma (requer admin key)
+  // POST /api/classes  body: { name: string, students: string[] }
+  if (url.pathname === '/api/classes' && req.method === 'POST') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
+    try {
+      const body = await req.json() as { name?: unknown; students?: unknown };
+
+      if (typeof body.name !== 'string' || !body.name.trim()) {
+        return Response.json({ error: 'Nome da turma é obrigatório' }, { status: 400, headers: corsHeaders });
+      }
+
+      if (!Array.isArray(body.students) || !body.students.every((s) => typeof s === 'string')) {
+        return Response.json({ error: 'Lista de alunos inválida' }, { status: 400, headers: corsHeaders });
+      }
+
+      const schoolClass = classStore.createClass(body.name, body.students as string[]);
+
+      log({
+        type: 'info',
+        message: `Turma "${schoolClass.name}" criada pelo administrador com ${schoolClass.students.length} alunos`,
+      });
+
+      return Response.json({ class: schoolClass }, { status: 201, headers: corsHeaders });
+    } catch (e) {
+      return Response.json({
+        error: 'Invalid request data',
+        details: e instanceof Error ? e.message : 'Unknown error',
+      }, { status: 400, headers: corsHeaders });
+    }
+  }
+
+  // Eliminar turma (requer admin key)
+  // DELETE /api/classes/:id
+  const deleteClassMatch = url.pathname.match(/^\/api\/classes\/([^/]+)$/);
+  if (deleteClassMatch && req.method === 'DELETE') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
+    const classId = deleteClassMatch[1];
+    const removed = classStore.deleteClass(classId);
+    if (!removed) {
+      return Response.json({ error: 'Turma não encontrada' }, { status: 404, headers: corsHeaders });
+    }
+
+    log({ type: 'info', message: `Turma ${classId} eliminada pelo administrador` });
+
+    return Response.json({ ok: true }, { headers: corsHeaders });
+  }
+
+  // Adicionar alunos a uma turma (requer admin key)
+  // POST /api/classes/:id/students  body: { names: string[] }
+  const addStudentsMatch = url.pathname.match(/^\/api\/classes\/([^/]+)\/students$/);
+  if (addStudentsMatch && req.method === 'POST') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
+    const classId = addStudentsMatch[1];
+
+    try {
+      const body = await req.json() as { names?: unknown };
+
+      if (!Array.isArray(body.names) || !body.names.every((n) => typeof n === 'string')) {
+        return Response.json({ error: 'Lista de alunos inválida' }, { status: 400, headers: corsHeaders });
+      }
+
+      const students = classStore.addStudents(classId, body.names as string[]);
+      if (!students) {
+        return Response.json({ error: 'Turma não encontrada' }, { status: 404, headers: corsHeaders });
+      }
+
+      log({
+        type: 'info',
+        message: `${students.length} aluno(s) adicionado(s) à turma ${classId} pelo administrador`,
+      });
+
+      return Response.json({ students }, { headers: corsHeaders });
+    } catch (e) {
+      return Response.json({
+        error: 'Invalid request data',
+        details: e instanceof Error ? e.message : 'Unknown error',
+      }, { status: 400, headers: corsHeaders });
+    }
+  }
+
+  // Remover aluno de uma turma (requer admin key)
+  // DELETE /api/classes/:id/students/:studentId
+  const removeStudentMatch = url.pathname.match(/^\/api\/classes\/([^/]+)\/students\/([^/]+)$/);
+  if (removeStudentMatch && req.method === 'DELETE') {
+    if (!isAdminAuthorized(authHeader, ADMIN_KEY, cookieHeader)) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
+    }
+
+    const classId = removeStudentMatch[1];
+    const studentId = removeStudentMatch[2];
+    const removed = classStore.removeStudent(classId, studentId);
+    if (!removed) {
+      return Response.json({ error: 'Turma ou aluno não encontrado' }, { status: 404, headers: corsHeaders });
+    }
+
+    log({ type: 'info', message: `Aluno ${studentId} removido da turma ${classId} pelo administrador` });
+
+    return Response.json({ ok: true }, { headers: corsHeaders });
+  }
+
+  // Login de aluno via código (sem autenticação)
+  // POST /api/login  body: { code: string }
+  if (url.pathname === '/api/login' && req.method === 'POST') {
+    try {
+      const body = await req.json() as { code?: unknown };
+
+      if (typeof body.code !== 'string' || !body.code.trim()) {
+        return Response.json({ error: 'codigo_invalido' }, { status: 400, headers: corsHeaders });
+      }
+
+      const result = classStore.findByCode(body.code);
+      if (!result) {
+        return Response.json({ error: 'codigo_invalido' }, { status: 404, headers: corsHeaders });
+      }
+
+      return Response.json({
+        student: { id: result.student.id, name: result.student.name },
+        class: { id: result.schoolClass.id, name: result.schoolClass.name },
+      }, { headers: corsHeaders });
+    } catch (e) {
+      return Response.json({ error: 'codigo_invalido' }, { status: 400, headers: corsHeaders });
+    }
   }
 
   // Serve static files from dist/ for admin spectator page

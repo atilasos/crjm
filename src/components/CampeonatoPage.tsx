@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Header } from './Header';
+import { loadStudentSession } from '../utils/student-session';
 import {
   createTournamentClient,
   tournamentStateFromUpdate,
@@ -123,6 +124,19 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectionCode, setReconnectionCode] = useState<string | null>(null);
   const [reconnectionCodeInput, setReconnectionCodeInput] = useState('');
+
+  // Pré-preenche nome e turma a partir da sessão de aluno (login opcional);
+  // os campos continuam editáveis
+  useEffect(() => {
+    const session = loadStudentSession();
+    if (!session) return;
+    setPlayerName((atual) => (atual === '' ? session.name : atual));
+    setClassId((atual) => (atual === '' ? session.className : atual));
+    if (session.serverUrl) {
+      // Restaura o servidor onde o aluno fez login, se o campo ainda não foi editado
+      setServerUrl((atual) => (atual === '' || atual === DEFAULT_TOURNAMENT_SERVER_URL ? session.serverUrl : atual));
+    }
+  }, []);
 
   // Estado do torneio
   const [phase, setPhase] = useState<Phase>('connect');

@@ -16,10 +16,11 @@ import { AtariGoGame } from './games/atari-go/AtariGoGame';
 import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
 import { PuzzlePage } from './components/PuzzlePage';
+import { LoginPage } from './components/LoginPage';
 
-type Pagina = 'inicio' | 'perfil' | 'puzzles' | 'campeonato' | 'admin' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+type Pagina = 'inicio' | 'perfil' | 'entrar' | 'puzzles' | 'campeonato' | 'admin' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
 
-const PAGINAS: readonly Pagina[] = ['inicio', 'perfil', 'puzzles', 'campeonato', 'admin', 'gatos-caes', 'dominorio', 'quelhas', 'atari-go', 'produto', 'nex'];
+const PAGINAS: readonly Pagina[] = ['inicio', 'perfil', 'entrar', 'puzzles', 'campeonato', 'admin', 'gatos-caes', 'dominorio', 'quelhas', 'atari-go', 'produto', 'nex'];
 
 function paginaDoHash(): Pagina {
   if (typeof window === 'undefined') return 'inicio';
@@ -70,6 +71,10 @@ function AppContent() {
 
   if (paginaAtual === 'perfil') {
     return <PerfilPage onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'entrar') {
+    return <LoginPage onVoltar={voltarInicio} />;
   }
 
   if (paginaAtual === 'puzzles') {
@@ -124,13 +129,22 @@ function AppContent() {
           <p className="text-lg text-white/75 max-w-xl mx-auto">
             Pratica todos os jogos oficiais do campeonato — do 1.º Ciclo ao Secundário!
           </p>
-          <button
-            type="button"
-            onClick={() => setPaginaAtual('perfil')}
-            className="mt-6 rounded-2xl border border-white/30 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/20"
-          >
-            Ver perfil e progresso
-          </button>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              onClick={() => setPaginaAtual('perfil')}
+              className="rounded-2xl border border-white/30 bg-white/10 px-5 py-3 font-semibold text-white transition hover:bg-white/20"
+            >
+              Ver perfil e progresso
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaginaAtual('entrar')}
+              className="rounded-2xl border border-emerald-300/40 bg-emerald-500/15 px-5 py-3 font-semibold text-emerald-50 transition hover:bg-emerald-500/25"
+            >
+              Entrar com o teu código
+            </button>
+          </div>
           <div className="mt-4">
             <button
               type="button"
