@@ -1,5 +1,12 @@
 import { describe, expect, test } from 'bun:test';
-import { bootstrapGamification, postGameCompleted, postReviewCompleted } from './backend-client';
+import {
+  bootstrapGamification,
+  postGameCompleted,
+  postMissionClaim,
+  postPatternProgress,
+  postPuzzleSolved,
+  postReviewCompleted,
+} from './backend-client';
 
 function makeResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -224,5 +231,43 @@ describe('backend gamification client', () => {
     expect(gameResult.popups).toHaveLength(2);
     expect(gameResult.sessionXpDelta).toBe(28);
     expect(reviewResult.profile.totalXp).toBe(28);
+  });
+
+  test('posts pedagogical evidence to the dedicated endpoints', async () => {
+    const calls: Array<{ url: string; body: unknown }> = [];
+    const responsePayload = {
+      dashboard: {
+        profile: {
+          userId: 'learner-1', displayName: 'Aluno', locale: 'pt-PT', cycleOrGrade: null,
+          totalXp: 0, currentStreakDays: 0, lastActiveOn: null,
+          createdAt: '2026-07-10T09:00:00Z', updatedAt: '2026-07-10T09:00:00Z',
+        },
+        gameProgress: {}, achievements: {}, patterns: {}, missionClaims: {}, missions: [], recentEvents: [], importFingerprint: null,
+      },
+      sessionXpDelta: 0,
+      unlockedAchievementIds: [],
+    };
+    const fetchMock: typeof fetch = (async (input, init) => {
+      calls.push({ url: String(input), body: JSON.parse(String(init?.body ?? '{}')) });
+      return makeResponse(responsePayload);
+    }) as typeof fetch;
+
+    await postPuzzleSolved(fetchMock, 'atari-go', 'ag-atari-1', true);
+    await postPatternProgress(fetchMock, {
+      gameId: 'produto', patternId: 'produto:equilibrio', evidence: 'used_alone', contextId: 'game-a',
+    });
+    await postMissionClaim(fetchMock, 'daily-review-1');
+
+    expect(calls).toEqual([
+      {
+        url: '/api/learner/events/puzzle-solved',
+        body: { gameId: 'atari-go', puzzleId: 'ag-atari-1', usedHint: true },
+      },
+      {
+        url: '/api/learner/events/pattern-progress',
+        body: { gameId: 'produto', patternId: 'produto:equilibrio', evidence: 'used_alone', contextId: 'game-a' },
+      },
+      { url: '/api/learner/missions/claim', body: { missionId: 'daily-review-1' } },
+    ]);
   });
 });

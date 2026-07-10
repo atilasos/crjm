@@ -1,5 +1,6 @@
 import { STARTER_ACHIEVEMENTS } from '../../ai-core/gamification';
 import type { GameId } from '../../ai-core/types';
+import type { PatternEvidence } from '../../ai-core/learner-gamification';
 import { sanitizeProfile, type AchievementPopupState, type GamificationProfile, type MissionProgress } from './gamification-state';
 import type { LearnerCommandResponse, LearnerDashboardPayload } from '../../types/learner-core';
 
@@ -20,6 +21,10 @@ function toClientProfile(payload: LearnerDashboardPayload, sessionXp = 0): Gamif
     streakDays: payload.profile.currentStreakDays,
     lastActiveDate: payload.profile.lastActiveOn,
     achievements: payload.achievements,
+    patterns: payload.patterns,
+    missionClaims: payload.missionClaims,
+    solvedPuzzleIds: payload.solvedPuzzleIds,
+    streakShieldWeeks: payload.streakShieldWeeks,
     gameProgress: payload.gameProgress,
     recentEvents: payload.recentEvents,
   });
@@ -117,4 +122,56 @@ export async function postReviewCompleted(fetchImpl: FetchLike, gameId: GameId):
     popups: popupsFromUnlocks(payload.unlockedAchievementIds),
     sessionXpDelta: payload.sessionXpDelta,
   };
+}
+
+type ClientCommandResult = {
+  profile: GamificationProfile;
+  missions: MissionProgress[];
+  popups: AchievementPopupState[];
+  sessionXpDelta: number;
+};
+
+async function postPedagogicalCommand(
+  fetchImpl: FetchLike,
+  endpoint: string,
+  body: unknown,
+): Promise<ClientCommandResult> {
+  const response = await fetchImpl(endpoint, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) throw new Error(`pedagogical command failed: ${response.status}`);
+
+  const payload = (await response.json()) as LearnerCommandResponse;
+  return {
+    profile: toClientProfile(payload.dashboard, payload.sessionXpDelta),
+    missions: payload.dashboard.missions,
+    popups: popupsFromUnlocks(payload.unlockedAchievementIds),
+    sessionXpDelta: payload.sessionXpDelta,
+  };
+}
+
+export function postPuzzleSolved(
+  fetchImpl: FetchLike,
+  gameId: GameId,
+  puzzleId?: string,
+  usedHint = false,
+): Promise<ClientCommandResult> {
+  return postPedagogicalCommand(fetchImpl, '/api/learner/events/puzzle-solved', {
+    gameId,
+    ...(puzzleId ? { puzzleId, usedHint } : {}),
+  });
+}
+
+export function postPatternProgress(
+  fetchImpl: FetchLike,
+  input: { gameId: GameId; patternId: string; evidence: PatternEvidence; contextId: string },
+): Promise<ClientCommandResult> {
+  return postPedagogicalCommand(fetchImpl, '/api/learner/events/pattern-progress', input);
+}
+
+export function postMissionClaim(fetchImpl: FetchLike, missionId: string): Promise<ClientCommandResult> {
+  return postPedagogicalCommand(fetchImpl, '/api/learner/missions/claim', { missionId });
 }

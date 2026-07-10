@@ -1,4 +1,9 @@
-import { STARTER_ACHIEVEMENTS } from '../ai-core/gamification';
+import {
+  PATTERN_CARDS,
+  STARTER_ACHIEVEMENTS,
+  STARTER_MISSIONS,
+  type AchievementCategory,
+} from '../ai-core/gamification';
 import { useGamification } from './gamification/GamificationProvider';
 import { GameProgressBars, GAME_LABELS } from './gamification/GameProgressBars';
 import { Header } from './Header';
@@ -7,8 +12,39 @@ interface PerfilPageProps {
   onVoltar: () => void;
 }
 
+const ACHIEVEMENT_GROUPS: Array<{ category: AchievementCategory; title: string }> = [
+  { category: 'onboarding', title: 'Primeiros passos' },
+  { category: 'aprendizagem', title: 'Aprendizagem' },
+  { category: 'consistencia', title: 'Consistência' },
+  { category: 'por-jogo', title: 'Por jogo' },
+];
+
+function currentWeekKey(now = new Date()): string {
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() - day + 1);
+  return date.toISOString().slice(0, 10);
+}
+
+export function formatStreak(days: number): string {
+  return `streak ${Math.max(0, days)} dia(s)`;
+}
+
 export function PerfilPage({ onVoltar }: PerfilPageProps) {
-  const { isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
+  const { claimMissionReward, isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
+  const shieldUsedThisWeek = profile.streakShieldWeeks.includes(currentWeekKey());
+  const missionHistory = Object.entries(profile.missionClaims)
+    .map(([claimKey, claim]) => {
+      const separator = claimKey.lastIndexOf(':');
+      const missionId = separator > 0 ? claimKey.slice(0, separator) : claimKey;
+      return {
+        mission: STARTER_MISSIONS.find((candidate) => candidate.id === missionId),
+        claim,
+      };
+    })
+    .filter((item): item is { mission: NonNullable<typeof item.mission>; claim: typeof item.claim } => Boolean(item.mission))
+    .sort((a, b) => b.claim.claimedAt.localeCompare(a.claim.claimedAt))
+    .slice(0, 5);
 
   return (
     <div className="min-h-screen">
@@ -21,7 +57,10 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
               <p className="text-sm uppercase tracking-wide text-white/70">Perfil</p>
               <h2 className="text-3xl font-bold">{isReady ? levelTitle : 'A sincronizar...'}</h2>
               <p className="mt-1 text-white/80">
-                {isReady ? `Nível ${level} · ${profile.totalXp} XP total · streak ${Math.max(profile.streakDays, 1)} dia(s)` : 'A carregar dados do jogador...'}
+                {isReady ? `Nível ${level} · ${profile.totalXp} XP total · ${formatStreak(profile.streakDays)}` : 'A carregar dados do jogador...'}
+              </p>
+              <p className="mt-2 text-sm text-amber-200">
+                🛡️ Escudo semanal: {shieldUsedThisWeek ? 'usado — renova na próxima segunda-feira' : 'disponível para proteger um dia em falta'}
               </p>
             </div>
             <div className="min-w-[220px]">
@@ -73,8 +112,35 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                         style={{ width: `${Math.min(100, (mission.progress / mission.target) * 100)}%` }}
                       />
                     </div>
+                    {mission.completed && (
+                      <button
+                        type="button"
+                        onClick={() => claimMissionReward(mission.id)}
+                        disabled={mission.claimed}
+                        className="mt-3 min-h-12 w-full rounded-xl bg-emerald-400 px-3 py-2 text-sm font-bold text-emerald-950 transition hover:bg-emerald-300 disabled:cursor-default disabled:bg-white/15 disabled:text-white/60"
+                      >
+                        {mission.claimed ? 'Recompensa recebida' : `Receber +${mission.rewardXp} XP`}
+                      </button>
+                    )}
                   </div>
                 ))}
+              </div>
+              <div className="mt-5 border-t border-white/15 pt-4">
+                <p className="text-sm font-bold">Histórico de recompensas</p>
+                {missionHistory.length === 0 ? (
+                  <p className="mt-2 text-sm text-white/60">Ainda não recebeste recompensas de missões.</p>
+                ) : (
+                  <ul className="mt-2 space-y-2">
+                    {missionHistory.map(({ mission, claim }) => (
+                      <li key={`${mission.id}:${claim.claimedAt}`} className="flex items-center justify-between gap-3 text-sm text-white/75">
+                        <span>{mission.title}</span>
+                        <span className="whitespace-nowrap text-xs text-emerald-200">
+                          +{mission.rewardXp} XP · {new Date(claim.claimedAt).toLocaleDateString('pt-PT')}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </div>
             </div>
 
@@ -95,7 +161,11 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                     <div key={`${event.at}-${i}`} className="rounded-2xl border border-white/10 bg-black/10 p-3 flex items-center justify-between gap-3">
                       <div>
                         <p className="font-semibold text-sm">
-                          {event.type === 'game_completed' ? 'Partida Jogada' : 'Revisão Concluída'}
+                          {event.type === 'game_completed'
+                            ? 'Partida jogada'
+                            : event.type === 'review_completed'
+                              ? 'Revisão concluída'
+                              : 'Puzzle resolvido'}
                         </p>
                         <p className="text-xs text-white/70">
                           {GAME_LABELS[event.gameId] || event.gameId}
@@ -124,39 +194,77 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
               {isReady ? `${Object.keys(profile.achievements).length}/${STARTER_ACHIEVEMENTS.length}` : '-/-'}
             </span>
           </div>
+          <div className="mt-5 space-y-7">
+            {ACHIEVEMENT_GROUPS.map((group) => (
+              <section key={group.category} aria-labelledby={`achievement-${group.category}`}>
+                <h3 id={`achievement-${group.category}`} className="text-sm font-black uppercase tracking-[0.16em] text-amber-200">
+                  {group.title}
+                </h3>
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {STARTER_ACHIEVEMENTS.filter((achievement) => achievement.category === group.category).map((achievement) => {
+                    const unlocked = profile.achievements[achievement.id];
+                    return (
+                      <div
+                        key={achievement.id}
+                        className={`rounded-2xl border p-4 ${
+                          unlocked
+                            ? 'border-emerald-300 bg-emerald-50/90 text-emerald-950'
+                            : 'border-white/10 bg-black/10 text-white'
+                        } ${!isReady ? 'animate-pulse opacity-70' : ''}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="font-semibold">{achievement.title}</p>
+                          <span className="text-xs font-medium">{unlocked ? '✓' : '🔒'}</span>
+                        </div>
+                        <p className={`mt-2 text-sm ${unlocked ? 'text-emerald-900/80' : 'text-white/75'}`}>
+                          {achievement.description}
+                        </p>
+                        <p className={`mt-3 text-xs ${unlocked ? 'text-emerald-800' : 'text-white/60'}`}>
+                          +{achievement.xp} XP {achievement.gameId ? `· ${GAME_LABELS[achievement.gameId]}` : ''}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
+        </section>
+
+        <section className="rounded-3xl border border-white/20 bg-white/10 p-5 text-white backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-lg font-bold">Cartões de estratégia</p>
+              <p className="mt-1 text-sm text-white/70">Descobre um padrão, usa-o com apoio e depois sozinho em três situações diferentes.</p>
+            </div>
+            <span className="text-sm text-white/70">
+              {Object.keys(profile.patterns).length}/{PATTERN_CARDS.length}
+            </span>
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {!isReady ? (
-              Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="rounded-2xl border border-white/10 bg-black/10 p-4 animate-pulse">
-                  <div className="h-4 bg-white/20 rounded w-1/2 mb-2"></div>
-                  <div className="h-3 bg-white/10 rounded w-3/4 mb-3"></div>
-                  <div className="h-3 bg-white/10 rounded w-1/3"></div>
-                </div>
-              ))
-            ) : STARTER_ACHIEVEMENTS.map((achievement) => {
-              const unlocked = profile.achievements[achievement.id];
+            {PATTERN_CARDS.map((card) => {
+              const progress = profile.patterns[card.id];
+              const stateLabel = progress?.state === 'mastered'
+                ? '⭐ Dominado'
+                : progress?.state === 'used_alone'
+                  ? '✅ Usado sozinho'
+                  : progress?.state === 'used_with_help'
+                    ? '🛠️ Usado com ajuda'
+                    : progress?.state === 'seen'
+                      ? '👁️ Visto'
+                      : '🔒 Ainda não descoberto';
               return (
-                <div
-                  key={achievement.id}
-                  className={`rounded-2xl border p-4 ${
-                    unlocked
-                      ? 'border-emerald-300 bg-emerald-50/90 text-emerald-950'
-                      : 'border-white/10 bg-black/10 text-white'
-                  }`}
+                <article
+                  key={card.id}
+                  className={`rounded-2xl border p-4 ${progress ? 'border-sky-300/60 bg-sky-950/30' : 'border-white/10 bg-black/10'}`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="font-semibold">{achievement.title}</p>
-                    <span className="text-xs font-medium">
-                      {unlocked ? '✓' : '🔒'}
-                    </span>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="font-semibold">{card.title}</p>
+                    <span className="text-xs text-white/60">Fase {card.minimumPhase}</span>
                   </div>
-                  <p className={`mt-2 text-sm ${unlocked ? 'text-emerald-900/80' : 'text-white/75'}`}>
-                    {achievement.description}
-                  </p>
-                  <p className={`mt-3 text-xs ${unlocked ? 'text-emerald-800' : 'text-white/60'}`}>
-                    +{achievement.xp} XP {achievement.gameId ? `· ${achievement.gameId}` : ''}
-                  </p>
-                </div>
+                  <p className="mt-2 text-sm text-white/75">{card.description}</p>
+                  <p className="mt-3 text-xs font-medium text-sky-200">{stateLabel}</p>
+                </article>
               );
             })}
           </div>

@@ -6,7 +6,10 @@ export {
   getLevelTitle,
   getMissionProgress,
   getXpWindow,
+  claimMissionReward,
   recordGameCompletion,
+  recordPatternProgress,
+  recordPuzzleSolved,
   recordReviewCompletion,
   rebuildProfileFromEvents,
   sanitizeProfile,
@@ -16,4 +19,7 @@ export {
   type GamificationProfile,
   type GameProgressSnapshot,
   type MissionProgress,
+  type PatternEvidence,
+  type PatternProgress,
+  type PatternState,
 } from '../../ai-core/learner-gamification';

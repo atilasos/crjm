@@ -1,7 +1,7 @@
 import { Player, GameMode, GameStatus } from '../types';
-
-// AI-related types (optional, for games that support AI)
-export type AIDifficulty = 'easy' | 'medium' | 'hard';
+import type { DifficultyLevel } from '../ai-core/types';
+import type { DifficultyRecommendation } from '../ai-core/adaptive-difficulty';
+import { DifficultySelector } from './DifficultySelector';
 
 export interface AIMetrics {
   isThinking: boolean;
@@ -26,23 +26,14 @@ interface PlayerInfoProps {
   onNovoJogo: () => void;
   onTrocarModo: () => void;
   // AI-specific props (optional)
-  difficulty?: AIDifficulty;
-  onChangeDifficulty?: (difficulty: AIDifficulty) => void;
+  difficulty?: DifficultyLevel;
+  onChangeDifficulty?: (difficulty: DifficultyLevel) => void;
+  difficultyRecommendation?: DifficultyRecommendation;
+  canAcceptDifficultyRecommendation?: boolean;
+  onAcceptDifficultyRecommendation?: (difficulty: DifficultyLevel) => void;
   aiMetrics?: AIMetrics;
   aiReady?: boolean;
 }
-
-const DIFFICULTY_LABELS: Record<AIDifficulty, string> = {
-  easy: 'Fácil',
-  medium: 'Médio',
-  hard: 'Difícil',
-};
-
-const DIFFICULTY_COLORS: Record<AIDifficulty, string> = {
-  easy: 'bg-green-500',
-  medium: 'bg-yellow-500',
-  hard: 'bg-red-500',
-};
 
 export function PlayerInfo({
   modo,
@@ -59,6 +50,9 @@ export function PlayerInfo({
   // AI props
   difficulty,
   onChangeDifficulty,
+  difficultyRecommendation,
+  canAcceptDifficultyRecommendation,
+  onAcceptDifficultyRecommendation,
   aiMetrics,
   aiReady = true,
 }: PlayerInfoProps) {
@@ -136,22 +130,13 @@ export function PlayerInfo({
       {/* Difficulty selector (only for games with AI support) */}
       {modo === 'vs-computador' && hasAISupport && (
         <div className="mb-4 pb-4 border-b border-gray-200">
-          <span className="text-sm font-medium text-gray-600 block mb-2">Dificuldade:</span>
-          <div className="flex gap-2">
-            {(['easy', 'medium', 'hard'] as AIDifficulty[]).map((level) => (
-              <button
-                key={level}
-                onClick={() => onChangeDifficulty(level)}
-                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                  difficulty === level
-                    ? `${DIFFICULTY_COLORS[level]} text-white shadow-md`
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                {DIFFICULTY_LABELS[level]}
-              </button>
-            ))}
-          </div>
+          <DifficultySelector
+            level={difficulty!}
+            onChange={onChangeDifficulty!}
+            recommendation={difficultyRecommendation}
+            canAcceptRecommendation={canAcceptDifficultyRecommendation}
+            onAcceptRecommendation={onAcceptDifficultyRecommendation}
+          />
         </div>
       )}
 

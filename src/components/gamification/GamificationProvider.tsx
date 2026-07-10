@@ -1,6 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { GameId } from '../../ai-core/types';
+import type { DifficultyLevel, GameId } from '../../ai-core/types';
+import {
+  createAdaptiveEvidence,
+  recordAdaptiveDecision as accumulateAdaptiveDecision,
+  recommendDifficulty,
+  type AdaptiveDecisionEvidence,
+  type AdaptiveDifficultyEvidence,
+  type DifficultyRecommendation,
+} from '../../ai-core/adaptive-difficulty';
+import type { PatternEvidence } from '../../ai-core/learner-gamification';
 import type { AchievementDefinition } from '../../ai-core/gamification';
 import {
   createInitialProfile,
@@ -10,13 +19,23 @@ import {
   getXpWindow,
   GAMIFICATION_STORAGE_KEY,
   recordGameCompletion,
+  recordPatternProgress,
+  recordPuzzleSolved,
   recordReviewCompletion,
+  claimMissionReward,
   sanitizeProfile,
   type AchievementPopupState,
   type GamificationProfile,
   type MissionProgress,
 } from './gamification-state';
-import { bootstrapGamification, postGameCompleted, postReviewCompleted } from './backend-client';
+import {
+  bootstrapGamification,
+  postGameCompleted,
+  postMissionClaim,
+  postPatternProgress,
+  postPuzzleSolved,
+  postReviewCompleted,
+} from './backend-client';
 import { createCommandGate } from './command-gate';
 
 interface GamificationContextValue {
@@ -29,6 +48,13 @@ interface GamificationContextValue {
   isReady: boolean;
   recordGameCompleted: (gameId: GameId, won: boolean) => void;
   recordReviewCompleted: (gameId: GameId) => void;
+  recordPuzzleSolved: (gameId: GameId, puzzleId?: string, usedHint?: boolean) => void;
+  recordPatternProgress: (input: { gameId: GameId; patternId: string; evidence: PatternEvidence; contextId: string }) => void;
+  claimMissionReward: (missionId: string) => void;
+  recordAdaptiveDecision: (gameId: GameId, decision: AdaptiveDecisionEvidence) => void;
+  getDifficultyRecommendation: (gameId: GameId, level: DifficultyLevel) => DifficultyRecommendation;
+  acceptDifficultyRecommendation: (gameId: GameId) => void;
+  resetAdaptiveSession: (gameId: GameId) => void;
   dismissPopup: () => void;
 }
 
@@ -56,11 +82,11 @@ function writeLegacyProfile(profile: GamificationProfile): void {
 }
 
 function shouldUseLearnerApi(): boolean {
-  const runtimeConfig = globalThis as typeof globalThis & {
-    __CRJM_ENABLE_LEARNER_API__?: boolean;
-  };
-
-  return runtimeConfig.__CRJM_ENABLE_LEARNER_API__ === true;
+  // Bun bundles classic scripts referenced by imported HTML into its client
+  // entrypoint, so a server-side override of runtime-config.js is not reliable.
+  // Probe the same-origin API instead; bootstrap already falls back to the
+  // local profile when the static deployment has no learner-core routes.
+  return true;
 }
 
 function buildOfflineBootstrap(localProfile: unknown): {
@@ -79,6 +105,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const [missions, setMissions] = useState<MissionProgress[]>([]);
   const [queue, setQueue] = useState<AchievementPopupState[]>([]);
   const [isReady, setIsReady] = useState(false);
+  const [adaptiveEvidence, setAdaptiveEvidence] = useState<Partial<Record<GameId, AdaptiveDifficultyEvidence>>>({});
   const commandGateRef = useRef(createCommandGate());
   const profileRef = useRef(profile);
   const learnerApiEnabled = shouldUseLearnerApi();
@@ -154,6 +181,63 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     applyOfflineProfile(result.profile, result.popups);
   }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
+  const recordPuzzleSolvedHandler = useCallback((gameId: GameId, puzzleId?: string, usedHint = false) => {
+    if (learnerApiEnabled) {
+      void commandGateRef.current.run(() => postPuzzleSolved(fetch, gameId, puzzleId, usedHint)).then(applyCommandResult).catch(() => undefined);
+      return;
+    }
+    const result = recordPuzzleSolved(profileRef.current, gameId, new Date(), { puzzleId, usedHint });
+    if (result.awarded) applyOfflineProfile(result.profile, result.popups);
+  }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
+
+  const recordPatternProgressHandler = useCallback((input: {
+    gameId: GameId;
+    patternId: string;
+    evidence: PatternEvidence;
+    contextId: string;
+  }) => {
+    if (learnerApiEnabled) {
+      void commandGateRef.current.run(() => postPatternProgress(fetch, input)).then(applyCommandResult).catch(() => undefined);
+      return;
+    }
+    const result = recordPatternProgress(profileRef.current, { ...input, now: new Date() });
+    applyOfflineProfile(result.profile, result.popups);
+  }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
+
+  const claimMissionRewardHandler = useCallback((missionId: string) => {
+    if (learnerApiEnabled) {
+      void commandGateRef.current.run(() => postMissionClaim(fetch, missionId)).then(applyCommandResult).catch(() => undefined);
+      return;
+    }
+    const result = claimMissionReward(profileRef.current, missionId, new Date());
+    if (result.claimed) applyOfflineProfile(result.profile, result.popups);
+  }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
+
+  const recordAdaptiveDecisionHandler = useCallback((gameId: GameId, decision: AdaptiveDecisionEvidence) => {
+    setAdaptiveEvidence((current) => ({
+      ...current,
+      [gameId]: accumulateAdaptiveDecision(current[gameId] ?? createAdaptiveEvidence(), decision),
+    }));
+  }, []);
+
+  const getDifficultyRecommendation = useCallback((gameId: GameId, difficulty: DifficultyLevel) => (
+    recommendDifficulty(difficulty, adaptiveEvidence[gameId] ?? createAdaptiveEvidence())
+  ), [adaptiveEvidence]);
+
+  const acceptDifficultyRecommendation = useCallback((gameId: GameId) => {
+    setAdaptiveEvidence((current) => ({
+      ...current,
+      [gameId]: {
+        ...(current[gameId] ?? createAdaptiveEvidence()),
+        changedThisSession: true,
+      },
+    }));
+  }, []);
+
+  const resetAdaptiveSession = useCallback((gameId: GameId) => {
+    setAdaptiveEvidence((current) => ({ ...current, [gameId]: createAdaptiveEvidence() }));
+  }, []);
+
   const dismissPopup = useCallback(() => {
     setQueue((prev) => prev.slice(1));
   }, []);
@@ -170,9 +254,32 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       isReady,
       recordGameCompleted: recordGameCompletedHandler,
       recordReviewCompleted: recordReviewCompletedHandler,
+      recordPuzzleSolved: recordPuzzleSolvedHandler,
+      recordPatternProgress: recordPatternProgressHandler,
+      claimMissionReward: claimMissionRewardHandler,
+      recordAdaptiveDecision: recordAdaptiveDecisionHandler,
+      getDifficultyRecommendation,
+      acceptDifficultyRecommendation,
+      resetAdaptiveSession,
       dismissPopup,
     }),
-    [dismissPopup, isReady, level, missions, profile, queue, recordGameCompletedHandler, recordReviewCompletedHandler],
+    [
+      claimMissionRewardHandler,
+      dismissPopup,
+      isReady,
+      level,
+      missions,
+      profile,
+      queue,
+      acceptDifficultyRecommendation,
+      getDifficultyRecommendation,
+      recordGameCompletedHandler,
+      recordAdaptiveDecisionHandler,
+      recordPatternProgressHandler,
+      recordPuzzleSolvedHandler,
+      recordReviewCompletedHandler,
+      resetAdaptiveSession,
+    ],
   );
 
   return <GamificationContext.Provider value={value}>{children}</GamificationContext.Provider>;
