@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-10T18:06:05.397Z",
+  "generatedAt": "2026-04-10T22:58:47.102Z",
   "options": {
     "gamesPerMirror": 1,
     "maxPliesPerGame": 48,
@@ -54,32 +54,32 @@
   ],
   "t2ByLevel": {
     "1": {
-      "p50": 3.82,
-      "p95": 7.21,
+      "p50": 8.13,
+      "p95": 12.3,
       "budgetMs": 5,
-      "t2Pass": true
+      "t2Pass": false
     },
     "2": {
-      "p50": 7.64,
-      "p95": 15.11,
+      "p50": 12.17,
+      "p95": 24.63,
       "budgetMs": 13,
       "t2Pass": true
     },
     "3": {
-      "p50": 15.17,
-      "p95": 38.78,
+      "p50": 18.89,
+      "p95": 55.42,
       "budgetMs": 25,
       "t2Pass": true
     },
     "4": {
-      "p50": 123.12,
-      "p95": 245.08,
+      "p50": 148.99,
+      "p95": 275.36,
       "budgetMs": 50,
       "t2Pass": false
     },
     "5": {
-      "p50": 1082.28,
-      "p95": 2137.1,
+      "p50": 1142.56,
+      "p95": 2129.67,
       "budgetMs": 100,
       "t2Pass": false
     }
@@ -90,6 +90,7 @@
   },
   "nC3": {
     "failedLevels": [
+      1,
       4,
       5
     ],
@@ -97,29 +98,29 @@
       {
         "fromLevel": 1,
         "toLevel": 2,
-        "fromP50": 3.82,
-        "toP50": 7.64,
+        "fromP50": 8.13,
+        "toP50": 12.17,
         "pass": true
       },
       {
         "fromLevel": 2,
         "toLevel": 3,
-        "fromP50": 7.64,
-        "toP50": 15.17,
+        "fromP50": 12.17,
+        "toP50": 18.89,
         "pass": true
       },
       {
         "fromLevel": 3,
         "toLevel": 4,
-        "fromP50": 15.17,
-        "toP50": 123.12,
+        "fromP50": 18.89,
+        "toP50": 148.99,
         "pass": true
       },
       {
         "fromLevel": 4,
         "toLevel": 5,
-        "fromP50": 123.12,
-        "toP50": 1082.28,
+        "fromP50": 148.99,
+        "toP50": 1142.56,
         "pass": true
       }
     ],
@@ -138,57 +139,57 @@
       "decisions": [
         {
           "level": 2,
-          "elapsedMs": 17.648101999999994,
+          "elapsedMs": 18.471431000000003,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 7.926043999999997,
+          "elapsedMs": 7.868973000000004,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 11.369946000000013,
+          "elapsedMs": 16.361248000000003,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 7.212667999999994,
+          "elapsedMs": 16.112690999999998,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 15.111958999999999,
+          "elapsedMs": 28.111563000000004,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 3.816626999999997,
+          "elapsedMs": 6.974496000000002,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.570112999999992,
+          "elapsedMs": 7.781419,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 3.5845079999999996,
+          "elapsedMs": 8.929823999999996,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 6.133363000000003,
+          "elapsedMs": 18.065388000000013,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 3.945969000000005,
+          "elapsedMs": 8.133837,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 6.873896000000002,
+          "elapsedMs": 20.958887000000004,
           "legal": true
         }
       ]
@@ -203,62 +204,62 @@
       "decisions": [
         {
           "level": 1,
-          "elapsedMs": 3.2608700000000113,
+          "elapsedMs": 3.2822999999999922,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.620087000000012,
+          "elapsedMs": 15.377666000000005,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 3.3253679999999974,
+          "elapsedMs": 3.400548000000015,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.786487999999991,
+          "elapsedMs": 11.793403999999981,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 3.4560590000000104,
+          "elapsedMs": 12.300849,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.35767899999999,
+          "elapsedMs": 11.753914000000037,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 3.5376349999999945,
+          "elapsedMs": 4.531665999999973,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.682981999999981,
+          "elapsedMs": 5.234478999999965,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 4.0706209999999885,
+          "elapsedMs": 11.563669000000004,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 9.284606999999994,
+          "elapsedMs": 30.386990000000026,
           "legal": true
         },
         {
           "level": 1,
-          "elapsedMs": 4.448737000000023,
+          "elapsedMs": 9.986271000000045,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 6.644549999999981,
+          "elapsedMs": 9.99621099999996,
           "legal": true
         }
       ]
@@ -273,47 +274,47 @@
       "decisions": [
         {
           "level": 3,
-          "elapsedMs": 6.286264999999986,
+          "elapsedMs": 5.94009299999999,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 8.099391999999995,
+          "elapsedMs": 6.061454000000026,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 11.625687999999997,
+          "elapsedMs": 7.576339999999959,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.286670000000015,
+          "elapsedMs": 5.957433000000037,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 6.673856999999998,
+          "elapsedMs": 7.667222000000038,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.105917000000005,
+          "elapsedMs": 6.299385000000029,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 7.059418000000022,
+          "elapsedMs": 7.018488999999988,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 6.498560999999995,
+          "elapsedMs": 6.8182390000000055,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 9.65695599999998,
+          "elapsedMs": 12.097992000000033,
           "legal": true
         }
       ]
@@ -328,172 +329,172 @@
       "decisions": [
         {
           "level": 2,
-          "elapsedMs": 6.427499999999952,
+          "elapsedMs": 7.503953999999965,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 6.333417999999995,
+          "elapsedMs": 5.748965999999996,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 4.766497000000015,
+          "elapsedMs": 4.520326000000011,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 7.990594999999985,
+          "elapsedMs": 8.81451199999998,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.1727469999999585,
+          "elapsedMs": 4.73821700000002,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 6.645551999999952,
+          "elapsedMs": 7.185592999999983,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 5.549380000000042,
+          "elapsedMs": 6.530993000000024,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 8.394176000000016,
+          "elapsedMs": 10.387230999999986,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 6.257289999999955,
+          "elapsedMs": 5.9851150000000075,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 9.401181000000008,
+          "elapsedMs": 9.065283000000022,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 8.842977000000019,
+          "elapsedMs": 11.199905999999999,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 9.146271000000013,
+          "elapsedMs": 22.823828999999932,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 7.635109999999997,
+          "elapsedMs": 24.628784999999993,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 12.377806000000021,
+          "elapsedMs": 41.67262800000003,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 9.092840999999964,
+          "elapsedMs": 10.245895000000019,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 11.688224000000048,
+          "elapsedMs": 13.934925000000021,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 11.309477000000015,
+          "elapsedMs": 12.574029999999993,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 11.179234000000008,
+          "elapsedMs": 12.020151999999939,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 9.799688000000003,
+          "elapsedMs": 12.866173000000003,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 13.01189000000005,
+          "elapsedMs": 14.107531999999992,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 9.620086000000015,
+          "elapsedMs": 14.074964999999906,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 14.52614299999999,
+          "elapsedMs": 14.902809999999931,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 11.034760000000006,
+          "elapsedMs": 13.759662999999932,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 15.167374999999993,
+          "elapsedMs": 15.129827000000091,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 11.700986999999998,
+          "elapsedMs": 12.172634000000016,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 13.653768000000014,
+          "elapsedMs": 15.37134100000003,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 11.806952000000024,
+          "elapsedMs": 13.893437000000063,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 17.605981000000043,
+          "elapsedMs": 17.683576000000016,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 13.274172000000021,
+          "elapsedMs": 14.39114799999993,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 17.977431999999908,
+          "elapsedMs": 19.131748000000016,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 15.289193000000068,
+          "elapsedMs": 13.269020000000069,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 17.218525,
+          "elapsedMs": 19.942250000000058,
           "legal": true
         },
         {
           "level": 2,
-          "elapsedMs": 12.774850000000015,
+          "elapsedMs": 13.178764000000001,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 14.660869000000048,
+          "elapsedMs": 18.604520999999977,
           "legal": true
         }
       ]
@@ -508,242 +509,242 @@
       "decisions": [
         {
           "level": 4,
-          "elapsedMs": 34.775938999999994,
+          "elapsedMs": 70.60360600000001,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 5.989599999999996,
+          "elapsedMs": 8.164204999999924,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 32.323882000000026,
+          "elapsedMs": 35.336648999999966,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 7.615523000000053,
+          "elapsedMs": 10.514739000000077,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 35.77137000000005,
+          "elapsedMs": 46.057035999999925,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 8.427355000000034,
+          "elapsedMs": 9.27306899999985,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 41.972422999999935,
+          "elapsedMs": 44.65033400000016,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 9.748019,
+          "elapsedMs": 10.559884000000011,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 47.09514200000001,
+          "elapsedMs": 48.462901999999985,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 10.668867999999975,
+          "elapsedMs": 12.186807000000044,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 52.79378099999997,
+          "elapsedMs": 63.6768239999999,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 11.639562999999953,
+          "elapsedMs": 11.487621999999874,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 61.06750700000009,
+          "elapsedMs": 92.90453000000002,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 12.177731000000108,
+          "elapsedMs": 12.003496999999925,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 66.36349599999994,
+          "elapsedMs": 75.69163900000012,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 15.191522000000077,
+          "elapsedMs": 18.349444000000176,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 79.95133299999998,
+          "elapsedMs": 227.83743000000004,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 16.123256999999967,
+          "elapsedMs": 42.453246000000036,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 96.10463000000004,
+          "elapsedMs": 155.14064099999996,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 21.022877000000108,
+          "elapsedMs": 18.89383799999996,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 107.23034800000005,
+          "elapsedMs": 148.98952099999997,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 21.270667000000003,
+          "elapsedMs": 38.55615099999977,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 111.00624999999991,
+          "elapsedMs": 200.73701500000016,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 23.779422000000068,
+          "elapsedMs": 37.60873899999979,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 117.70001900000011,
+          "elapsedMs": 118.30304399999977,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 25.045294000000013,
+          "elapsedMs": 36.88526300000012,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 133.33201299999996,
+          "elapsedMs": 175.03973599999972,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 26.853370999999925,
+          "elapsedMs": 27.038884000000053,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 131.56823900000018,
+          "elapsedMs": 190.21722099999988,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 27.830556000000115,
+          "elapsedMs": 49.04109800000015,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 136.47613899999988,
+          "elapsedMs": 202.79099600000018,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 27.529783999999836,
+          "elapsedMs": 37.65480699999989,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 141.59804099999974,
+          "elapsedMs": 275.3552679999998,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 30.503692999999657,
+          "elapsedMs": 183.47164799999973,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 149.91135799999984,
+          "elapsedMs": 285.02281200000016,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 31.335998000000018,
+          "elapsedMs": 53.470204000000194,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 164.54122199999983,
+          "elapsedMs": 376.24548200000027,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 37.736191999999846,
+          "elapsedMs": 34.63295600000038,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 148.57645000000002,
+          "elapsedMs": 184.47974599999998,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 29.603595999999925,
+          "elapsedMs": 29.903387000000293,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 149.0858820000003,
+          "elapsedMs": 177.70028700000057,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 31.819684000000052,
+          "elapsedMs": 37.61701600000015,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 153.57468100000006,
+          "elapsedMs": 187.38678700000037,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 31.890708999999788,
+          "elapsedMs": 51.4562760000008,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 171.36741400000028,
+          "elapsedMs": 194.09097199999997,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 37.64613999999983,
+          "elapsedMs": 53.81830899999932,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 173.64990099999977,
+          "elapsedMs": 180.32947400000012,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 34.33641299999999,
+          "elapsedMs": 55.67578700000013,
           "legal": true
         }
       ]
@@ -758,242 +759,242 @@
       "decisions": [
         {
           "level": 3,
-          "elapsedMs": 6.078741999999693,
+          "elapsedMs": 5.923388999999588,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 37.245216000000255,
+          "elapsedMs": 36.3147170000002,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 6.258817000000363,
+          "elapsedMs": 7.041358999999829,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 35.349825999999666,
+          "elapsedMs": 35.78605299999981,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 6.751075000000128,
+          "elapsedMs": 7.516251000000011,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 40.06950599999982,
+          "elapsedMs": 42.4347600000001,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 7.97891699999991,
+          "elapsedMs": 11.570283000000018,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 44.23142800000005,
+          "elapsedMs": 61.31940899999972,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 8.782396000000062,
+          "elapsedMs": 11.970193000000108,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 49.66869399999996,
+          "elapsedMs": 68.1072409999997,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 9.83045200000015,
+          "elapsedMs": 9.617416999999477,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 55.90395599999965,
+          "elapsedMs": 61.966285999999855,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 11.256579000000329,
+          "elapsedMs": 11.079392999999982,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 59.92111799999975,
+          "elapsedMs": 81.13490899999942,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 13.543752000000495,
+          "elapsedMs": 23.82802400000037,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 73.02048800000011,
+          "elapsedMs": 86.66699299999982,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 14.8411559999995,
+          "elapsedMs": 14.63821900000039,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 83.79626800000005,
+          "elapsedMs": 94.98487699999987,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 18.28287900000032,
+          "elapsedMs": 27.112291999999798,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 98.32102299999951,
+          "elapsedMs": 119.07162799999969,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 20.20916599999964,
+          "elapsedMs": 20.901847999999518,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 103.67564399999992,
+          "elapsedMs": 105.2112849999994,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 22.567731999999523,
+          "elapsedMs": 22.689683999999943,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 120.37971199999993,
+          "elapsedMs": 121.77866500000073,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 24.248034999999618,
+          "elapsedMs": 23.512800000000425,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 122.46533499999987,
+          "elapsedMs": 143.9371769999998,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 27.19506100000035,
+          "elapsedMs": 26.534436999999343,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 140.22925599999962,
+          "elapsedMs": 142.10108800000035,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 30.027286999999887,
+          "elapsedMs": 29.349246000000676,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 153.2737130000005,
+          "elapsedMs": 157.36411700000008,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 31.743193000000247,
+          "elapsedMs": 30.50822799999969,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 159.53326000000015,
+          "elapsedMs": 163.28323,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 31.91988499999934,
+          "elapsedMs": 32.3168569999998,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 184.97584300000017,
+          "elapsedMs": 180.42416200000025,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 38.32719199999974,
+          "elapsedMs": 37.301133999999365,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 187.3719490000003,
+          "elapsedMs": 240.3160029999999,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 37.78754800000024,
+          "elapsedMs": 36.64060100000006,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 187.12503800000013,
+          "elapsedMs": 190.9246659999999,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 39.32834300000013,
+          "elapsedMs": 55.41666599999917,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 187.55492099999992,
+          "elapsedMs": 238.85699399999976,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 40.97827099999995,
+          "elapsedMs": 43.861321000000316,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 200.86605400000008,
+          "elapsedMs": 203.11417900000015,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 41.06018800000038,
+          "elapsedMs": 41.529544999999416,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 191.46311100000003,
+          "elapsedMs": 197.09177799999998,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 38.78225199999997,
+          "elapsedMs": 60.44311099999868,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 191.1685469999993,
+          "elapsedMs": 241.55775499999982,
           "legal": true
         },
         {
           "level": 3,
-          "elapsedMs": 39.51038299999982,
+          "elapsedMs": 59.20339400000012,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 189.48324499999944,
+          "elapsedMs": 222.18678399999953,
           "legal": true
         }
       ]
@@ -1008,242 +1009,242 @@
       "decisions": [
         {
           "level": 5,
-          "elapsedMs": 271.1416419999996,
+          "elapsedMs": 301.78761900000063,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 33.35915800000021,
+          "elapsedMs": 32.68957699999919,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 281.9700409999996,
+          "elapsedMs": 296.4645840000012,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 34.7639879999997,
+          "elapsedMs": 39.3641579999985,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 310.4964029999992,
+          "elapsedMs": 354.37823200000093,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 41.00455800000054,
+          "elapsedMs": 45.47642799999994,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 373.7355119999993,
+          "elapsedMs": 386.4716439999993,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 59.69210100000055,
+          "elapsedMs": 52.83669100000043,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 413.01391200000035,
+          "elapsedMs": 473.5279019999998,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 54.10783800000172,
+          "elapsedMs": 89.8733280000015,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 487.714645,
+          "elapsedMs": 636.5681069999991,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 64.88658899999973,
+          "elapsedMs": 67.08974999999919,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 526.5389140000007,
+          "elapsedMs": 721.90956,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 71.7728160000006,
+          "elapsedMs": 75.67236199999934,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 611.4302900000002,
+          "elapsedMs": 655.2103490000009,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 78.25951200000054,
+          "elapsedMs": 114.28914199999963,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 672.9298210000015,
+          "elapsedMs": 893.6048869999995,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 88.68435399999908,
+          "elapsedMs": 84.40162500000042,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 721.0841240000009,
+          "elapsedMs": 764.9829339999997,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 98.80981099999917,
+          "elapsedMs": 96.74817000000075,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 851.1085050000002,
+          "elapsedMs": 968.0222159999976,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 117.63321499999984,
+          "elapsedMs": 143.59877699999925,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 936.2016210000002,
+          "elapsedMs": 1016.8575849999979,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 126.6060180000004,
+          "elapsedMs": 155.56869799999913,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1109.8581519999989,
+          "elapsedMs": 1190.5884289999995,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 137.12638300000071,
+          "elapsedMs": 137.7775619999993,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1142.1282889999984,
+          "elapsedMs": 1219.3722559999987,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 144.86029500000222,
+          "elapsedMs": 170.36990700000024,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1207.055547,
+          "elapsedMs": 1468.1844859999983,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 163.0476239999989,
+          "elapsedMs": 220.22869899999932,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1431.2661640000006,
+          "elapsedMs": 1621.7689020000034,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 182.86757099999886,
+          "elapsedMs": 180.95944800000143,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1468.3208169999998,
+          "elapsedMs": 1577.571436000002,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 183.80025899999964,
+          "elapsedMs": 182.3891130000011,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1526.9378980000001,
+          "elapsedMs": 1818.9250329999995,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 192.91275799999858,
+          "elapsedMs": 215.84730499999932,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1698.722804000001,
+          "elapsedMs": 1898.9714509999976,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 215.30565500000012,
+          "elapsedMs": 215.25588400000197,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1785.7202139999972,
+          "elapsedMs": 2087.239186999999,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 226.1756319999986,
+          "elapsedMs": 303.6956140000002,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1813.9628090000006,
+          "elapsedMs": 2052.867115000001,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 231.04188900000008,
+          "elapsedMs": 272.02021600000444,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1828.0797380000004,
+          "elapsedMs": 2128.1019640000013,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 245.07652700000108,
+          "elapsedMs": 422.219047999999,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 2084.9629179999974,
+          "elapsedMs": 2248.013949,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 263.5522750000018,
+          "elapsedMs": 273.90061699999933,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 2137.1000609999974,
+          "elapsedMs": 2287.4323640000002,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 282.19890300000407,
+          "elapsedMs": 276.72656599999755,
           "legal": true
         }
       ]
@@ -1258,242 +1259,242 @@
       "decisions": [
         {
           "level": 4,
-          "elapsedMs": 42.4402240000054,
+          "elapsedMs": 39.77164300000004,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 314.577400999995,
+          "elapsedMs": 325.9549790000019,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 39.18769800000155,
+          "elapsedMs": 41.40397099999973,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 322.55914499999926,
+          "elapsedMs": 378.1205239999981,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 40.99933400000009,
+          "elapsedMs": 40.7539489999981,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 348.35846599999786,
+          "elapsedMs": 357.2432790000021,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 43.93504400000529,
+          "elapsedMs": 47.237975000003644,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 397.40282500000467,
+          "elapsedMs": 437.44727599999896,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 52.27112599999964,
+          "elapsedMs": 70.8429959999994,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 489.31507799999963,
+          "elapsedMs": 540.1763879999999,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 65.79004800000257,
+          "elapsedMs": 62.91178999999829,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 536.6862440000041,
+          "elapsedMs": 592.4037200000021,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 68.98264700000436,
+          "elapsedMs": 80.37180100000114,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 591.4485050000003,
+          "elapsedMs": 647.0518489999959,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 78.00407599999744,
+          "elapsedMs": 136.23341300000175,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 726.8185500000036,
+          "elapsedMs": 779.5370089999997,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 93.62451900000451,
+          "elapsedMs": 97.82022799999686,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 903.0199060000014,
+          "elapsedMs": 915.821465999994,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 167.0781480000005,
+          "elapsedMs": 108.90027299999929,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 907.2992100000047,
+          "elapsedMs": 1003.0646790000028,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 113.3108099999954,
+          "elapsedMs": 179.0348610000001,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1009.8324829999983,
+          "elapsedMs": 1142.5623699999996,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 123.11582900000212,
+          "elapsedMs": 169.01665800000046,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1082.2785500000027,
+          "elapsedMs": 1335.495584999997,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 134.42584799999895,
+          "elapsedMs": 163.21747300000425,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1141.9389070000034,
+          "elapsedMs": 1307.5349950000018,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 148.127794,
+          "elapsedMs": 185.670352000001,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1161.2092029999985,
+          "elapsedMs": 1387.0384279999998,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 148.92341200000374,
+          "elapsedMs": 141.6464629999973,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1208.8176759999988,
+          "elapsedMs": 1169.3879520000046,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 152.01245600000402,
+          "elapsedMs": 143.20762500000274,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1223.2968220000039,
+          "elapsedMs": 1142.1746869999988,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 161.39211299999442,
+          "elapsedMs": 149.50787200000195,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1360.7794240000003,
+          "elapsedMs": 1290.580538000002,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 168.61348900000303,
+          "elapsedMs": 160.05184900000313,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1449.6823099999965,
+          "elapsedMs": 1357.1954850000038,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 185.9226989999952,
+          "elapsedMs": 175.2162160000007,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1565.3940460000013,
+          "elapsedMs": 1475.984080000002,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 205.80040100000042,
+          "elapsedMs": 195.95132400000148,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1699.1736349999992,
+          "elapsedMs": 1591.0107229999994,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 221.52964600000269,
+          "elapsedMs": 212.4369250000018,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 1910.0322289999967,
+          "elapsedMs": 1817.4776379999967,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 258.73030899999867,
+          "elapsedMs": 243.10663100000238,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 2205.2778529999996,
+          "elapsedMs": 2035.1012349999946,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 284.83851600000344,
+          "elapsedMs": 259.2733809999918,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 2379.4137530000007,
+          "elapsedMs": 2129.674306000001,
           "legal": true
         },
         {
           "level": 4,
-          "elapsedMs": 286.2996390000044,
+          "elapsedMs": 272.9407000000065,
           "legal": true
         },
         {
           "level": 5,
-          "elapsedMs": 2248.4024299999946,
+          "elapsedMs": 2154.955514000001,
           "legal": true
         }
       ]
