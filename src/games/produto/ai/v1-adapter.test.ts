@@ -56,4 +56,20 @@ describe('ProdutoV1Adapter', () => {
     expect(mapLevelToProdutoDifficulty(3)).toBe('hard');
     expect(mapLevelToProdutoDifficulty(5)).toBe('max');
   });
+
+  test('forwards the common N1-N5 classroom budget', async () => {
+    let receivedBudget = 0;
+    const client = {
+      ...makeClient({ posA: 0, colorA: 0, posB: -1, colorB: 0 }),
+      async getBestMove(_state: ProdutoState, _difficulty: unknown, options?: { timeBudgetMs?: number }) {
+        receivedBudget = options?.timeBudgetMs ?? 0;
+        return { posA: 0, colorA: 0, posB: -1, colorB: 0 };
+      },
+    };
+
+    await new ProdutoV1Adapter({ client: client as any }).compute(
+      makeRequest(criarEstadoInicial('vs-computador'), { level: 4 }),
+    );
+    expect(receivedBudget).toBe(1000);
+  });
 });

@@ -51,6 +51,16 @@ describe('Gatos & Cães AI Engine', () => {
       expect(stats.timeMs).toBeGreaterThanOrEqual(0);
     });
 
+    test('keeps a legal fallback when the deadline expires before depth one', () => {
+      let state = criarEstadoInicial('vs-computador');
+      state = colocarPeca(state, { linha: 3, coluna: 3 });
+
+      const { move } = computeBestMove(state, 2, { timeLimit: 1 });
+
+      expect(move).not.toBeNull();
+      expect(isJogadaValida(state, move!)).toBe(true);
+    });
+
     test('higher difficulty searches deeper', () => {
       const state = criarEstadoInicial('vs-computador');
 

@@ -1,7 +1,6 @@
 import type { AIRequest, AIResponse } from './types';
 import { DIFFICULTY_PRESETS } from './types';
-import { calcularJogadasValidas, jogadaComputador } from '../logic';
-import type { Celula, Posicao } from '../types';
+import { chooseFallbackMoveIndexFromPacked } from './fallback-engine';
 
 function post(msg: AIResponse) {
   self.postMessage(msg);
@@ -38,43 +37,6 @@ async function init(): Promise<void> {
   }
 }
 
-function unpackBoard(board: Uint8Array): Celula[][] {
-  const out: Celula[][] = Array.from({ length: 9 }, () => Array.from({ length: 9 }, () => 'vazia' as Celula));
-  for (let i = 0; i < 81; i++) {
-    const v = board[i] ?? 0;
-    const linha = Math.floor(i / 9);
-    const coluna = i % 9;
-    out[linha]![coluna] = v === 1 ? 'preta' : v === 2 ? 'branca' : 'vazia';
-  }
-  return out;
-}
-
-function posToIdx(p: Posicao): number {
-  return p.linha * 9 + p.coluna;
-}
-
-function randomFallbackMove(req: Extract<AIRequest, { type: 'choose' }>): number | null {
-  const tabuleiro = unpackBoard(req.state.board);
-  const jogador = req.state.toPlay === 0 ? 'jogador1' : 'jogador2';
-  const jogadasValidas = calcularJogadasValidas(tabuleiro, jogador);
-  if (jogadasValidas.length === 0) return null;
-
-  // Reusar a IA TS existente como fallback (mas a correr no Worker).
-  const dummyState: any = {
-    tabuleiro,
-    modo: 'vs-computador',
-    jogadorAtual: jogador,
-    estado: 'a-jogar',
-    jogadasValidas,
-    ultimaJogada: null,
-    pedrasCapturadas: { pretas: 0, brancas: 0 },
-  };
-
-  const next = jogadaComputador(dummyState) as any;
-  const last: Posicao | null = next?.ultimaJogada ?? null;
-  return last ? posToIdx(last) : null;
-}
-
 const initPromise = init().catch(e => {
   console.error('[AtariGoAI] init failed:', e);
 });
@@ -105,7 +67,11 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
         stats,
       });
     } else {
-      const mv = randomFallbackMove(req);
+      const mv = chooseFallbackMoveIndexFromPacked(req.state, {
+        level: req.coreLevel,
+        seed: req.seed,
+        timeBudgetMs,
+      });
       post({
         type: 'result',
         id: req.id,

@@ -6,6 +6,7 @@ import type {
   AIPedagogyV1,
   DifficultyLevel,
 } from '../../../ai-core';
+import { getDifficultyProfile } from '../../../ai-core/difficulty';
 import {
   calcularDistanciaMinima,
   executarColocacao,
@@ -31,7 +32,7 @@ const LEVEL_MAP: Record<DifficultyLevel, AIDifficulty> = {
   2: 'medium',
   3: 'hard',
   4: 'master',
-  5: 'master',
+  5: 'champion',
 };
 
 export class NexV1Adapter {
@@ -53,7 +54,10 @@ export class NexV1Adapter {
     request: AIRequestV1<NexState, NexAiAction>,
   ): Promise<AIResponseV1<NexAiAction, NexState>> {
     const difficulty = mapLevelToNexDifficulty(request.level);
-    const bestMove = await this.client.getBestAction(request.state, difficulty);
+    const bestMove = await this.client.getBestAction(request.state, difficulty, {
+      timeBudgetMs: request.timeBudgetMs ?? getDifficultyProfile(request.level).timeBudgetMs,
+      seed: request.seed,
+    });
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(request.state, topMoves);
     const pedagogy = buildPedagogy(request.state, topMoves);

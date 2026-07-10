@@ -51,6 +51,7 @@ export type AIRequest =
     id: number;
     state: ProdutoPackedState;
     difficulty: AIDifficulty;
+    timeBudgetMs?: number;
     seed?: number;
   }
   | { type: 'cancel'; id: number };

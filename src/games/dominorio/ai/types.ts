@@ -49,8 +49,8 @@ export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
   hard: {
     timeBudgetMs: 15000,
     maxDepth: 13,
-    topN: 0,
-    scoreDelta: 0,
+    topN: 2,
+    scoreDelta: 10,
   },
   hardPlus: {
     timeBudgetMs: 15000,

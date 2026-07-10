@@ -176,7 +176,7 @@ function finalizarTurno(state: NexState, novoTabuleiro: Celula[][]): NexState {
   // Ativar swap após primeira jogada das Pretas
   const novoSwapDisponivel = state.primeiraJogada && state.jogadorAtual === 'jogador1';
   
-  return {
+  const estadoAposTurno: NexState = {
     ...state,
     tabuleiro: novoTabuleiro,
     jogadorAtual: proximoJogador,
@@ -185,6 +185,9 @@ function finalizarTurno(state: NexState, novoTabuleiro: Celula[][]): NexState {
     swapDisponivel: novoSwapDisponivel,
     acaoEmCurso: criarAcaoEmCursoVazia(),
   };
+
+  if (novoEstado !== 'a-jogar') return estadoAposTurno;
+  return resolverFinalRaro(estadoAposTurno) ?? estadoAposTurno;
 }
 
 // Executar swap (trocar de cor)
@@ -339,6 +342,65 @@ function contarCasasVazias(tabuleiro: Celula[][]): number {
     }
   }
   return count;
+}
+
+function getPosicoesComCelula(tabuleiro: Celula[][], celula: Celula): Posicao[] {
+  const posicoes: Posicao[] = [];
+  for (let x = 0; x < LADO_TABULEIRO; x++) {
+    for (let y = 0; y < LADO_TABULEIRO; y++) {
+      if (tabuleiro[x][y] === celula) posicoes.push({ x, y });
+    }
+  }
+  return posicoes;
+}
+
+/**
+ * Aplica uma das três convenções de fim publicadas para o Nex quando já não
+ * existe uma ação normal. Devolve null enquanto o jogo puder prosseguir.
+ */
+export function resolverFinalRaro(state: NexState): NexState | null {
+  if (state.estado !== 'a-jogar') return null;
+
+  const vazias = getPosicoesComCelula(state.tabuleiro, 'vazia');
+  const neutras = getPosicoesComCelula(state.tabuleiro, 'neutra');
+  const isFinalRaro =
+    (vazias.length === 1 && neutras.length === 0) ||
+    (vazias.length === 0 && neutras.length === 1) ||
+    (vazias.length === 1 && neutras.length === 1);
+
+  if (!isFinalRaro) return null;
+
+  const jogadorAtual = state.jogadorAtual;
+  const adversario: Player = jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1';
+  const corAtual = getCorJogador(state, jogadorAtual);
+  const corAdversario = getCorJogador(state, adversario);
+  const tabuleiro = state.tabuleiro.map(linha => [...linha]);
+
+  if (vazias.length === 1) {
+    tabuleiro[vazias[0].x][vazias[0].y] = corAtual;
+  }
+  if (neutras.length === 1) {
+    tabuleiro[neutras[0].x][neutras[0].y] =
+      vazias.length === 1 ? corAdversario : corAtual;
+  }
+
+  const vencedor = verificarVitoria(tabuleiro, corAtual)
+    ? jogadorAtual
+    : verificarVitoria(tabuleiro, corAdversario)
+      ? adversario
+      : null;
+
+  return {
+    ...state,
+    tabuleiro,
+    estado: vencedor === 'jogador1'
+      ? 'vitoria-jogador1'
+      : vencedor === 'jogador2'
+        ? 'vitoria-jogador2'
+        : 'empate',
+    swapDisponivel: false,
+    acaoEmCurso: criarAcaoEmCursoVazia(),
+  };
 }
 
 // Verificar se colocação é possível (2+ casas vazias)

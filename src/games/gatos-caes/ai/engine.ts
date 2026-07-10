@@ -287,6 +287,10 @@ function iterativeDeepening(
     return { bestMove: rootMoves[0], score: 0, depth: 0 };
   }
 
+  // Always keep a legal root fallback. With a very short classroom budget,
+  // depth one may not finish across a wide branching position.
+  bestMove = orderMoves(board, rootMoves, 0, null)[0] ?? rootMoves[0] ?? null;
+
   // Iterative deepening
   for (let depth = 1; depth <= config.maxDepth; depth++) {
     if (shouldAbort()) break;
@@ -399,7 +403,30 @@ export function computeBestMove(
   // Handle difficulty randomization for easy levels
   let finalMove = bestMove;
 
-  if (config.topN > 1 && config.randomFactor > 0 && bestMove !== null) {
+  if (difficulty === 1 && bestMove !== null) {
+    const isGatosMove = board.sideToMove === 'jogador1';
+    const allMoves = generateMoves(
+      board,
+      isGatosMove,
+      board.primeiroGatoColocado,
+      board.primeiroCaoColocado
+    );
+    // N1 makes a visible, teachable mistake: it gives the opponent the most
+    // immediate room. This preserves legality while making “close space” a
+    // pattern students can discover and exploit.
+    finalMove = allMoves
+      .map((move) => {
+        const next = makeMove(board, move);
+        const replies = countLegalMoves(
+          next,
+          next.sideToMove === 'jogador1',
+          next.primeiroGatoColocado,
+          next.primeiroCaoColocado,
+        );
+        return { move, replies };
+      })
+      .sort((a, b) => b.replies - a.replies || a.move - b.move)[0]?.move ?? bestMove;
+  } else if (config.topN > 1 && config.randomFactor > 0 && bestMove !== null) {
     // Get top N moves for easier difficulty
     const isGatosMove = board.sideToMove === 'jogador1';
     const allMoves = generateMoves(

@@ -6,6 +6,7 @@ import type {
   AIPedagogyV1,
   DifficultyLevel,
 } from '../../../ai-core';
+import { getDifficultyProfile } from '../../../ai-core/difficulty';
 import { calcularJogadasValidas, colocarPeca } from '../logic';
 import type { GatosCaesState, Posicao } from '../types';
 import { computeMove } from './ai-client';
@@ -39,7 +40,8 @@ export class GatosCaesV1Adapter {
       };
     }
 
-    const { move: bestMove, stats } = await computeMove(request.state, request.level);
+    const timeLimitMs = resolveGatosCaesTimeLimitMs(request.level, request.timeBudgetMs);
+    const { move: bestMove, stats } = await computeMove(request.state, request.level, { timeLimitMs });
     const topMoves = buildTopMoves(request.state, bestMove, legalMoves);
     const criticalThreats = buildCriticalThreats(request.state, topMoves);
 
@@ -61,7 +63,7 @@ export class GatosCaesV1Adapter {
         usedWasm: false,
         engine: 'ts-fallback',
       },
-      warnings: ['engine:inline-ts'],
+      warnings: [stats.runtime === 'worker' ? 'engine:worker-ts' : 'engine:inline-ts'],
     };
   }
 
@@ -72,6 +74,13 @@ export class GatosCaesV1Adapter {
 
 export function mapLevelToDifficulty(level: DifficultyLevel): number {
   return level;
+}
+
+export function resolveGatosCaesTimeLimitMs(level: DifficultyLevel, requested?: number): number {
+  if (typeof requested === 'number' && Number.isFinite(requested)) {
+    return Math.max(1, Math.trunc(requested));
+  }
+  return getDifficultyProfile(level).timeBudgetMs;
 }
 
 function emptyStats() {

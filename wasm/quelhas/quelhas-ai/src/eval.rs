@@ -1,4 +1,4 @@
-use quelhas_core::{apply_move, decode_move, extract_runs, Occupancy, Run, BOARD_SIZE};
+use quelhas_core::{apply_move, extract_runs, Occupancy, Run, BOARD_SIZE};
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Metrics {
@@ -164,6 +164,12 @@ pub fn evaluate_misere(occ: Occupancy, side_to_move: u8) -> i32 {
     score
 }
 
+/// Converte a estimativa de carga/reserva numa utilidade para o negamax.
+/// Em misère, uma carga própria maior é uma desvantagem.
+pub fn evaluate_search_leaf(occ: Occupancy, side_to_move: u8) -> i32 {
+    -evaluate_misere(occ, side_to_move)
+}
+
 pub fn cheap_move_score(occ: Occupancy, mv: u16, side_to_move: u8) -> i32 {
     let child = apply_move(occ, mv);
     // se o adversário ficar sem jogadas, é derrota imediata (misère)
@@ -173,5 +179,16 @@ pub fn cheap_move_score(occ: Occupancy, mv: u16, side_to_move: u8) -> i32 {
         return -1_000_000;
     }
     // score aproximado: avaliação do nó filho do ponto de vista de quem joga agora (adversário)
-    -evaluate_misere(child, opp)
+    -evaluate_search_leaf(child, opp)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn search_leaf_inverts_the_misere_burden_estimate() {
+        let occ = Occupancy::default();
+        assert_eq!(evaluate_search_leaf(occ, 0), -evaluate_misere(occ, 0));
+    }
 }

@@ -19,6 +19,7 @@ import { INITIAL_METRICS, DIFFICULTY_PRESETS } from './types';
 import * as bitboard from './bitboard';
 import type { DominorioState, Domino } from '../types';
 import openingBook from './book.json';
+import { selectDidacticBeginnerMove } from './difficulty-policy';
 
 export interface AIClientOptions {
   onMetricsUpdate?: (metrics: AIMetrics) => void;
@@ -402,6 +403,30 @@ export class DominorioAIClient {
     // Update metrics to show thinking
     this.currentMetrics = { ...this.currentMetrics, isThinking: true };
     this.options.onMetricsUpdate?.(this.currentMetrics);
+
+    if (difficulty === 'beginner') {
+      const move = selectDidacticBeginnerMove(
+        bitboard.generateMoves(occupiedLow, occupiedHigh, side),
+        side,
+      );
+      if (move !== null) {
+        const response: AIResponse = {
+          type: 'result',
+          id: 0,
+          bestMove: move,
+          depthReached: 0,
+          nodesSearched: 0,
+          principalVariation: [move],
+          elapsedMs: 0,
+          ttHitRate: 0,
+          score: 0,
+          fromBook: false,
+          usedWasm: false,
+        };
+        this.updateMetrics(response);
+        return bitboard.anchorToDomino(move, side);
+      }
+    }
     
     // Check opening book first
     const bookMove = this.checkOpeningBook(occupiedLow, occupiedHigh, side, plyCount, random);

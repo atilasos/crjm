@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { getDifficultyProfile } from '../../ai-core/difficulty';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
+import { selectReviewPattern } from '../../ai-core/review-patterns';
 import { GameLayout } from '../../components/GameLayout';
+import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
@@ -19,9 +22,9 @@ import {
 import type { GameMode, Player } from '../../types';
 import { ProdutoAIClient, decodeMove } from './ai/ai-client';
 import type { AIDifficulty } from './ai/types';
-import { DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai/types';
+import { INITIAL_METRICS } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
-import { ProdutoV1Adapter } from './ai/v1-adapter';
+import { ProdutoV1Adapter, mapLevelToProdutoDifficulty } from './ai/v1-adapter';
 import { buildQuickReviewItems, resolveHintLevel } from './ai/pedagogy-mvp';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
@@ -41,14 +44,6 @@ const REGRAS = [
   'O jogo termina quando o tabuleiro estiver cheio.',
 ];
 
-function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
-  if (difficulty === 'easy') return 1;
-  if (difficulty === 'medium') return 2;
-  if (difficulty === 'hard') return 3;
-  if (difficulty === 'very-hard') return 4;
-  return 5;
-}
-
 function formatPos(pos: Posicao): string {
   return `(${pos.q},${pos.r})`;
 }
@@ -57,6 +52,18 @@ function formatMove(move: JogadaDupla): string {
   const first = `${move.cor1} ${formatPos(move.pos1)}`;
   if (!move.pos2 || !move.cor2) return first;
   return `${first} + ${move.cor2} ${formatPos(move.pos2)}`;
+}
+
+function sameProdutoMove(a: JogadaDupla, b: JogadaDupla): boolean {
+  const samePiece = (posA: Posicao, corA: string, posB: Posicao, corB: string) =>
+    posToKey(posA) === posToKey(posB) && corA === corB;
+  const direct =
+    samePiece(a.pos1, a.cor1, b.pos1, b.cor1) &&
+    ((!a.pos2 && !b.pos2) || (!!a.pos2 && !!b.pos2 && !!a.cor2 && !!b.cor2 && samePiece(a.pos2, a.cor2, b.pos2, b.cor2)));
+  if (direct) return true;
+  return !!a.pos2 && !!b.pos2 && !!a.cor2 && !!b.cor2 &&
+    samePiece(a.pos1, a.cor1, b.pos2, b.cor2) &&
+    samePiece(a.pos2, a.cor2, b.pos1, b.cor1);
 }
 
 function getSuggestedAction(
@@ -87,14 +94,23 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
 }
 
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
-  const { recordGameCompleted, recordReviewCompleted } = useGamification();
+  const {
+    acceptDifficultyRecommendation,
+    getDifficultyRecommendation,
+    recordAdaptiveDecision,
+    recordGameCompleted,
+    recordPatternProgress,
+    recordReviewCompleted,
+    resetAdaptiveSession,
+  } = useGamification();
   const [state, setState] = useState<ProdutoState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [corSelecionada, setCorSelecionada] = useState<'preta' | 'branca'>('preta');
-  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
+  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
+  const aiDifficulty: AIDifficulty = mapLevelToProdutoDifficulty(difficultyLevel);
   const [aiMetrics, setAiMetrics] = useState(() => ({ ...INITIAL_METRICS }));
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<JogadaDupla, ProdutoState> | null>(null);
@@ -118,12 +134,13 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     ) {
       let cancelled = false;
       let finished = false;
-      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
+      const maxWaitMs = timeBudgetMs + 250;
       const timer = setTimeout(() => {
         void (async () => {
           try {
             const move = await withTimeout(
-              aiClientRef.getBestMove(state, aiDifficulty),
+              aiClientRef.getBestMove(state, aiDifficulty, { timeBudgetMs }),
               maxWaitMs,
               () => aiClientRef.cancel()
             );
@@ -164,7 +181,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
         if (!finished) aiClientRef.cancel();
       };
     }
-  }, [state, humanPlayer, aiDifficulty, aiClientRef]);
+  }, [state, humanPlayer, aiDifficulty, difficultyLevel, aiClientRef]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -200,8 +217,24 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
     if (state.tabuleiro[posToKey(pos)] !== 'vazia') return;
 
+    const finishesTurn = state.primeiraJogada || state.jogadaEmCurso.pos1 !== null;
+    if (finishesTurn && tutorResponse) {
+      const played: JogadaDupla = state.primeiraJogada
+        ? { pos1: pos, cor1: corSelecionada, pos2: null, cor2: null }
+        : {
+            pos1: state.jogadaEmCurso.pos1!,
+            cor1: state.jogadaEmCurso.cor1!,
+            pos2: pos,
+            cor2: corSelecionada,
+          };
+      recordAdaptiveDecision('produto', {
+        successful: tutorResponse.topMoves.some(({ move }) => sameProdutoMove(move, played)),
+        usedHint: hintLevel === 'H3',
+      });
+    }
+
     setState(prev => colocarPeca(prev, pos, corSelecionada));
-  }, [state, humanPlayer, corSelecionada]);
+  }, [state, humanPlayer, corSelecionada, tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const handleCancelar = useCallback(() => {
     setState(prev => cancelarJogadaEmCurso(prev));
@@ -215,7 +248,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setTutorHistory([]);
     setHintLevel('H2');
     setReviewRewarded(false);
-  }, [state.modo]);
+    resetAdaptiveSession('produto');
+  }, [resetAdaptiveSession, state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
@@ -260,7 +294,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       requestId: `produto-tutor-${Date.now()}`,
       gameId: 'produto',
       mode: 'tutor',
-      level: mapDifficultyToLevel(aiDifficulty),
+      level: difficultyLevel,
       state,
       locale: 'pt-PT',
     };
@@ -291,7 +325,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       cancelled = true;
       tutorAdapterRef.cancel();
     };
-  }, [aiDifficulty, humanPlayer, state, tutorAdapterRef]);
+  }, [difficultyLevel, humanPlayer, state, tutorAdapterRef]);
 
   // Converter coordenadas axiais para posição no ecrã (pointy-top orientation)
   const hexToPixel = (q: number, r: number, size: number) => {
@@ -378,6 +412,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     state.jogadorAtual !== humanPlayer;
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
+  const reviewPattern = selectReviewPattern('produto', tutorHistory.at(-1) ?? tutorResponse);
+  const difficultyRecommendation = getDifficultyRecommendation('produto', difficultyLevel);
 
   return (
     <GameLayout titulo="Produto" regras={REGRAS} onVoltar={onVoltar}>
@@ -401,21 +437,18 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
         {/* Configuração de IA (só no modo vs-computador) */}
         {state.modo === 'vs-computador' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-sm font-medium text-blue-900">Dificuldade (IA)</label>
-              <select
-                className="text-sm rounded-lg border border-blue-200 bg-white px-2 py-1"
-                value={aiDifficulty}
-                onChange={e => setAiDifficulty(e.target.value as AIDifficulty)}
-              >
-                <option value="easy">Fácil</option>
-                <option value="medium">Médio</option>
-                <option value="hard">Difícil</option>
-                <option value="very-hard">Muito difícil</option>
-                <option value="max">Máximo</option>
-              </select>
-            </div>
+          <div className="space-y-2">
+            <DifficultySelector
+              level={difficultyLevel}
+              onChange={setDifficultyLevel}
+              disabled={aiMetrics.isThinking}
+              recommendation={difficultyRecommendation}
+              canAcceptRecommendation={state.estado !== 'a-jogar'}
+              onAcceptRecommendation={(level) => {
+                setDifficultyLevel(level);
+                acceptDifficultyRecommendation('produto');
+              }}
+            />
             <div className="text-xs text-blue-900/80 flex items-center justify-between">
               <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
               <span>{aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback'}</span>
@@ -589,6 +622,9 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
             <p className="mt-1 text-emerald-800">
               Revê até 2 momentos e confirma onde podias melhorar o teu produto sem ajudar o adversário.
             </p>
+            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
@@ -606,6 +642,9 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
               onClick={() => {
                 if (reviewRewarded) return;
                 recordReviewCompleted('produto');
+                recordPatternProgress({
+                  gameId: 'produto', patternId: reviewPattern.id, evidence: 'seen', contextId: `review-${Date.now()}`,
+                });
                 setReviewRewarded(true);
               }}
               className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"

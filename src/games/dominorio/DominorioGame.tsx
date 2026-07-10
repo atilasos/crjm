@@ -7,7 +7,9 @@ import { HintLegend } from '../../components/tutor/HintLegend';
 import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { getDifficultyProfile } from '../../ai-core/difficulty';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
+import { selectReviewPattern } from '../../ai-core/review-patterns';
 import type { DominorioState, Posicao, Domino } from './types';
 import {
   criarEstadoInicial,
@@ -20,9 +22,9 @@ import type { GameMode, Player } from '../../types';
 import {
   DominorioAIClient,
   DominorioV1Adapter,
+  mapLevelToLegacyDifficulty,
   type AIDifficulty,
   type AIMetrics,
-  DIFFICULTY_PRESETS,
   INITIAL_METRICS,
 } from './ai';
 import { withTimeout } from '../../utils/withTimeout';
@@ -47,12 +49,6 @@ const REGRAS = [
   'Ganha quem colocar a ÚLTIMA peça.',
   'Se não tiveres jogadas no teu turno, PERDES.',
 ];
-
-function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
-  if (difficulty === 'easy') return 2;
-  if (difficulty === 'medium') return 3;
-  return 4;
-}
 
 function formatMove(move: Domino): string {
   const l1 = move.pos1.linha + 1;
@@ -116,20 +112,23 @@ function isPartOfDomino(move: Domino | null | undefined, linha: number, coluna: 
   );
 }
 
-function normalizeDifficultyForPlayerInfo(level: AIDifficulty): 'easy' | 'medium' | 'hard' {
-  if (level === 'beginner' || level === 'easy') return 'easy';
-  if (level === 'medium') return 'medium';
-  return 'hard';
-}
-
 export function DominorioGame({ onVoltar }: DominorioGameProps) {
-  const { recordGameCompleted, recordReviewCompleted } = useGamification();
+  const {
+    acceptDifficultyRecommendation,
+    getDifficultyRecommendation,
+    recordAdaptiveDecision,
+    recordGameCompleted,
+    recordPatternProgress,
+    recordReviewCompleted,
+    resetAdaptiveSession,
+  } = useGamification();
   const [state, setState] = useState<DominorioState>(() =>
     criarEstadoInicial('vs-computador'),
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
-  const [difficulty, setDifficulty] = useState<AIDifficulty>('medium');
+  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
+  const difficulty: AIDifficulty = mapLevelToLegacyDifficulty(difficultyLevel);
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
   const [tutorResponse, setTutorResponse] =
@@ -199,7 +198,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       requestId,
       gameId: 'dominorio',
       mode: 'tutor',
-      level: mapDifficultyToLevel(difficulty),
+      level: difficultyLevel,
       state,
       locale: 'pt-PT',
     };
@@ -281,7 +280,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       let cancelled = false;
       let finished = false;
       const client = aiClientRef.current;
-      const maxWaitMs = DIFFICULTY_PRESETS[difficulty].timeBudgetMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
+      const maxWaitMs = timeBudgetMs + 250;
 
       // Small delay for UX
       const timer = setTimeout(async () => {
@@ -289,7 +289,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
         try {
           const move = await withTimeout(
-            client.getBestMove(state, difficulty),
+            client.getBestMove(state, difficulty, { timeBudgetMs }),
             maxWaitMs,
             () => client.cancel(),
           );
@@ -359,10 +359,18 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
       const preview = getDominoPreview(state, pos);
       if (preview) {
+        if (tutorResponse) {
+          const successful = tutorResponse.topMoves.some(({ move }) => sameMove(move, preview));
+          recordAdaptiveDecision('dominorio', {
+            successful,
+            usedHint: hintLevel === 'H3',
+            repeatedError: !successful && hintSignalsRef.current.struggleStreak > 0,
+          });
+        }
         setState((prev) => colocarDomino(prev, preview));
       }
     },
-    [state, humanPlayer],
+    [state, humanPlayer, tutorResponse, recordAdaptiveDecision, hintLevel],
   );
 
   const novoJogo = useCallback(() => {
@@ -379,7 +387,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     previousMoveCountRef.current = 0;
     lastSuggestedMoveRef.current = null;
     hintSignalsRef.current = { struggleStreak: 0, stableStreak: 0, h3Streak: 0 };
-  }, [state.modo]);
+    resetAdaptiveSession('dominorio');
+  }, [resetAdaptiveSession, state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode =
@@ -417,9 +426,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     hintSignalsRef.current = { struggleStreak: 0, stableStreak: 0, h3Streak: 0 };
   }, []);
 
-  const handleChangeDifficulty = useCallback((newDifficulty: AIDifficulty) => {
-    setDifficulty(newDifficulty);
+  const handleChangeDifficulty = useCallback((newDifficulty: DifficultyLevel) => {
+    setDifficultyLevel(newDifficulty);
   }, []);
+
+  const difficultyRecommendation = getDifficultyRecommendation('dominorio', difficultyLevel);
 
   // Verificar se uma célula faz parte do preview
   const isPreview = (linha: number, coluna: number): boolean => {
@@ -468,6 +479,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
+  const reviewPattern = selectReviewPattern('dominorio', tutorHistory.at(-1) ?? tutorResponse);
 
   return (
     <GameLayout titulo="Dominório" regras={REGRAS} onVoltar={onVoltar}>
@@ -486,8 +498,14 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
           // AI props
-          difficulty={normalizeDifficultyForPlayerInfo(difficulty)}
-          onChangeDifficulty={(level) => handleChangeDifficulty(level === 'easy' ? 'easy' : level === 'medium' ? 'medium' : 'hard')}
+          difficulty={difficultyLevel}
+          onChangeDifficulty={handleChangeDifficulty}
+          difficultyRecommendation={difficultyRecommendation}
+          canAcceptDifficultyRecommendation={state.estado !== 'a-jogar'}
+          onAcceptDifficultyRecommendation={(level) => {
+            setDifficultyLevel(level);
+            acceptDifficultyRecommendation('dominorio');
+          }}
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
@@ -594,6 +612,9 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
             <p className="mt-1 text-emerald-800">
               Revê até 2 momentos e tenta repetir a melhor alternativa.
             </p>
+            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div key={item.title} className="rounded-lg border border-emerald-200 bg-white px-3 py-2">
@@ -608,6 +629,9 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
               onClick={() => {
                 if (reviewRewarded) return;
                 recordReviewCompleted('dominorio');
+                recordPatternProgress({
+                  gameId: 'dominorio', patternId: reviewPattern.id, evidence: 'seen', contextId: `review-${Date.now()}`,
+                });
                 setReviewRewarded(true);
               }}
               className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"

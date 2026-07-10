@@ -12,7 +12,11 @@ export class NexAIClient {
   private worker: Worker | null = null;
   private isReady = false;
   private nextId = 1;
-  private pending = new Map<number, { resolve: (a: NexAiAction | null) => void; reject: (e: Error) => void }>();
+  private pending = new Map<number, {
+    resolve: (a: NexAiAction | null) => void;
+    reject: (e: Error) => void;
+    runFallback: () => NexAiAction | null;
+  }>();
   private currentMetrics: AIMetrics = { ...INITIAL_METRICS };
   private options: AIClientOptions;
 
@@ -46,7 +50,11 @@ export class NexAIClient {
       // ignore
     }
     this.worker = null;
-    this.cancel();
+    const pending = [...this.pending.values()];
+    this.pending.clear();
+    for (const request of pending) request.resolve(request.runFallback());
+    this.currentMetrics = { ...INITIAL_METRICS, lastExplain: 'Fallback estratégico local' };
+    this.options.onMetricsUpdate?.(this.currentMetrics);
     console.warn?.('[NexAI] Falling back (no worker):', reason);
     this.isReady = true;
     this.options.onReady?.();
@@ -84,7 +92,11 @@ export class NexAIClient {
     }
   }
 
-  async getBestAction(state: NexState, difficulty: AIDifficulty): Promise<NexAiAction | null> {
+  async getBestAction(
+    state: NexState,
+    difficulty: AIDifficulty,
+    options: { timeBudgetMs?: number; seed?: number } = {},
+  ): Promise<NexAiAction | null> {
     this.currentMetrics = { ...this.currentMetrics, isThinking: true };
     this.options.onMetricsUpdate?.(this.currentMetrics);
 
@@ -92,7 +104,7 @@ export class NexAIClient {
     void preset;
 
     if (!this.worker) {
-      const fallbackAction = chooseFallbackActionFromState(state, difficulty);
+      const fallbackAction = chooseFallbackActionFromState(state, difficulty, options);
       this.currentMetrics = { ...INITIAL_METRICS };
       this.currentMetrics.lastExplain = 'Fallback estratégico local';
       this.options.onMetricsUpdate?.(this.currentMetrics);
@@ -105,13 +117,15 @@ export class NexAIClient {
       id,
       state: packState(state),
       difficulty,
-      seed: ((Date.now() >>> 0) + id) >>> 0,
+      timeBudgetMs: options.timeBudgetMs,
+      seed: options.seed ?? (((Date.now() >>> 0) + id) >>> 0),
     };
 
     return new Promise((resolve, reject) => {
       this.pending.set(id, {
         resolve: (action) => resolve(isValidAiAction(state, action) ? action : null),
         reject,
+        runFallback: () => chooseFallbackActionFromState(state, difficulty, options),
       });
       this.worker!.postMessage(req);
     });

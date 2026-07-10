@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { AIRequestV1, AIResponseV1 } from '../../ai-core';
+import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
+import { selectReviewPattern } from '../../ai-core/review-patterns';
 import { GameLayout } from '../../components/GameLayout';
+import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
@@ -77,13 +79,21 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
 }
 
 export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
-  const { recordGameCompleted, recordReviewCompleted } = useGamification();
+  const {
+    acceptDifficultyRecommendation,
+    getDifficultyRecommendation,
+    recordAdaptiveDecision,
+    recordGameCompleted,
+    recordPatternProgress,
+    recordReviewCompleted,
+    resetAdaptiveSession,
+  } = useGamification();
   const [state, setState] = useState<GatosCaesState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
-  const [difficulty, setDifficulty] = useState(3);
+  const [difficulty, setDifficulty] = useState<DifficultyLevel>(3);
   const [aiThinking, setAiThinking] = useState(false);
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<Posicao, GatosCaesState> | null>(null);
@@ -172,7 +182,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       requestId: `gatos-tutor-${Date.now()}`,
       gameId: 'gatos-caes',
       mode: 'tutor',
-      level: Math.max(1, Math.min(5, difficulty)) as 1 | 2 | 3 | 4 | 5,
+      level: difficulty,
       state,
       locale: 'pt-PT',
     };
@@ -233,9 +243,18 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
     if (isJogadaValida(state, pos)) {
+      if (tutorResponse) {
+        const successful = tutorResponse.topMoves.some(({ move }) =>
+          move.linha === pos.linha && move.coluna === pos.coluna
+        );
+        recordAdaptiveDecision('gatos-caes', {
+          successful,
+          usedHint: hintLevel === 'H3',
+        });
+      }
       setState(prev => colocarPeca(prev, pos));
     }
-  }, [state, humanPlayer]);
+  }, [state, humanPlayer, tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const novoJogo = useCallback(() => {
     setState(criarEstadoInicial(state.modo));
@@ -244,7 +263,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     setTutorHistory([]);
     setTutorLoading(false);
     setHintLevel('H2');
-  }, [state.modo]);
+    resetAdaptiveSession('gatos-caes');
+  }, [resetAdaptiveSession, state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
@@ -322,6 +342,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     (state.jogadorAtual !== humanPlayer || aiThinking);
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
+  const reviewPattern = selectReviewPattern('gatos-caes', tutorHistory.at(-1) ?? tutorResponse);
+  const difficultyRecommendation = getDifficultyRecommendation('gatos-caes', difficulty);
 
   return (
     <GameLayout titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
@@ -345,32 +367,17 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
         {/* Difficulty selector (only in vs computer mode) */}
         {state.modo === 'vs-computador' && (
-          <div className="flex items-center justify-center gap-3 text-sm">
-            <span className="text-gray-600">Dificuldade:</span>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((level) => (
-                <button
-                  key={level}
-                  onClick={() => setDifficulty(level)}
-                  disabled={aiThinking}
-                  className={`px-3 py-1 rounded-md font-medium transition-colors ${
-                    difficulty === level
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                  } ${aiThinking ? 'opacity-50 cursor-not-allowed' : ''}`}
-                >
-                  {level}
-                </button>
-              ))}
-            </div>
-            <span className="text-xs text-gray-500">
-              {difficulty === 1 && '(Fácil)'}
-              {difficulty === 2 && '(Normal)'}
-              {difficulty === 3 && '(Difícil)'}
-              {difficulty === 4 && '(Muito Difícil)'}
-              {difficulty === 5 && '(Mestre)'}
-            </span>
-          </div>
+          <DifficultySelector
+            level={difficulty}
+            onChange={setDifficulty}
+            disabled={aiThinking}
+            recommendation={difficultyRecommendation}
+            canAcceptRecommendation={state.estado !== 'a-jogar'}
+            onAcceptRecommendation={(level) => {
+              setDifficulty(level);
+              acceptDifficultyRecommendation('gatos-caes');
+            }}
+          />
         )}
 
         {/* Tabuleiro */}
@@ -483,6 +490,9 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
             <p className="mt-1 text-emerald-800">
               Revê os momentos em que perdeste mais espaço e experimenta a alternativa sugerida.
             </p>
+            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
@@ -500,6 +510,9 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
               onClick={() => {
                 if (reviewRewarded) return;
                 recordReviewCompleted('gatos-caes');
+                recordPatternProgress({
+                  gameId: 'gatos-caes', patternId: reviewPattern.id, evidence: 'seen', contextId: `review-${Date.now()}`,
+                });
                 setReviewRewarded(true);
               }}
               className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"

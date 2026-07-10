@@ -42,6 +42,10 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
   if (!initDone) await initPromise;
 
   const preset = DIFFICULTY_PRESETS[req.difficulty];
+  const timeMs =
+    typeof req.timeBudgetMs === 'number' && Number.isFinite(req.timeBudgetMs)
+      ? Math.max(1, Math.trunc(req.timeBudgetMs))
+      : preset.timeMs;
   const start = performance.now();
 
   try {
@@ -57,7 +61,7 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
                 : req.difficulty === 'very-hard'
                   ? 3
                   : 4,
-        timeMs: preset.timeMs,
+        timeMs,
         candidateK: preset.candidateK,
         endgameEmptyN: preset.endgameEmptyN,
         seed: req.seed ?? (Date.now() >>> 0),
@@ -73,7 +77,7 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
         explain,
       });
     } else {
-      const mv = chooseFallbackPackedMove(req.state, req.difficulty, req.seed ?? (Date.now() >>> 0));
+      const mv = chooseFallbackPackedMove(req.state, req.difficulty, req.seed ?? (Date.now() >>> 0), timeMs);
       post({
         type: 'result',
         id: req.id,

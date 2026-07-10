@@ -149,7 +149,7 @@ describe('DominorioV1Adapter', () => {
     const adapter = new DominorioV1Adapter();
     const state = criarEstadoInicial('vs-computador');
 
-    const response = await adapter.compute(buildRequest(state, 1));
+    const response = await adapter.compute(buildRequest(state, 3));
     adapter.terminate();
 
     expect(response.warnings).toContain('opening-book');
@@ -165,19 +165,18 @@ describe('DominorioV1Adapter', () => {
     expect(mapLevelToLegacyDifficulty(5)).toBe('hardPlus');
   });
 
-  test('keeps beginner and easy levels separated', () => {
-    expect(resolveLegacyTimeBudgetMs(2, 'easy')).toBeGreaterThan(
-      resolveLegacyTimeBudgetMs(1, 'beginner'),
-    );
+  test('mantém erro controlado em N4 e pesquisa máxima em N5', () => {
+    expect(DIFFICULTY_PRESETS.hard.topN).toBeGreaterThan(0);
+    expect(DIFFICULTY_PRESETS.hardPlus.topN).toBe(0);
+    expect(DIFFICULTY_PRESETS.hard.maxDepth).toBeLessThan(DIFFICULTY_PRESETS.hardPlus.maxDepth);
   });
 
-  test('separates hard budgets between level 4 and 5', () => {
-    expect(resolveLegacyTimeBudgetMs(4, 'hard')).toBe(
-      Math.round(DIFFICULTY_PRESETS.hard.timeBudgetMs * 1.08),
-    );
-    expect(resolveLegacyTimeBudgetMs(5, 'hardPlus')).toBe(
-      Math.round(DIFFICULTY_PRESETS.hardPlus.timeBudgetMs * 1.28),
-    );
+  test('uses the common N1-N5 classroom budgets', () => {
+    expect(resolveLegacyTimeBudgetMs(1, 'beginner')).toBe(100);
+    expect(resolveLegacyTimeBudgetMs(2, 'easy')).toBe(250);
+    expect(resolveLegacyTimeBudgetMs(3, 'medium')).toBe(500);
+    expect(resolveLegacyTimeBudgetMs(4, 'hard')).toBe(1000);
+    expect(resolveLegacyTimeBudgetMs(5, 'hardPlus')).toBe(2000);
   });
 
   test('keeps explicit request time budget when provided', () => {

@@ -37,7 +37,11 @@ export class ProdutoAIClient {
   private worker: Worker | null = null;
   private isReady = false;
   private nextId = 1;
-  private pending = new Map<number, { resolve: (m: ProdutoPackedMove | null) => void; reject: (e: Error) => void }>();
+  private pending = new Map<number, {
+    resolve: (m: ProdutoPackedMove | null) => void;
+    reject: (e: Error) => void;
+    runFallback: () => ProdutoPackedMove | null;
+  }>();
   private currentMetrics: AIMetrics = { ...INITIAL_METRICS };
   private options: AIClientOptions;
 
@@ -73,7 +77,11 @@ export class ProdutoAIClient {
       // ignore
     }
     this.worker = null;
-    this.cancel();
+    const pending = [...this.pending.values()];
+    this.pending.clear();
+    for (const request of pending) request.resolve(request.runFallback());
+    this.currentMetrics = { ...INITIAL_METRICS, lastExplain: 'Fallback estratégico local' };
+    this.options.onMetricsUpdate?.(this.currentMetrics);
     console.warn?.('[ProdutoAI] Falling back (no worker):', reason);
   }
 
@@ -111,16 +119,20 @@ export class ProdutoAIClient {
     }
   }
 
-  async getBestMove(state: ProdutoState, difficulty: AIDifficulty = 'hard'): Promise<ProdutoPackedMove | null> {
+  async getBestMove(
+    state: ProdutoState,
+    difficulty: AIDifficulty = 'hard',
+    options: { timeBudgetMs?: number; seed?: number } = {},
+  ): Promise<ProdutoPackedMove | null> {
     this.currentMetrics = { ...this.currentMetrics, isThinking: true };
     this.options.onMetricsUpdate?.(this.currentMetrics);
 
     const preset = DIFFICULTY_PRESETS[difficulty];
     void preset; // reservado para presets adicionais no futuro
-    const requestSeed = (Date.now() >>> 0) + this.nextId;
+    const requestSeed = options.seed ?? (((Date.now() >>> 0) + this.nextId) >>> 0);
 
     if (!this.worker) {
-      const fallbackMove = chooseFallbackMoveFromState(state, difficulty, requestSeed);
+      const fallbackMove = chooseFallbackMoveFromState(state, difficulty, requestSeed, options.timeBudgetMs);
       this.currentMetrics = { ...INITIAL_METRICS };
       this.currentMetrics.lastExplain = 'Fallback estratégico local';
       this.options.onMetricsUpdate?.(this.currentMetrics);
@@ -133,11 +145,19 @@ export class ProdutoAIClient {
       id,
       state: packState(state, INDEX_MAPS.keyToIdx),
       difficulty,
+      timeBudgetMs: options.timeBudgetMs,
       seed: requestSeed,
     };
 
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, {
+        resolve,
+        reject,
+        runFallback: () => {
+          const move = chooseFallbackMoveFromState(state, difficulty, requestSeed, options.timeBudgetMs);
+          return move ? packMove(move) : null;
+        },
+      });
       this.worker!.postMessage(req);
     });
   }

@@ -6,6 +6,7 @@ import type {
   DifficultyLevel,
   AIPedagogyV1,
 } from '../../../ai-core';
+import { getDifficultyProfile } from '../../../ai-core/difficulty';
 import type { DominorioState, Domino } from '../types';
 import { DominorioAIClient, type AIClientOptions, type AIRuntimeInfo } from './ai-client';
 import { DIFFICULTY_PRESETS, type AIDifficulty } from './types';
@@ -111,26 +112,16 @@ export function mapLevelToLegacyDifficulty(level: DifficultyLevel): AIDifficulty
   return 'hardPlus';
 }
 
-const LEVEL_TIME_BUDGET_MULTIPLIER: Record<DifficultyLevel, number> = {
-  1: 0.82,
-  2: 0.94,
-  3: 1,
-  4: 1.08,
-  5: 1.28,
-};
-
 export function resolveLegacyTimeBudgetMs(
   level: DifficultyLevel,
-  difficulty: AIDifficulty,
+  _difficulty: AIDifficulty,
   requestTimeBudgetMs?: number,
 ): number {
   if (typeof requestTimeBudgetMs === 'number' && Number.isFinite(requestTimeBudgetMs)) {
     return Math.max(1, Math.trunc(requestTimeBudgetMs));
   }
 
-  const baseBudget = DIFFICULTY_PRESETS[difficulty].timeBudgetMs;
-  const multiplier = LEVEL_TIME_BUDGET_MULTIPLIER[level] ?? 1;
-  return Math.max(1, Math.round(baseBudget * multiplier));
+  return getDifficultyProfile(level).timeBudgetMs;
 }
 
 const OPENING_BOOK_MAX_PLY = 6;

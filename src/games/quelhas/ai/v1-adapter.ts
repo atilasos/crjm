@@ -6,6 +6,7 @@ import type {
   DifficultyLevel,
   AIPedagogyV1,
 } from '../../../ai-core';
+import { getDifficultyProfile } from '../../../ai-core/difficulty';
 import type { QuelhasState, Segmento } from '../types';
 import { QuelhasAIClient } from './ai-client';
 import { DIFFICULTY_PRESETS, type AIDifficulty } from './types';
@@ -15,11 +16,11 @@ export interface QuelhasV1AdapterOptions {
 }
 
 const LEVEL_MAP: Record<DifficultyLevel, AIDifficulty> = {
-  1: 'easy',
+  1: 'beginner',
   2: 'easy',
   3: 'medium',
   4: 'hard',
-  5: 'hard',
+  5: 'master',
 };
 
 export class QuelhasV1Adapter {
@@ -44,7 +45,7 @@ export class QuelhasV1Adapter {
     const timeBudgetMs =
       typeof request.timeBudgetMs === 'number' && Number.isFinite(request.timeBudgetMs)
         ? Math.max(1, Math.trunc(request.timeBudgetMs))
-        : DIFFICULTY_PRESETS[difficulty].timeBudgetMs;
+        : getDifficultyProfile(request.level).timeBudgetMs;
 
     const bestMove = await this.client.getBestMove(request.state, difficulty, {
       timeBudgetMs,

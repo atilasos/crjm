@@ -9,6 +9,7 @@ import type { AIRequest, AIResponse, AIError, AIReady, Side, DifficultyParams } 
 import { DIFFICULTY_PRESETS } from './types';
 import * as bitboard from './bitboard';
 import openingBook from './book.json';
+import { selectDidacticBeginnerMove } from './difficulty-policy';
 
 interface WasmSearchResult {
   search(
@@ -379,6 +380,28 @@ function handleSearch(request: AIRequest): AIResponse {
     request.seed,
     `${request.occupiedLow}:${request.occupiedHigh}:${request.sideToMove}:${request.plyCount}:${request.difficulty}`,
   );
+
+  if (request.difficulty === 'beginner') {
+    const move = selectDidacticBeginnerMove(
+      bitboard.generateMoves(request.occupiedLow, request.occupiedHigh, request.sideToMove),
+      request.sideToMove,
+    );
+    if (move !== null) {
+      return {
+        type: 'result',
+        id: request.id,
+        bestMove: move,
+        depthReached: 0,
+        nodesSearched: 0,
+        principalVariation: [move],
+        elapsedMs: 0,
+        ttHitRate: 0,
+        score: 0,
+        fromBook: false,
+        usedWasm: false,
+      };
+    }
+  }
   
   // Check opening book first
   const bookMove = checkOpeningBook(

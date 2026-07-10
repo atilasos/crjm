@@ -48,6 +48,7 @@ export interface SearchStats {
   bestMove: Move | null;
   timeMs: number;
   nodesPerSecond: number;
+  runtime?: 'worker' | 'inline';
 }
 
 // AI configuration per difficulty level
@@ -62,7 +63,7 @@ export interface AIConfig {
 
 // Difficulty presets
 export const DIFFICULTY_CONFIGS: Record<number, AIConfig> = {
-  1: { maxDepth: 4,  timeLimit: 500,   ttSize: 65536,   topN: 3, randomFactor: 0.3 },
+  1: { maxDepth: 2,  timeLimit: 500,   ttSize: 65536,   topN: 8, randomFactor: 0.85 },
   2: { maxDepth: 6,  timeLimit: 1500,  ttSize: 131072,  topN: 2, randomFactor: 0.15 },
   3: { maxDepth: 8,  timeLimit: 3000,  ttSize: 262144,  topN: 1, randomFactor: 0 },
   4: { maxDepth: 10, timeLimit: 6000,  ttSize: 524288,  topN: 1, randomFactor: 0 },
@@ -75,14 +76,21 @@ export interface WorkerRequest {
   state: GatosCaesState;
   difficulty: number;
   requestId: number;
+  timeLimitMs: number;
 }
 
-export interface WorkerResponse {
+export interface WorkerMoveResponse {
   type: 'move_result';
   move: Posicao | null;
   stats: SearchStats;
   requestId: number;
 }
+
+export interface WorkerReady {
+  type: 'ready';
+}
+
+export type WorkerResponse = WorkerMoveResponse | WorkerReady;
 
 export interface WorkerCancel {
   type: 'cancel';

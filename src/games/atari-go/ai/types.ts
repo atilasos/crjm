@@ -1,4 +1,5 @@
 import type { AtariGoState, Celula } from '../types';
+import type { DifficultyLevel } from '../../../ai-core/types';
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'very-hard';
 
@@ -37,6 +38,7 @@ export interface DifficultyPreset {
 export interface AIComputeOverrides {
   timeBudgetMs?: number;
   seed?: number;
+  level?: DifficultyLevel;
 }
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
@@ -54,6 +56,7 @@ export type AIRequest =
       difficulty: AIDifficulty;
       timeBudgetMs?: number;
       seed?: number;
+      coreLevel?: DifficultyLevel;
     }
   | { type: 'cancel'; id: number };
 

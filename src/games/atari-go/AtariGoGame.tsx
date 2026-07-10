@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
+import { selectReviewPattern } from '../../ai-core/review-patterns';
+import { getDifficultyProfile } from '../../ai-core/difficulty';
 import { GameLayout } from '../../components/GameLayout';
+import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
@@ -17,8 +20,8 @@ import {
 } from './logic';
 import { GameMode, Player } from '../../types';
 import { AtariGoAIClient, idxToPos } from './ai/ai-client';
-import { AtariGoV1Adapter } from './ai/v1-adapter';
-import { DIFFICULTY_PRESETS, INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
+import { AtariGoV1Adapter, mapLevelToLegacyDifficulty } from './ai/v1-adapter';
+import { INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
@@ -36,13 +39,6 @@ const REGRAS = [
   'Suicídio proibido (exceto se captura pedras adversárias).',
   'OBJETIVO: O primeiro a fazer QUALQUER captura VENCE!',
 ];
-
-function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
-  if (difficulty === 'easy') return 2;
-  if (difficulty === 'medium') return 3;
-  if (difficulty === 'hard') return 4;
-  return 5;
-}
 
 function formatMove(move: Posicao): string {
   return `(${move.linha + 1},${move.coluna + 1})`;
@@ -102,13 +98,22 @@ function getPostGameTurningPoint(
 }
 
 export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
-  const { recordGameCompleted, recordReviewCompleted } = useGamification();
+  const {
+    acceptDifficultyRecommendation,
+    getDifficultyRecommendation,
+    recordAdaptiveDecision,
+    recordGameCompleted,
+    recordPatternProgress,
+    recordReviewCompleted,
+    resetAdaptiveSession,
+  } = useGamification();
   const [state, setState] = useState<AtariGoState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
-  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
+  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
+  const aiDifficulty: AIDifficulty = mapLevelToLegacyDifficulty(difficultyLevel);
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>({ ...INITIAL_METRICS });
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<Posicao, AtariGoState> | null>(null);
@@ -161,7 +166,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       requestId,
       gameId: 'atari-go',
       mode: 'tutor',
-      level: mapDifficultyToLevel(aiDifficulty),
+      level: difficultyLevel,
       state,
       locale: 'pt-PT',
     };
@@ -200,7 +205,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     state.pedrasCapturadas.brancas,
     state.pedrasCapturadas.pretas,
     isVezDaIA,
-    aiDifficulty,
+    difficultyLevel,
   ]);
 
   // Efeito para jogada do computador
@@ -213,7 +218,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       let cancelled = false;
       const client = aiRef.current;
       let finished = false;
-      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
+      const maxWaitMs = timeBudgetMs + 250;
 
       const run = async () => {
         // Pequeno delay para UX (e para permitir UI atualizar)
@@ -222,7 +228,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         try {
           const mv = client
-            ? await withTimeout(client.getBestMove(state, aiDifficulty), maxWaitMs, () => client.cancel())
+            ? await withTimeout(client.getBestMove(state, aiDifficulty, { timeBudgetMs, level: difficultyLevel }), maxWaitMs, () => client.cancel())
             : null;
           if (cancelled) return;
 
@@ -262,7 +268,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         if (!finished) client?.cancel();
       };
     }
-  }, [state, humanPlayer, aiDifficulty]);
+  }, [state, humanPlayer, aiDifficulty, difficultyLevel]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -293,9 +299,17 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
     if (isJogadaValida(state, pos)) {
+      if (tutorResponse) {
+        recordAdaptiveDecision('atari-go', {
+          successful: tutorResponse.topMoves.some(({ move }) =>
+            move.linha === pos.linha && move.coluna === pos.coluna
+          ),
+          usedHint: hintLevel === 'H3',
+        });
+      }
       setState(prev => colocarPedra(prev, pos));
     }
-  }, [state, humanPlayer]);
+  }, [state, humanPlayer, tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const novoJogo = useCallback(() => {
     aiRef.current?.cancel();
@@ -306,7 +320,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     setTutorLoading(false);
     setTutorHistory([]);
     setHintLevel('H2');
-  }, [state.modo]);
+    resetAdaptiveSession('atari-go');
+  }, [resetAdaptiveSession, state.modo]);
 
   const trocarModo = useCallback(() => {
     aiRef.current?.cancel();
@@ -453,6 +468,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const postGameTurningPoint = getPostGameTurningPoint(tutorHistory);
+  const reviewPattern = selectReviewPattern('atari-go', tutorHistory.at(-1) ?? tutorResponse);
+  const difficultyRecommendation = getDifficultyRecommendation('atari-go', difficultyLevel);
 
   return (
     <GameLayout titulo="Atari Go" regras={REGRAS} onVoltar={onVoltar}>
@@ -483,29 +500,24 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         {/* Configuração da IA */}
         {state.modo === 'vs-computador' && (
-          <div className="bg-white rounded-xl border border-gray-200 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <label className="text-sm text-gray-700">
-                Dificuldade IA:{' '}
-                <select
-                  className="ml-2 rounded-md border border-gray-300 px-2 py-1 text-sm"
-                  value={aiDifficulty}
-                  onChange={e => setAiDifficulty(e.target.value as AIDifficulty)}
-                >
-                  <option value="easy">Fácil</option>
-                  <option value="medium">Médio</option>
-                  <option value="hard">Difícil</option>
-                  <option value="very-hard">Muito difícil</option>
-                </select>
-              </label>
-
-              <div className="text-xs text-gray-500">
+          <div className="space-y-2">
+            <DifficultySelector
+              level={difficultyLevel}
+              onChange={setDifficultyLevel}
+              disabled={aiMetrics.isThinking}
+              recommendation={difficultyRecommendation}
+              canAcceptRecommendation={state.estado !== 'a-jogar'}
+              onAcceptRecommendation={(level) => {
+                setDifficultyLevel(level);
+                acceptDifficultyRecommendation('atari-go');
+              }}
+            />
+            <div className="rounded-xl border border-gray-200 bg-white p-2 text-center text-xs text-gray-500">
                 {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
                 {' • '}
                 {aiMetrics.usedWasm ? 'WASM' : 'TS fallback'}
                 {' • '}
                 {aiMetrics.lastTimeMs.toFixed(0)}ms
-              </div>
             </div>
           </div>
         )}
@@ -603,6 +615,9 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
             <p className="font-semibold">Turning point pós-jogo</p>
             <p className="mt-1 text-emerald-800">{postGameTurningPoint.explanation}</p>
+            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            </p>
             <p className="mt-1 font-medium">
               Jogada recomendada: {formatMove(postGameTurningPoint.bestMove ?? postGameTurningPoint.playedMove)}
             </p>
@@ -612,6 +627,9 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
               onClick={() => {
                 if (reviewRewarded) return;
                 recordReviewCompleted('atari-go');
+                recordPatternProgress({
+                  gameId: 'atari-go', patternId: reviewPattern.id, evidence: 'seen', contextId: `review-${Date.now()}`,
+                });
                 setReviewRewarded(true);
               }}
               className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"

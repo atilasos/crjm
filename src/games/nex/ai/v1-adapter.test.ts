@@ -67,9 +67,26 @@ describe('NexV1Adapter', () => {
     expect(response.pedagogy?.errorCode).toBe('E-NX-01');
   });
 
-  test('maps hard levels onto the master preset family', () => {
+  test('reserva o preset champion para N5', () => {
     expect(mapLevelToNexDifficulty(1)).toBe('easy');
     expect(mapLevelToNexDifficulty(3)).toBe('hard');
-    expect(mapLevelToNexDifficulty(5)).toBe('master');
+    expect(mapLevelToNexDifficulty(4)).toBe('master');
+    expect(mapLevelToNexDifficulty(5)).toBe('champion');
+  });
+
+  test('forwards the common N1-N5 classroom budget', async () => {
+    let receivedBudget = 0;
+    const client = {
+      ...makeClient({ type: 'recusar_swap' }),
+      async getBestAction(_state: NexState, _difficulty: unknown, options?: { timeBudgetMs?: number }) {
+        receivedBudget = options?.timeBudgetMs ?? 0;
+        return null;
+      },
+    };
+
+    await new NexV1Adapter({ client: client as any }).compute(
+      makeRequest(criarEstadoInicial('vs-computador'), { level: 2 }),
+    );
+    expect(receivedBudget).toBe(250);
   });
 });

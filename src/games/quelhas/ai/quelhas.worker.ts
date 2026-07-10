@@ -1,6 +1,6 @@
 import type { AIRequest, AIResponse } from './types';
 import { DIFFICULTY_PRESETS } from './types';
-import { searchBestMove } from './engine';
+import { applyDifficultySelection, searchBestMove } from './engine';
 
 function post(msg: AIResponse) {
   self.postMessage(msg);
@@ -151,7 +151,12 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
       const ttProbes = Number(r.tt_probes);
       const ttHits = Number(r.tt_hits);
       result = {
-        bestMove: r.best_move >= 0 ? decodeMoveToSegmento(r.best_move, req.orientacaoIA) : null,
+        bestMove: applyDifficultySelection(
+          req.tabuleiro,
+          req.orientacaoIA,
+          r.best_move >= 0 ? decodeMoveToSegmento(r.best_move, req.orientacaoIA) : null,
+          preset.selectionQuantile,
+        ),
         depthReached: r.depth_reached,
         nodesSearched: Number(r.nodes_searched),
         elapsedMs: performance.now() - startTime,
@@ -165,6 +170,7 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
         maxDepth: preset.maxDepth,
         topN: preset.topN,
         scoreDelta: preset.scoreDelta,
+        selectionQuantile: preset.selectionQuantile,
       });
     }
 

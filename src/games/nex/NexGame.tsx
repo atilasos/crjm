@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { getDifficultyProfile } from '../../ai-core/difficulty';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
+import { selectReviewPattern } from '../../ai-core/review-patterns';
 import { GameLayout } from '../../components/GameLayout';
+import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
 import { TrainingPathCard } from '../../components/TrainingPathCard';
@@ -27,10 +30,10 @@ import {
   jogadaComputador,
 } from './logic';
 import type { GameMode, Player } from '../../types';
-import { NexAIClient, type AIDifficulty, type AIMetrics, DIFFICULTY_PRESETS, INITIAL_METRICS } from './ai';
+import { NexAIClient, type AIDifficulty, type AIMetrics, INITIAL_METRICS } from './ai';
 import { withTimeout } from '../../utils/withTimeout';
 import type { NexAiAction } from './ai/types';
-import { NexV1Adapter } from './ai/v1-adapter';
+import { NexV1Adapter, mapLevelToNexDifficulty } from './ai/v1-adapter';
 import { buildQuickReviewItems, resolveHintLevel } from './ai/pedagogy-mvp';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
@@ -50,13 +53,6 @@ const REGRAS = [
   'Ganha quem conectar primeiro as suas duas margens!',
 ];
 
-function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
-  if (difficulty === 'easy') return 1;
-  if (difficulty === 'medium') return 2;
-  if (difficulty === 'hard') return 3;
-  return 5;
-}
-
 function formatPos(pos: Posicao): string {
   return `(${pos.x + 1},${pos.y + 1})`;
 }
@@ -68,6 +64,21 @@ function formatAction(action: NexAiAction): string {
     return `substituir ${formatPos(action.n1)} + ${formatPos(action.n2)} / ${formatPos(action.sacrifice)}`;
   }
   return `colocar própria em ${formatPos(action.own)} e neutra em ${formatPos(action.neutral)}`;
+}
+
+function sameNexAction(a: NexAiAction, b: NexAiAction): boolean {
+  if (a.type !== b.type) return false;
+  if (a.type === 'swap' || a.type === 'recusar_swap') return true;
+  if (a.type === 'colocar' && b.type === 'colocar') {
+    return posToKey(a.own) === posToKey(b.own) && posToKey(a.neutral) === posToKey(b.neutral);
+  }
+  if (a.type === 'substituir' && b.type === 'substituir') {
+    const sameNeutrals =
+      (posToKey(a.n1) === posToKey(b.n1) && posToKey(a.n2) === posToKey(b.n2)) ||
+      (posToKey(a.n1) === posToKey(b.n2) && posToKey(a.n2) === posToKey(b.n1));
+    return sameNeutrals && posToKey(a.sacrifice) === posToKey(b.sacrifice);
+  }
+  return false;
 }
 
 function getSuggestedAction(
@@ -118,14 +129,23 @@ function actionTouchesPos(action: NexAiAction | undefined | null, pos: Posicao):
 }
 
 export function NexGame({ onVoltar }: NexGameProps) {
-  const { recordGameCompleted, recordReviewCompleted } = useGamification();
+  const {
+    acceptDifficultyRecommendation,
+    getDifficultyRecommendation,
+    recordAdaptiveDecision,
+    recordGameCompleted,
+    recordPatternProgress,
+    recordReviewCompleted,
+    resetAdaptiveSession,
+  } = useGamification();
   const [state, setState] = useState<NexState>(() => 
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
   const [tipoSelecao, setTipoSelecao] = useState<'propria' | 'neutra'>('propria');
-  const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('medium');
+  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
+  const aiDifficulty: AIDifficulty = mapLevelToNexDifficulty(difficultyLevel);
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
   const [tutorResponse, setTutorResponse] =
@@ -190,12 +210,13 @@ export function NexGame({ onVoltar }: NexGameProps) {
       let cancelled = false;
       let finished = false;
       const client = aiClientRef.current;
-      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
+      const maxWaitMs = timeBudgetMs + 250;
       const timer = setTimeout(async () => {
         if (cancelled || !client) return;
         try {
           const action = await withTimeout(
-            client.getBestAction(state, aiDifficulty),
+            client.getBestAction(state, aiDifficulty, { timeBudgetMs }),
             maxWaitMs,
             () => client.cancel()
           );
@@ -215,7 +236,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
         if (!finished) client?.cancel();
       };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, state.swapDisponivel, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
+  }, [state.jogadorAtual, state.modo, state.estado, state.swapDisponivel, humanPlayer, aiDifficulty, difficultyLevel, state, aplicarAcaoIA]);
 
   // Efeito para IA decidir swap
   useEffect(() => {
@@ -228,12 +249,13 @@ export function NexGame({ onVoltar }: NexGameProps) {
       let cancelled = false;
       let finished = false;
       const client = aiClientRef.current;
-      const maxWaitMs = DIFFICULTY_PRESETS[aiDifficulty].timeMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
+      const maxWaitMs = timeBudgetMs + 250;
       const timer = setTimeout(async () => {
         if (cancelled || !client) return;
         try {
           const action = await withTimeout(
-            client.getBestAction(state, aiDifficulty),
+            client.getBestAction(state, aiDifficulty, { timeBudgetMs }),
             maxWaitMs,
             () => client.cancel()
           );
@@ -253,7 +275,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
         if (!finished) client?.cancel();
       };
     }
-  }, [state.swapDisponivel, state.modo, state.jogadorAtual, humanPlayer, aiDifficulty, state, aplicarAcaoIA]);
+  }, [state.swapDisponivel, state.modo, state.jogadorAtual, humanPlayer, aiDifficulty, difficultyLevel, state, aplicarAcaoIA]);
 
   useEffect(() => {
     if (!tutorAdapterRef.current) return;
@@ -269,7 +291,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
       requestId: `nex-tutor-${Date.now()}`,
       gameId: 'nex',
       mode: 'tutor',
-      level: mapDifficultyToLevel(aiDifficulty),
+      level: difficultyLevel,
       state,
       locale: 'pt-PT',
     };
@@ -300,7 +322,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
       cancelled = true;
       adapter.cancel();
     };
-  }, [aiDifficulty, humanPlayer, state]);
+  }, [difficultyLevel, humanPlayer, state]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -357,12 +379,29 @@ export function NexGame({ onVoltar }: NexGameProps) {
   // Executar ação quando completa
   useEffect(() => {
     if (isAcaoCompleta(state.acaoEmCurso)) {
+      const acao = state.acaoEmCurso;
+      const played: NexAiAction | null = acao.tipo === 'colocacao'
+        ? { type: 'colocar', own: acao.posPropria!, neutral: acao.posNeutra! }
+        : acao.tipo === 'substituicao'
+          ? {
+              type: 'substituir',
+              n1: acao.neutrasParaProprias[0]!,
+              n2: acao.neutrasParaProprias[1]!,
+              sacrifice: acao.propriaParaNeutra!,
+            }
+          : null;
+      if (played && tutorResponse) {
+        recordAdaptiveDecision('nex', {
+          successful: tutorResponse.topMoves.some(({ move }) => sameNexAction(move, played)),
+          usedHint: hintLevel === 'H3',
+        });
+      }
       const timer = setTimeout(() => {
         setState(prev => executarAcao(prev));
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [state.acaoEmCurso]);
+  }, [state.acaoEmCurso, tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const handleSelectTipoAcao = useCallback((tipo: TipoAcao) => {
     setState(prev => selecionarTipoAcao(prev, tipo));
@@ -375,12 +414,24 @@ export function NexGame({ onVoltar }: NexGameProps) {
   }, []);
 
   const handleSwap = useCallback(() => {
+    if (tutorResponse) {
+      recordAdaptiveDecision('nex', {
+        successful: tutorResponse.topMoves.some(({ move }) => move.type === 'swap'),
+        usedHint: hintLevel === 'H3',
+      });
+    }
     setState(prev => executarSwap(prev));
-  }, []);
+  }, [tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const handleRecusarSwap = useCallback(() => {
+    if (tutorResponse) {
+      recordAdaptiveDecision('nex', {
+        successful: tutorResponse.topMoves.some(({ move }) => move.type === 'recusar_swap'),
+        usedHint: hintLevel === 'H3',
+      });
+    }
     setState(prev => recusarSwap(prev));
-  }, []);
+  }, [tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const novoJogo = useCallback(() => {
     aiClientRef.current?.cancel();
@@ -391,7 +442,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setTutorHistory([]);
     setTutorLoading(false);
     setHintLevel('H2');
-  }, [state.modo]);
+    resetAdaptiveSession('nex');
+  }, [resetAdaptiveSession, state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
@@ -582,6 +634,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const podeFazerSubstituicao = podeSubstituir(state.tabuleiro, state.jogadorAtual, state.swapEfetuado);
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
+  const reviewPattern = selectReviewPattern('nex', tutorHistory.at(-1) ?? tutorResponse);
+  const difficultyRecommendation = getDifficultyRecommendation('nex', difficultyLevel);
 
   // Determinar o que está em falta na ação
   const getInstrucaoAcao = () => {
@@ -649,23 +703,21 @@ export function NexGame({ onVoltar }: NexGameProps) {
 
         {/* Configuração de IA (só no modo vs-computador) */}
         {state.modo === 'vs-computador' && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <label className="text-sm font-medium text-blue-900">Dificuldade (IA)</label>
-              <select
-                className="text-sm rounded-lg border border-blue-200 bg-white px-2 py-1"
-                value={aiDifficulty}
-                onChange={e => {
-                  aiClientRef.current?.cancel();
-                  setAiDifficulty(e.target.value as AIDifficulty);
-                }}
-              >
-                <option value="easy">Fácil</option>
-                <option value="medium">Médio</option>
-                <option value="hard">Difícil</option>
-                <option value="master">Master</option>
-              </select>
-            </div>
+          <div className="space-y-2">
+            <DifficultySelector
+              level={difficultyLevel}
+              disabled={aiMetrics.isThinking}
+              onChange={(level) => {
+                aiClientRef.current?.cancel();
+                setDifficultyLevel(level);
+              }}
+              recommendation={difficultyRecommendation}
+              canAcceptRecommendation={state.estado !== 'a-jogar'}
+              onAcceptRecommendation={(level) => {
+                setDifficultyLevel(level);
+                acceptDifficultyRecommendation('nex');
+              }}
+            />
             <div className="text-xs text-blue-900/80 flex items-center justify-between">
               <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
               <span>
@@ -959,6 +1011,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
             <p className="mt-1 text-emerald-800">
               Revê até 2 momentos e confirma onde podias encurtar a tua ligação ou bloquear melhor a do adversário.
             </p>
+            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
@@ -976,6 +1031,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
               onClick={() => {
                 if (reviewRewarded) return;
                 recordReviewCompleted('nex');
+                recordPatternProgress({
+                  gameId: 'nex', patternId: reviewPattern.id, evidence: 'seen', contextId: `review-${Date.now()}`,
+                });
                 setReviewRewarded(true);
               }}
               className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"

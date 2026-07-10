@@ -18,10 +18,10 @@ self.onmessage = (event: MessageEvent<WorkerMessage>) => {
   }
 
   if (message.type === 'compute_move') {
-    const { state, difficulty, requestId } = message;
+    const { state, difficulty, requestId, timeLimitMs } = message;
 
     try {
-      const { move, stats } = computeBestMove(state, difficulty);
+      const { move, stats } = computeBestMove(state, difficulty, { timeLimit: timeLimitMs });
 
       const response: WorkerResponse = {
         type: 'move_result',

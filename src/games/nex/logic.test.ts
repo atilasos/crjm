@@ -16,6 +16,7 @@ import {
   executarAcao,
   cancelarAcao,
   getVizinhos,
+  resolverFinalRaro,
 } from "./logic";
 import { Celula, LADO_TABULEIRO } from "./types";
 
@@ -490,5 +491,58 @@ describe("Nex - Verificações Gerais", () => {
     tabuleiro[0][0] = 'vazia';
     
     expect(podeColocar(tabuleiro)).toBe(false);
+  });
+});
+
+describe("Nex - Convenções raras de fim", () => {
+  test("com uma casa vazia e sem neutras, o jogador atual coloca apenas a sua peça", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () =>
+      Array<Celula>(LADO_TABULEIRO).fill('branca'),
+    );
+    estado.tabuleiro[5][5] = 'vazia';
+    estado.jogadorAtual = 'jogador1';
+    estado.primeiraJogada = false;
+
+    const final = resolverFinalRaro(estado);
+
+    expect(final?.tabuleiro[5][5]).toBe('preta');
+    expect(final?.estado).not.toBe('a-jogar');
+  });
+
+  test("com uma neutra e sem casas vazias, o jogador atual converte essa peça", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () =>
+      Array<Celula>(LADO_TABULEIRO).fill('branca'),
+    );
+    estado.tabuleiro[4][4] = 'neutra';
+    estado.jogadorAtual = 'jogador1';
+    estado.primeiraJogada = false;
+
+    const final = resolverFinalRaro(estado);
+
+    expect(final?.tabuleiro[4][4]).toBe('preta');
+    expect(final?.estado).not.toBe('a-jogar');
+  });
+
+  test("com uma vazia e uma neutra, o jogador atual ocupa a vazia e o adversário converte a neutra", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () =>
+      Array<Celula>(LADO_TABULEIRO).fill('preta'),
+    );
+    estado.tabuleiro[3][3] = 'vazia';
+    estado.tabuleiro[7][7] = 'neutra';
+    estado.jogadorAtual = 'jogador1';
+    estado.primeiraJogada = false;
+
+    const final = resolverFinalRaro(estado);
+
+    expect(final?.tabuleiro[3][3]).toBe('preta');
+    expect(final?.tabuleiro[7][7]).toBe('branca');
+    expect(final?.estado).not.toBe('a-jogar');
+  });
+
+  test("não intervém enquanto uma ação normal continua disponível", () => {
+    expect(resolverFinalRaro(criarEstadoInicial('dois-jogadores'))).toBeNull();
   });
 });

@@ -81,10 +81,27 @@ describe('QuelhasV1Adapter', () => {
     expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
   });
 
-  test('maps hard difficulty levels to hard and medium to medium', () => {
+  test('maps each core level to a distinct search preset', () => {
+    expect(mapLevelToQuelhasDifficulty(1)).toBe('beginner');
+    expect(mapLevelToQuelhasDifficulty(2)).toBe('easy');
     expect(mapLevelToQuelhasDifficulty(3)).toBe('medium');
     expect(mapLevelToQuelhasDifficulty(4)).toBe('hard');
-    expect(mapLevelToQuelhasDifficulty(5)).toBe('hard');
+    expect(mapLevelToQuelhasDifficulty(5)).toBe('master');
+  });
+
+  test('forwards the common N1-N5 classroom budget', async () => {
+    let receivedBudget = 0;
+    const state = criarEstadoInicial('vs-computador');
+    const client = {
+      ...makeClient(state.jogadasValidas[0]!),
+      async getBestMove(_state: QuelhasState, _difficulty: unknown, options?: { timeBudgetMs?: number }) {
+        receivedBudget = options?.timeBudgetMs ?? 0;
+        return state.jogadasValidas[0]!;
+      },
+    };
+
+    await new QuelhasV1Adapter({ client: client as any }).compute(makeRequest(state, { level: 1 }));
+    expect(receivedBudget).toBe(100);
   });
 
   test('emits high-severity threat when only one legal move remains', async () => {

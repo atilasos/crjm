@@ -177,6 +177,16 @@ describe('AtariGoV1Adapter', () => {
     expect(client.lastOverrides).toEqual({
       seed: 20260406,
       timeBudgetMs: 4321,
+      level: 5,
     });
+  });
+
+  test('uses the common level budget when no override is supplied', async () => {
+    const client = new FakeClient(0);
+    const adapter = new AtariGoV1Adapter({ client });
+
+    await adapter.compute(buildRequest(criarEstadoInicial('vs-computador'), 5));
+
+    expect(client.lastOverrides?.timeBudgetMs).toBe(2000);
   });
 });

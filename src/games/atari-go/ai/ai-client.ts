@@ -7,6 +7,7 @@ import type {
   AIMetrics,
 } from './types';
 import { INITIAL_METRICS, packState } from './types';
+import { chooseFallbackMoveIndex } from './fallback-engine';
 
 export interface AIClientOptions {
   onReady?: () => void;
@@ -21,7 +22,11 @@ export class AtariGoAIClient {
   private worker: Worker | null = null;
   private isReady = false;
   private nextId = 1;
-  private pending = new Map<number, { resolve: (m: number | null) => void; reject: (e: Error) => void }>();
+  private pending = new Map<number, {
+    resolve: (m: number | null) => void;
+    reject: (e: Error) => void;
+    runFallback: () => number | null;
+  }>();
   private currentMetrics: AIMetrics = { ...INITIAL_METRICS };
   private options: AIClientOptions;
 
@@ -58,7 +63,11 @@ export class AtariGoAIClient {
       // ignore
     }
     this.worker = null;
-    this.cancel();
+    const pending = [...this.pending.values()];
+    this.pending.clear();
+    for (const request of pending) request.resolve(request.runFallback());
+    this.currentMetrics = { ...INITIAL_METRICS };
+    this.options.onMetricsUpdate?.(this.currentMetrics);
     console.warn?.('[AtariGoAI] Falling back (no worker):', reason);
   }
 
@@ -106,7 +115,7 @@ export class AtariGoAIClient {
     if (!this.worker) {
       this.currentMetrics = { ...INITIAL_METRICS };
       this.options.onMetricsUpdate?.(this.currentMetrics);
-      return null;
+      return chooseFallbackMoveIndex(state, overrides);
     }
 
     const id = this.nextId++;
@@ -125,10 +134,15 @@ export class AtariGoAIClient {
       difficulty,
       timeBudgetMs,
       seed,
+      coreLevel: overrides.level,
     };
 
     return new Promise((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
+      this.pending.set(id, {
+        resolve,
+        reject,
+        runFallback: () => chooseFallbackMoveIndex(state, overrides),
+      });
       this.worker!.postMessage(req);
     });
   }

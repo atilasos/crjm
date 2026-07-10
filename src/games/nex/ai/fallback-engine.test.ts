@@ -6,10 +6,12 @@ import { chooseFallbackActionFromState } from './fallback-engine';
 describe('Nex fallback engine', () => {
   test('returns a valid placement action on the opening', () => {
     const state = criarEstadoInicial('vs-computador');
-    const action = chooseFallbackActionFromState(state, 'medium');
+    const started = performance.now();
+    const action = chooseFallbackActionFromState(state, 'medium', { timeBudgetMs: 100, seed: 7 });
 
     expect(action).not.toBeNull();
     expect(action?.type).toBe('colocar');
+    expect(performance.now() - started).toBeLessThan(300);
   });
 
   test('finds an immediate winning placement for black', () => {
@@ -38,5 +40,19 @@ describe('Nex fallback engine', () => {
       });
       expect(verificarVitoria(nextState.tabuleiro, 'preta')).toBe(true);
     }
+  });
+
+  test('keeps a legal substitution fallback at N1 when placement is unavailable', () => {
+    const state = criarEstadoInicial('vs-computador');
+    state.tabuleiro = state.tabuleiro.map((row) => row.map(() => 'branca'));
+    state.tabuleiro[0]![0] = 'preta';
+    state.tabuleiro[1]![1] = 'neutra';
+    state.tabuleiro[2]![2] = 'neutra';
+    state.primeiraJogada = false;
+    state.jogadorAtual = 'jogador1';
+
+    const action = chooseFallbackActionFromState(state, 'easy', { timeBudgetMs: 5, seed: 3 });
+
+    expect(action?.type).toBe('substituir');
   });
 });

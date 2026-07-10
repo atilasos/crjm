@@ -7,6 +7,7 @@ import type {
   AITurningPoint,
   DifficultyLevel,
 } from '../../../ai-core';
+import { getDifficultyProfile } from '../../../ai-core/difficulty';
 import {
   calcularJogadasValidas,
   colocarPedra,
@@ -54,8 +55,9 @@ export class AtariGoV1Adapter {
     const startedAt = performance.now();
     const difficulty = mapLevelToLegacyDifficulty(request.level);
     const bestMoveIdx = await this.client.getBestMove(request.state, difficulty, {
-      timeBudgetMs: request.timeBudgetMs,
+      timeBudgetMs: request.timeBudgetMs ?? getDifficultyProfile(request.level).timeBudgetMs,
       seed: request.seed,
+      level: request.level,
     });
     const bestMove = bestMoveIdx === null ? null : idxToPos(bestMoveIdx);
     const topMoves = buildTopMoves(request.state, bestMove);

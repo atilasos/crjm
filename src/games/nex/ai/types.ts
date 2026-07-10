@@ -2,7 +2,7 @@ import type { NexState, Posicao } from '../types';
 import { LADO_TABULEIRO, posToKey } from '../types';
 import { getCorJogador, podeColocar, podeSubstituir } from '../logic';
 
-export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'master';
+export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'master' | 'champion';
 
 export interface NexAiActionSwap {
   type: 'swap';
@@ -43,6 +43,7 @@ export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {
   medium: { timeMs: 6000, level: 2 },
   hard: { timeMs: 10000, level: 3 },
   master: { timeMs: 15000, level: 4 },
+  champion: { timeMs: 15000, level: 4 },
 };
 
 export interface AIMetrics {
@@ -64,6 +65,7 @@ export type AIRequest =
       id: number;
       state: NexPackedState;
       difficulty: AIDifficulty;
+      timeBudgetMs?: number;
       seed: number;
     };
 

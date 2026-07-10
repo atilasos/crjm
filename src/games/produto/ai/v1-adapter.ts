@@ -6,6 +6,7 @@ import type {
   AIPedagogyV1,
   DifficultyLevel,
 } from '../../../ai-core';
+import { getDifficultyProfile } from '../../../ai-core/difficulty';
 import { calcularPontuacao } from '../logic';
 import type { JogadaDupla, Posicao, ProdutoState } from '../types';
 import { posToKey } from '../types';
@@ -23,7 +24,11 @@ export interface ProdutoV1Client {
     lastExplain?: string;
   };
   readonly idxToPos: Posicao[];
-  getBestMove(state: ProdutoState, difficulty: AIDifficulty): Promise<ProdutoPackedMove | null>;
+  getBestMove(
+    state: ProdutoState,
+    difficulty: AIDifficulty,
+    options?: { timeBudgetMs?: number; seed?: number },
+  ): Promise<ProdutoPackedMove | null>;
   cancel(): void;
   terminate(): void;
 }
@@ -55,7 +60,10 @@ export class ProdutoV1Adapter {
     request: AIRequestV1<ProdutoState, JogadaDupla>,
   ): Promise<AIResponseV1<JogadaDupla, ProdutoState>> {
     const difficulty = mapLevelToProdutoDifficulty(request.level);
-    const packedMove = await this.client.getBestMove(request.state, difficulty);
+    const packedMove = await this.client.getBestMove(request.state, difficulty, {
+      timeBudgetMs: request.timeBudgetMs ?? getDifficultyProfile(request.level).timeBudgetMs,
+      seed: request.seed,
+    });
     const bestMove = decodePackedMove(packedMove, this.client.idxToPos);
     const topMoves = buildTopMoves(request.state, bestMove);
     const criticalThreats = buildCriticalThreats(request.state, topMoves);

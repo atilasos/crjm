@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { __internal } from './engine';
+import { __internal, searchBestMove } from './engine';
+import { DIFFICULTY_PRESETS } from './types';
 
 type Celula = 'vazia' | 'ocupada';
 
@@ -17,6 +18,45 @@ function makeBoard(emptyIdxs: number[]): Celula[][] {
 }
 
 describe('Quelhas AI (misère)', () => {
+  test('os cinco níveis reduzem progressivamente os erros controlados', () => {
+    expect(DIFFICULTY_PRESETS.beginner.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.easy.selectionQuantile);
+    expect(DIFFICULTY_PRESETS.easy.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.medium.selectionQuantile);
+    expect(DIFFICULTY_PRESETS.medium.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.hard.selectionQuantile);
+    expect(DIFFICULTY_PRESETS.hard.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.master.selectionQuantile);
+  });
+
+  test('N1 não preserva a melhor variante numa posição com alternativas', () => {
+    const board = makeBoard(Array.from({ length: 100 }, (_, index) => index));
+    const best = searchBestMove(board, 'vertical', {
+      timeBudgetMs: 20,
+      maxDepth: 1,
+      topN: 0,
+      scoreDelta: 0,
+      selectionQuantile: 0,
+    });
+    const beginner = searchBestMove(board, 'vertical', {
+      timeBudgetMs: 20,
+      maxDepth: 1,
+      topN: 0,
+      scoreDelta: 0,
+      selectionQuantile: DIFFICULTY_PRESETS.beginner.selectionQuantile,
+    });
+
+    expect(beginner.bestMove).not.toEqual(best.bestMove);
+  });
+
+  test('mantém uma jogada legal mesmo quando o orçamento acaba antes da profundidade um', () => {
+    const board = makeBoard(Array.from({ length: 100 }, (_, index) => index));
+    const result = searchBestMove(board, 'vertical', {
+      timeBudgetMs: 1,
+      maxDepth: 5,
+      topN: 0,
+      scoreDelta: 0,
+    });
+
+    expect(result.bestMove).not.toBeNull();
+  });
+
   test('rollout: se o adversário não tem jogadas, raiz perde', () => {
     // Estado com:
     // - vertical tem uma jogada em (4,5)-(5,5)
@@ -33,4 +73,3 @@ describe('Quelhas AI (misère)', () => {
     expect(rootWins).toBe(false);
   });
 });
-

@@ -282,7 +282,7 @@ impl<'a> Searcher<'a> {
         }
 
         if depth == 0 {
-            return eval::evaluate_misere(occ, side);
+            return eval::evaluate_search_leaf(occ, side);
         }
 
         let mut moves = moves;
@@ -356,4 +356,3 @@ impl<'a> Searcher<'a> {
         best_score
     }
 }
-

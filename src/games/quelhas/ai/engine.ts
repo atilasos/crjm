@@ -66,6 +66,14 @@ function moveToSegmento(m: EncMove): Segmento {
   };
 }
 
+function segmentoToMove(move: Segmento): EncMove {
+  return encMove(
+    move.inicio.linha * BOARD_SIZE + move.inicio.coluna,
+    move.comprimento,
+    orientToBit(move.orientacao),
+  );
+}
+
 function applyMove(occ: Occ, m: EncMove): Occ {
   const { start, len, orient } = decMove(m);
   const delta = orient === 0 ? BOARD_SIZE : 1;
@@ -412,6 +420,12 @@ function evaluateMisere(occ: Occ, sideToMove: 0 | 1): number {
   return score;
 }
 
+// As métricas acima estimam sobretudo a carga/reserva de jogadas. Em misère,
+// mais carga própria é uma desvantagem: a folha do negamax usa o sinal oposto.
+function evaluateSearchLeaf(occ: Occ, sideToMove: 0 | 1): number {
+  return -evaluateMisere(occ, sideToMove);
+}
+
 function hashStringToU32(str: string): number {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) {
@@ -437,7 +451,7 @@ function cheapMoveScore(occ: Occ, m: EncMove, side: 0 | 1): number {
   const oppMoves = generateMovesDynamic(next, opp);
   if (oppMoves.length === 0) return -1e9;
 
-  const s = evaluateMisere(next, opp); // perspectiva do adversário a jogar
+  const s = evaluateSearchLeaf(next, opp); // perspectiva do adversário a jogar
   return -s;
 }
 
@@ -457,7 +471,7 @@ function rolloutWinForRoot(occAfterRoot: Occ, sideRoot: 0 | 1, rng: () => number
   }
 
   // fallback por avaliação
-  const evalSide = evaluateMisere(occ, side);
+  const evalSide = evaluateSearchLeaf(occ, side);
   return side === sideRoot ? evalSide >= 0 : evalSide < 0;
 }
 
@@ -466,6 +480,7 @@ export interface SearchParams {
   maxDepth: number;
   topN: number;
   scoreDelta: number;
+  selectionQuantile?: number;
 }
 
 export interface SearchResult {
@@ -584,7 +599,7 @@ function negamax(
   }
 
   if (depth === 0) {
-    return { score: evaluateMisere(occ, side), bestMove: -1 };
+    return { score: evaluateSearchLeaf(occ, side), bestMove: -1 };
   }
 
   const ordered = orderMoves(occ, side, depth, moves, ttRes.best);
@@ -723,6 +738,10 @@ export function searchBestMove(
   }
 
   let rootOrdered = orderMoves(occ0, side, 1, rootMoves, undefined);
+  // Preserve a legal root action even if Monte Carlo seeding consumes a very
+  // short classroom budget before depth one can complete.
+  bestMove = rootOrdered[0] ?? -1;
+  if (bestMove !== -1) bestScore = cheapMoveScore(occ0, bestMove, side);
 
   for (let depth = 1; depth <= params.maxDepth; depth++) {
     if (Date.now() >= deadline) break;
@@ -806,6 +825,14 @@ export function searchBestMove(
     }
   }
 
+  bestMove = selectMoveBySkill(
+    occ0,
+    side,
+    rootMoves,
+    bestMove,
+    params.selectionQuantile ?? 0,
+  );
+
   const ttHitRate = stats.ttProbes > 0 ? stats.ttHits / stats.ttProbes : 0;
 
   return {
@@ -819,6 +846,43 @@ export function searchBestMove(
   };
 }
 
+function selectMoveBySkill(
+  occ: Occ,
+  side: 0 | 1,
+  moves: EncMove[],
+  searchedBest: EncMove | -1,
+  selectionQuantile: number,
+): EncMove | -1 {
+  if (searchedBest === -1 || selectionQuantile <= 0 || moves.length <= 1) return searchedBest;
+
+  const ranked = moves
+    .map((move) => ({ move, score: cheapMoveScore(occ, move, side) }))
+    .sort((a, b) => b.score - a.score || a.move - b.move);
+  const quantile = Math.min(1, Math.max(0, selectionQuantile));
+  const index = Math.min(ranked.length - 1, Math.floor(quantile * ranked.length));
+  return ranked[index]?.move ?? searchedBest;
+}
+
+/** Aplica a mesma escada pedagógica ao resultado produzido pelo worker/WASM. */
+export function applyDifficultySelection(
+  tabuleiro: Celula[][],
+  orientacaoIA: Orientacao,
+  searchedBest: Segmento | null,
+  selectionQuantile: number,
+): Segmento | null {
+  if (!searchedBest || selectionQuantile <= 0) return searchedBest;
+  const occ = boardToOcc(tabuleiro);
+  const side = orientToBit(orientacaoIA);
+  const selected = selectMoveBySkill(
+    occ,
+    side,
+    generateMovesDynamic(occ, side),
+    segmentoToMove(searchedBest),
+    selectionQuantile,
+  );
+  return selected === -1 ? null : moveToSegmento(selected);
+}
+
 // Exposto apenas para testes/debug.
 export const __internal = {
   boardToOcc,
@@ -828,4 +892,5 @@ export const __internal = {
   generateMovesDynamic,
   evaluateMisere,
   rolloutWinForRoot,
+  selectMoveBySkill,
 };

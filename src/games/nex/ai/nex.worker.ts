@@ -40,11 +40,15 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
   if (!initDone) await initPromise;
 
   const preset = DIFFICULTY_PRESETS[req.difficulty];
+  const timeMs =
+    typeof req.timeBudgetMs === 'number' && Number.isFinite(req.timeBudgetMs)
+      ? Math.max(1, Math.trunc(req.timeBudgetMs))
+      : preset.timeMs;
   const start = performance.now();
 
   try {
     if (useWasm && wasm) {
-      const action = wasm.choose_move(req.state.board, req.state.toPlay, req.state.flags, preset.timeMs, preset.level, req.seed ?? (Date.now() >>> 0)) as NexAiAction;
+      const action = wasm.choose_move(req.state.board, req.state.toPlay, req.state.flags, timeMs, preset.level, req.seed ?? (Date.now() >>> 0)) as NexAiAction;
       post({
         type: 'result',
         id: req.id,
@@ -53,7 +57,10 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
         usedWasm: true,
       });
     } else {
-      const action = chooseFallbackActionFromPacked(req.state, req.difficulty);
+      const action = chooseFallbackActionFromPacked(req.state, req.difficulty, {
+        timeBudgetMs: timeMs,
+        seed: req.seed,
+      });
       post({
         type: 'result',
         id: req.id,

@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
+import { getDifficultyProfile } from '../../ai-core/difficulty';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
+import { selectReviewPattern } from '../../ai-core/review-patterns';
 import { GameLayout } from '../../components/GameLayout';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { PlayerInfo } from '../../components/PlayerInfo';
@@ -25,9 +27,9 @@ import { GameMode, Player } from '../../types';
 import {
   QuelhasAIClient,
   QuelhasV1Adapter,
+  mapLevelToQuelhasDifficulty,
   buildQuickReviewItems,
   resolveHintLevel,
-  DIFFICULTY_PRESETS,
   INITIAL_METRICS,
   type AIDifficulty,
   type AIMetrics,
@@ -51,12 +53,6 @@ const REGRAS = [
   'ATENÇÃO: Este jogo é MISÈRE - perde quem fizer a última jogada!',
   'Se não tiveres jogadas no teu turno, GANHAS (o adversário foi o último a jogar).',
 ];
-
-function mapDifficultyToLevel(difficulty: AIDifficulty): DifficultyLevel {
-  if (difficulty === 'easy') return 2;
-  if (difficulty === 'medium') return 3;
-  return 5;
-}
 
 function formatSegmento(segmento: QuelhasState['jogadasValidas'][number]): string {
   return `L${segmento.inicio.linha + 1} C${segmento.inicio.coluna + 1}, ${segmento.orientacao}, ${segmento.comprimento} casas`;
@@ -92,14 +88,23 @@ function getSuggestedAction(
 }
 
 export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
-  const { recordGameCompleted, recordReviewCompleted } = useGamification();
+  const {
+    acceptDifficultyRecommendation,
+    getDifficultyRecommendation,
+    recordAdaptiveDecision,
+    recordGameCompleted,
+    recordPatternProgress,
+    recordReviewCompleted,
+    resetAdaptiveSession,
+  } = useGamification();
   const [state, setState] = useState<QuelhasState>(() => 
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [posicaoInicial, setPosicaoInicial] = useState<Posicao | null>(null);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
-  const [difficulty, setDifficulty] = useState<AIDifficulty>('hard');
+  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
+  const difficulty: AIDifficulty = mapLevelToQuelhasDifficulty(difficultyLevel);
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
   const [tutorResponse, setTutorResponse] =
@@ -167,13 +172,14 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       let cancelled = false;
       let finished = false;
       const client = aiClientRef.current;
-      const maxWaitMs = DIFFICULTY_PRESETS[difficulty].timeBudgetMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
+      const maxWaitMs = timeBudgetMs + 250;
       const timer = setTimeout(async () => {
         if (cancelled || !client) return;
 
         try {
           const bestMove = await withTimeout(
-            client.getBestMove(state, difficulty),
+            client.getBestMove(state, difficulty, { timeBudgetMs }),
             maxWaitMs,
             () => client.cancel()
           );
@@ -201,7 +207,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         if (!finished) client?.cancel();
       };
     }
-  }, [state.jogadorAtual, state.modo, state.estado, state.trocaDisponivel, humanPlayer, difficulty, state]);
+  }, [state.jogadorAtual, state.modo, state.estado, state.trocaDisponivel, humanPlayer, difficulty, difficultyLevel, state]);
 
   useEffect(() => {
     if (state.modo !== 'vs-computador') {
@@ -223,9 +229,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       requestId: `quelhas-tutor-${Date.now()}`,
       gameId: 'quelhas',
       mode: 'tutor',
-      level: mapDifficultyToLevel(difficulty),
+      level: difficultyLevel,
       state,
-      timeBudgetMs: Math.min(DIFFICULTY_PRESETS[difficulty].timeBudgetMs, 5000),
       locale: 'pt-PT',
     };
 
@@ -254,7 +259,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       cancelled = true;
       adapter.cancel();
     };
-  }, [difficulty, isVezDoHumano, state]);
+  }, [difficultyLevel, isVezDoHumano, state]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -300,6 +305,14 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       // Segundo clique: tentar criar segmento
       const segmento = criarSegmentoEntrePosicoes(state, posicaoInicial, pos);
       if (segmento) {
+        if (tutorResponse) {
+          recordAdaptiveDecision('quelhas', {
+            successful: tutorResponse.topMoves.some(({ move }) =>
+              formatSegmento(move) === formatSegmento(segmento)
+            ),
+            usedHint: hintLevel === 'H3',
+          });
+        }
         setState(prev => colocarSegmento(prev, segmento));
         setPosicaoInicial(null);
       } else {
@@ -311,7 +324,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         }
       }
     }
-  }, [state, posicaoInicial, isVezDoHumano]);
+  }, [state, posicaoInicial, isVezDoHumano, tutorResponse, recordAdaptiveDecision, hintLevel]);
 
   const handleMouseEnter = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
@@ -344,7 +357,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setTutorHistory([]);
     setTutorLoading(false);
     setHintLevel('H2');
-  }, [state.modo]);
+    resetAdaptiveSession('quelhas');
+  }, [resetAdaptiveSession, state.modo]);
 
   const trocarModo = useCallback(() => {
     const novoModo: GameMode = state.modo === 'vs-computador' ? 'dois-jogadores' : 'vs-computador';
@@ -372,9 +386,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setHintLevel('H2');
   }, []);
 
-  const handleChangeDifficulty = useCallback((d: AIDifficulty) => {
-    setDifficulty(d);
+  const handleChangeDifficulty = useCallback((level: DifficultyLevel) => {
+    setDifficultyLevel(level);
   }, []);
+
+  const difficultyRecommendation = getDifficultyRecommendation('quelhas', difficultyLevel);
 
   const handleTroca = useCallback(() => {
     setState(prev => trocarOrientacoes(prev));
@@ -445,6 +461,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer);
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
+  const reviewPattern = selectReviewPattern('quelhas', tutorHistory.at(-1) ?? tutorResponse);
 
   // Determinar nomes dos jogadores baseado nas orientações atuais
   const getNomeJogador = (jogador: 'jogador1' | 'jogador2') => {
@@ -468,8 +485,14 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           onChangeHumanPlayer={handleChangeHumanPlayer}
           onNovoJogo={novoJogo}
           onTrocarModo={trocarModo}
-          difficulty={difficulty}
+          difficulty={difficultyLevel}
           onChangeDifficulty={handleChangeDifficulty}
+          difficultyRecommendation={difficultyRecommendation}
+          canAcceptDifficultyRecommendation={state.estado !== 'a-jogar'}
+          onAcceptDifficultyRecommendation={(level) => {
+            setDifficultyLevel(level);
+            acceptDifficultyRecommendation('quelhas');
+          }}
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
@@ -618,6 +641,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
             <p className="mt-1 text-emerald-800">
               Revê até 2 momentos e tenta repetir a alternativa mais segura.
             </p>
+            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
@@ -635,6 +661,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
               onClick={() => {
                 if (reviewRewarded) return;
                 recordReviewCompleted('quelhas');
+                recordPatternProgress({
+                  gameId: 'quelhas', patternId: reviewPattern.id, evidence: 'seen', contextId: `review-${Date.now()}`,
+                });
                 setReviewRewarded(true);
               }}
               className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"

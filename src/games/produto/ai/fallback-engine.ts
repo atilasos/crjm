@@ -1,7 +1,7 @@
 import { calcularPontuacao, encontrarGrupos } from '../logic';
-import type { Celula, JogadaDupla, Posicao, ProdutoState } from '../types';
+import type { Celula, JogadaDupla, Pontuacao, Posicao, ProdutoState } from '../types';
 import { gerarPosicoesValidas, posToKey } from '../types';
-import type { AIDifficulty, ProdutoPackedMove, ProdutoPackedState } from './types';
+import { DIFFICULTY_PRESETS, type AIDifficulty, type ProdutoPackedMove, type ProdutoPackedState } from './types';
 
 const POSITIONS = gerarPosicoesValidas();
 const KEY_TO_INDEX = new Map<string, number>(POSITIONS.map((pos, index) => [posToKey(pos), index]));
@@ -108,6 +108,9 @@ function scoreBoard(board: Record<string, Celula>, state: ProdutoState): number 
   const { own, opponent } = getColorsForPlayer(state);
   const ownScore = calcularPontuacao(board, own);
   const opponentScore = calcularPontuacao(board, opponent);
+  if (Object.values(board).every((cell) => cell !== 'vazia')) {
+    return scoreTerminalResult(ownScore, opponentScore);
+  }
   const ownGroups = encontrarGrupos(board, own);
   const opponentGroups = encontrarGrupos(board, opponent);
 
@@ -133,6 +136,16 @@ function scoreBoard(board: Record<string, Celula>, state: ProdutoState): number 
   return score;
 }
 
+function scoreTerminalResult(own: Pontuacao, opponent: Pontuacao): number {
+  if (own.produto !== opponent.produto) {
+    return own.produto > opponent.produto ? 100_000 : -100_000;
+  }
+  if (own.totalPecas !== opponent.totalPecas) {
+    return own.totalPecas < opponent.totalPecas ? 100_000 : -100_000;
+  }
+  return 0;
+}
+
 function togglePlayer(state: ProdutoState, board: Record<string, Celula>): ProdutoState {
   return {
     ...state,
@@ -146,7 +159,21 @@ function togglePlayer(state: ProdutoState, board: Record<string, Celula>): Produ
   };
 }
 
-function scoreMove(move: JogadaDupla, state: ProdutoState, difficulty: AIDifficulty): number {
+function combineLookaheadScore(immediateScore: number, replyScoresForUs: number[]): number {
+  if (replyScoresForUs.length === 0) return immediateScore + 400;
+  return immediateScore + Math.min(...replyScoresForUs) * 0.8;
+}
+
+function rankOpponentScores(scores: number[], limit: number): number[] {
+  return [...scores].sort((a, b) => b - a).slice(0, Math.max(0, limit));
+}
+
+function scoreMove(
+  move: JogadaDupla,
+  state: ProdutoState,
+  difficulty: AIDifficulty,
+  deadline: number,
+): number {
   const board = applyMove(state.tabuleiro, move);
   let score = scoreBoard(board, state);
   const tuning = TUNING[difficulty];
@@ -163,19 +190,22 @@ function scoreMove(move: JogadaDupla, state: ProdutoState, difficulty: AIDifficu
   }
 
   const replyState = togglePlayer(state, board);
-  const replyMoves = buildCandidateMoves(replyState, difficulty).slice(0, tuning.responseCandidates);
-  if (replyMoves.length === 0) {
-    return score + 400;
+  const replyCandidates = buildCandidateMoves(replyState, difficulty)
+    .slice(0, tuning.responseCandidates * 3);
+  if (replyCandidates.length === 0) {
+    return combineLookaheadScore(score, []);
   }
 
-  let bestReply = -Infinity;
-  for (const reply of replyMoves) {
-    const replyBoard = applyMove(replyState.tabuleiro, reply);
-    const replyScore = -scoreBoard(replyBoard, replyState);
-    if (replyScore > bestReply) bestReply = replyScore;
+  const opponentScores: number[] = [];
+  for (const reply of replyCandidates) {
+    if (opponentScores.length > 0 && Date.now() >= deadline) break;
+    opponentScores.push(scoreBoard(applyMove(replyState.tabuleiro, reply), replyState));
   }
+  if (opponentScores.length === 0) return score;
+  const replyScoresForUs = rankOpponentScores(opponentScores, tuning.responseCandidates)
+    .map((opponentScore) => -opponentScore);
 
-  return score - bestReply * 0.8;
+  return combineLookaheadScore(score, replyScoresForUs);
 }
 
 function makeRng(seed: number): () => number {
@@ -190,14 +220,19 @@ export function chooseFallbackMoveFromState(
   state: ProdutoState,
   difficulty: AIDifficulty,
   seed = Date.now(),
+  timeBudgetMs = DIFFICULTY_PRESETS[difficulty].timeMs,
 ): JogadaDupla | null {
   const candidates = buildCandidateMoves(state, difficulty);
   if (candidates.length === 0) return null;
 
   const rng = makeRng(seed);
-  const ranked = candidates
-    .map((move) => ({ move, score: scoreMove(move, state, difficulty) }))
-    .sort((a, b) => b.score - a.score);
+  const deadline = Date.now() + Math.max(1, Math.trunc(timeBudgetMs));
+  const ranked: Array<{ move: JogadaDupla; score: number }> = [];
+  for (const move of candidates) {
+    if (ranked.length > 0 && Date.now() >= deadline) break;
+    ranked.push({ move, score: scoreMove(move, state, difficulty, deadline) });
+  }
+  ranked.sort((a, b) => b.score - a.score);
 
   const topPool = ranked.slice(0, TUNING[difficulty].pickFromTop);
   const choice = topPool[Math.floor(rng() * topPool.length)] ?? ranked[0];
@@ -254,11 +289,14 @@ export function packMove(move: JogadaDupla): ProdutoPackedMove | null {
   };
 }
 
+export const __internal = { combineLookaheadScore, rankOpponentScores, scoreTerminalResult };
+
 export function chooseFallbackPackedMove(
   packed: ProdutoPackedState,
   difficulty: AIDifficulty,
   seed = Date.now(),
+  timeBudgetMs = DIFFICULTY_PRESETS[difficulty].timeMs,
 ): ProdutoPackedMove | null {
-  const move = chooseFallbackMoveFromState(unpackState(packed), difficulty, seed);
+  const move = chooseFallbackMoveFromState(unpackState(packed), difficulty, seed, timeBudgetMs);
   return move ? packMove(move) : null;
 }
