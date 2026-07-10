@@ -6,8 +6,8 @@ const clientPromise = createClawhipOmxClient();
 const OMX_EVENT_MAP = {
   'session-start':    'started',
   'session-end':      'finished',
-  'session-idle':     null,          // skip — not meaningful for Discord
-  'turn-complete':    null,          // skip — too noisy
+  'session-idle':     'blocked',
+  'turn-complete':    'test-finished',
   'task-complete':    'finished',
   'task-failed':      'failed',
   'task-blocked':     'blocked',
@@ -27,7 +27,6 @@ export async function onHookEvent(event, sdk) {
   const rawEvent = event?.event ?? event?.context?.normalized_event ?? '';
   const mappedEvent = event?.context?.normalized_event ?? OMX_EVENT_MAP[rawEvent];
 
-  // Skip events that map to null (too noisy or irrelevant)
   if (!mappedEvent) {
     await sdk.log.info('clawhip OMX hook skipped unmapped event', {
       event: rawEvent,

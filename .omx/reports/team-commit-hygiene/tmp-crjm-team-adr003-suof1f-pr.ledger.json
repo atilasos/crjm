@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "team_name": "tmp-crjm-team-adr003-suof1f-pr",
+  "updated_at": "2026-04-06T22:30:34.315Z",
+  "runtime_commits_are_scaffolding": true,
+  "entries": [
+    {
+      "recorded_at": "2026-04-06T22:26:46.825Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "39e51a9fd8bdfffd63c0f17c3be7c9da19d1a415",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/tmp-crjm-team-adr003-suof1f-pr/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    },
+    {
+      "recorded_at": "2026-04-06T22:26:49.621Z",
+      "operation": "integration_merge",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "9db2987078626c8bd0a093c056d8885435e7c382",
+      "source_commit": "39e51a9fd8bdfffd63c0f17c3be7c9da19d1a415",
+      "leader_head_before": "a8f3c99809a6887823b61d5e56e40179c70a3bab",
+      "leader_head_after": "9db2987078626c8bd0a093c056d8885435e7c382",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/tmp-crjm-team-adr003-suof1f-pr/worktrees/worker-1",
+      "detail": "Leader created a runtime merge commit to integrate worker history."
+    },
+    {
+      "recorded_at": "2026-04-06T22:28:35.534Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "9469ffbffed4882e73be7f47a962279925461fa5",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/tmp-crjm-team-adr003-suof1f-pr/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    },
+    {
+      "recorded_at": "2026-04-06T22:30:33.675Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "e687a6f1c1effa9d27fa8e199abcd66da8fea395",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/tmp-crjm-team-adr003-suof1f-pr/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+{
+  "version": 1,
+  "team_name": "no-branch-crjm-vnext-corrige-o",
+  "updated_at": "2026-04-07T10:40:37.383Z",
+  "runtime_commits_are_scaffolding": true,
+  "entries": [
+    {
+      "recorded_at": "2026-04-07T10:33:18.725Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "ff0f53a5343191bb811707cdb203887aa31ba618",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    },
+    {
+      "recorded_at": "2026-04-07T10:33:21.611Z",
+      "operation": "integration_merge",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "dc306a5482d5e8b45a21a129ab0e2acc33ce832f",
+      "source_commit": "ff0f53a5343191bb811707cdb203887aa31ba618",
+      "leader_head_before": "9db2987078626c8bd0a093c056d8885435e7c382",
+      "leader_head_after": "dc306a5482d5e8b45a21a129ab0e2acc33ce832f",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Leader created a runtime merge commit to integrate worker history."
+    },
+    {
+      "recorded_at": "2026-04-07T10:34:30.600Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "91b67f9c495516d2cff3473f2bd7c59f985628f2",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    },
+    {
+      "recorded_at": "2026-04-07T10:34:33.623Z",
+      "operation": "integration_cherry_pick",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "7fdaa1022e8b2684855f1c1e0fdc07ae0272cfc4",
+      "source_commit": "91b67f9c495516d2cff3473f2bd7c59f985628f2",
+      "leader_head_before": "dc306a5482d5e8b45a21a129ab0e2acc33ce832f",
+      "leader_head_after": "7fdaa1022e8b2684855f1c1e0fdc07ae0272cfc4",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Leader created a runtime cherry-pick commit while integrating diverged worker history."
+    },
+    {
+      "recorded_at": "2026-04-07T10:37:13.105Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "52a093670927b1d9c9d2521ad741b52ad4e82c5c",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    },
+    {
+      "recorded_at": "2026-04-07T10:37:15.911Z",
+      "operation": "integration_cherry_pick",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "ea2b156230410df88ff04c7b61c566b2ab8116b0",
+      "source_commit": "52a093670927b1d9c9d2521ad741b52ad4e82c5c",
+      "leader_head_before": "7fdaa1022e8b2684855f1c1e0fdc07ae0272cfc4",
+      "leader_head_after": "ea2b156230410df88ff04c7b61c566b2ab8116b0",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Leader created a runtime cherry-pick commit while integrating diverged worker history."
+    },
+    {
+      "recorded_at": "2026-04-07T10:40:34.600Z",
+      "operation": "auto_checkpoint",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "2a46663dd7927c900a91492cb9487e23f2adf2c2",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Dirty worker worktree checkpointed before runtime integration."
+    },
+    {
+      "recorded_at": "2026-04-07T10:40:37.342Z",
+      "operation": "integration_cherry_pick",
+      "worker_name": "worker-1",
+      "status": "applied",
+      "operational_commit": "9cb0189371dbfbca024e6efb0e7c3ad05e94eca3",
+      "source_commit": "2a46663dd7927c900a91492cb9487e23f2adf2c2",
+      "leader_head_before": "ea2b156230410df88ff04c7b61c566b2ab8116b0",
+      "leader_head_after": "9cb0189371dbfbca024e6efb0e7c3ad05e94eca3",
+      "worktree_path": "/Users/igor/dev/crjm/.omx/team/no-branch-crjm-vnext-corrige-o/worktrees/worker-1",
+      "detail": "Leader created a runtime cherry-pick commit while integrating diverged worker history."
+    }
+  ]
+}
