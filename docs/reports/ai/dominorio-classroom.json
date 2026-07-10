@@ -1,0 +1,296 @@
+{
+  "generatedAt": "2026-07-10T12:31:48.804Z",
+  "profile": "classroom",
+  "options": {
+    "gamesPerMirror": 3,
+    "maxPlies": 80,
+    "budgetScale": 0.1
+  },
+  "requestedGame": "dominorio",
+  "games": {
+    "dominorio": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.58,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 3,
+          "weakerWins": 3,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.5,
+          "threshold": 0.56,
+          "monotonic": false,
+          "pass": false
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.54,
+          "monotonic": true,
+          "pass": true
+        }
+      ],
+      "monotonicPairs": 3,
+      "allPairsMonotonic": false
+    }
+  },
+  "totals": {
+    "games": 24,
+    "illegalMoves": 0
+  },
+  "pass": false,
+  "failedPairs": [
+    "dominorio:N4>N3"
+  ],
+  "details": [
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 25,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 25,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 27,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 26,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    }
+  ]
+}

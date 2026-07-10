@@ -1,0 +1,352 @@
+{
+  "generatedAt": "2026-07-10T12:29:50.277Z",
+  "profile": "smoke",
+  "samplesPerLevel": 1,
+  "gate": "0 jogadas ilegais; p95 <= 2 × budget + 100 ms",
+  "pass": true,
+  "failed": [],
+  "games": {
+    "gatos-caes": {
+      "N1": {
+        "budgetMs": 100,
+        "p50Ms": 119.08,
+        "p95Ms": 119.08,
+        "illegalMoves": 0,
+        "limitMs": 300,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N2": {
+        "budgetMs": 250,
+        "p50Ms": 253.88,
+        "p95Ms": 253.88,
+        "illegalMoves": 0,
+        "limitMs": 600,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N3": {
+        "budgetMs": 500,
+        "p50Ms": 503.38,
+        "p95Ms": 503.38,
+        "illegalMoves": 0,
+        "limitMs": 1100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N4": {
+        "budgetMs": 1000,
+        "p50Ms": 1004.48,
+        "p95Ms": 1004.48,
+        "illegalMoves": 0,
+        "limitMs": 2100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N5": {
+        "budgetMs": 2000,
+        "p50Ms": 2009.28,
+        "p95Ms": 2009.28,
+        "illegalMoves": 0,
+        "limitMs": 4100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      }
+    },
+    "dominorio": {
+      "N1": {
+        "budgetMs": 100,
+        "p50Ms": 5.31,
+        "p95Ms": 5.31,
+        "illegalMoves": 0,
+        "limitMs": 300,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N2": {
+        "budgetMs": 250,
+        "p50Ms": 1.51,
+        "p95Ms": 1.51,
+        "illegalMoves": 0,
+        "limitMs": 600,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N3": {
+        "budgetMs": 500,
+        "p50Ms": 1.07,
+        "p95Ms": 1.07,
+        "illegalMoves": 0,
+        "limitMs": 1100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N4": {
+        "budgetMs": 1000,
+        "p50Ms": 1001.72,
+        "p95Ms": 1001.72,
+        "illegalMoves": 0,
+        "limitMs": 2100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N5": {
+        "budgetMs": 2000,
+        "p50Ms": 2000.69,
+        "p95Ms": 2000.69,
+        "illegalMoves": 0,
+        "limitMs": 4100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      }
+    },
+    "quelhas": {
+      "N1": {
+        "budgetMs": 100,
+        "p50Ms": 118.2,
+        "p95Ms": 118.2,
+        "illegalMoves": 0,
+        "limitMs": 300,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N2": {
+        "budgetMs": 250,
+        "p50Ms": 264.71,
+        "p95Ms": 264.71,
+        "illegalMoves": 0,
+        "limitMs": 600,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N3": {
+        "budgetMs": 500,
+        "p50Ms": 513.07,
+        "p95Ms": 513.07,
+        "illegalMoves": 0,
+        "limitMs": 1100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N4": {
+        "budgetMs": 1000,
+        "p50Ms": 1014.57,
+        "p95Ms": 1014.57,
+        "illegalMoves": 0,
+        "limitMs": 2100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N5": {
+        "budgetMs": 2000,
+        "p50Ms": 2000.69,
+        "p95Ms": 2000.69,
+        "illegalMoves": 0,
+        "limitMs": 4100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      }
+    },
+    "produto": {
+      "N1": {
+        "budgetMs": 100,
+        "p50Ms": 6.74,
+        "p95Ms": 6.74,
+        "illegalMoves": 0,
+        "limitMs": 300,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N2": {
+        "budgetMs": 250,
+        "p50Ms": 2.64,
+        "p95Ms": 2.64,
+        "illegalMoves": 0,
+        "limitMs": 600,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N3": {
+        "budgetMs": 500,
+        "p50Ms": 71.28,
+        "p95Ms": 71.28,
+        "illegalMoves": 0,
+        "limitMs": 1100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N4": {
+        "budgetMs": 1000,
+        "p50Ms": 74,
+        "p95Ms": 74,
+        "illegalMoves": 0,
+        "limitMs": 2100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N5": {
+        "budgetMs": 2000,
+        "p50Ms": 83.32,
+        "p95Ms": 83.32,
+        "illegalMoves": 0,
+        "limitMs": 4100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      }
+    },
+    "atari-go": {
+      "N1": {
+        "budgetMs": 100,
+        "p50Ms": 100.02,
+        "p95Ms": 100.02,
+        "illegalMoves": 0,
+        "limitMs": 300,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N2": {
+        "budgetMs": 250,
+        "p50Ms": 85.21,
+        "p95Ms": 85.21,
+        "illegalMoves": 0,
+        "limitMs": 600,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N3": {
+        "budgetMs": 500,
+        "p50Ms": 85.13,
+        "p95Ms": 85.13,
+        "illegalMoves": 0,
+        "limitMs": 1100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N4": {
+        "budgetMs": 1000,
+        "p50Ms": 257.2,
+        "p95Ms": 257.2,
+        "illegalMoves": 0,
+        "limitMs": 2100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N5": {
+        "budgetMs": 2000,
+        "p50Ms": 323.98,
+        "p95Ms": 323.98,
+        "illegalMoves": 0,
+        "limitMs": 4100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      }
+    },
+    "nex": {
+      "N1": {
+        "budgetMs": 100,
+        "p50Ms": 27.38,
+        "p95Ms": 27.38,
+        "illegalMoves": 0,
+        "limitMs": 300,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N2": {
+        "budgetMs": 250,
+        "p50Ms": 30.51,
+        "p95Ms": 30.51,
+        "illegalMoves": 0,
+        "limitMs": 600,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N3": {
+        "budgetMs": 500,
+        "p50Ms": 44.29,
+        "p95Ms": 44.29,
+        "illegalMoves": 0,
+        "limitMs": 1100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N4": {
+        "budgetMs": 1000,
+        "p50Ms": 49.28,
+        "p95Ms": 49.28,
+        "illegalMoves": 0,
+        "limitMs": 2100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      },
+      "N5": {
+        "budgetMs": 2000,
+        "p50Ms": 117.44,
+        "p95Ms": 117.44,
+        "illegalMoves": 0,
+        "limitMs": 4100,
+        "pass": true,
+        "engines": [
+          "ts-fallback"
+        ]
+      }
+    }
+  }
+}

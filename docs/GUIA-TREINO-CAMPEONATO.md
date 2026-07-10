@@ -2,6 +2,29 @@
 
 Este guia resume o foco de treino mais útil para cada jogo no CRJM.
 
+## Arranque local para uma aula
+
+```bash
+bun install
+bun run classroom:smoke
+bun run start
+```
+
+Depois abre `http://127.0.0.1:3000`. Para outros dispositivos na mesma rede, usa o endereço IP local do computador que executa o servidor e confirma primeiro as regras da firewall da escola.
+
+O perfil do aluno é anónimo: não é necessário introduzir nome real. O progresso no servidor fica associado a um cookie assinado do browser; limpar cookies ou mudar de browser cria outro perfil. A versão estática continua a funcionar com progresso local, mas não partilha esse progresso entre dispositivos.
+
+### Ritmo recomendado
+
+1. 2–3 minutos de aquecimento/regras ou um puzzle do Laboratório de Estratégias.
+2. Uma partida em N1–N3, conforme a experiência.
+3. Revisão curta de 1–3 momentos e desbloqueio de um cartão de padrão.
+4. Repetição do mesmo padrão ou nova partida; aceitar mudanças adaptativas apenas entre partidas.
+
+O laboratório oferece três desafios por jogo. A primeira resposta certa atribui XP uma única vez; usar a pista fica registado apenas como evidência pedagógica, sem recolher texto livre do aluno.
+
+Antes da aula, usa também [CLASSROOM-CHECKLIST.md](./CLASSROOM-CHECKLIST.md).
+
 ## Gatos & Cães
 - **Objetivo-chave:** ganhar a luta pela mobilidade.
 - **Treino base:** dominar as regras das primeiras jogadas e o valor do centro.

@@ -1,0 +1,294 @@
+{
+  "generatedAt": "2026-07-10T12:13:09.086Z",
+  "profile": "classroom",
+  "options": {
+    "gamesPerMirror": 3,
+    "maxPlies": 80,
+    "budgetScale": 0.1
+  },
+  "requestedGame": "quelhas",
+  "games": {
+    "quelhas": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.58,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.56,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 4,
+          "weakerWins": 2,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.667,
+          "threshold": 0.54,
+          "monotonic": true,
+          "pass": true
+        }
+      ],
+      "monotonicPairs": 4,
+      "allPairsMonotonic": true
+    }
+  },
+  "totals": {
+    "games": 24,
+    "illegalMoves": 0
+  },
+  "pass": true,
+  "failedPairs": [],
+  "details": [
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 39,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 44,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 36,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 40,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 39,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    }
+  ]
+}

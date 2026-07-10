@@ -1,0 +1,1667 @@
+{
+  "generatedAt": "2026-07-10T12:23:30.657Z",
+  "profile": "classroom",
+  "options": {
+    "gamesPerMirror": 3,
+    "maxPlies": 80,
+    "budgetScale": 0.1
+  },
+  "requestedGame": null,
+  "games": {
+    "gatos-caes": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.58,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.56,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.54,
+          "monotonic": true,
+          "pass": true
+        }
+      ],
+      "monotonicPairs": 4,
+      "allPairsMonotonic": true
+    },
+    "dominorio": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.58,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 4,
+          "weakerWins": 2,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.667,
+          "threshold": 0.56,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 3,
+          "weakerWins": 3,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.5,
+          "threshold": 0.54,
+          "monotonic": false,
+          "pass": false
+        }
+      ],
+      "monotonicPairs": 3,
+      "allPairsMonotonic": false
+    },
+    "quelhas": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.58,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.56,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 5,
+          "weakerWins": 1,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.833,
+          "threshold": 0.54,
+          "monotonic": true,
+          "pass": true
+        }
+      ],
+      "monotonicPairs": 4,
+      "allPairsMonotonic": true
+    },
+    "produto": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.62,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 5,
+          "weakerWins": 1,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.833,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 5,
+          "weakerWins": 1,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.833,
+          "threshold": 0.57,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 4,
+          "weakerWins": 2,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.667,
+          "threshold": 0.55,
+          "monotonic": true,
+          "pass": true
+        }
+      ],
+      "monotonicPairs": 4,
+      "allPairsMonotonic": true
+    },
+    "atari-go": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 5,
+          "weakerWins": 1,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.833,
+          "threshold": 0.62,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 5,
+          "weakerWins": 1,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.833,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 4,
+          "weakerWins": 2,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.667,
+          "threshold": 0.57,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.55,
+          "monotonic": true,
+          "pass": true
+        }
+      ],
+      "monotonicPairs": 4,
+      "allPairsMonotonic": true
+    },
+    "nex": {
+      "pairs": [
+        {
+          "strongerLevel": 2,
+          "weakerLevel": 1,
+          "games": 6,
+          "strongerWins": 6,
+          "weakerWins": 0,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 1,
+          "threshold": 0.62,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 3,
+          "weakerLevel": 2,
+          "games": 6,
+          "strongerWins": 5,
+          "weakerWins": 1,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.833,
+          "threshold": 0.6,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 4,
+          "weakerLevel": 3,
+          "games": 6,
+          "strongerWins": 4,
+          "weakerWins": 2,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.667,
+          "threshold": 0.57,
+          "monotonic": true,
+          "pass": true
+        },
+        {
+          "strongerLevel": 5,
+          "weakerLevel": 4,
+          "games": 6,
+          "strongerWins": 3,
+          "weakerWins": 3,
+          "draws": 0,
+          "illegalMoves": 0,
+          "score": 0.5,
+          "threshold": 0.55,
+          "monotonic": false,
+          "pass": false
+        }
+      ],
+      "monotonicPairs": 3,
+      "allPairsMonotonic": false
+    }
+  },
+  "totals": {
+    "games": 144,
+    "illegalMoves": 0
+  },
+  "pass": false,
+  "failedPairs": [
+    "dominorio:N5>N4",
+    "nex:N5>N4"
+  ],
+  "details": [
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 41,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 41,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 40,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 39,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 40,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 41,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 36,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 36,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 34,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 34,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador1",
+      "gameId": "gatos-caes",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 34,
+      "strongerAs": "jogador2",
+      "gameId": "gatos-caes",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 25,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 25,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 27,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 26,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador1",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 30,
+      "strongerAs": "jogador2",
+      "gameId": "dominorio",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 23,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 33,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 40,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 37,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 43,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 35,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 42,
+      "strongerAs": "jogador1",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 43,
+      "strongerAs": "jogador2",
+      "gameId": "quelhas",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador1",
+      "gameId": "produto",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "produto",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 39,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 36,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 55,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 61,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 29,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 66,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 47,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 60,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 43,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 71,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 49,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 68,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 47,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 75,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 65,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 39,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 69,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 76,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 63,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 72,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 63,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 78,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 63,
+      "strongerAs": "jogador1",
+      "gameId": "atari-go",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 72,
+      "strongerAs": "jogador2",
+      "gameId": "atari-go",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 38,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 35,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 26,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 31,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 2,
+      "weakerLevel": 1
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 34,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 27,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 28,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 32,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 36,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 25,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 3,
+      "weakerLevel": 2
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 27,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 22,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 4,
+      "weakerLevel": 3
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "stronger",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador1",
+      "gameId": "nex",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    },
+    {
+      "winner": "weaker",
+      "illegalMoves": 0,
+      "plies": 24,
+      "strongerAs": "jogador2",
+      "gameId": "nex",
+      "strongerLevel": 5,
+      "weakerLevel": 4
+    }
+  ]
+}

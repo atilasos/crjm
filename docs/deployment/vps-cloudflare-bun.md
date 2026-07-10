@@ -68,6 +68,7 @@ CRJM_LEARNER_DB_PATH=/var/lib/crjm/learner-core-v1.sqlite
 CRJM_SESSION_SECRET=MUDA_PARA_UM_SEGREDO_LONGO_E_ALEATORIO
 CRJM_SESSION_COOKIE_NAME=crjm_session
 CRJM_SESSION_COOKIE_MAX_AGE=2592000
+CRJM_COOKIE_SECURE=true
 VITE_TOURNAMENT_SERVER_URL=wss://torneios.escola.pt
 ```
 
@@ -90,6 +91,12 @@ ADMIN_KEY=MUDA_PARA_UMA_CHAVE_FORTE
 ## 4. Arranque manual inicial
 
 Testa primeiro manualmente.
+
+Antes de criar os serviços, corre o gate local com a mesma revisão de código:
+
+```bash
+bun run classroom:smoke
+```
 
 ### App principal
 
@@ -283,11 +290,24 @@ Adicionar:
 
 ```bash
 sudo systemctl stop crjm-main.service
+cp /var/lib/crjm/learner-core-v1.sqlite /home/SEU_UTILIZADOR/backups/crjm/pre-restore-$(date +%F-%H%M%S).sqlite
 cp /home/SEU_UTILIZADOR/backups/crjm/learner-core-AAAA-MM-DD-HHMMSS.sqlite /var/lib/crjm/learner-core-v1.sqlite
+sudo chown SEU_UTILIZADOR:SEU_UTILIZADOR /var/lib/crjm/learner-core-v1.sqlite
 sudo systemctl start crjm-main.service
+curl --fail https://jogos.escola.pt/api/health
 ```
 
-## 10. Fluxo real para a escola
+Faz sempre uma cópia `pre-restore` do estado actual. O restore substitui o progresso posterior à data do backup e deve ser uma decisão humana, fora do horário de aula.
+
+## 10. Limites de autenticação e privacidade
+
+- O learner-core usa uma sessão anónima por cookie assinado; não é um sistema de contas escolares nem recupera progresso depois de o cookie ser apagado.
+- O cookie é `HttpOnly` e `SameSite=Lax`; recebe `Secure` quando `CRJM_COOKIE_SECURE=true`. Usa `false` apenas numa sala de aula servida diretamente por HTTP e `true` no VPS HTTPS.
+- Não uses nomes completos como `displayName` nem guardes email, idade exacta ou identificadores escolares na SQLite.
+- O painel de torneio usa uma credencial administrativa partilhada (`ADMIN_KEY`). Para uma implantação multi-escola, auditoria individual ou permissões por função, é necessária revisão humana e um sistema de autenticação próprio antes de produção.
+- Mantém a SQLite e os backups legíveis apenas pelo utilizador do serviço; não os coloques na pasta pública do servidor web.
+
+## 11. Fluxo real para a escola
 
 ### Para os alunos
 
@@ -305,7 +325,7 @@ sudo systemctl start crjm-main.service
 - inicia as rondas
 - pode abrir `https://torneios.escola.pt/admin/spectator` para projeção
 
-## 11. Atualizar o site
+## 12. Atualizar o site
 
 Quando fizeres pull de alterações:
 
@@ -319,7 +339,7 @@ sudo systemctl restart crjm-tournament.service
 
 Se as alterações incluírem o learner-core, faz backup da SQLite antes do restart.
 
-## 12. Checklist final
+## 13. Checklist final
 
 - [ ] `jogos.escola.pt` abre em HTTPS
 - [ ] `torneios.escola.pt/admin` abre em HTTPS
@@ -329,5 +349,7 @@ Se as alterações incluírem o learner-core, faz backup da SQLite antes do rest
 - [ ] progresso do learner-core persiste após restart
 - [ ] backups automáticos estão a ser criados
 - [ ] `CRJM_SESSION_SECRET` e `ADMIN_KEY` foram mudados
+- [ ] `bun run classroom:smoke` passou na revisão publicada
+- [ ] restore foi ensaiado numa cópia, sem substituir a base activa
 
 Quando estes pontos estiverem verdes, tens uma versão funcional para usar com os teus alunos.
