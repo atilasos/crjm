@@ -736,6 +736,17 @@ console.log(`\n✅ Build completed in ${buildTime}ms\n`);
 // ============================================================================
 
 try {
+  const aiGatosCaesOut = path.join(outdir, "ai", "gatos-caes");
+  await mkdir(aiGatosCaesOut, { recursive: true });
+  await buildWorker(
+    path.join(process.cwd(), "src", "games", "gatos-caes", "ai", "gatos-caes.worker.ts"),
+    aiGatosCaesOut,
+  );
+} catch (e) {
+  console.log(`⚠️  Failed to build Gatos & Cães worker asset: ${e instanceof Error ? e.message : String(e)}\n`);
+}
+
+try {
   const aiDominorioOut = path.join(outdir, "ai", "dominorio");
   await mkdir(aiDominorioOut, { recursive: true });
 
