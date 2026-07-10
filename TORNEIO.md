@@ -20,7 +20,7 @@ Este guia explica como organizar um torneio de dupla eliminação para os teus a
 │          (ngrok / Cloudflare Tunnel)                         │
 │                                                              │
 │  Expõe o servidor local como HTTPS público                   │
-│  Ex: https://abc123.ngrok.io ou https://torneio.exemplo.com  │
+│  Ex: https://crjm.infantinho.xyz (túnel permanente)          │
 └─────────────────────────────────────────────────────────────┘
                               │
                               │ http://localhost:4000
@@ -47,15 +47,16 @@ Este guia explica como organizar um torneio de dupla eliminação para os teus a
    powershell -c "irm bun.sh/install.ps1 | iex"
    ```
 
-2. **ngrok** ou **Cloudflare Tunnel** para expor o servidor
+2. **Cloudflare Tunnel** (ou ngrok) para expor o servidor
    ```bash
-   # ngrok (mais simples, grátis para uso básico)
-   # Instalar em: https://ngrok.com/download
-   
-   # ou Cloudflare Tunnel (grátis, mais estável)
+   # Cloudflare Tunnel (grátis, estável) — no MacBook do Igor já está
+   # instalado e existe um túnel permanente para crjm.infantinho.xyz
+   # (ver docs/deployment/tunnel-crjm-infantinho.md)
    # macOS
    brew install cloudflare/cloudflare/cloudflared
    # Outros: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/
+
+   # alternativa: ngrok — https://ngrok.com/download
    ```
 
 ## Passo a Passo - Dia do Torneio
@@ -86,7 +87,33 @@ Deves ver algo como:
 
 ### 2. Expor o servidor (noutra janela de terminal)
 
-#### Opção A: ngrok (mais simples)
+#### Opção A: túnel permanente crjm.infantinho.xyz (recomendado)
+
+Já existe um Cloudflare Tunnel dedicado que mapeia **https://crjm.infantinho.xyz**
+para a porta 4000 local — o URL é fixo, não muda entre sessões:
+
+```bash
+cloudflared tunnel --config ~/.cloudflared/config-crjm.yml run
+```
+
+Quando o log mostrar `Registered tunnel connection`, os alunos usam
+`https://crjm.infantinho.xyz`. Detalhes de criação, diagnóstico e remoção em
+[docs/deployment/tunnel-crjm-infantinho.md](docs/deployment/tunnel-crjm-infantinho.md).
+
+Quando abrires `http://localhost:4000/admin` (ou o URL público equivalente), o browser vai pedir:
+
+- **utilizador**: `admin`
+- **palavra-passe**: o valor de `ADMIN_KEY`
+
+#### Opção B: túnel efémero Cloudflare (sem configuração)
+```bash
+cloudflared tunnel --url http://localhost:4000
+```
+
+Imprime um URL descartável tipo `https://random-words.trycloudflare.com` — útil como
+fallback, mas muda a cada execução.
+
+#### Opção C: ngrok
 ```bash
 ngrok http 4000
 ```
@@ -96,25 +123,11 @@ Resultado:
 Forwarding  https://abc123.ngrok.io -> http://localhost:4000
 ```
 
-Anota o URL `https://abc123.ngrok.io` - este é o URL que os alunos vão usar!
-
-Quando abrires `http://localhost:4000/admin` (ou o URL público equivalente), o browser vai pedir:
-
-- **utilizador**: `admin`
-- **palavra-passe**: o valor de `ADMIN_KEY`
-
-#### Opção B: Cloudflare Tunnel (mais estável)
-```bash
-cloudflared tunnel --url http://localhost:4000
-```
-
-Resultado similar, com um URL como `https://random-words.trycloudflare.com`
-
 ### 3. Testar a ligação
 
 1. Abre o painel de administração:
    - Local: http://localhost:4000/admin
-   - Ou pelo túnel: https://abc123.ngrok.io/admin
+   - Ou pelo túnel: https://crjm.infantinho.xyz/admin
 
 2. Verifica que aparece "Servidor ativo" no topo
 
@@ -130,8 +143,8 @@ Diz aos alunos para:
    - Jogo (ex: Gatos & Cães)
 4. **Desligar** o toggle "Modo de teste"
 5. Introduzir o endereço do servidor:
-   - Se usas ngrok: `wss://abc123.ngrok.io` (nota o `wss://` no início!)
-   - Se usas Cloudflare: `wss://random-words.trycloudflare.com`
+   - Túnel permanente: `wss://crjm.infantinho.xyz` (nota o `wss://` no início!)
+   - Se usas um túnel efémero/ngrok: `wss://<url-do-túnel>`
 6. Clicar em "Entrar no Campeonato"
 
 ### 5. Iniciar o torneio
