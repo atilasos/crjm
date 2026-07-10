@@ -32,6 +32,7 @@ import type { ProdutoState, JogadaDupla } from '../games/produto/types';
 import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
 import type { NexState, Acao as NexAcao } from '../games/nex/types';
 import { DEFAULT_TOURNAMENT_SERVER_URL, PRESET_TOURNAMENT_SERVERS } from '../tournament/server-config';
+import { registarBloqueioNavegacao } from '../navigation-guard';
 
 interface CampeonatoPageProps {
   onVoltar: () => void;
@@ -125,6 +126,13 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Estado do torneio
   const [phase, setPhase] = useState<Phase>('connect');
+
+  // Bloqueia o retroceder do browser enquanto o torneio decorre (a saída
+  // deliberada continua disponível através do botão de desligar)
+  useEffect(() => {
+    if (phase === 'connect') return;
+    return registarBloqueioNavegacao(() => true);
+  }, [phase]);
   const [tournamentState, setTournamentState] = useState<TournamentState | null>(null);
   const [currentMatch, setCurrentMatch] = useState<Match | null>(null);
   const [myRole, setMyRole] = useState<'player1' | 'player2' | null>(null);

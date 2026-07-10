@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import "./index.css";
+import { navegacaoBloqueada } from './navigation-guard';
 import { Header } from './components/Header';
 import { GameCard } from './components/GameCard';
 import { CampeonatoPage } from './components/CampeonatoPage';
@@ -14,8 +15,17 @@ import { QuelhasGame } from './games/quelhas/QuelhasGame';
 import { AtariGoGame } from './games/atari-go/AtariGoGame';
 import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
+import { PuzzlePage } from './components/PuzzlePage';
 
-type Pagina = 'inicio' | 'perfil' | 'campeonato' | 'admin' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+type Pagina = 'inicio' | 'perfil' | 'puzzles' | 'campeonato' | 'admin' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+
+const PAGINAS: readonly Pagina[] = ['inicio', 'perfil', 'puzzles', 'campeonato', 'admin', 'gatos-caes', 'dominorio', 'quelhas', 'atari-go', 'produto', 'nex'];
+
+function paginaDoHash(): Pagina {
+  if (typeof window === 'undefined') return 'inicio';
+  const slug = window.location.hash.replace(/^#\/?/, '');
+  return (PAGINAS as readonly string[]).includes(slug) ? (slug as Pagina) : 'inicio';
+}
 
 export function App() {
   return (
@@ -26,8 +36,31 @@ export function App() {
 }
 
 function AppContent() {
-  const [paginaAtual, setPaginaAtual] = useState<Pagina>('inicio');
+  const [paginaAtual, setPaginaAtualState] = useState<Pagina>(paginaDoHash);
   const { activePopup, dismissPopup, isReady, profile } = useGamification();
+
+  const paginaRef = useRef(paginaAtual);
+  paginaRef.current = paginaAtual;
+
+  useEffect(() => {
+    const sincronizar = () => {
+      const destino = paginaDoHash();
+      if (destino === paginaRef.current) return;
+      if (navegacaoBloqueada()) {
+        // Repõe o hash da página atual para o retroceder não abandonar um torneio
+        window.location.hash = paginaRef.current === 'inicio' ? '/' : `/${paginaRef.current}`;
+        return;
+      }
+      setPaginaAtualState(destino);
+    };
+    window.addEventListener('hashchange', sincronizar);
+    return () => window.removeEventListener('hashchange', sincronizar);
+  }, []);
+
+  const setPaginaAtual = (pagina: Pagina) => {
+    window.location.hash = pagina === 'inicio' ? '/' : `/${pagina}`;
+    setPaginaAtualState(pagina);
+  };
 
   const voltarInicio = () => setPaginaAtual('inicio');
 
@@ -37,6 +70,10 @@ function AppContent() {
 
   if (paginaAtual === 'perfil') {
     return <PerfilPage onVoltar={voltarInicio} />;
+  }
+
+  if (paginaAtual === 'puzzles') {
+    return <PuzzlePage onVoltar={voltarInicio} />;
   }
 
   if (paginaAtual === 'admin') {
@@ -119,6 +156,16 @@ function AppContent() {
               emoji="🏆"
               corFundo="bg-gradient-to-br from-yellow-500 to-orange-600"
               onClick={() => setPaginaAtual('campeonato')}
+            />
+          </div>
+
+          <div className="mb-8">
+            <GameCard
+              titulo="Laboratório de Estratégias"
+              descricao="Resolve puzzles curtos, pede uma pista quando precisares e transforma cada ideia num cartão dominado."
+              emoji="🧠"
+              corFundo="bg-gradient-to-br from-amber-500 to-orange-600"
+              onClick={() => setPaginaAtual('puzzles')}
             />
           </div>
 

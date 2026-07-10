@@ -2,6 +2,7 @@ import { useGamification } from './gamification/GamificationProvider';
 import { MissionWidget } from './gamification/MissionWidget';
 import { PlayerBadge } from './gamification/PlayerBadge';
 import { SessionXpBar } from './gamification/SessionXpBar';
+import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
   titulo?: string;
@@ -15,6 +16,7 @@ export function Header({ titulo, onVoltar }: HeaderProps) {
     <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex items-center gap-4">
+          {!onVoltar && <div className="w-20" />}
           {onVoltar && (
             <button
               onClick={onVoltar}
@@ -35,7 +37,9 @@ export function Header({ titulo, onVoltar }: HeaderProps) {
             </h1>
           </div>
           
-          {onVoltar && <div className="w-20" />}
+          <div className="flex w-20 items-center justify-end text-white">
+            <ThemeToggle />
+          </div>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <PlayerBadge isReady={isReady} level={level} title={levelTitle} streakDays={profile.streakDays} />

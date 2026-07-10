@@ -31,15 +31,15 @@ export function RulesPanel({ titulo, regras }: RulesPanelProps) {
       {aberto && (
         <ul className="mt-4 space-y-3">
           {regras.map((regra, index) => (
-            <li key={index} className="text-gray-700">
+            <li key={index}>
               {regra}
             </li>
           ))}
         </ul>
       )}
       
-      <div className="mt-6 pt-4 border-t border-indigo-100">
-        <p className="text-sm text-gray-500 flex items-center gap-2">
+      <div className="rules-panel-hint mt-6 pt-4 border-t">
+        <p className="text-sm flex items-center gap-2">
           <span>💡</span>
           <span>Dica: Pensa bem antes de cada jogada!</span>
         </p>
