@@ -1,6 +1,7 @@
 import type { Server } from 'bun';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { GameId } from '../../ai-core/types';
+import type { PatternEvidence } from '../../ai-core/learner-gamification';
 import type { LearnerCommandResponse, LearnerDashboardPayload } from '../../types/learner-core';
 import { getLearnerCoreConfig } from './config';
 import { getLearnerCoreDb } from './db';
@@ -58,7 +59,7 @@ function decodeSessionCookieValue(rawValue: string | undefined, secret: string):
 
 function sessionCookie(sessionId: string, config: ReturnType<typeof getLearnerCoreConfig>): string {
   const value = encodeSessionCookieValue(sessionId, config.sessionSecret);
-  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  const secure = config.sessionCookieSecure ? '; Secure' : '';
   return `${config.sessionCookieName}=${encodeURIComponent(value)}; Path=/; HttpOnly; SameSite=Lax${secure}; Max-Age=${config.sessionCookieMaxAgeSeconds}`;
 }
 
@@ -118,6 +119,44 @@ export async function handleAppRequest(req: Request, _server: Server<unknown>): 
       const { userId, headers } = withSession(req);
       const body = await readJson<{ gameId: GameId }>(req);
       return json(service.recordReviewCompleted(userId, body.gameId), { headers });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  }
+
+  if (url.pathname === '/api/learner/events/puzzle-solved' && req.method === 'POST') {
+    try {
+      const { userId, headers } = withSession(req);
+      const body = await readJson<{ gameId: GameId; puzzleId?: string; usedHint?: boolean }>(req);
+      return json(service.recordPuzzleSolved(userId, body.gameId, {
+        puzzleId: body.puzzleId,
+        usedHint: Boolean(body.usedHint),
+      }), { headers });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  }
+
+  if (url.pathname === '/api/learner/events/pattern-progress' && req.method === 'POST') {
+    try {
+      const { userId, headers } = withSession(req);
+      const body = await readJson<{
+        gameId: GameId;
+        patternId: string;
+        evidence: PatternEvidence;
+        contextId: string;
+      }>(req);
+      return json(service.recordPatternProgress(userId, body), { headers });
+    } catch (error) {
+      return errorResponse(error);
+    }
+  }
+
+  if (url.pathname === '/api/learner/missions/claim' && req.method === 'POST') {
+    try {
+      const { userId, headers } = withSession(req);
+      const body = await readJson<{ missionId: string }>(req);
+      return json(service.claimMissionReward(userId, body.missionId), { headers });
     } catch (error) {
       return errorResponse(error);
     }

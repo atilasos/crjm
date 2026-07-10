@@ -17,6 +17,7 @@ async function withTempDb() {
 afterEach(async () => {
   delete process.env.CRJM_LEARNER_DB_PATH;
   delete process.env.CRJM_SESSION_SECRET;
+  delete process.env.CRJM_COOKIE_SECURE;
   if (originalNodeEnv === undefined) {
     delete process.env.NODE_ENV;
   } else {
@@ -62,7 +63,7 @@ describe('learner core HTTP routes', () => {
     expect(dashboardResponse.headers.get('set-cookie')).toContain('crjm_session=');
   });
 
-  test('bootstraps a production session even without explicit CRJM_SESSION_SECRET', async () => {
+  test('bootstraps an HTTP classroom session in production without forcing Secure', async () => {
     await withTempDb();
     delete process.env.CRJM_SESSION_SECRET;
     process.env.NODE_ENV = 'production';
@@ -74,7 +75,7 @@ describe('learner core HTTP routes', () => {
 
     expect(sessionResponse.status).toBe(200);
     expect(cookie).toContain('crjm_session=');
-    expect(cookie).toContain('Secure');
+    expect(cookie).not.toContain('Secure');
 
     const dashboardResponse = await handleAppRequest(
       new Request('http://localhost/api/learner/dashboard', { headers: { cookie } }),
@@ -84,5 +85,49 @@ describe('learner core HTTP routes', () => {
 
     expect(dashboardResponse.status).toBe(200);
     expect(dashboard.profile.displayName).toBeTruthy();
+  });
+
+  test('marks the session cookie Secure when HTTPS deployment opts in', async () => {
+    await withTempDb();
+    process.env.NODE_ENV = 'production';
+    process.env.CRJM_COOKIE_SECURE = 'true';
+
+    const response = await handleAppRequest(
+      new Request('https://jogos.example/api/auth/session'),
+      {} as Parameters<typeof handleAppRequest>[1],
+    );
+
+    expect(response.headers.get('set-cookie')).toContain('Secure');
+  });
+
+  test('accepts pedagogical gamification commands through the learner API', async () => {
+    await withTempDb();
+    const server = {} as Parameters<typeof handleAppRequest>[1];
+    const sessionResponse = await handleAppRequest(new Request('http://localhost/api/auth/session'), server);
+    const cookie = sessionResponse.headers.get('set-cookie') ?? '';
+    const post = (path: string, body: unknown) => handleAppRequest(new Request(`http://localhost${path}`, {
+      method: 'POST',
+      headers: { cookie, 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+    }), server);
+
+    const puzzle = await post('/api/learner/events/puzzle-solved', { gameId: 'atari-go' });
+    expect(puzzle.status).toBe(200);
+    expect((await puzzle.json()).dashboard.achievements.first_puzzle).toBeDefined();
+
+    const pattern = await post('/api/learner/events/pattern-progress', {
+      gameId: 'produto',
+      patternId: 'produto:equilibrio',
+      evidence: 'used_alone',
+      contextId: 'game-a',
+    });
+    expect(pattern.status).toBe(200);
+    expect((await pattern.json()).dashboard.patterns['produto:equilibrio'].state).toBe('used_alone');
+
+    await post('/api/learner/events/review-completed', { gameId: 'dominorio' });
+    const mission = await post('/api/learner/missions/claim', { missionId: 'daily-review-1' });
+    const duplicate = await post('/api/learner/missions/claim', { missionId: 'daily-review-1' });
+    expect((await mission.json()).sessionXpDelta).toBe(8);
+    expect((await duplicate.json()).sessionXpDelta).toBe(0);
   });
 });

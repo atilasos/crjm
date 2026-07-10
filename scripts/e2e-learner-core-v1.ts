@@ -43,11 +43,17 @@ async function waitForServer(): Promise<void> {
 }
 
 async function expectText(page: import('playwright').Page, text: string): Promise<void> {
-  await page.waitForFunction(
-    (expected) => document.querySelector('main')?.innerText.includes(expected) ?? false,
-    text,
-    { timeout: 30000 },
-  );
+  try {
+    await page.waitForFunction(
+      (expected) => document.querySelector('main')?.innerText.includes(expected) ?? false,
+      text,
+      { timeout: 30000 },
+    );
+  } catch (error) {
+    const mainText = await page.locator('main').innerText().catch(() => '<main> indisponível');
+    console.error(`Texto E2E em falta: ${JSON.stringify(text)}\n--- <main> ---\n${mainText}`);
+    throw error;
+  }
 }
 
 async function main() {
@@ -98,17 +104,18 @@ async function main() {
     await page.getByRole('button', { name: 'Ver perfil e progresso' }).click();
 
     await expectText(page, '42 XP total');
-    await expectText(page, '3/7');
+    await expectText(page, '4/29');
     await expectText(page, '2 partidas');
     await expectText(page, '1 revisões');
     await expectText(page, 'Atividade Recente');
-    await expectText(page, 'Partida Jogada');
-    await expectText(page, 'Revisão Concluída');
+    await expectText(page, 'Partida jogada');
+    await expectText(page, 'Revisão concluída');
+    await expectText(page, '0/23');
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Ver perfil e progresso' }).click();
     await expectText(page, '42 XP total');
-    await expectText(page, '3/7');
+    await expectText(page, '4/29');
 
     const commandResult = await page.evaluate(async () => {
       const gameResponse = await fetch('/api/learner/events/game-completed', {
@@ -143,7 +150,7 @@ async function main() {
     await expectText(page, '70 XP total');
     await expectText(page, '3 partidas');
     await expectText(page, '2 revisões');
-    await expectText(page, '3/7');
+    await expectText(page, '4/29');
     await expectText(page, 'Atividade Recente');
 
     const localValue = await page.evaluate((key) => window.localStorage.getItem(key), LEGACY_PROFILE_KEY);

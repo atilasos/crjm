@@ -4,6 +4,7 @@ import type {
   GameProgressSnapshot,
   GamificationEvent,
   MissionProgress,
+  PatternProgress,
 } from '../components/gamification/gamification-state';
 
 export interface LearnerProfileRecord {
@@ -35,7 +36,7 @@ export interface LearnerActivityEventRecord {
   id: string;
   userId: string;
   gameId: GameId;
-  eventType: 'game_completed' | 'review_completed';
+  eventType: 'game_completed' | 'review_completed' | 'puzzle_solved';
   occurredAt: string;
   won: boolean | null;
   xpDelta: number;
@@ -45,6 +46,10 @@ export interface LearnerDashboardPayload {
   profile: LearnerProfileRecord;
   gameProgress: Record<GameId, GameProgressSnapshot>;
   achievements: Record<string, AchievementUnlock>;
+  patterns: Record<string, PatternProgress>;
+  missionClaims: Record<string, { claimedAt: string }>;
+  solvedPuzzleIds: string[];
+  streakShieldWeeks: string[];
   missions: MissionProgress[];
   recentEvents: GamificationEvent[];
   importFingerprint: string | null;

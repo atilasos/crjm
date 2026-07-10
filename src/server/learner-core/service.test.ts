@@ -11,6 +11,7 @@ function createService(nowIso = '2026-04-07T09:00:00Z') {
     dbPath: tempDbPath,
     sessionCookieName: 'crjm_session',
     sessionCookieMaxAgeSeconds: 3600,
+    sessionCookieSecure: false,
     sessionSecret: 'test-secret',
   };
   const db = createLearnerCoreDb(config);
@@ -70,6 +71,55 @@ describe('learner core service', () => {
     expect(reloaded.achievements.first_game).toBeDefined();
     expect(reloaded.achievements.first_win).toBeDefined();
     expect(reloaded.achievements.first_review).toBeDefined();
+  });
+
+  test('persists puzzles, pattern evidence, and idempotent mission claims', () => {
+    const { service, setNow } = createService('2026-07-10T09:00:00Z');
+    const session = service.ensureSession(null);
+
+    const puzzle = service.recordPuzzleSolved(session.userId, 'atari-go', {
+      puzzleId: 'ag-atari-1',
+      usedHint: true,
+    });
+    expect(puzzle.dashboard.achievements.first_puzzle).toBeDefined();
+    expect(puzzle.dashboard.recentEvents.at(-1)).toMatchObject({
+      type: 'puzzle_solved',
+      puzzleId: 'ag-atari-1',
+      usedHint: true,
+    });
+    const duplicatePuzzle = service.recordPuzzleSolved(session.userId, 'atari-go', {
+      puzzleId: 'ag-atari-1',
+      usedHint: false,
+    });
+    expect(duplicatePuzzle.sessionXpDelta).toBe(0);
+    expect(duplicatePuzzle.dashboard.solvedPuzzleIds).toEqual(['ag-atari-1']);
+
+    setNow('2026-07-10T09:10:00Z');
+    service.recordPatternProgress(session.userId, {
+      gameId: 'produto',
+      patternId: 'produto:equilibrio',
+      evidence: 'seen',
+      contextId: 'review-a',
+    });
+    const independent = service.recordPatternProgress(session.userId, {
+      gameId: 'produto',
+      patternId: 'produto:equilibrio',
+      evidence: 'used_alone',
+      contextId: 'game-a',
+    });
+    expect(independent.dashboard.patterns['produto:equilibrio']?.state).toBe('used_alone');
+    expect(independent.dashboard.achievements.balanced_builder).toBeDefined();
+
+    service.recordReviewCompleted(session.userId, 'dominorio');
+    const firstClaim = service.claimMissionReward(session.userId, 'daily-review-1');
+    const duplicateClaim = service.claimMissionReward(session.userId, 'daily-review-1');
+    expect(firstClaim.sessionXpDelta).toBe(8);
+    expect(duplicateClaim.sessionXpDelta).toBe(0);
+
+    const reloaded = service.getDashboard(session.userId);
+    expect(reloaded.patterns['produto:equilibrio']?.state).toBe('used_alone');
+    expect(reloaded.recentEvents.some((event) => event.type === 'puzzle_solved')).toBe(true);
+    expect(Object.keys(reloaded.missionClaims)).toHaveLength(1);
   });
 
   test('rolls back learner events when snapshot sync fails', () => {
@@ -138,6 +188,8 @@ describe('learner core service', () => {
     expect(tables).toContain('learner_activity_events');
     expect(tables).toContain('auth_sessions');
     expect(tables).toContain('learner_import_markers');
+    expect(tables).toContain('learner_puzzle_completions');
+    expect(tables).toContain('learner_streak_shields');
     expect(tables).not.toContain('matches');
     expect(tables).not.toContain('classrooms');
     expect(tables).not.toContain('teacher_dashboards');

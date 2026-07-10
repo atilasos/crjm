@@ -143,7 +143,10 @@ PORT=3001 bun run dev
 ```bash
 CRJM_LEARNER_DB_PATH=.data/learner-core-v1.sqlite
 CRJM_SESSION_SECRET=dev-session-secret
+CRJM_COOKIE_SECURE=false
 ```
+
+Mantém `CRJM_COOKIE_SECURE=false` ao servir por HTTP numa rede local. Num domínio HTTPS atrás de proxy, define-o como `true`.
 
 ### Estado atual da autenticação no branch V1
 
