@@ -19,8 +19,8 @@ function formatPos(pos: JogadaDupla['pos1']): string {
 export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
   if (isLoading) {
     return (
-      <section className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-        <p className="text-sm text-slate-600">A calcular melhores jogadas...</p>
+      <section className="rounded-xl border px-4 py-3 [background:var(--painel)] [border-color:var(--linha)]">
+        <p className="text-sm [color:var(--tinta-suave)]">A calcular melhores jogadas...</p>
       </section>
     );
   }
@@ -30,17 +30,17 @@ export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-200 bg-white px-4 py-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <section className="rounded-xl border px-4 py-3 [background:var(--painel)] [border-color:var(--linha)]">
+      <p className="text-xs font-semibold uppercase tracking-wide [color:var(--tinta-suave)]">
         Top jogadas
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
         {moves.slice(0, 3).map((candidate) => (
           <div
             key={`${candidate.rank}-${formatMove(candidate.move)}`}
-            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs text-slate-700"
+            className="rounded-lg border px-3 py-2 text-xs [background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta-suave)]"
           >
-            <p className="font-semibold text-slate-900">#{candidate.rank} {formatMove(candidate.move)}</p>
+            <p className="font-semibold [color:var(--tinta)]">#{candidate.rank} {formatMove(candidate.move)}</p>
             {candidate.reasonShort && <p className="mt-1">{candidate.reasonShort}</p>}
           </div>
         ))}

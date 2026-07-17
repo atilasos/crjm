@@ -1,4 +1,4 @@
-import { Player, GameMode, GameStatus } from '../types';
+import type { Player, GameMode, GameStatus } from '../types';
 import type { DifficultyLevel } from '../ai-core/types';
 import type { DifficultyRecommendation } from '../ai-core/adaptive-difficulty';
 import { DifficultySelector } from './DifficultySelector';
@@ -86,13 +86,13 @@ export function PlayerInfo({
   };
 
   return (
-    <div className="bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-lg border-2 border-white/50">
+    <div className="rounded-[var(--raio-painel)] border p-4 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
       {/* Modo de jogo */}
-      <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200">
-        <span className="text-sm font-medium text-gray-600">Modo de jogo:</span>
+      <div className="flex items-center justify-between mb-4 pb-4 border-b [border-color:var(--linha)]">
+        <span className="text-sm font-medium [color:var(--tinta-suave)]">Modo de jogo:</span>
         <button
           onClick={onTrocarModo}
-          className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+          className="text-sm font-semibold transition-colors [color:var(--tinta)] hover:[color:var(--tinta-suave)]"
         >
           {modo === 'vs-computador' ? '🤖 vs Computador' : '👥 2 Jogadores'}
         </button>
@@ -100,25 +100,25 @@ export function PlayerInfo({
 
       {/* Selector de lado (apenas em modo vs-computador) */}
       {modo === 'vs-computador' && onChangeHumanPlayer && (
-        <div className="mb-4 pb-4 border-b border-gray-200">
-          <span className="text-sm font-medium text-gray-600 block mb-2">Jogar como:</span>
+        <div className="mb-4 pb-4 border-b [border-color:var(--linha)]">
+          <span className="text-sm font-medium block mb-2 [color:var(--tinta-suave)]">Jogar como:</span>
           <div className="flex gap-2">
             <button
               onClick={() => onChangeHumanPlayer('jogador1')}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 py-2 px-3 rounded-[var(--raio-controlo)] text-sm font-medium transition-all ${
                 humanPlayer === 'jogador1'
-                  ? `${corJogador1} text-white shadow-md`
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? `${corJogador1} text-white`
+                  : 'border [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[border-color:var(--tinta-suave)]'
               }`}
             >
               {nomeJogador1} (1.º)
             </button>
             <button
               onClick={() => onChangeHumanPlayer('jogador2')}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+              className={`flex-1 py-2 px-3 rounded-[var(--raio-controlo)] text-sm font-medium transition-all ${
                 humanPlayer === 'jogador2'
-                  ? `${corJogador2} text-white shadow-md`
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  ? `${corJogador2} text-white`
+                  : 'border [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[border-color:var(--tinta-suave)]'
               }`}
             >
               {nomeJogador2} (2.º)
@@ -129,7 +129,7 @@ export function PlayerInfo({
 
       {/* Difficulty selector (only for games with AI support) */}
       {modo === 'vs-computador' && hasAISupport && (
-        <div className="mb-4 pb-4 border-b border-gray-200">
+        <div className="mb-4 pb-4 border-b [border-color:var(--linha)]">
           <DifficultySelector
             level={difficulty!}
             onChange={onChangeDifficulty!}
@@ -151,7 +151,7 @@ export function PlayerInfo({
           <span>{getNomeJogador('jogador1')}</span>
         </div>
         
-        <span className="text-2xl font-bold text-gray-400">VS</span>
+        <span className="text-2xl font-bold [color:var(--tinta-suave)]">VS</span>
         
         <div
           className={`player-indicator ${corJogador2} text-white ${
@@ -165,11 +165,14 @@ export function PlayerInfo({
 
       {/* Estado do jogo */}
       {!jogoTerminado && (
-        <div className="text-center py-2 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
-          <p className="text-gray-700">
+        <div className="text-center py-2 rounded-[var(--raio-controlo)] border [border-color:var(--linha)]">
+          <p className="[color:var(--tinta)]">
             {aiMetrics?.isThinking ? (
               <span className="flex items-center justify-center gap-2">
-                <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                <span
+                  className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
+                  style={{ borderColor: 'var(--tinta-suave)', borderTopColor: 'transparent' }}
+                ></span>
                 A pensar...
               </span>
             ) : (
@@ -181,10 +184,10 @@ export function PlayerInfo({
 
       {/* AI Metrics (only show if AI has made moves) */}
       {modo === 'vs-computador' && hasAISupport && aiMetrics && (aiMetrics.lastDepth > 0 || aiMetrics.fromBook) && (
-        <div className="mt-3 p-2 bg-gray-50 rounded-lg">
-          <div className="text-xs text-gray-500 flex flex-wrap gap-x-3 gap-y-1 justify-center">
+        <div className="mt-3 p-2 rounded-[var(--raio-controlo)] border [border-color:var(--linha)]">
+          <div className="text-xs flex flex-wrap gap-x-3 gap-y-1 justify-center [color:var(--tinta-suave)]">
             {aiMetrics.fromBook ? (
-              <span className="text-indigo-600 font-medium">📖 Livro de aberturas</span>
+              <span className="font-medium [color:var(--tinta)]">📖 Livro de aberturas</span>
             ) : (
               <>
                 <span title="Profundidade de pesquisa">🔍 {aiMetrics.lastDepth}</span>
@@ -203,7 +206,7 @@ export function PlayerInfo({
 
       {/* AI status indicator */}
       {modo === 'vs-computador' && hasAISupport && !aiReady && (
-        <div className="mt-2 text-center text-xs text-amber-600">
+        <div className="mt-2 text-center text-xs [color:var(--ouro)]">
           ⏳ A carregar motor de IA...
         </div>
       )}

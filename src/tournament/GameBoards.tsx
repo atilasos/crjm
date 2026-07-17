@@ -89,40 +89,40 @@ export function GatosCaesBoard({ state, isMyTurn, myRole, onMove }: GatosCaesBoa
       </div>
 
       {/* Legenda e Stats */}
-      <div className="flex flex-col items-center gap-3 text-sm text-white/80">
+      <div className="flex flex-col items-center gap-3 text-sm [color:var(--tinta)]">
         <div className="flex justify-center gap-8">
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? 'bg-orange-500/20 ring-1 ring-orange-400 shadow-lg' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <span className="text-2xl drop-shadow-sm">🐱</span>
-              <span className="font-semibold text-white">Gatos (J1)</span>
-              {myRole === 'jogador1' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Gatos (J1)</span>
+              {myRole === 'jogador1' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
-            <div className="text-xs text-white/50">Total: {state.totalGatos}</div>
+            <div className="text-xs [color:var(--tinta-suave)]">Total: {state.totalGatos}</div>
           </div>
 
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? 'bg-blue-500/20 ring-1 ring-blue-400 shadow-lg' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <span className="text-2xl drop-shadow-sm">🐶</span>
-              <span className="font-semibold text-white">Cães (J2)</span>
-              {myRole === 'jogador2' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Cães (J2)</span>
+              {myRole === 'jogador2' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
-            <div className="text-xs text-white/50">Total: {state.totalCaes}</div>
+            <div className="text-xs [color:var(--tinta-suave)]">Total: {state.totalCaes}</div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-white/60">
+        <div className="flex items-center gap-2 text-xs [color:var(--tinta-suave)]">
           <div className="w-4 h-4 bg-amber-200 rounded border border-amber-400/50 shadow-sm" />
           <span>Casas centrais (Obrigatórias no 1.º Gato)</span>
         </div>
 
         <div className="text-xs font-medium">
           {isMyTurn
-            ? <span className="text-green-400 animate-pulse">É a tua vez de jogar!</span>
-            : <span className="text-white/40">A aguardar pela jogada do adversário...</span>}
+            ? <span className="[color:var(--sucesso)] animate-pulse">É a tua vez de jogar!</span>
+            : <span className="[color:var(--tinta-suave)]">A aguardar pela jogada do adversário...</span>}
         </div>
 
         {isMyTurn && (
-          <div className="text-[11px] text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+          <div className="text-[11px] [color:var(--tinta-suave)] [background:var(--fundo)] px-3 py-1 rounded-full border [border-color:var(--linha)]">
             {myRole === 'jogador1'
               ? !state.primeiroGatoColocado
                 ? 'Coloca o primeiro Gato numa casa central (amarela)'
@@ -249,33 +249,33 @@ export function DominorioBoard({ state, isMyTurn, myRole, onMove }: DominorioBoa
       </div>
 
       {/* Legenda e Stats */}
-      <div className="flex flex-col items-center gap-3 text-sm text-white/80">
+      <div className="flex flex-col items-center gap-3 text-sm [color:var(--tinta)]">
         <div className="flex justify-center gap-8">
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? 'bg-pink-500/20 ring-1 ring-pink-400 shadow-lg' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <div className="w-3 h-6 bg-pink-500 rounded shadow-sm"></div>
-              <span className="font-semibold text-white">Vertical (J1)</span>
-              {myRole === 'jogador1' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Vertical (J1)</span>
+              {myRole === 'jogador1' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
           </div>
 
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? 'bg-cyan-500/20 ring-1 ring-cyan-400 shadow-lg' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <div className="w-6 h-3 bg-cyan-500 rounded shadow-sm"></div>
-              <span className="font-semibold text-white">Horizontal (J2)</span>
-              {myRole === 'jogador2' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Horizontal (J2)</span>
+              {myRole === 'jogador2' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
           </div>
         </div>
 
         <div className="text-xs font-medium">
           {isMyTurn
-            ? <span className="text-green-400 animate-pulse">É a tua vez de jogar!</span>
-            : <span className="text-white/40">A aguardar pela jogada do adversário...</span>}
+            ? <span className="[color:var(--sucesso)] animate-pulse">É a tua vez de jogar!</span>
+            : <span className="[color:var(--tinta-suave)]">A aguardar pela jogada do adversário...</span>}
         </div>
 
         {isMyTurn && (
-          <div className="text-[11px] text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+          <div className="text-[11px] [color:var(--tinta-suave)] [background:var(--fundo)] px-3 py-1 rounded-full border [border-color:var(--linha)]">
             {myRole === 'jogador1'
               ? 'Clica para colocar um dominó VERTICAL'
               : 'Clica para colocar um dominó HORIZONTAL'}
@@ -403,8 +403,8 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
   return (
     <div className="space-y-4">
       {/* Aviso Misère */}
-      <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-2 text-center">
-        <p className="text-yellow-200 font-semibold text-[11px] flex items-center justify-center gap-2">
+      <div className="rounded-lg p-2 text-center border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_10%,transparent)]">
+        <p className="[color:var(--tinta)] font-semibold text-[11px] flex items-center justify-center gap-2">
           <span>⚠️</span> MISÈRE: Quem fizer a última jogada PERDE!
         </p>
       </div>
@@ -434,29 +434,29 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
       </div>
 
       {/* Legenda e Stats */}
-      <div className="flex flex-col items-center gap-3 text-sm text-white/80">
+      <div className="flex flex-col items-center gap-3 text-sm [color:var(--tinta)]">
         <div className="flex justify-center gap-8">
-          <div className={`flex items-center gap-2 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? 'bg-pink-500/20 ring-1 ring-pink-400' : ''}`}>
+          <div className={`flex items-center gap-2 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="w-3 h-6 bg-pink-500 rounded shadow-sm"></div>
-            <span className="font-semibold text-white">Vertical (J1)</span>
-            {myRole === 'jogador1' && <span className="text-[10px] text-white/60 ml-1">(tu)</span>}
+            <span className="font-semibold [color:var(--tinta)]">Vertical (J1)</span>
+            {myRole === 'jogador1' && <span className="text-[10px] [color:var(--tinta-suave)] ml-1">(tu)</span>}
           </div>
 
-          <div className={`flex items-center gap-2 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? 'bg-cyan-500/20 ring-1 ring-cyan-400' : ''}`}>
+          <div className={`flex items-center gap-2 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="w-6 h-3 bg-cyan-500 rounded shadow-sm"></div>
-            <span className="font-semibold text-white">Horizontal (J2)</span>
-            {myRole === 'jogador2' && <span className="text-[10px] text-white/60 ml-1">(tu)</span>}
+            <span className="font-semibold [color:var(--tinta)]">Horizontal (J2)</span>
+            {myRole === 'jogador2' && <span className="text-[10px] [color:var(--tinta-suave)] ml-1">(tu)</span>}
           </div>
         </div>
 
         <div className="text-xs font-medium">
           {isMyTurn
-            ? <span className="text-green-400 animate-pulse">É a tua vez de jogar!</span>
-            : <span className="text-white/40">A aguardar pela jogada do adversário...</span>}
+            ? <span className="[color:var(--sucesso)] animate-pulse">É a tua vez de jogar!</span>
+            : <span className="[color:var(--tinta-suave)]">A aguardar pela jogada do adversário...</span>}
         </div>
 
         {isMyTurn && (
-          <div className="text-[11px] text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+          <div className="text-[11px] [color:var(--tinta-suave)] [background:var(--fundo)] px-3 py-1 rounded-full border [border-color:var(--linha)]">
             {inicioSelecao
               ? 'Clica na casa final para completar o segmento'
               : `Clica na casa inicial para o teu segmento ${minhaOrientacao.toUpperCase()}`}
@@ -467,7 +467,7 @@ export function QuelhasBoard({ state, isMyTurn, myRole, onMove, onSwap }: Quelha
         {state.trocaDisponivel && isMyTurn && onSwap && (
           <button
             onClick={onSwap}
-            className="mt-2 px-3 py-1.5 rounded-lg bg-purple-500 text-white text-[11px] font-medium hover:bg-purple-600 transition-colors shadow-lg shadow-purple-500/20"
+            className="mt-2 px-3 py-1.5 rounded-lg [background:var(--tinta)] [color:var(--fundo)] text-[11px] font-medium hover:[background:var(--tinta-suave)] transition-colors"
           >
             🔄 Usar regra de troca
           </button>
@@ -571,15 +571,15 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
 
   return (
     <div className="space-y-4">
-      <div className="bg-white/5 p-4 rounded-xl border border-white/10 shadow-inner">
-        <label className="text-white/50 text-[10px] font-bold uppercase tracking-wider mb-3 block text-center">Cor da peça a colocar</label>
+      <div className="rounded-xl p-4 border [background:var(--fundo)] [border-color:var(--linha)]">
+        <label className="[color:var(--tinta-suave)] text-[10px] font-bold uppercase tracking-wider mb-3 block text-center">Cor da peça a colocar</label>
         <div className="flex justify-center gap-4">
           <button
             onClick={() => !state.primeiraJogada && setCorSelecao('preta')}
             disabled={state.primeiraJogada && myRole === 'jogador2'}
             className={`flex-1 max-w-[120px] px-3 py-2 rounded-lg border flex items-center justify-center gap-2 transition-all ${(state.primeiraJogada && myRole === 'jogador1') || (corSelecao === 'preta') || (!state.primeiraJogada && !corSelecao && myRole === 'jogador1')
-              ? 'bg-gray-800 border-gray-600 ring-2 ring-red-400 text-white shadow-lg'
-              : 'bg-white/5 border-white/10 text-white/40 grayscale'
+              ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] [border-color:var(--ouro)] ring-2 ring-[var(--ouro)] [color:var(--tinta)]'
+              : '[background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta-suave)] grayscale'
               } ${state.primeiraJogada && myRole === 'jogador2' ? 'opacity-20 cursor-not-allowed' : ''}`}
           >
             <div className="w-3 h-3 rounded-full bg-gray-900 border border-gray-600"></div>
@@ -590,8 +590,8 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
             onClick={() => !state.primeiraJogada && setCorSelecao('branca')}
             disabled={state.primeiraJogada && myRole === 'jogador1'}
             className={`flex-1 max-w-[120px] px-3 py-2 rounded-lg border flex items-center justify-center gap-2 transition-all ${(state.primeiraJogada && myRole === 'jogador2') || (corSelecao === 'branca') || (!state.primeiraJogada && !corSelecao && myRole === 'jogador2')
-              ? 'bg-indigo-900/40 border-indigo-400 ring-2 ring-blue-400 text-white shadow-lg'
-              : 'bg-white/5 border-white/10 text-white/40 grayscale'
+              ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] [border-color:var(--ouro)] ring-2 ring-[var(--ouro)] [color:var(--tinta)]'
+              : '[background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta-suave)] grayscale'
               } ${state.primeiraJogada && myRole === 'jogador1' ? 'opacity-20 cursor-not-allowed' : ''}`}
           >
             <div className="w-3 h-3 rounded-full bg-indigo-50 border border-indigo-300"></div>
@@ -686,26 +686,26 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
       </div>
 
       {/* Pontuação */}
-      <div className="flex flex-col items-center gap-3 text-sm text-white/80">
+      <div className="flex flex-col items-center gap-3 text-sm [color:var(--tinta)]">
         <div className="flex justify-center gap-8">
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? 'bg-red-500/20 ring-1 ring-red-400' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <span className="text-xl">🔴</span>
-              <span className="font-semibold text-white">Pretas (J1)</span>
-              {myRole === 'jogador1' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Pretas (J1)</span>
+              {myRole === 'jogador1' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
-            <div className="text-[10px] text-white/50">
+            <div className="text-[10px] [color:var(--tinta-suave)]">
               Grupo: {state.pontuacaoPretas.maiorGrupo} / {state.pontuacaoPretas.segundoMaiorGrupo} | Produto: {state.pontuacaoPretas.produto}
             </div>
           </div>
 
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? 'bg-blue-500/20 ring-1 ring-blue-400' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <span className="text-xl">🔵</span>
-              <span className="font-semibold text-white">Brancas (J2)</span>
-              {myRole === 'jogador2' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Brancas (J2)</span>
+              {myRole === 'jogador2' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
-            <div className="text-[10px] text-white/50">
+            <div className="text-[10px] [color:var(--tinta-suave)]">
               Grupo: {state.pontuacaoBrancas.maiorGrupo} / {state.pontuacaoBrancas.segundoMaiorGrupo} | Produto: {state.pontuacaoBrancas.produto}
             </div>
           </div>
@@ -713,12 +713,12 @@ export function ProdutoBoard({ state, isMyTurn, myRole, onMove }: ProdutoBoardPr
 
         <div className="text-xs font-medium">
           {isMyTurn
-            ? <span className="text-green-400 animate-pulse">É a tua vez de jogar!</span>
-            : <span className="text-white/40">A aguardar pela jogada do adversário...</span>}
+            ? <span className="[color:var(--sucesso)] animate-pulse">É a tua vez de jogar!</span>
+            : <span className="[color:var(--tinta-suave)]">A aguardar pela jogada do adversário...</span>}
         </div>
 
         {isMyTurn && (
-          <div className="text-[11px] text-white/50 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+          <div className="text-[11px] [color:var(--tinta-suave)] [background:var(--fundo)] px-3 py-1 rounded-full border [border-color:var(--linha)]">
             {state.jogadaEmCurso.pos1
               ? 'Coloca a segunda peça'
               : `Coloca a primeira peça (${state.primeiraJogada ? 'cor obrigatória' : 'qualquer cor'})`}
@@ -821,36 +821,36 @@ export function AtariGoBoard({ state, isMyTurn, myRole, onMove }: AtariGoBoardPr
       </div>
 
       {/* Legenda e Stats */}
-      <div className="flex flex-col items-center gap-3 text-sm text-white/80">
+      <div className="flex flex-col items-center gap-3 text-sm [color:var(--tinta)]">
         <div className="flex justify-center gap-8">
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? 'bg-black/20 ring-1 ring-white/10 shadow-lg' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador1' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-black shadow-sm" />
-              <span className="font-semibold text-white">Pretos (J1)</span>
-              {myRole === 'jogador1' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Pretos (J1)</span>
+              {myRole === 'jogador1' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
-            <div className="text-xs text-white/50">Capturas: {state.pedrasCapturadas.brancas}</div>
+            <div className="text-xs [color:var(--tinta-suave)]">Capturas: {state.pedrasCapturadas.brancas}</div>
           </div>
 
-          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? 'bg-white/10 ring-1 ring-white/20 shadow-lg' : ''}`}>
+          <div className={`flex flex-col items-center gap-1 p-2 rounded-lg transition-all ${myRole === 'jogador2' ? '[background:color-mix(in_srgb,var(--ouro)_12%,transparent)] ring-1 ring-[var(--ouro)]' : ''}`}>
             <div className="flex items-center gap-2">
               <div className="w-4 h-4 rounded-full bg-white border border-gray-300 shadow-sm" />
-              <span className="font-semibold text-white">Brancos (J2)</span>
-              {myRole === 'jogador2' && <span className="text-[10px] text-white/60">(tu)</span>}
+              <span className="font-semibold [color:var(--tinta)]">Brancos (J2)</span>
+              {myRole === 'jogador2' && <span className="text-[10px] [color:var(--tinta-suave)]">(tu)</span>}
             </div>
-            <div className="text-xs text-white/50">Capturas: {state.pedrasCapturadas.pretas}</div>
+            <div className="text-xs [color:var(--tinta-suave)]">Capturas: {state.pedrasCapturadas.pretas}</div>
           </div>
         </div>
 
-        <div className="px-4 py-1.5 bg-red-500/20 border border-red-400/30 rounded-full text-[11px] text-red-100 flex items-center gap-2">
+        <div className="px-4 py-1.5 rounded-full text-[11px] flex items-center gap-2 border [border-color:var(--perigo)] [color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,transparent)]">
           <span>⚔️</span>
           <span><b>Objetivo:</b> A primeira captura vence o jogo!</span>
         </div>
 
         <div className="text-xs font-medium">
           {isMyTurn
-            ? <span className="text-green-400 animate-pulse">É a tua vez de jogar!</span>
-            : <span className="text-white/40">A aguardar pela jogada do adversário...</span>}
+            ? <span className="[color:var(--sucesso)] animate-pulse">É a tua vez de jogar!</span>
+            : <span className="[color:var(--tinta-suave)]">A aguardar pela jogada do adversário...</span>}
         </div>
       </div>
     </div>
@@ -985,30 +985,30 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
   return (
     <div className="space-y-4">
       {/* Seletor de Ação */}
-      <div className="bg-white/5 p-3 rounded-xl border border-white/10">
+      <div className="rounded-xl p-3 border [background:var(--fundo)] [border-color:var(--linha)]">
         <div className="flex justify-center gap-3 mb-2">
           <button
             onClick={() => handleSelectTipoAcao('colocacao')}
-            className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${tipoAcao === 'colocacao' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
+            className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${tipoAcao === 'colocacao' ? 'border border-transparent [background:var(--tinta)] [color:var(--fundo)]' : 'border [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)]'}`}
           >
             Colocação
           </button>
           <button
             onClick={() => handleSelectTipoAcao('substituicao')}
-            className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${tipoAcao === 'substituicao' ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-white/5 text-white/60 hover:bg-white/10'}`}
+            className={`px-3 py-1.5 rounded-lg font-medium text-xs transition-all ${tipoAcao === 'substituicao' ? 'border border-transparent [background:var(--tinta)] [color:var(--fundo)]' : 'border [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)]'}`}
           >
             Substituição
           </button>
           {state.swapDisponivel && (
             <button
               onClick={() => onMove({ type: 'nex_swap' } as any)}
-              className="px-3 py-1.5 rounded-lg font-medium text-xs bg-purple-500 text-white shadow-lg shadow-purple-500/20"
+              className="px-3 py-1.5 rounded-lg font-medium text-xs [background:var(--tinta)] [color:var(--fundo)]"
             >
               🔄 Swap
             </button>
           )}
           {tipoAcao && (
-            <button onClick={handleCancelar} className="px-2 py-1 text-red-400 text-xs underline ml-2">Cancelar</button>
+            <button onClick={handleCancelar} className="px-2 py-1 [color:var(--perigo)] text-xs underline ml-2">Cancelar</button>
           )}
         </div>
 
@@ -1016,13 +1016,13 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
           <div className="flex justify-center gap-2 mt-2">
             <button
               onClick={() => setTipoSelecao('propria')}
-              className={`px-2 py-1 rounded text-[10px] ${tipoSelecao === 'propria' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40'}`}
+              className={`px-2 py-1 rounded text-[10px] ${tipoSelecao === 'propria' ? '[background:color-mix(in_srgb,var(--tinta)_12%,transparent)] [color:var(--tinta)]' : '[background:var(--fundo)] [color:var(--tinta-suave)]'}`}
             >
               {tipoAcao === 'colocacao' ? 'Própria' : 'Sua (Sacrifício)'}
             </button>
             <button
               onClick={() => setTipoSelecao('neutra')}
-              className={`px-2 py-1 rounded text-[10px] ${tipoSelecao === 'neutra' ? 'bg-white/20 text-white' : 'bg-white/5 text-white/40'}`}
+              className={`px-2 py-1 rounded text-[10px] ${tipoSelecao === 'neutra' ? '[background:color-mix(in_srgb,var(--tinta)_12%,transparent)] [color:var(--tinta)]' : '[background:var(--fundo)] [color:var(--tinta-suave)]'}`}
             >
               Neutras {tipoAcao === 'substituicao' && `(${selecao.neutrasParaProprias.length}/2)`}
             </button>
@@ -1033,10 +1033,10 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
       {/* Tabuleiro */}
       <div className="relative group">
         {(panOffset.x !== 0 || panOffset.y !== 0) && (
-          <button onClick={resetPan} className="absolute top-2 right-2 z-10 px-2 py-1 bg-blue-500 text-white text-[10px] rounded-lg shadow-md">↺ Reset</button>
+          <button onClick={resetPan} className="absolute top-2 right-2 z-10 px-2 py-1 [background:var(--tinta)] [color:var(--fundo)] text-[10px] rounded-lg [box-shadow:var(--sombra)]">↺ Reset</button>
         )}
 
-        <div className="overflow-hidden rounded-xl bg-black/20 border border-white/5 cursor-grab active:cursor-grabbing"
+        <div className="overflow-hidden rounded-xl border [background:var(--fundo)] [border-color:var(--linha)] cursor-grab active:cursor-grabbing"
           onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={() => setIsDragging(false)} onMouseLeave={() => setIsDragging(false)}>
           <div style={{ transform: `translate(${panOffset.x}px, ${panOffset.y}px)`, transition: isDragging ? 'none' : 'transform 0.1s' }} className="p-12 inline-block relative">
             {/* Indicadores de canto */}
@@ -1077,8 +1077,8 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
       </div>
 
       <div className="text-center">
-        <div className="text-[11px] text-white/50 font-medium uppercase tracking-wider mb-2">Legenda</div>
-        <div className="flex justify-center gap-4 text-xs text-white/60">
+        <div className="text-[11px] [color:var(--tinta-suave)] font-medium uppercase tracking-wider mb-2">Legenda</div>
+        <div className="flex justify-center gap-4 text-xs [color:var(--tinta-suave)]">
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-gray-900" /> Pretas (↖↘)</div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-white border border-gray-400" /> Brancas (↗↙)</div>
           <div className="flex items-center gap-1.5"><div className="w-3 h-3 rounded-full bg-gray-400" /> Neutras</div>
@@ -1087,8 +1087,8 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
 
       <div className="text-center text-xs">
         {isMyTurn
-          ? <span className="text-green-400 font-medium animate-pulse">É a tua vez! {tipoAcao ? 'Completa a ação.' : 'Escolhe uma ação.'}</span>
-          : <span className="text-white/40">A aguardar adversário...</span>}
+          ? <span className="[color:var(--sucesso)] font-medium animate-pulse">É a tua vez! {tipoAcao ? 'Completa a ação.' : 'Escolhe uma ação.'}</span>
+          : <span className="[color:var(--tinta-suave)]">A aguardar adversário...</span>}
       </div>
     </div>
   );

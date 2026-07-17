@@ -70,12 +70,12 @@ function getSuggestedAction(
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'high') {
-    return 'border-rose-300 bg-rose-50 text-rose-900';
+    return '[border-color:color-mix(in_srgb,#E05252_50%,var(--linha))] [background:color-mix(in_srgb,#E05252_12%,var(--painel))] [color:var(--tinta)]';
   }
   if (severity === 'medium') {
-    return 'border-amber-300 bg-amber-50 text-amber-900';
+    return '[border-color:color-mix(in_srgb,var(--ouro)_55%,var(--linha))] [background:color-mix(in_srgb,var(--ouro)_12%,var(--painel))] [color:var(--tinta)]';
   }
-  return 'border-sky-300 bg-sky-50 text-sky-900';
+  return '[border-color:color-mix(in_srgb,var(--jogo-dominorio)_45%,var(--linha))] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,var(--painel))] [color:var(--tinta)]';
 }
 
 export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
@@ -347,41 +347,44 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
   return (
     <GameLayout titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
-      <div className="space-y-4">
-        {/* Info do jogador */}
-        <PlayerInfo
-          modo={state.modo}
-          jogadorAtual={state.jogadorAtual}
-          estado={state.estado}
-          nomeJogador1="Gatos"
-          nomeJogador2="Cães"
-          corJogador1="bg-orange-500"
-          corJogador2="bg-blue-500"
-          humanPlayer={humanPlayer}
-          onChangeHumanPlayer={handleChangeHumanPlayer}
-          onNovoJogo={novoJogo}
-          onTrocarModo={trocarModo}
-        />
-
-        <TrainingPathCard gameId="gatos-caes" />
-
-        {/* Difficulty selector (only in vs computer mode) */}
-        {state.modo === 'vs-computador' && (
-          <DifficultySelector
-            level={difficulty}
-            onChange={setDifficulty}
-            disabled={aiThinking}
-            recommendation={difficultyRecommendation}
-            canAcceptRecommendation={state.estado !== 'a-jogar'}
-            onAcceptRecommendation={(level) => {
-              setDifficulty(level);
-              acceptDifficultyRecommendation('gatos-caes');
-            }}
+      <div className="flex flex-col gap-4">
+        {/* Controlos de pré-jogo — em mobile ficam depois do tabuleiro */}
+        <div className="order-2 lg:order-1 flex flex-col gap-4">
+          {/* Info do jogador */}
+          <PlayerInfo
+            modo={state.modo}
+            jogadorAtual={state.jogadorAtual}
+            estado={state.estado}
+            nomeJogador1="Gatos"
+            nomeJogador2="Cães"
+            corJogador1="bg-orange-500"
+            corJogador2="bg-blue-500"
+            humanPlayer={humanPlayer}
+            onChangeHumanPlayer={handleChangeHumanPlayer}
+            onNovoJogo={novoJogo}
+            onTrocarModo={trocarModo}
           />
-        )}
 
-        {/* Tabuleiro */}
-        <div className="game-container">
+          <TrainingPathCard gameId="gatos-caes" />
+
+          {/* Difficulty selector (only in vs computer mode) */}
+          {state.modo === 'vs-computador' && (
+            <DifficultySelector
+              level={difficulty}
+              onChange={setDifficulty}
+              disabled={aiThinking}
+              recommendation={difficultyRecommendation}
+              canAcceptRecommendation={state.estado !== 'a-jogar'}
+              onAcceptRecommendation={(level) => {
+                setDifficulty(level);
+                acceptDifficultyRecommendation('gatos-caes');
+              }}
+            />
+          )}
+        </div>
+
+        {/* Tabuleiro — primeiro em mobile (above the fold) */}
+        <div className="game-container order-1 lg:order-2">
           <div className="aspect-square max-w-md mx-auto">
             <div className="grid grid-cols-8 gap-1 h-full bg-amber-900 p-2 rounded-xl">
               {state.tabuleiro.map((linha, linhaIdx) =>
@@ -405,7 +408,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           </div>
 
           {/* Legenda */}
-          <div className="mt-4 flex flex-col items-center gap-2 text-sm text-gray-600">
+          <div className="mt-4 flex flex-col items-center gap-2 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex justify-center gap-6">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🐱</span>
@@ -423,11 +426,11 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
           </div>
 
           {/* Dica de jogada */}
-          <div className="mt-2 text-center text-sm text-gray-500">
+          <div className="mt-2 text-center text-sm [color:var(--tinta-suave-no-papel)]">
             {state.estado === 'a-jogar' && (
               isVezDaIA ? (
-                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
-                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                <span className="flex items-center justify-center gap-2 [color:var(--tinta-no-papel)] font-medium">
+                  <span className="inline-block w-4 h-4 border-2 border-[color:var(--tinta-suave-no-papel)] border-t-transparent rounded-full animate-spin"></span>
                   IA a pensar…
                 </span>
               ) : (
@@ -447,7 +450,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
         </div>
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && isVezDoHumano && (
-          <div className="space-y-3">
+          <div className="order-3 space-y-3">
             <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
             <HintLegend showThreat={Boolean(criticalThreat)} showAlternative={false} />
             <TutorHintCard
@@ -480,27 +483,27 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
         )}
 
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
-          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <section className="order-4 rounded-xl border [border-color:var(--linha)] [background:var(--painel)] px-4 py-3 text-sm [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+              <span className="rounded-full [background:color-mix(in_srgb,var(--ouro)_18%,transparent)] px-2 py-0.5 text-xs font-medium [color:var(--tinta)]">
                 2-3 min
               </span>
             </div>
-            <p className="mt-1 text-emerald-800">
+            <p className="mt-1 [color:var(--tinta-suave)]">
               Revê os momentos em que perdeste mais espaço e experimenta a alternativa sugerida.
             </p>
-            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+            <p className="mt-2 rounded-lg border [border-color:color-mix(in_srgb,var(--ouro)_45%,var(--linha))] [background:color-mix(in_srgb,var(--ouro)_12%,var(--painel))] px-3 py-2 font-medium">
               Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                  className="rounded-lg border [border-color:var(--linha)] [background:color-mix(in_srgb,var(--tinta)_4%,var(--painel))] px-3 py-2"
                 >
-                  <p className="font-medium text-emerald-900">{item.title}</p>
-                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
                 </div>
               ))}
             </div>
@@ -515,7 +518,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
                 });
                 setReviewRewarded(true);
               }}
-              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="mt-3 rounded-lg [background:var(--tinta)] px-3 py-2 text-sm font-semibold [color:var(--fundo)] transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
             </button>

@@ -1,213 +1,317 @@
 @import "tailwindcss";
 
-/* Custom CSS Variables */
-:root {
-  --color-primary: #6366f1;
-  --color-primary-dark: #4f46e5;
-  --color-secondary: #8b5cf6;
-  --color-accent: #f59e0b;
-  --color-success: #10b981;
-  --color-danger: #ef4444;
-  --color-cat: #f97316;
-  --color-dog: #3b82f6;
-  --color-player1: #ec4899;
-  --color-player2: #06b6d4;
-  --font-display: 'Fredoka', sans-serif;
-  --font-handwriting: 'Patrick Hand', cursive;
-  --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
-  --panel-bg: rgba(255, 255, 255, 0.9);
-  --panel-border: #c7d2fe;
-  --panel-heading: #3730a3;
-  --panel-text: #374151;
-  --panel-muted: #6b7280;
-  --panel-divider: #e0e7ff;
+/* ============================================================================
+   Fontes self-hosted (subset latin, sem CDN — o site funciona offline)
+   ========================================================================== */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 700 800;
+  font-display: swap;
+  src: url('./fonts/bricolage-grotesque-700-800-latin.woff2') format('woff2');
 }
 
-/* Tema escuro: o tabuleiro continua "papel", é a sala que escurece */
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/atkinson-hyperlegible-400-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/atkinson-hyperlegible-700-latin.woff2') format('woff2');
+}
+
+/* ============================================================================
+   Tokens — «O tabuleiro é a identidade»
+   Sala sóbria (fundo frio), tabuleiros em papel quente, um acento por jogo.
+   ========================================================================== */
+:root {
+  color-scheme: light;
+
+  /* Superfícies e texto */
+  --fundo: #F1F4F8;
+  --papel: #FDFBF4;
+  --painel: #FFFFFF;
+  --tinta: #1C2B45;
+  --tinta-suave: #54627A;
+  --linha: #D8DFE9;
+  --ouro: #DDA62E;
+
+  /* Tinta sobre papel: os tabuleiros continuam claros nos dois temas */
+  --tinta-no-papel: #1C2B45;
+  --tinta-suave-no-papel: #54627A;
+  --linha-no-papel: #E3DCC6;
+
+  /* Acento por jogo (mesma família de saturação — nenhum grita mais que outro) */
+  --jogo-gatos: #E06A45;
+  --jogo-dominorio: #3F7FD9;
+  --jogo-quelhas: #7A5FD0;
+  --jogo-produto: #2E9E74;
+  --jogo-atari: #3C4654;
+  --jogo-nex: #C98A2E;
+
+  /* Semânticos */
+  --sucesso: #2E9E74;
+  --perigo: #C0442E;
+
+  /* Elevação única e raios consistentes */
+  --sombra: 0 1px 3px rgb(28 43 69 / 0.08);
+  --raio-painel: 12px;
+  --raio-controlo: 8px;
+
+  /* Tipografia */
+  --font-display: 'Bricolage Grotesque', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --font-corpo: 'Atkinson Hyperlegible', 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Tema escuro: a sala escurece; o tabuleiro continua papel — é o objeto iluminado */
 :root[data-theme="escuro"] {
-  --bg-gradient: linear-gradient(135deg, #1e1b4b 0%, #312e81 55%, #4c1d95 100%);
-  --panel-bg: rgba(30, 27, 75, 0.85);
-  --panel-border: #4338ca;
-  --panel-heading: #c7d2fe;
-  --panel-text: #e0e7ff;
-  --panel-muted: #a5b4fc;
-  --panel-divider: #4338ca;
+  color-scheme: dark;
+
+  --fundo: #101828;
+  --papel: #F4EFDF;
+  --painel: #1A2336;
+  --tinta: #E8EDF5;
+  --tinta-suave: #9AA8BF;
+  --linha: #2A3650;
+  --ouro: #E3B14C;
+
+  --sombra: 0 1px 3px rgb(0 0 0 / 0.35);
 }
 
 @layer base {
   * {
     box-sizing: border-box;
   }
-  
+
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
     @apply m-0 min-h-screen;
-    font-family: var(--font-display);
-    background: var(--bg-gradient);
-    background-attachment: fixed;
+    font-family: var(--font-corpo);
+    background: var(--fundo);
+    color: var(--tinta);
   }
-  
+
   #root {
     @apply min-h-screen;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+  }
+
+  /* Números alinhados em placares, XP e relógios */
+  [data-numerico],
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--jogo-dominorio);
+    outline-offset: 2px;
   }
 }
 
 @layer components {
-  /* Game Card Styles */
+  /* Cartões de jogo */
   .game-card {
-    @apply relative overflow-hidden rounded-3xl p-6 cursor-pointer;
+    @apply relative overflow-hidden p-6 cursor-pointer;
     @apply transition-all duration-300 ease-out;
-    @apply hover:scale-105 hover:shadow-2xl;
-    @apply active:scale-95;
-  }
-  
-  .game-card::before {
-    content: '';
-    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
-    background: linear-gradient(135deg, rgba(255,255,255,0.2), transparent);
-  }
-  
-  .game-card:hover::before {
-    @apply opacity-100;
+    background: var(--painel);
+    color: var(--tinta);
+    border: 1px solid var(--linha);
+    border-radius: var(--raio-painel);
+    box-shadow: var(--sombra);
   }
 
-  /* Button Styles */
+  .game-card:hover,
+  .game-card:focus-visible {
+    transform: translateY(-2px);
+    border-color: var(--tinta-suave);
+  }
+
+  .game-card:active {
+    transform: translateY(0);
+  }
+
+  /* Botões */
   .btn {
-    @apply px-6 py-3 rounded-2xl font-semibold text-white;
-    @apply transition-all duration-200 ease-out;
-    @apply hover:scale-105 hover:shadow-lg;
-    @apply active:scale-95;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100;
-  }
-  
-  .btn-primary {
-    @apply bg-gradient-to-r from-indigo-500 to-purple-600;
-    @apply hover:from-indigo-600 hover:to-purple-700;
-  }
-  
-  .btn-secondary {
-    @apply bg-gradient-to-r from-gray-500 to-gray-600;
-    @apply hover:from-gray-600 hover:to-gray-700;
-  }
-  
-  .btn-success {
-    @apply bg-gradient-to-r from-emerald-500 to-green-600;
-    @apply hover:from-emerald-600 hover:to-green-700;
-  }
-  
-  .btn-danger {
-    @apply bg-gradient-to-r from-rose-500 to-red-600;
-    @apply hover:from-rose-600 hover:to-red-700;
+    @apply px-5 py-2.5 font-bold;
+    @apply transition-colors duration-200 ease-out;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+    font-family: var(--font-corpo);
+    border-radius: var(--raio-controlo);
+    border: 1px solid transparent;
   }
 
-  /* Board Cell Styles */
+  .btn-primary {
+    background: var(--tinta);
+    color: var(--fundo);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: var(--tinta-suave);
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--tinta);
+    border-color: var(--linha);
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--tinta-suave);
+    background: color-mix(in srgb, var(--tinta) 6%, transparent);
+  }
+
+  .btn-success {
+    background: var(--sucesso);
+    color: #FFFFFF;
+  }
+
+  .btn-success:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--sucesso) 85%, #000000);
+  }
+
+  .btn-danger {
+    background: var(--perigo);
+    color: #FFFFFF;
+  }
+
+  .btn-danger:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--perigo) 85%, #000000);
+  }
+
+  /* Células de tabuleiro */
   .board-cell {
     @apply flex items-center justify-center;
     @apply transition-all duration-200 ease-out;
     @apply cursor-pointer select-none;
   }
-  
+
   .board-cell:hover:not(.disabled) {
     @apply scale-110;
   }
-  
+
   .board-cell.disabled {
     @apply cursor-not-allowed opacity-60;
   }
-  
+
   .board-cell.highlight {
-    @apply ring-4 ring-yellow-400/75;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ouro) 75%, transparent);
     animation: pulse-highlight 1s ease-in-out infinite;
   }
 
-  /* Player Indicator */
+  /* Indicador de jogador */
   .player-indicator {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full font-semibold;
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full font-bold;
     @apply transition-all duration-300;
   }
-  
+
   .player-indicator.active {
-    @apply scale-110 shadow-lg;
+    @apply scale-110;
+    box-shadow: var(--sombra);
     animation: bounce-subtle 0.6s ease-in-out infinite;
   }
 
-  /* Rules Panel */
+  /* Painel de regras */
   .rules-panel {
-    @apply backdrop-blur-sm rounded-2xl p-6 shadow-xl border-2;
-    background: var(--panel-bg);
-    border-color: var(--panel-border);
+    @apply p-6;
+    background: var(--painel);
+    color: var(--tinta);
+    border: 1px solid var(--linha);
+    border-radius: var(--raio-painel);
+    box-shadow: var(--sombra);
   }
 
   .rules-panel h3 {
-    @apply text-xl font-bold mb-4;
-    color: var(--panel-heading);
+    @apply text-xl mb-4;
+    color: var(--tinta);
     font-family: var(--font-display);
+    font-weight: 700;
   }
 
   .rules-panel ul {
     @apply space-y-2;
-    color: var(--panel-text);
+    color: var(--tinta);
   }
-  
+
   .rules-panel li {
     @apply flex items-start gap-2;
   }
 
   .rules-panel svg {
-    color: var(--panel-heading);
+    color: var(--tinta-suave);
   }
 
   .rules-panel .rules-panel-hint {
-    border-color: var(--panel-divider);
-    color: var(--panel-muted);
+    border-color: var(--linha);
+    color: var(--tinta-suave);
   }
-  
+
   .rules-panel li::before {
     content: '•';
-    @apply text-indigo-500 font-bold;
+    @apply font-bold;
+    color: var(--tinta-suave);
   }
 
-  /* Game Container */
+  /* Superfície de jogo — papel quente nos dois temas */
   .game-container {
-    @apply bg-white/95 backdrop-blur-sm rounded-3xl shadow-2xl p-6;
-    @apply border-4 border-white/50;
+    @apply p-6;
+    background: var(--papel);
+    color: var(--tinta-no-papel);
+    border: 1px solid var(--linha-no-papel);
+    border-radius: var(--raio-painel);
+    box-shadow: var(--sombra);
   }
 
-  /* Winner Announcement */
+  /* Anúncio de vencedor */
   .winner-announcement {
     @apply fixed inset-0 flex items-center justify-center z-50;
-    @apply bg-black/50 backdrop-blur-sm;
+    background: rgb(16 24 40 / 0.55);
     animation: fade-in 0.3s ease-out;
   }
-  
+
   .winner-card {
-    @apply bg-gradient-to-br from-yellow-400 via-orange-400 to-pink-500;
-    @apply rounded-3xl p-8 text-center shadow-2xl;
-    @apply border-4 border-white;
+    @apply p-8 text-center;
+    background: var(--painel);
+    color: var(--tinta);
+    border: 2px solid var(--ouro);
+    border-radius: var(--raio-painel);
+    box-shadow: var(--sombra);
     animation: pop-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 }
 
 @layer utilities {
-  .text-shadow {
-    text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-  }
-  
+  /* Sem sombras de texto no novo sistema — mantidas como no-op para compat */
+  .text-shadow,
   .text-shadow-lg {
-    text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    text-shadow: none;
+  }
+
+  .font-display {
+    font-family: var(--font-display);
   }
 }
 
 /* Animations */
 @keyframes pulse-highlight {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.7);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--ouro) 70%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(250, 204, 21, 0);
+    box-shadow: 0 0 0 10px color-mix(in srgb, var(--ouro) 0%, transparent);
   }
 }
 
@@ -276,4 +380,3 @@
     transition-duration: 0.01ms !important;
   }
 }
-

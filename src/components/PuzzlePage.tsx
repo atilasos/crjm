@@ -63,16 +63,16 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
     <div className="min-h-screen">
       <Header titulo="Laboratório de Estratégias" onVoltar={onVoltar} />
       <main className="mx-auto max-w-5xl px-4 py-8">
-        <section data-puzzle-lab className="relative overflow-hidden rounded-[2rem] border border-amber-200 bg-[#fffaf0] shadow-[0_24px_70px_rgba(15,23,42,0.28)]">
-          <div className="absolute inset-y-0 left-5 hidden w-px bg-rose-200 sm:block" aria-hidden="true" />
-          <div className="border-b border-amber-200 bg-amber-100/70 px-5 py-5 sm:pl-12">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-amber-800">Caderno de treinador</p>
+        <section data-puzzle-lab className="relative overflow-hidden rounded-xl border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
+          <div className="absolute inset-y-0 left-5 hidden w-px [background:var(--ouro)] opacity-50 sm:block" aria-hidden="true" />
+          <div className="border-b px-5 py-5 sm:pl-12 [background:var(--fundo)] [border-color:var(--linha)]">
+            <p className="text-xs font-black uppercase tracking-[0.22em] [color:var(--ouro)]">Caderno de treinador</p>
             <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <h2 className="text-3xl font-black text-slate-900">Uma decisão. Uma ideia.</h2>
-                <p className="mt-1 max-w-2xl text-sm text-slate-600">Experimenta, pede uma pista se precisares e lê a explicação antes de avançar.</p>
+                <h2 className="text-3xl font-black [color:var(--tinta)]">Uma decisão. Uma ideia.</h2>
+                <p className="mt-1 max-w-2xl text-sm [color:var(--tinta-suave)]">Experimenta, pede uma pista se precisares e lê a explicação antes de avançar.</p>
               </div>
-              <p className="rounded-full bg-white px-4 py-2 text-sm font-bold text-amber-900 shadow-sm">
+              <p className="rounded-full border px-4 py-2 text-sm font-bold [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
                 {game.label}: {solvedCount}/3 resolvidos
               </p>
             </div>
@@ -86,10 +86,10 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                   type="button"
                   onClick={() => selectGame(candidate.id)}
                   aria-pressed={candidate.id === gameId}
-                  className={`min-h-12 rounded-xl border px-2 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 ${
+                  className={`min-h-12 rounded-lg border px-2 py-2 text-sm font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ouro)] ${
                     candidate.id === gameId
-                      ? 'border-slate-900 bg-slate-900 text-white shadow-md'
-                      : 'border-amber-200 bg-white text-slate-700 hover:border-amber-500 hover:bg-amber-50'
+                      ? '[background:var(--tinta)] [border-color:var(--tinta)] [color:var(--fundo)]'
+                      : '[background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[border-color:var(--ouro)] hover:[color:var(--tinta)]'
                   }`}
                 >
                   <span className="mr-1" aria-hidden="true">{candidate.mark}</span>{candidate.label}
@@ -98,18 +98,18 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
             </nav>
 
             <article className="mt-7 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
-              <div className="rounded-2xl bg-slate-900 p-6 text-white shadow-lg">
+              <div className="rounded-xl border p-6 [background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta)]">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-4xl" aria-hidden="true">{game.mark}</span>
-                  <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-bold">{puzzleIndex + 1} / 3</span>
+                  <span className="rounded-full border px-3 py-1 text-xs font-bold [border-color:var(--linha)] [color:var(--tinta-suave)]">{puzzleIndex + 1} / 3</span>
                 </div>
-                <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] text-amber-300">Padrão em treino</p>
+                <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] [color:var(--ouro)]">Padrão em treino</p>
                 <h3 className="mt-2 text-2xl font-black">{puzzle.title}</h3>
-                <p className="mt-4 text-base leading-relaxed text-slate-200">{puzzle.prompt}</p>
+                <p className="mt-4 text-base leading-relaxed [color:var(--tinta-suave)]">{puzzle.prompt}</p>
                 <button
                   type="button"
                   onClick={() => setUsedHint(true)}
-                  className="mt-6 min-h-12 w-full rounded-xl border border-amber-300/50 bg-amber-300/10 px-4 py-3 font-bold text-amber-200 transition hover:bg-amber-300/20"
+                  className="mt-6 min-h-12 w-full rounded-lg border px-4 py-3 font-bold transition [background:var(--painel)] [border-color:var(--ouro)] [color:var(--tinta)] hover:opacity-80"
                 >
                   {usedHint ? puzzle.hint : 'Pedir uma pista'}
                 </button>
@@ -117,7 +117,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
 
               <div>
                 <fieldset>
-                  <legend className="text-sm font-black uppercase tracking-[0.16em] text-slate-500">Qual é a melhor leitura?</legend>
+                  <legend className="text-sm font-black uppercase tracking-[0.16em] [color:var(--tinta-suave)]">Qual é a melhor leitura?</legend>
                   <div className="mt-3 space-y-3">
                     {puzzle.options.map((option, index) => {
                       const selected = selectedOption === option.id;
@@ -131,13 +131,13 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                             setResult(null);
                           }}
                           aria-pressed={selected}
-                          className={`min-h-12 w-full rounded-2xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600 ${
+                          className={`min-h-12 w-full rounded-lg border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ouro)] ${
                             selected
-                              ? 'border-amber-600 bg-amber-100 text-slate-950 shadow-sm'
-                              : 'border-slate-200 bg-white text-slate-700 hover:border-amber-400'
+                              ? '[background:var(--fundo)] [border-color:var(--ouro)] [color:var(--tinta)] ring-1 ring-[var(--ouro)]'
+                              : '[background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)] hover:[border-color:var(--ouro)]'
                           }`}
                         >
-                          <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-sm font-black text-slate-700">{index + 1}</span>
+                          <span className="mr-3 inline-flex h-8 w-8 items-center justify-center rounded-full border text-sm font-black [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta-suave)]">{index + 1}</span>
                           <span className="font-bold">{option.label}</span>
                         </button>
                       );
@@ -149,7 +149,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                   type="button"
                   onClick={confirmAnswer}
                   disabled={!selectedOption}
-                  className="mt-4 min-h-12 w-full rounded-2xl bg-amber-500 px-5 py-3 font-black text-slate-950 shadow-md transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+                  className="mt-4 min-h-12 w-full rounded-lg px-5 py-3 font-black transition [background:var(--tinta)] [color:var(--fundo)] [box-shadow:var(--sombra)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-100 disabled:[background:var(--linha)] disabled:[color:var(--tinta-suave)]"
                 >
                   Confirmar resposta
                 </button>
@@ -158,12 +158,12 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                   <div
                     role="status"
                     aria-live="polite"
-                    className={`mt-4 rounded-2xl border p-4 ${result.correct ? 'border-emerald-300 bg-emerald-50 text-emerald-950' : 'border-orange-300 bg-orange-50 text-orange-950'}`}
+                    className={`mt-4 rounded-lg border p-4 [background:var(--fundo)] [color:var(--tinta)] ${result.correct ? '[border-color:var(--sucesso)]' : '[border-color:var(--perigo)]'}`}
                   >
-                    <p className="font-black">{result.correct ? (solved.has(puzzle.id) ? '✓ Já dominaste esta ideia' : '✓ Boa leitura') : 'Ainda não — tenta outra vez'}</p>
+                    <p className={`font-black ${result.correct ? '[color:var(--sucesso)]' : '[color:var(--perigo)]'}`}>{result.correct ? (solved.has(puzzle.id) ? '✓ Já dominaste esta ideia' : '✓ Boa leitura') : 'Ainda não — tenta outra vez'}</p>
                     <p className="mt-1 text-sm leading-relaxed">{result.explanation}</p>
                     {result.correct && (
-                      <button type="button" onClick={nextPuzzle} className="mt-3 min-h-12 rounded-xl bg-emerald-700 px-4 py-2 font-bold text-white hover:bg-emerald-800">
+                      <button type="button" onClick={nextPuzzle} className="mt-3 min-h-12 rounded-lg px-4 py-2 font-bold text-white [background:var(--sucesso)] hover:opacity-90">
                         Próximo puzzle
                       </button>
                     )}

@@ -48,7 +48,7 @@ export function ThemeToggle() {
     <button
       type="button"
       onClick={alternar}
-      className="rounded-full border border-white/30 bg-white/10 p-2 text-xl leading-none transition hover:bg-white/20"
+      className="rounded-full border p-2 text-xl leading-none transition-colors [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]"
       aria-label={tema === 'claro' ? 'Ativar modo noite' : 'Ativar modo dia'}
       title={tema === 'claro' ? 'Modo noite' : 'Modo dia'}
     >

@@ -13,12 +13,12 @@ export function AchievementPopup({ achievement, onClose }: AchievementPopupProps
       <button
         type="button"
         onClick={onClose}
-        className="pointer-events-auto mt-8 max-w-sm rounded-3xl border-2 border-white/70 bg-white/95 px-5 py-4 text-left shadow-2xl"
+        className="pointer-events-auto mt-8 max-w-sm rounded-xl border px-5 py-4 text-left [background:var(--painel)] [border-color:var(--ouro)] [box-shadow:var(--sombra)]"
       >
-        <p className="text-xs font-semibold uppercase tracking-wide text-amber-700">🏆 Conquista</p>
-        <p className="mt-1 text-lg font-bold text-slate-900">{achievement.title}</p>
-        <p className="mt-1 text-sm text-slate-700">{achievement.description}</p>
-        <p className="mt-2 text-xs font-medium text-emerald-700">+{achievement.xp} XP</p>
+        <p className="text-xs font-bold uppercase tracking-wide [color:var(--ouro)]">🏆 Conquista</p>
+        <p className="mt-1 text-lg font-bold [color:var(--tinta)]">{achievement.title}</p>
+        <p className="mt-1 text-sm [color:var(--tinta-suave)]">{achievement.description}</p>
+        <p className="mt-2 text-xs font-bold tabular-nums [color:var(--sucesso)]">+{achievement.xp} XP</p>
       </button>
     </div>
   );

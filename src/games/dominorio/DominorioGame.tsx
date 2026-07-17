@@ -94,14 +94,14 @@ function getSuggestedAction(
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'high') {
-    return 'border-red-300 bg-red-50 text-red-900';
+    return '[background:color-mix(in_srgb,#E5484D_14%,var(--painel))] [border-color:color-mix(in_srgb,#E5484D_45%,var(--linha))] [color:var(--tinta)]';
   }
 
   if (severity === 'medium') {
-    return 'border-amber-300 bg-amber-50 text-amber-900';
+    return '[background:color-mix(in_srgb,var(--ouro)_16%,var(--painel))] [border-color:color-mix(in_srgb,var(--ouro)_50%,var(--linha))] [color:var(--tinta)]';
   }
 
-  return 'border-slate-300 bg-slate-50 text-slate-800';
+  return '[background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)]';
 }
 
 function isPartOfDomino(move: Domino | null | undefined, linha: number, coluna: number): boolean {
@@ -483,37 +483,43 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
   return (
     <GameLayout titulo="Dominório" regras={REGRAS} onVoltar={onVoltar}>
-      <div className="space-y-4">
-        {/* Info do jogador */}
-        <PlayerInfo
-          modo={state.modo}
-          jogadorAtual={state.jogadorAtual}
-          estado={state.estado}
-          nomeJogador1="Vertical"
-          nomeJogador2="Horizontal"
-          corJogador1="bg-pink-500"
-          corJogador2="bg-cyan-500"
-          humanPlayer={humanPlayer}
-          onChangeHumanPlayer={handleChangeHumanPlayer}
-          onNovoJogo={novoJogo}
-          onTrocarModo={trocarModo}
-          // AI props
-          difficulty={difficultyLevel}
-          onChangeDifficulty={handleChangeDifficulty}
-          difficultyRecommendation={difficultyRecommendation}
-          canAcceptDifficultyRecommendation={state.estado !== 'a-jogar'}
-          onAcceptDifficultyRecommendation={(level) => {
-            setDifficultyLevel(level);
-            acceptDifficultyRecommendation('dominorio');
-          }}
-          aiMetrics={aiMetrics}
-          aiReady={aiReady}
-        />
+      {/* Em mobile o tabuleiro vem primeiro (order-*); em lg mantém-se a ordem original */}
+      <div className="flex flex-col gap-4">
+        {/* Info do jogador (controlos de pré-jogo: modo, cor, dificuldade) */}
+        <div className="order-2 lg:order-1">
+          <PlayerInfo
+            modo={state.modo}
+            jogadorAtual={state.jogadorAtual}
+            estado={state.estado}
+            nomeJogador1="Vertical"
+            nomeJogador2="Horizontal"
+            corJogador1="bg-pink-500"
+            corJogador2="bg-cyan-500"
+            humanPlayer={humanPlayer}
+            onChangeHumanPlayer={handleChangeHumanPlayer}
+            onNovoJogo={novoJogo}
+            onTrocarModo={trocarModo}
+            // AI props
+            difficulty={difficultyLevel}
+            onChangeDifficulty={handleChangeDifficulty}
+            difficultyRecommendation={difficultyRecommendation}
+            canAcceptDifficultyRecommendation={state.estado !== 'a-jogar'}
+            onAcceptDifficultyRecommendation={(level) => {
+              setDifficultyLevel(level);
+              acceptDifficultyRecommendation('dominorio');
+            }}
+            aiMetrics={aiMetrics}
+            aiReady={aiReady}
+          />
+        </div>
 
-        <TrainingPathCard gameId="dominorio" />
+        {/* Caminho de evolução (pré-jogo) */}
+        <div className="order-3 lg:order-2">
+          <TrainingPathCard gameId="dominorio" />
+        </div>
 
-        {/* Tabuleiro */}
-        <div className="game-container">
+        {/* Tabuleiro — primeiro em mobile para ficar above the fold */}
+        <div className="game-container order-1 lg:order-3">
           <div className="aspect-square max-w-md mx-auto">
             <div
               className="grid grid-cols-8 gap-1 h-full bg-emerald-800 p-2 rounded-xl"
@@ -538,7 +544,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           </div>
 
           {/* Legenda */}
-          <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600">
+          <div className="mt-4 flex justify-center gap-6 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-4 h-8 bg-pink-500 rounded"></div>
               <span>Vertical (J1)</span>
@@ -550,11 +556,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           </div>
 
           {/* Dica de jogada */}
-          <div className="mt-2 text-center text-sm text-gray-500">
+          <div className="mt-2 text-center text-sm [color:var(--tinta-suave-no-papel)]">
             {state.estado === 'a-jogar' &&
               (isVezDaIA ? (
-                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
-                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                <span className="flex items-center justify-center gap-2 font-medium [color:var(--jogo-dominorio)]">
+                  <span className="inline-block w-4 h-4 border-2 [border-color:var(--jogo-dominorio)] border-t-transparent rounded-full animate-spin"></span>
                   IA a pensar…
                 </span>
               ) : (
@@ -569,7 +575,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
         </div>
 
         {state.estado === 'a-jogar' && !isVezDaIA && (
-          <div className="space-y-3">
+          <div className="space-y-3 order-4">
             <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
             <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
@@ -602,24 +608,24 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
         )}
 
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
-          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <section className="rounded-xl border px-4 py-3 text-sm order-5 [background:var(--painel)] [border-color:color-mix(in_srgb,var(--jogo-produto)_35%,var(--linha))] [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-produto)_18%,var(--painel))] [color:var(--tinta)]">
                 2-4 min
               </span>
             </div>
-            <p className="mt-1 text-emerald-800">
+            <p className="mt-1 [color:var(--tinta-suave)]">
               Revê até 2 momentos e tenta repetir a melhor alternativa.
             </p>
-            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--jogo-produto)_12%,var(--painel))]">
               Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
-                <div key={item.title} className="rounded-lg border border-emerald-200 bg-white px-3 py-2">
-                  <p className="font-semibold text-emerald-900">{item.title}</p>
-                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                <div key={item.title} className="rounded-lg border px-3 py-2 [border-color:var(--linha)] [background:var(--fundo)]">
+                  <p className="font-semibold [color:var(--tinta)]">{item.title}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
                 </div>
               ))}
             </div>
@@ -634,7 +640,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
                 });
                 setReviewRewarded(true);
               }}
-              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-colors [background:var(--jogo-produto)] hover:[background:color-mix(in_srgb,var(--jogo-produto)_85%,black)] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
             </button>

@@ -7,13 +7,13 @@ interface TutorContextBarProps {
 function getToneClasses(tone: TutorContextItem['tone']): string {
   switch (tone) {
     case 'success':
-      return 'bg-emerald-100 text-emerald-800 border-emerald-200';
+      return '[background:var(--painel)] [border-color:var(--sucesso)] [color:var(--tinta)]';
     case 'warning':
-      return 'bg-amber-100 text-amber-900 border-amber-200';
+      return '[background:var(--painel)] [border-color:var(--ouro)] [color:var(--tinta)]';
     case 'danger':
-      return 'bg-rose-100 text-rose-900 border-rose-200';
+      return '[background:var(--painel)] [border-color:var(--perigo)] [color:var(--tinta)]';
     default:
-      return 'bg-slate-100 text-slate-800 border-slate-200';
+      return '[background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta-suave)]';
   }
 }
 

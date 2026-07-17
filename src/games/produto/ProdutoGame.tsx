@@ -88,9 +88,11 @@ function getSuggestedAction(
 }
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
-  if (severity === 'high') return 'border-red-300 bg-red-50 text-red-900';
-  if (severity === 'medium') return 'border-amber-300 bg-amber-50 text-amber-900';
-  return 'border-slate-300 bg-slate-50 text-slate-800';
+  if (severity === 'high')
+    return '[border-color:color-mix(in_srgb,var(--perigo)_55%,var(--linha))] [background:color-mix(in_srgb,var(--perigo)_10%,var(--painel))] [color:var(--tinta)]';
+  if (severity === 'medium')
+    return '[border-color:color-mix(in_srgb,var(--ouro)_55%,var(--linha))] [background:color-mix(in_srgb,var(--ouro)_10%,var(--painel))] [color:var(--tinta)]';
+  return '[border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta)]';
 }
 
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
@@ -417,27 +419,31 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
   return (
     <GameLayout titulo="Produto" regras={REGRAS} onVoltar={onVoltar}>
-      <div className="space-y-4">
-        {/* Info do jogador */}
-        <PlayerInfo
-          modo={state.modo}
-          jogadorAtual={state.jogadorAtual}
-          estado={state.estado}
-          nomeJogador1="Pretas"
-          nomeJogador2="Brancas"
-          corJogador1="bg-gray-900"
-          corJogador2="bg-gray-200"
-          humanPlayer={humanPlayer}
-          onChangeHumanPlayer={handleChangeHumanPlayer}
-          onNovoJogo={novoJogo}
-          onTrocarModo={trocarModo}
-        />
+      <div className="flex flex-col gap-4">
+        {/* Info do jogador — em mobile desce para depois do tabuleiro */}
+        <div className="order-5 lg:order-1">
+          <PlayerInfo
+            modo={state.modo}
+            jogadorAtual={state.jogadorAtual}
+            estado={state.estado}
+            nomeJogador1="Pretas"
+            nomeJogador2="Brancas"
+            corJogador1="bg-gray-900"
+            corJogador2="bg-gray-200"
+            humanPlayer={humanPlayer}
+            onChangeHumanPlayer={handleChangeHumanPlayer}
+            onNovoJogo={novoJogo}
+            onTrocarModo={trocarModo}
+          />
+        </div>
 
-        <TrainingPathCard gameId="produto" />
+        <div className="order-7 lg:order-2">
+          <TrainingPathCard gameId="produto" />
+        </div>
 
         {/* Configuração de IA (só no modo vs-computador) */}
         {state.modo === 'vs-computador' && (
-          <div className="space-y-2">
+          <div className="space-y-2 order-6 lg:order-3">
             <DifficultySelector
               level={difficultyLevel}
               onChange={setDifficultyLevel}
@@ -449,7 +455,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 acceptDifficultyRecommendation('produto');
               }}
             />
-            <div className="text-xs text-blue-900/80 flex items-center justify-between">
+            <div className="text-xs [color:var(--tinta-suave)] flex items-center justify-between">
               <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
               <span>{aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback'}</span>
             </div>
@@ -457,7 +463,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
         )}
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
-          <div className="space-y-3">
+          <div className="space-y-3 order-4 lg:order-4">
             <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
             <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
@@ -484,7 +490,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
         )}
 
         {/* Painel de pontuação */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 order-3 lg:order-5">
           <div className="bg-gray-900 text-white rounded-xl p-3 text-center">
             <div className="text-xs opacity-75 mb-1">Pretas</div>
             <div className="text-2xl font-bold">{state.pontuacaoPretas.produto}</div>
@@ -495,7 +501,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
               {state.pontuacaoPretas.totalPecas} peças
             </div>
           </div>
-          <div className="bg-gray-100 text-gray-900 rounded-xl p-3 text-center border-2 border-gray-300">
+          <div className="rounded-xl p-3 text-center border-2 [background:var(--painel)] [color:var(--tinta)] [border-color:var(--linha)]">
             <div className="text-xs opacity-75 mb-1">Brancas</div>
             <div className="text-2xl font-bold">{state.pontuacaoBrancas.produto}</div>
             <div className="text-xs opacity-75">
@@ -510,16 +516,16 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
         {/* Seletor de cor (só se não é primeira jogada) */}
         {!state.primeiraJogada && state.estado === 'a-jogar' &&
           (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer) && (
-            <div className="bg-purple-100 border-2 border-purple-400 rounded-xl p-3">
-              <p className="text-purple-800 text-sm mb-2 text-center font-medium">
+            <div className="rounded-xl p-3 border-2 order-2 lg:order-6 [background:var(--painel)] [border-color:var(--ouro)]">
+              <p className="text-sm mb-2 text-center font-medium [color:var(--tinta)]">
                 Cor da peça a colocar ({pecasFaltam} peça{pecasFaltam > 1 ? 's' : ''} restante{pecasFaltam > 1 ? 's' : ''}):
               </p>
               <div className="flex justify-center gap-3">
                 <button
                   onClick={() => setCorSelecionada('preta')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${corSelecionada === 'preta'
-                      ? 'bg-gray-900 text-white ring-2 ring-purple-400'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'bg-gray-900 text-white ring-2 ring-[var(--ouro)]'
+                      : 'border [background:transparent] [color:var(--tinta)] [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                     }`}
                 >
                   <div className="w-4 h-4 rounded-full bg-gray-900 border border-gray-600"></div>
@@ -528,8 +534,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 <button
                   onClick={() => setCorSelecionada('branca')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${corSelecionada === 'branca'
-                      ? 'bg-indigo-50 text-gray-900 ring-2 ring-purple-400 border border-indigo-300'
-                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                      ? 'border ring-2 ring-[var(--ouro)] [background:var(--painel)] [color:var(--tinta)] [border-color:var(--tinta-suave)]'
+                      : 'border [background:transparent] [color:var(--tinta)] [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                     }`}
                 >
                   <div className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-200 border-2 border-indigo-400"></div>
@@ -540,7 +546,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 <div className="mt-2 flex justify-center">
                   <button
                     onClick={handleCancelar}
-                    className="text-sm text-red-600 hover:text-red-800 underline"
+                    className="text-sm underline [color:var(--perigo)] hover:opacity-80"
                   >
                     Cancelar primeira peça
                   </button>
@@ -550,7 +556,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           )}
 
         {/* Tabuleiro hexagonal */}
-        <div className="game-container">
+        <div className="game-container order-1 lg:order-7">
           <div className="flex justify-center w-full">
             <svg
               viewBox={`-10 -10 ${boundingBox.width + 20} ${boundingBox.height + 20}`}
@@ -575,7 +581,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           </div>
 
           {/* Legenda */}
-          <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600">
+          <div className="mt-4 flex justify-center gap-6 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-gray-600"></div>
               <span>Pretas (J1)</span>
@@ -587,11 +593,14 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           </div>
 
           {/* Dica de jogada */}
-          <div className="mt-2 text-center text-sm text-gray-500">
+          <div className="mt-2 text-center text-sm [color:var(--tinta-suave-no-papel)]">
             {state.estado === 'a-jogar' && (
               isVezDaIA ? (
-                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
-                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                <span className="flex items-center justify-center gap-2 font-medium [color:var(--jogo-produto)]">
+                  <span
+                    className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
+                    style={{ borderColor: 'var(--jogo-produto)', borderTopColor: 'transparent' }}
+                  ></span>
                   IA a pensar…
                 </span>
               ) : (
@@ -607,32 +616,32 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           </div>
 
           {/* Dica de estratégia */}
-          <div className="mt-3 bg-yellow-50 border border-yellow-200 rounded-lg p-2 text-xs text-yellow-800 text-center">
+          <div className="mt-3 rounded-lg p-2 text-xs text-center border [background:color-mix(in_srgb,var(--ouro)_12%,var(--papel))] [border-color:color-mix(in_srgb,var(--ouro)_45%,var(--linha-no-papel))] [color:var(--tinta-no-papel)]">
             <strong>Dica:</strong> Podes colocar peças do adversário para unir os grupos dele e reduzir a pontuação a 0!
           </div>
         </div>
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
-          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <section className="rounded-xl border px-4 py-3 text-sm order-8 lg:order-8 [border-color:color-mix(in_srgb,var(--sucesso)_45%,var(--linha))] [background:color-mix(in_srgb,var(--sucesso)_8%,var(--painel))] [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))] [color:var(--tinta)]">
                 2-4 min
               </span>
             </div>
-            <p className="mt-1 text-emerald-800">
+            <p className="mt-1 [color:var(--tinta-suave)]">
               Revê até 2 momentos e confirma onde podias melhorar o teu produto sem ajudar o adversário.
             </p>
-            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))]">
               Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                  className="rounded-lg border px-3 py-2 [border-color:var(--linha)] [background:var(--painel)]"
                 >
-                  <p className="font-medium text-emerald-900">{item.title}</p>
-                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
                 </div>
               ))}
             </div>
@@ -647,7 +656,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                 });
                 setReviewRewarded(true);
               }}
-              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-colors [background:var(--sucesso)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-100 disabled:[background:var(--linha)] disabled:[color:var(--tinta-suave)]"
             >
               {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
             </button>

@@ -60,12 +60,12 @@ function formatSegmento(segmento: QuelhasState['jogadasValidas'][number]): strin
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'high') {
-    return 'border-rose-300 bg-rose-50 text-rose-900';
+    return '[border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_12%,var(--painel))] [color:var(--tinta)]';
   }
   if (severity === 'medium') {
-    return 'border-amber-300 bg-amber-50 text-amber-900';
+    return '[border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_14%,var(--painel))] [color:var(--tinta)]';
   }
-  return 'border-sky-300 bg-sky-50 text-sky-900';
+  return '[border-color:color-mix(in_srgb,var(--jogo-dominorio)_55%,var(--linha))] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,var(--painel))] [color:var(--tinta)]';
 }
 
 function getSuggestedAction(
@@ -471,8 +471,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
 
   return (
     <GameLayout titulo="Quelhas" regras={REGRAS} onVoltar={onVoltar}>
-      <div className="space-y-4">
-        {/* Info do jogador */}
+      <div className="flex flex-col gap-4">
+        {/* Info do jogador — em mobile passa para depois do tabuleiro */}
+        <div className="order-4 lg:order-none">
         <PlayerInfo
           modo={state.modo}
           jogadorAtual={state.jogadorAtual}
@@ -496,29 +497,32 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
+        </div>
 
-        <TrainingPathCard gameId="quelhas" />
+        <div className="order-5 lg:order-none">
+          <TrainingPathCard gameId="quelhas" />
+        </div>
 
         {/* UI de decisão de troca */}
         {mostrarUiTroca && (
-          <div className="bg-purple-100 border-2 border-purple-400 rounded-xl p-4">
-            <p className="text-purple-800 font-semibold text-sm mb-2 text-center">
+          <div className="order-3 lg:order-none rounded-xl border-2 p-4 [background:var(--painel)] [border-color:var(--jogo-quelhas)]">
+            <p className="font-semibold text-sm mb-2 text-center [color:var(--tinta)]">
               🔄 Regra de Troca
             </p>
-            <p className="text-purple-700 text-xs mb-3 text-center">
+            <p className="text-xs mb-3 text-center [color:var(--tinta-suave)]">
               Podes trocar de papel e ficar com a jogada que o Vertical acabou de fazer.
               A troca consome a tua jogada — a seguir joga o adversário.
             </p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={handleTroca}
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg font-medium text-sm hover:bg-purple-600 transition-colors"
+                className="px-4 py-2 text-white rounded-lg font-medium text-sm transition-[filter] [background:var(--jogo-quelhas)] hover:brightness-110"
               >
                 Trocar papéis
               </button>
               <button
                 onClick={handleRecusarTroca}
-                className="px-4 py-2 bg-white text-purple-600 border border-purple-300 rounded-lg font-medium text-sm hover:bg-purple-50 transition-colors"
+                className="px-4 py-2 border rounded-lg font-medium text-sm transition-colors [background:var(--painel)] [color:var(--jogo-quelhas)] [border-color:var(--linha)] hover:[border-color:var(--jogo-quelhas)]"
               >
                 Manter como está
               </button>
@@ -526,15 +530,15 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           </div>
         )}
 
-        {/* Aviso Misère */}
-        <div className="bg-yellow-100 border-2 border-yellow-400 rounded-xl p-3 text-center">
-          <p className="text-yellow-800 font-semibold text-sm">
+        {/* Aviso Misère (objetivo) — compacto, fica acima do tabuleiro em mobile */}
+        <div className="order-1 lg:order-none rounded-xl border px-3 py-2 text-center [background:color-mix(in_srgb,var(--ouro)_14%,var(--painel))] [border-color:var(--ouro)]">
+          <p className="font-semibold text-sm [color:var(--tinta)]">
             ⚠️ MISÈRE: Quem fizer a última jogada PERDE!
           </p>
         </div>
 
         {/* Tabuleiro */}
-        <div className="game-container">
+        <div className="game-container order-2 lg:order-none">
           <div className="aspect-square max-w-lg mx-auto">
             <div 
               className="grid grid-cols-10 gap-0.5 h-full bg-gray-400 p-1 rounded-xl"
@@ -555,7 +559,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           </div>
 
           {/* Legenda */}
-          <div className="mt-4 flex justify-center gap-6 text-sm text-gray-600">
+          <div className="mt-4 flex justify-center gap-6 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-3 h-6 bg-pink-500 rounded"></div>
               <span>Vertical</span>
@@ -567,12 +571,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           </div>
 
           {/* Dica de jogada */}
-          <div className="mt-2 text-center text-sm text-gray-500">
+          <div className="mt-2 text-center text-sm [color:var(--tinta-suave-no-papel)]">
             {state.estado === 'a-jogar' && !state.trocaDisponivel && (
               isVezDoHumano() ? (
                 <>
                   {posicaoInicial ? (
-                    <span className="text-indigo-600 font-medium">
+                    <span className="font-medium [color:var(--jogo-quelhas)]">
                       Clica na casa final do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
                     </span>
                   ) : (
@@ -583,14 +587,14 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
                   {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
                 </>
               ) : (
-                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
-                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                <span className="flex items-center justify-center gap-2 font-medium [color:var(--jogo-quelhas)]">
+                  <span className="inline-block w-4 h-4 border-2 rounded-full animate-spin [border-color:var(--jogo-quelhas)] [border-top-color:transparent]"></span>
                   IA a pensar…
                 </span>
               )
             )}
             {state.trocaDisponivel && !mostrarUiTroca && (
-              <span className="text-purple-600 font-medium">
+              <span className="font-medium [color:var(--jogo-quelhas)]">
                 A IA está a decidir sobre a troca de papéis...
               </span>
             )}
@@ -598,7 +602,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         </div>
 
         {state.estado === 'a-jogar' && !state.trocaDisponivel && isVezDoHumano() && (
-          <div className="space-y-3">
+          <div className="order-6 lg:order-none space-y-3">
             <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
             <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
@@ -631,27 +635,27 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         )}
 
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
-          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <section className="order-7 lg:order-none rounded-xl border px-4 py-3 text-sm [background:var(--painel)] [border-color:color-mix(in_srgb,var(--sucesso)_45%,var(--linha))] [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--sucesso)_15%,var(--painel))] [color:var(--sucesso)]">
                 2-4 min
               </span>
             </div>
-            <p className="mt-1 text-emerald-800">
+            <p className="mt-1 [color:var(--tinta-suave)]">
               Revê até 2 momentos e tenta repetir a alternativa mais segura.
             </p>
-            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_12%,var(--painel))]">
               Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div
                   key={item.title}
-                  className="rounded-lg border border-emerald-200 bg-white/80 px-3 py-2"
+                  className="rounded-lg border px-3 py-2 [border-color:var(--linha)] [background:var(--fundo)]"
                 >
-                  <p className="font-medium text-emerald-900">{item.title}</p>
-                  <p className="mt-1 text-emerald-800">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
                 </div>
               ))}
             </div>
@@ -666,7 +670,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
                 });
                 setReviewRewarded(true);
               }}
-              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-[filter] [background:var(--sucesso)] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
             </button>

@@ -16,24 +16,24 @@ export function TutorHintCard({
   return (
     <section
       aria-live="polite"
-      className="rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm text-indigo-900"
+      className="rounded-xl border px-4 py-3 text-sm [background:var(--painel)] [border-color:color-mix(in_srgb,var(--jogo-dominorio)_35%,var(--linha))] [color:var(--tinta)]"
     >
       <div className="flex items-center gap-2 font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-indigo-600 text-xs font-bold text-white">
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white [background:var(--jogo-dominorio)]">
           IA
         </span>
         Dica do turno
-        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+        <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-dominorio)_15%,var(--painel))] [color:var(--tinta)]">
           {hintLevel}
         </span>
         {errorCode && (
-          <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">
+          <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-dominorio)_15%,var(--painel))] [color:var(--tinta)]">
             {errorCode}
           </span>
         )}
       </div>
       {isLoading ? (
-        <p className="mt-2 text-indigo-700">A analisar a posição...</p>
+        <p className="mt-2 [color:var(--tinta-suave)]">A analisar a posição...</p>
       ) : (
         <div className="mt-2 space-y-2">
           <p>

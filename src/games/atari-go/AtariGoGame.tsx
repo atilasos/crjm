@@ -77,14 +77,14 @@ function resolveHintLevel(
 
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'high') {
-    return 'border-red-300 bg-red-50 text-red-900';
+    return '[border-color:color-mix(in_srgb,var(--perigo)_45%,var(--linha))] [background:color-mix(in_srgb,var(--perigo)_12%,var(--painel))] [color:var(--tinta)]';
   }
 
   if (severity === 'medium') {
-    return 'border-amber-300 bg-amber-50 text-amber-900';
+    return '[border-color:color-mix(in_srgb,var(--ouro)_55%,var(--linha))] [background:color-mix(in_srgb,var(--ouro)_12%,var(--painel))] [color:var(--tinta)]';
   }
 
-  return 'border-slate-300 bg-slate-50 text-slate-800';
+  return '[border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta)]';
 }
 
 function getPostGameTurningPoint(
@@ -473,34 +473,38 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
   return (
     <GameLayout titulo="Atari Go" regras={REGRAS} onVoltar={onVoltar}>
-      <div className="space-y-4">
-        {/* Info do jogador */}
-        <PlayerInfo
-          modo={state.modo}
-          jogadorAtual={state.jogadorAtual}
-          estado={state.estado}
-          nomeJogador1="Pretas"
-          nomeJogador2="Brancas"
-          corJogador1="bg-gray-900"
-          corJogador2="bg-gray-100"
-          humanPlayer={humanPlayer}
-          onChangeHumanPlayer={handleChangeHumanPlayer}
-          onNovoJogo={novoJogo}
-          onTrocarModo={trocarModo}
-        />
+      <div className="flex flex-col gap-4">
+        {/* Info do jogador — em mobile passa para depois do tabuleiro */}
+        <div className="order-3 md:order-none">
+          <PlayerInfo
+            modo={state.modo}
+            jogadorAtual={state.jogadorAtual}
+            estado={state.estado}
+            nomeJogador1="Pretas"
+            nomeJogador2="Brancas"
+            corJogador1="bg-gray-900"
+            corJogador2="bg-gray-100"
+            humanPlayer={humanPlayer}
+            onChangeHumanPlayer={handleChangeHumanPlayer}
+            onNovoJogo={novoJogo}
+            onTrocarModo={trocarModo}
+          />
+        </div>
 
-        <TrainingPathCard gameId="atari-go" />
+        <div className="order-4 md:order-none">
+          <TrainingPathCard gameId="atari-go" />
+        </div>
 
-        {/* Aviso de vitória na primeira captura */}
-        <div className="bg-red-100 border-2 border-red-400 rounded-xl p-3 text-center">
-          <p className="text-red-800 font-semibold text-sm">
+        {/* Aviso de vitória na primeira captura — faixa compacta acima do tabuleiro */}
+        <div className="order-1 md:order-none border-2 rounded-xl p-2 md:p-3 text-center [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,var(--painel))]">
+          <p className="font-semibold text-sm [color:var(--tinta)]">
             ⚔️ OBJETIVO: A primeira captura VENCE o jogo!
           </p>
         </div>
 
-        {/* Configuração da IA */}
+        {/* Configuração da IA — em mobile passa para depois do tabuleiro */}
         {state.modo === 'vs-computador' && (
-          <div className="space-y-2">
+          <div className="order-5 md:order-none space-y-2">
             <DifficultySelector
               level={difficultyLevel}
               onChange={setDifficultyLevel}
@@ -512,7 +516,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
                 acceptDifficultyRecommendation('atari-go');
               }}
             />
-            <div className="rounded-xl border border-gray-200 bg-white p-2 text-center text-xs text-gray-500">
+            <div className="rounded-xl border p-2 text-center text-xs [border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta-suave)]">
                 {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
                 {' • '}
                 {aiMetrics.usedWasm ? 'WASM' : 'TS fallback'}
@@ -523,7 +527,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         )}
 
         {/* Tabuleiro */}
-        <div className="game-container">
+        <div className="game-container order-2 md:order-none">
           <div className="aspect-square max-w-md mx-auto">
             <div
               className="w-full h-full bg-amber-200 p-4 rounded-xl shadow-inner"
@@ -542,7 +546,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           </div>
 
           {/* Legenda e estatísticas */}
-          <div className="mt-4 flex flex-col items-center gap-2 text-sm text-gray-600">
+          <div className="mt-4 flex flex-col items-center gap-2 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex justify-center gap-6">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-700 to-black border border-gray-600"></div>
@@ -560,11 +564,11 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           </div>
 
           {/* Dica de jogada */}
-          <div className="mt-2 text-center text-sm text-gray-500">
+          <div className="mt-2 text-center text-sm [color:var(--tinta-suave-no-papel)]">
             {state.estado === 'a-jogar' && (
               isVezDaIA ? (
-                <span className="flex items-center justify-center gap-2 text-indigo-600 font-medium">
-                  <span className="inline-block w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin"></span>
+                <span className="flex items-center justify-center gap-2 font-medium [color:var(--tinta-no-papel)]">
+                  <span className="inline-block w-4 h-4 border-2 [border-color:var(--tinta-suave-no-papel)] [border-top-color:transparent] rounded-full animate-spin"></span>
                   IA a pensar…
                 </span>
               ) : (
@@ -580,7 +584,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         </div>
 
         {state.estado === 'a-jogar' && !isVezDaIA && (
-          <div className="space-y-3">
+          <div className="order-6 md:order-none space-y-3">
             <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
             <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
             <TutorHintCard
@@ -612,10 +616,10 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
         )}
 
         {state.estado !== 'a-jogar' && postGameTurningPoint && (
-          <section className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+          <section className="order-7 md:order-none rounded-xl border px-4 py-3 text-sm [border-color:color-mix(in_srgb,var(--sucesso)_45%,var(--linha))] [background:color-mix(in_srgb,var(--sucesso)_10%,var(--painel))] [color:var(--tinta)]">
             <p className="font-semibold">Turning point pós-jogo</p>
-            <p className="mt-1 text-emerald-800">{postGameTurningPoint.explanation}</p>
-            <p className="mt-2 rounded-lg bg-emerald-100 px-3 py-2 font-medium">
+            <p className="mt-1 [color:var(--tinta-suave)]">{postGameTurningPoint.explanation}</p>
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))]">
               Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
             </p>
             <p className="mt-1 font-medium">
@@ -632,7 +636,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
                 });
                 setReviewRewarded(true);
               }}
-              className="mt-3 rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-emerald-300"
+              className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-[filter,opacity] [background:var(--sucesso)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
             </button>

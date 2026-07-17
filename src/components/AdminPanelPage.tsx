@@ -36,29 +36,29 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
       <Header titulo="Painel do professor" onVoltar={onVoltar} />
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
-        <section className="bg-white/12 backdrop-blur-md rounded-3xl border border-white/20 p-6 md:p-8">
+        <section className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-sm text-white/80 mb-4">
+              <div className="inline-flex items-center gap-2 rounded-full border [border-color:var(--linha)] [background:var(--fundo)] px-3 py-1 text-sm [color:var(--tinta-suave)] mb-4">
                 <span>🧑‍🏫</span>
                 <span>Área reservada ao professor</span>
               </div>
-              <h1 className="text-3xl md:text-4xl font-bold text-white text-shadow-lg mb-3">
+              <h1 className="text-3xl md:text-4xl font-bold [color:var(--tinta)] mb-3">
                 Gestão rápida do campeonato e da projeção
               </h1>
-              <p className="text-white/80 text-lg leading-relaxed">
+              <p className="[color:var(--tinta)] text-lg leading-relaxed">
                 Os alunos usam o site principal para treinar e entrar nos jogos. O professor usa esta página para abrir,
                 numa nova aba, o painel de administração do servidor de torneio e o modo espectador projetado na sala.
               </p>
             </div>
 
-            <div className="bg-white/10 rounded-2xl border border-white/15 p-4 min-w-0 md:w-80">
-              <div className="text-sm uppercase tracking-wide text-white/55 mb-2">Servidor ativo</div>
-              <div className="text-white font-semibold break-all">{browserBaseUrl || 'Introduz o endereço do servidor'}</div>
-              <p className="text-white/60 text-sm mt-2">
+            <div className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)] min-w-0 md:w-80">
+              <div className="text-sm uppercase tracking-wide [color:var(--tinta-suave)] mb-2">Servidor ativo</div>
+              <div className="[color:var(--tinta)] font-semibold break-all">{browserBaseUrl || 'Introduz o endereço do servidor'}</div>
+              <p className="[color:var(--tinta-suave)] text-sm mt-2">
                 O painel abre sempre no mesmo servidor onde os alunos estão a jogar em tempo real.
               </p>
-              <p className="text-white/50 text-sm mt-2">
+              <p className="[color:var(--tinta-suave)] text-sm mt-2">
                 Ao abrir o painel, o browser vai pedir a palavra-passe de administração configurada no servidor de torneio.
               </p>
             </div>
@@ -66,16 +66,16 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
         </section>
 
         <section className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-6">
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-6 space-y-4">
+          <div className="rounded-xl border p-6 space-y-4 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
             <div>
-              <h2 className="text-2xl font-bold text-white mb-2">Ligação ao servidor do torneio</h2>
-              <p className="text-white/75">
+              <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">Ligação ao servidor do torneio</h2>
+              <p className="[color:var(--tinta-suave)]">
                 Introduz o servidor da escola ou usa o valor configurado no ambiente. Este endereço é o mesmo usado no modo campeonato.
               </p>
             </div>
 
             <div>
-              <label className="block text-white/60 text-xs font-medium mb-1">Servidor do torneio</label>
+              <label className="block [color:var(--tinta-suave)] text-xs font-medium mb-1">Servidor do torneio</label>
               <select
                 value={selectedPreset}
                 onChange={(event) => {
@@ -86,10 +86,10 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
                     setServerUrl(selected);
                   }
                 }}
-                className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-sm mb-2"
+                className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] text-sm mb-2"
               >
                 {PRESET_TOURNAMENT_SERVERS.map((server) => (
-                  <option key={server.url} value={server.url} className="bg-gray-800">
+                  <option key={server.url} value={server.url} className="[background:var(--painel)] [color:var(--tinta)]">
                     {server.label}
                   </option>
                 ))}
@@ -101,11 +101,11 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
                   value={serverUrl}
                   onChange={(event) => setServerUrl(event.target.value)}
                   placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
-                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 font-mono text-sm"
+                  className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-sm"
                 />
               )}
 
-              <p className="text-white/40 text-xs mt-2">
+              <p className="[color:var(--tinta-suave)] text-xs mt-2">
                 Se colares um endereço WebSocket, esta página converte-o automaticamente para a versão de browser.
               </p>
             </div>
@@ -116,14 +116,14 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={!canOpenLinks}
-                className={`rounded-2xl border p-4 transition ${canOpenLinks
-                  ? 'bg-gradient-to-br from-emerald-500/30 to-green-600/30 border-emerald-300/40 hover:bg-emerald-500/40'
-                  : 'bg-white/5 border-white/10 text-white/40 pointer-events-none'
+                className={`rounded-xl border p-4 transition ${canOpenLinks
+                  ? '[border-color:var(--sucesso)] [background:color-mix(in_srgb,var(--sucesso)_10%,transparent)] hover:[background:color-mix(in_srgb,var(--sucesso)_18%,transparent)]'
+                  : '[background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta-suave)] opacity-60 pointer-events-none'
                   }`}
               >
                 <div className="text-3xl mb-3">🛠️</div>
-                <h3 className="text-lg font-bold text-white mb-1">Abrir painel de administração</h3>
-                <p className="text-sm text-white/75">
+                <h3 className="text-lg font-bold [color:var(--tinta)] mb-1">Abrir painel de administração</h3>
+                <p className="text-sm [color:var(--tinta-suave)]">
                   Inscrições, arranque do torneio, reinícios de partidas, classificação, exportação e logs.
                 </p>
               </a>
@@ -133,40 +133,40 @@ export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-disabled={!canOpenLinks}
-                className={`rounded-2xl border p-4 transition ${canOpenLinks
-                  ? 'bg-gradient-to-br from-sky-500/30 to-indigo-600/30 border-sky-300/40 hover:bg-sky-500/40'
-                  : 'bg-white/5 border-white/10 text-white/40 pointer-events-none'
+                className={`rounded-xl border p-4 transition ${canOpenLinks
+                  ? '[border-color:var(--jogo-dominorio)] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,transparent)] hover:[background:color-mix(in_srgb,var(--jogo-dominorio)_18%,transparent)]'
+                  : '[background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta-suave)] opacity-60 pointer-events-none'
                   }`}
               >
                 <div className="text-3xl mb-3">📺</div>
-                <h3 className="text-lg font-bold text-white mb-1">Abrir modo espectador</h3>
-                <p className="text-sm text-white/75">
+                <h3 className="text-lg font-bold [color:var(--tinta)] mb-1">Abrir modo espectador</h3>
+                <p className="text-sm [color:var(--tinta-suave)]">
                   Observa tabuleiros em tempo real e projeta os jogos ativos para a turma acompanhar.
                 </p>
               </a>
             </div>
           </div>
 
-          <div className="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-6 space-y-4">
-            <h2 className="text-2xl font-bold text-white">Como usar na prática</h2>
-            <div className="space-y-3 text-white/80 text-sm leading-relaxed">
-              <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                <div className="font-semibold text-white mb-1">1. Alunos</div>
+          <div className="rounded-xl border p-6 space-y-4 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
+            <h2 className="text-2xl font-bold [color:var(--tinta)]">Como usar na prática</h2>
+            <div className="space-y-3 [color:var(--tinta)] text-sm leading-relaxed">
+              <div className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)]">
+                <div className="font-semibold [color:var(--tinta)] mb-1">1. Alunos</div>
                 <p>Entram no site principal, escolhem “Modo Campeonato” e ligam-se ao servidor da escola.</p>
               </div>
-              <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                <div className="font-semibold text-white mb-1">2. Professor</div>
+              <div className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)]">
+                <div className="font-semibold [color:var(--tinta)] mb-1">2. Professor</div>
                 <p>Abre o painel de administração para criar o torneio, gerir jogadores e iniciar as partidas.</p>
               </div>
-              <div className="rounded-2xl bg-white/8 border border-white/10 p-4">
-                <div className="font-semibold text-white mb-1">3. Projeção</div>
+              <div className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)]">
+                <div className="font-semibold [color:var(--tinta)] mb-1">3. Projeção</div>
                 <p>Abre o modo espectador noutra aba ou ecrã para mostrar jogos e classificações em direto.</p>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-yellow-300/30 bg-yellow-500/10 p-4">
-              <div className="font-semibold text-yellow-100 mb-1">Importante</div>
-              <p className="text-yellow-100/85 text-sm leading-relaxed">
+            <div className="rounded-xl border p-4 [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_10%,transparent)]">
+              <div className="font-semibold [color:var(--tinta)] mb-1">Importante</div>
+              <p className="[color:var(--tinta-suave)] text-sm leading-relaxed">
                 Este painel usa o servidor de torneio separado. Se o link não abrir, confirma primeiro se o servidor do campeonato
                 está online no endereço indicado acima.
               </p>
@@ -402,11 +402,11 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
   }
 
   return (
-    <section className="bg-white/10 backdrop-blur-md rounded-3xl border border-white/20 p-6 md:p-8 space-y-6">
+    <section className="rounded-xl border p-6 md:p-8 space-y-6 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
       <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
         <div className="max-w-2xl">
-          <h2 className="text-2xl font-bold text-white mb-2">🎒 Turmas e códigos dos alunos</h2>
-          <p className="text-white/75">
+          <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">🎒 Turmas e códigos dos alunos</h2>
+          <p className="[color:var(--tinta-suave)]">
             Cria turmas, gera códigos de acesso e imprime cartões para distribuir. Os alunos usam o código para entrar no
             site sem passwords nem emails.
           </p>
@@ -417,15 +417,15 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
             type="button"
             onClick={() => void ligar()}
             disabled={aLigar || mutacaoEmCurso}
-            className="self-start px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-sm hover:bg-white/20 transition disabled:opacity-50"
+            className="self-start px-4 py-2 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] text-sm hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition disabled:opacity-50"
           >
             🔄 {aLigar ? 'A atualizar...' : 'Atualizar lista'}
           </button>
         )}
       </div>
 
-      <div className="bg-white/10 rounded-2xl border border-white/15 p-4 space-y-3">
-        <label className="block text-white/60 text-xs font-medium" htmlFor="admin-key-input">
+      <div className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)] space-y-3">
+        <label className="block [color:var(--tinta-suave)] text-xs font-medium" htmlFor="admin-key-input">
           Chave de professor (ADMIN_KEY do servidor)
         </label>
         <div className="flex flex-col sm:flex-row gap-3">
@@ -436,24 +436,24 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
             onChange={(event) => setAdminKey(event.target.value)}
             placeholder="Chave de administração"
             autoComplete="off"
-            className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 font-mono text-sm"
+            className="flex-1 px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-sm"
           />
           <button
             type="button"
             onClick={() => void ligar()}
             disabled={!podeLigar || aLigar}
-            className="px-4 py-2 rounded-lg bg-gradient-to-br from-emerald-500/60 to-green-600/60 border border-emerald-300/40 text-white font-semibold text-sm hover:from-emerald-500/80 hover:to-green-600/80 transition disabled:opacity-40 disabled:cursor-not-allowed"
+            className="px-4 py-2 rounded-lg [background:var(--tinta)] [color:var(--fundo)] font-semibold text-sm hover:[background:var(--tinta-suave)] transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {aLigar ? 'A ligar...' : turmas === null ? '🔑 Ligar às turmas' : '🔑 Voltar a ligar'}
           </button>
         </div>
-        <p className="text-white/40 text-xs">
+        <p className="[color:var(--tinta-suave)] text-xs">
           A chave fica guardada apenas nesta sessão do browser e é a mesma palavra-passe do painel de administração.
         </p>
       </div>
 
       {erro && (
-        <div className="rounded-2xl border border-red-300/40 bg-red-500/15 p-4 text-red-100 text-sm" role="alert">
+        <div className="rounded-xl border p-4 [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,transparent)] [color:var(--perigo)] text-sm" role="alert">
           ⚠️ {erro}
         </div>
       )}
@@ -462,22 +462,22 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
         <>
           <div className="space-y-4">
             {turmas.length === 0 && (
-              <p className="text-white/60 text-sm">Ainda não há turmas neste servidor. Cria a primeira em baixo.</p>
+              <p className="[color:var(--tinta-suave)] text-sm">Ainda não há turmas neste servidor. Cria a primeira em baixo.</p>
             )}
 
             {turmas.map((turma) => {
               const expandida = turmasExpandidas.has(turma.id);
               return (
-                <div key={turma.id} className="bg-white/10 rounded-2xl border border-white/15 p-4 space-y-4">
+                <div key={turma.id} className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)] space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <button
                       type="button"
                       onClick={() => alternarExpansao(turma.id)}
-                      className="flex items-center gap-3 text-left text-white hover:text-cyan-200 transition"
+                      className="flex items-center gap-3 text-left [color:var(--tinta)] hover:[color:var(--tinta-suave)] transition"
                     >
                       <span aria-hidden="true">{expandida ? '▾' : '▸'}</span>
                       <span className="text-lg font-bold">{turma.name}</span>
-                      <span className="text-white/55 text-sm">
+                      <span className="[color:var(--tinta-suave)] text-sm">
                         {turma.students.length} {turma.students.length === 1 ? 'aluno' : 'alunos'}
                       </span>
                     </button>
@@ -487,7 +487,7 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                         type="button"
                         onClick={() => void copiarCodigos(turma)}
                         disabled={turma.students.length === 0}
-                        className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] text-xs hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition disabled:opacity-40"
                       >
                         {copiadoTurmaId === turma.id ? '✅ Copiado!' : '📋 Copiar códigos'}
                       </button>
@@ -495,7 +495,7 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                         type="button"
                         onClick={() => imprimirCodigos(turma)}
                         disabled={turma.students.length === 0}
-                        className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/20 text-white text-xs hover:bg-white/20 transition disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] text-xs hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition disabled:opacity-40"
                       >
                         🖨️ Imprimir códigos
                       </button>
@@ -508,7 +508,7 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                           })
                         }
                         disabled={mutacaoEmCurso}
-                        className="px-3 py-1.5 rounded-lg bg-sky-500/25 border border-sky-300/40 text-white text-xs hover:bg-sky-500/40 transition disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg border [border-color:var(--jogo-dominorio)] [background:color-mix(in_srgb,var(--jogo-dominorio)_12%,transparent)] [color:var(--tinta)] text-xs hover:[background:color-mix(in_srgb,var(--jogo-dominorio)_20%,transparent)] transition disabled:opacity-40"
                       >
                         ➕ Adicionar alunos
                       </button>
@@ -516,7 +516,7 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                         type="button"
                         onClick={() => void apagarTurma(turma)}
                         disabled={mutacaoEmCurso}
-                        className="px-3 py-1.5 rounded-lg bg-red-500/20 border border-red-300/40 text-red-100 text-xs hover:bg-red-500/35 transition disabled:opacity-40"
+                        className="px-3 py-1.5 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-xs hover:[background:color-mix(in_srgb,var(--perigo)_10%,transparent)] transition disabled:opacity-40"
                       >
                         🗑️ Apagar turma
                       </button>
@@ -524,8 +524,8 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                   </div>
 
                   {turmaEmAdicao === turma.id && (
-                    <div className="rounded-xl bg-white/8 border border-white/10 p-4 space-y-3">
-                      <label className="block text-white/60 text-xs font-medium" htmlFor={`novos-alunos-${turma.id}`}>
+                    <div className="rounded-xl border p-4 space-y-3 [background:var(--fundo)] [border-color:var(--linha)]">
+                      <label className="block [color:var(--tinta-suave)] text-xs font-medium" htmlFor={`novos-alunos-${turma.id}`}>
                         Novos alunos (um nome por linha)
                       </label>
                       <textarea
@@ -534,14 +534,14 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                         onChange={(event) => setNovosAlunosTexto(event.target.value)}
                         rows={4}
                         placeholder={'Maria\nRui\nAna'}
-                        className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-sm"
+                        className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] text-sm"
                       />
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={() => void adicionarAlunos(turma.id)}
                           disabled={mutacaoEmCurso}
-                          className="px-4 py-2 rounded-lg bg-emerald-500/40 border border-emerald-300/40 text-white text-sm font-semibold hover:bg-emerald-500/60 transition disabled:opacity-40"
+                          className="px-4 py-2 rounded-lg [background:var(--tinta)] [color:var(--fundo)] text-sm font-semibold hover:[background:var(--tinta-suave)] transition disabled:opacity-40"
                         >
                           {mutacaoEmCurso ? 'A adicionar...' : 'Adicionar à turma'}
                         </button>
@@ -551,7 +551,7 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                             setTurmaEmAdicao(null);
                             setNovosAlunosTexto('');
                           }}
-                          className="px-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white/80 text-sm hover:bg-white/20 transition"
+                          className="px-4 py-2 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] text-sm hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition"
                         >
                           Cancelar
                         </button>
@@ -562,11 +562,11 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                   {expandida && (
                     <div className="overflow-x-auto">
                       {turma.students.length === 0 ? (
-                        <p className="text-white/55 text-sm">Esta turma ainda não tem alunos.</p>
+                        <p className="[color:var(--tinta-suave)] text-sm">Esta turma ainda não tem alunos.</p>
                       ) : (
                         <table className="w-full text-sm">
                           <thead>
-                            <tr className="text-left text-white/55 border-b border-white/15">
+                            <tr className="text-left [color:var(--tinta-suave)] border-b [border-color:var(--linha)]">
                               <th className="py-2 pr-4 font-medium">Alcunha</th>
                               <th className="py-2 pr-4 font-medium">Código</th>
                               <th className="py-2 font-medium sr-only">Ações</th>
@@ -574,10 +574,10 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                           </thead>
                           <tbody>
                             {turma.students.map((aluno) => (
-                              <tr key={aluno.id} className="border-b border-white/10 last:border-b-0">
-                                <td className="py-2 pr-4 text-white">{aluno.name}</td>
+                              <tr key={aluno.id} className="border-b [border-color:var(--linha)] last:border-b-0">
+                                <td className="py-2 pr-4 [color:var(--tinta)]">{aluno.name}</td>
                                 <td className="py-2 pr-4">
-                                  <span className="font-mono text-base font-bold tracking-widest text-cyan-200 bg-white/10 rounded px-2 py-0.5">
+                                  <span className="font-mono text-base font-bold tracking-widest [color:var(--tinta)] border [border-color:var(--linha)] [background:var(--fundo)] rounded px-2 py-0.5">
                                     {aluno.code}
                                   </span>
                                 </td>
@@ -586,7 +586,7 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                                     type="button"
                                     onClick={() => void removerAluno(turma, aluno.id, aluno.name)}
                                     disabled={mutacaoEmCurso}
-                                    className="px-2 py-1 rounded-lg bg-red-500/15 border border-red-300/30 text-red-100 text-xs hover:bg-red-500/30 transition disabled:opacity-40"
+                                    className="px-2 py-1 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-xs hover:[background:color-mix(in_srgb,var(--perigo)_10%,transparent)] transition disabled:opacity-40"
                                   >
                                     Remover
                                   </button>
@@ -603,10 +603,10 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
             })}
           </div>
 
-          <div className="bg-white/10 rounded-2xl border border-white/15 p-4 space-y-3">
-            <h3 className="text-lg font-bold text-white">➕ Criar nova turma</h3>
+          <div className="rounded-xl border p-4 [background:var(--fundo)] [border-color:var(--linha)] space-y-3">
+            <h3 className="text-lg font-bold [color:var(--tinta)]">➕ Criar nova turma</h3>
             <div>
-              <label className="block text-white/60 text-xs font-medium mb-1" htmlFor="nome-nova-turma">
+              <label className="block [color:var(--tinta-suave)] text-xs font-medium mb-1" htmlFor="nome-nova-turma">
                 Nome da turma
               </label>
               <input
@@ -615,11 +615,11 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                 value={nomeNovaTurma}
                 onChange={(event) => setNomeNovaTurma(event.target.value)}
                 placeholder="Ex.: 5.º A"
-                className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-sm"
+                className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] text-sm"
               />
             </div>
             <div>
-              <label className="block text-white/60 text-xs font-medium mb-1" htmlFor="alunos-nova-turma">
+              <label className="block [color:var(--tinta-suave)] text-xs font-medium mb-1" htmlFor="alunos-nova-turma">
                 Alunos (um por linha, alcunha ou primeiro nome)
               </label>
               <textarea
@@ -628,18 +628,18 @@ function ClassManagementSection({ serverUrl }: ClassManagementSectionProps) {
                 onChange={(event) => setAlunosNovaTurma(event.target.value)}
                 rows={5}
                 placeholder={'Maria\nRui\nAna'}
-                className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cyan-400/50 text-sm"
+                className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] text-sm"
               />
             </div>
             <button
               type="button"
               onClick={() => void criarTurma()}
               disabled={mutacaoEmCurso || nomeNovaTurma.trim().length === 0}
-              className="px-4 py-2 rounded-lg bg-gradient-to-br from-emerald-500/60 to-green-600/60 border border-emerald-300/40 text-white font-semibold text-sm hover:from-emerald-500/80 hover:to-green-600/80 transition disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg [background:var(--tinta)] [color:var(--fundo)] font-semibold text-sm hover:[background:var(--tinta-suave)] transition disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {mutacaoEmCurso ? 'A criar...' : 'Criar turma e gerar códigos'}
             </button>
-            <p className="text-white/40 text-xs">
+            <p className="[color:var(--tinta-suave)] text-xs">
               Os códigos são gerados automaticamente pelo servidor. Depois de criar, expande a turma para os ver, copiar
               ou imprimir.
             </p>

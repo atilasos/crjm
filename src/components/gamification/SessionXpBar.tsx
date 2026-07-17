@@ -17,18 +17,18 @@ export function SessionXpBar({
   const progress = Math.max(0, Math.min(100, ((currentXp - currentLevelXp) / range) * 100));
 
   return (
-    <div className="rounded-2xl border border-white/20 bg-white/10 px-3 py-2 text-white shadow-lg backdrop-blur-sm">
-      <div className="flex items-center justify-between gap-3 text-xs text-white/80">
+    <div className="rounded-lg border px-3 py-2 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
+      <div className="flex items-center justify-between gap-3 text-xs [color:var(--tinta-suave)]">
         <span>{isReady ? `XP total: ${currentXp}` : 'XP total: -'}</span>
         <span>{isReady ? `+${sessionXp} sessão` : 'A sincronizar...'}</span>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/20">
+      <div className="mt-2 h-2 overflow-hidden rounded-full [background:var(--linha)]">
         <div
-          className={`h-full rounded-full bg-gradient-to-r from-amber-300 to-yellow-500 transition-all duration-500 ${!isReady ? 'animate-pulse opacity-50' : ''}`}
+          className={`h-full rounded-full transition-all duration-500 [background:var(--ouro)] ${!isReady ? 'animate-pulse opacity-50' : ''}`}
           style={{ width: isReady ? `${progress}%` : '0%' }}
         />
       </div>
-      <div className="mt-1 text-[11px] text-white/70">
+      <div className="mt-1 text-[11px] [color:var(--tinta-suave)]">
         {isReady ? `${currentXp - currentLevelXp} / ${range} XP para o próximo nível` : 'A carregar progresso...'}
       </div>
     </div>

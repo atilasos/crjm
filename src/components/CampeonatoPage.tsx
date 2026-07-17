@@ -738,15 +738,15 @@ function ConnectForm({
   const isConnecting = connectionStatus === 'connecting';
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
-      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
+      <h2 className="text-2xl font-bold [color:var(--tinta)] mb-6 flex items-center gap-3">
         <span>🏆</span>
         Entrar no Campeonato
       </h2>
 
       <div className="space-y-4">
         <div>
-          <label className="block text-white/80 text-sm font-medium mb-2">
+          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">
             O teu nome *
           </label>
           <input
@@ -754,13 +754,13 @@ function ConnectForm({
             value={playerName}
             onChange={e => setPlayerName(e.target.value)}
             placeholder="Ex: João Silva"
-            className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+            className="w-full px-4 py-3 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
             disabled={isConnecting}
           />
         </div>
 
         <div>
-          <label className="block text-white/80 text-sm font-medium mb-2">
+          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">
             Turma (opcional)
           </label>
           <input
@@ -768,69 +768,69 @@ function ConnectForm({
             value={classId}
             onChange={e => setClassId(e.target.value)}
             placeholder="Ex: 5ºA"
-            className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+            className="w-full px-4 py-3 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
             disabled={isConnecting}
           />
         </div>
 
         <div>
-          <label className="block text-white/80 text-sm font-medium mb-2">
+          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">
             Jogo do campeonato *
           </label>
           <select
             value={selectedGame}
             onChange={e => setSelectedGame(e.target.value as GameId)}
-            className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-yellow-400/50"
+            className="w-full px-4 py-3 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
             disabled={isConnecting}
           >
             {games.map(g => (
-              <option key={g} value={g} className="bg-gray-800">
+              <option key={g} value={g} className="[background:var(--painel)] [color:var(--tinta)]">
                 {GAME_NAMES[g]}
               </option>
             ))}
           </select>
-          <p className="text-white/50 text-xs mt-1">
+          <p className="[color:var(--tinta-suave)] text-xs mt-1">
             Mais jogos em breve!
           </p>
         </div>
 
         {/* Toggle modo de teste vs servidor real */}
-        <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+        <div className="rounded-lg p-4 border [background:var(--fundo)] [border-color:var(--linha)]">
           <div className="flex items-center justify-between mb-3">
-            <label className="text-white/80 text-sm font-medium">
+            <label className="[color:var(--tinta)] text-sm font-medium">
               Modo de ligação
             </label>
             <button
               type="button"
               onClick={() => setUseMockServer(!useMockServer)}
               disabled={isConnecting}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useMockServer ? 'bg-blue-500' : 'bg-green-500'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useMockServer ? '[background:var(--jogo-dominorio)]' : '[background:var(--sucesso)]'
                 } disabled:opacity-50`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${useMockServer ? 'translate-x-1' : 'translate-x-6'
+                className={`inline-block h-4 w-4 transform rounded-full [background:var(--painel)] transition-transform ${useMockServer ? 'translate-x-1' : 'translate-x-6'
                   }`}
               />
             </button>
           </div>
 
           {useMockServer ? (
-            <div className="bg-blue-500/20 border border-blue-400/30 rounded-lg p-3">
-              <p className="text-blue-200 text-sm">
+            <div className="rounded-lg p-3 border [border-color:var(--jogo-dominorio)] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,transparent)]">
+              <p className="[color:var(--tinta)] text-sm">
                 <strong>Modo de teste</strong> - Jogas contra um bot simulado localmente.
                 Ideal para treinar e testar a interface.
               </p>
             </div>
           ) : (
             <div className="space-y-3">
-              <div className="bg-green-500/20 border border-green-400/30 rounded-lg p-3">
-                <p className="text-green-200 text-sm">
+              <div className="rounded-lg p-3 border [border-color:var(--sucesso)] [background:color-mix(in_srgb,var(--sucesso)_10%,transparent)]">
+                <p className="[color:var(--sucesso)] text-sm">
                   <strong>Modo campeonato</strong> - Liga-te ao servidor do professor
                   para competir contra colegas em tempo real!
                 </p>
               </div>
               <div>
-                <label className="block text-white/60 text-xs font-medium mb-1">
+                <label className="block [color:var(--tinta-suave)] text-xs font-medium mb-1">
                   Servidor do torneio
                 </label>
                 <select
@@ -843,11 +843,11 @@ function ConnectForm({
                       setServerUrl(selected);
                     }
                   }}
-                  className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-green-400/50 text-sm mb-2"
+                  className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] text-sm mb-2"
                   disabled={isConnecting}
                 >
                   {PRESET_TOURNAMENT_SERVERS.map(server => (
-                    <option key={server.url} value={server.url} className="bg-gray-800">
+                    <option key={server.url} value={server.url} className="[background:var(--painel)] [color:var(--tinta)]">
                       {server.label}
                     </option>
                   ))}
@@ -859,11 +859,11 @@ function ConnectForm({
                     value={serverUrl}
                     onChange={e => setServerUrl(e.target.value)}
                     placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
-                    className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-green-400/50 font-mono text-sm"
+                    className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-sm"
                     disabled={isConnecting}
                   />
                 )}
-                <p className="text-white/40 text-xs mt-1">
+                <p className="[color:var(--tinta-suave)] text-xs mt-1">
                   Introduz o endereço da escola ou usa o servidor configurado no ambiente, se existir.
                 </p>
               </div>
@@ -872,15 +872,15 @@ function ConnectForm({
         </div>
 
         {connectionError && (
-          <div className="bg-red-500/20 border border-red-400/50 rounded-lg p-3">
-            <p className="text-red-200 text-sm">{connectionError}</p>
+          <div className="rounded-lg p-3 border [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,transparent)]">
+            <p className="[color:var(--perigo)] text-sm">{connectionError}</p>
           </div>
         )}
 
         <button
           onClick={onConnect}
           disabled={isConnecting || !playerName.trim() || (!useMockServer && (!serverUrl.trim() || serverUrl === 'custom'))}
-          className="w-full py-4 px-6 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold text-lg shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2"
+          className="w-full py-4 px-6 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold text-lg [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isConnecting ? (
             <>
@@ -897,12 +897,12 @@ function ConnectForm({
 
         {/* Secção de reconexão */}
         {!useMockServer && (
-          <div className="mt-6 pt-6 border-t border-white/20">
-            <h3 className="text-white/80 text-sm font-medium mb-3 flex items-center gap-2">
+          <div className="mt-6 pt-6 border-t [border-color:var(--linha)]">
+            <h3 className="[color:var(--tinta)] text-sm font-medium mb-3 flex items-center gap-2">
               <span>🔄</span>
               Voltar a entrar no torneio
             </h3>
-            <p className="text-white/50 text-xs mb-3">
+            <p className="[color:var(--tinta-suave)] text-xs mb-3">
               Se foste desconectado, insere o teu código de reconexão:
             </p>
             <div className="flex gap-2">
@@ -912,13 +912,13 @@ function ConnectForm({
                 onChange={e => setReconnectionCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                 placeholder="ABC234"
                 maxLength={6}
-                className="flex-1 px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-blue-400/50 font-mono text-lg tracking-widest text-center uppercase"
+                className="flex-1 px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-lg tracking-widest text-center uppercase"
                 disabled={isConnecting}
               />
               <button
                 onClick={onRejoin}
                 disabled={isConnecting || reconnectionCodeInput.length !== 6 || (!serverUrl.trim() || serverUrl === 'custom')}
-                className="px-4 py-2 rounded-lg bg-blue-500/30 border border-blue-400/50 text-blue-200 font-medium hover:bg-blue-500/40 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] font-medium hover:[border-color:var(--tinta-suave)] hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Reconectar
               </button>
@@ -978,24 +978,24 @@ function TournamentLobby({
     <>
       {/* Overlay de espera quando o torneio está a decorrer */}
       {isWaitingForMatch && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 flex flex-col p-4 overflow-auto">
+        <div className="fixed inset-0 [background:rgb(16_24_40_/_0.85)] z-40 flex flex-col p-4 overflow-auto">
           <div className="max-w-5xl mx-auto w-full flex-1 flex flex-col gap-4">
             {/* Header com info de espera */}
-            <div className="bg-gradient-to-r from-indigo-900/90 to-purple-900/90 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-xl">
+            <div className="rounded-xl p-4 border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="flex items-center gap-4">
                   {/* Animação de espera */}
                   <div className="relative">
                     <div className="text-4xl animate-bounce">⏳</div>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <div className="w-12 h-12 border-3 border-yellow-400/30 border-t-yellow-400 rounded-full animate-spin"></div>
+                      <div className="w-12 h-12 border-3 [border-color:color-mix(in_srgb,var(--ouro)_30%,transparent)] [border-top-color:var(--ouro)] rounded-full animate-spin"></div>
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white">
+                    <h2 className="text-xl font-bold [color:var(--tinta)]">
                       A aguardar o teu match
                     </h2>
-                    <p className="text-white/60 text-sm">
+                    <p className="[color:var(--tinta-suave)] text-sm">
                       Enquanto esperas, podes observar outros jogos!
                     </p>
                   </div>
@@ -1003,25 +1003,25 @@ function TournamentLobby({
                 
                 {/* Info do torneio compacta */}
                 <div className="flex items-center gap-4">
-                  <div className="bg-white/10 rounded-lg px-3 py-2">
-                    <p className="text-white/50 text-xs">Jogo</p>
-                    <p className="text-white font-medium text-sm">{GAME_NAMES[tournamentState.gameId]}</p>
+                  <div className="rounded-lg px-3 py-2 border [background:var(--fundo)] [border-color:var(--linha)]">
+                    <p className="[color:var(--tinta-suave)] text-xs">Jogo</p>
+                    <p className="[color:var(--tinta)] font-medium text-sm">{GAME_NAMES[tournamentState.gameId]}</p>
                   </div>
-                  <div className="bg-white/10 rounded-lg px-3 py-2">
-                    <p className="text-white/50 text-xs">Jogadores</p>
-                    <p className="text-white font-medium text-sm">
+                  <div className="rounded-lg px-3 py-2 border [background:var(--fundo)] [border-color:var(--linha)]">
+                    <p className="[color:var(--tinta-suave)] text-xs">Jogadores</p>
+                    <p className="[color:var(--tinta)] font-medium text-sm">
                       {tournamentState.players.filter(p => p.isOnline !== false).length}/{tournamentState.players.length}
                     </p>
                   </div>
                   {reconnectionCode && (
-                    <div className="bg-purple-500/20 border border-purple-400/40 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <div className="rounded-lg px-3 py-2 border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_12%,transparent)] flex items-center gap-2">
                       <div>
-                        <p className="text-purple-200 text-xs">Código</p>
-                        <p className="font-mono font-bold text-white text-sm tracking-wider">{reconnectionCode}</p>
+                        <p className="[color:var(--tinta-suave)] text-xs">Código</p>
+                        <p className="font-mono font-bold [color:var(--tinta)] text-sm tracking-wider">{reconnectionCode}</p>
                       </div>
                       <button
                         onClick={copyCode}
-                        className="p-1 rounded bg-purple-500/30 text-purple-200 text-xs hover:bg-purple-500/40"
+                        className="p-1 rounded border [border-color:var(--linha)] [color:var(--tinta-suave)] text-xs hover:[background:color-mix(in_srgb,var(--tinta)_8%,transparent)]"
                         title="Copiar"
                       >
                         📋
@@ -1035,14 +1035,14 @@ function TournamentLobby({
             {/* Área principal: lista de jogos + tabuleiro espectador */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[500px]">
               {/* Lista de jogos em curso */}
-              <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10">
-                <h3 className="text-white font-semibold mb-3 flex items-center gap-2">
+              <div className="rounded-xl p-4 border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
+                <h3 className="[color:var(--tinta)] font-semibold mb-3 flex items-center gap-2">
                   <span>🎮</span>
                   Jogos em Curso ({activeGames.length})
                 </h3>
                 
                 {activeGames.length === 0 ? (
-                  <div className="text-white/50 text-sm text-center py-8">
+                  <div className="[color:var(--tinta-suave)] text-sm text-center py-8">
                     <p className="text-3xl mb-2">🔍</p>
                     <p>Nenhum jogo a decorrer neste momento.</p>
                     <p className="text-xs mt-1">Os jogos aparecerão aqui quando começarem.</p>
@@ -1057,34 +1057,34 @@ function TournamentLobby({
                         )}
                         className={`w-full text-left p-3 rounded-xl transition-all ${
                           selectedSpectateMatchId === game.matchId
-                            ? 'bg-yellow-500/30 border-2 border-yellow-400'
-                            : 'bg-white/5 border border-white/10 hover:bg-white/10'
+                            ? 'border-2 [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_15%,transparent)]'
+                            : 'border [background:var(--fundo)] [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                         }`}
                       >
                         <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] uppercase tracking-wider text-white/50">
+                          <span className="text-[10px] uppercase tracking-wider [color:var(--tinta-suave)]">
                             {game.bracket === 'grandFinal' ? '🏆 Final' : 
                              game.bracket === 'grandFinalReset' ? '🏆 Reset' :
                              game.bracket === 'winners' ? '🟢 Winners' : '🟠 Losers'}
                             {' • Ronda ' + game.round}
                           </span>
-                          <span className="text-xs text-white/50">Jogo {game.gameNumber}</span>
+                          <span className="text-xs [color:var(--tinta-suave)]">Jogo {game.gameNumber}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <p className="text-white font-medium text-sm truncate">{game.player1Name}</p>
-                            <p className="text-white/60 text-sm truncate">vs {game.player2Name}</p>
+                            <p className="[color:var(--tinta)] font-medium text-sm truncate">{game.player1Name}</p>
+                            <p className="[color:var(--tinta-suave)] text-sm truncate">vs {game.player2Name}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold">
-                              <span className="text-green-400">{game.score.player1Wins}</span>
-                              <span className="text-white/40 mx-1">-</span>
-                              <span className="text-red-400">{game.score.player2Wins}</span>
+                              <span className="[color:var(--sucesso)]">{game.score.player1Wins}</span>
+                              <span className="[color:var(--tinta-suave)] mx-1">-</span>
+                              <span className="[color:var(--perigo)]">{game.score.player2Wins}</span>
                             </p>
                           </div>
                         </div>
                         {selectedSpectateMatchId === game.matchId && (
-                          <div className="mt-2 text-[10px] text-yellow-300 flex items-center gap-1">
+                          <div className="mt-2 text-[10px] [color:var(--ouro)] flex items-center gap-1">
                             <span className="animate-pulse">👁️</span> A observar
                           </div>
                         )}
@@ -1095,10 +1095,10 @@ function TournamentLobby({
               </div>
 
               {/* Tabuleiro do jogo selecionado */}
-              <div className="lg:col-span-2 bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex flex-col">
+              <div className="lg:col-span-2 rounded-xl p-4 border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] flex flex-col">
                 {!selectedSpectateMatchId ? (
                   <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center text-white/50">
+                    <div className="text-center [color:var(--tinta-suave)]">
                       <p className="text-5xl mb-4">👈</p>
                       <p className="font-medium">Seleciona um jogo para observar</p>
                       <p className="text-sm mt-1">Clica num jogo da lista à esquerda</p>
@@ -1107,30 +1107,30 @@ function TournamentLobby({
                 ) : selectedSpectateState && spectatorGameState ? (
                   <>
                     {/* Header do jogo espectador */}
-                    <div className="mb-4 pb-3 border-b border-white/10">
+                    <div className="mb-4 pb-3 border-b [border-color:var(--linha)]">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-white/50 text-xs uppercase tracking-wider">
+                          <p className="[color:var(--tinta-suave)] text-xs uppercase tracking-wider">
                             {selectedSpectateState.bracket === 'grandFinal' ? '🏆 Grand Final' :
                              selectedSpectateState.bracket === 'grandFinalReset' ? '🏆 Grand Final Reset' :
                              selectedSpectateState.bracket === 'winners' ? '🟢 Winners Bracket' : '🟠 Losers Bracket'}
                             {' • Ronda ' + selectedSpectateState.round}
                           </p>
-                          <p className="text-white font-semibold">
+                          <p className="[color:var(--tinta)] font-semibold">
                             {selectedSpectateState.player1Name} vs {selectedSpectateState.player2Name}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold">
-                            <span className="text-green-400">{selectedSpectateState.score.player1Wins}</span>
-                            <span className="text-white/40 mx-2">-</span>
-                            <span className="text-red-400">{selectedSpectateState.score.player2Wins}</span>
+                            <span className="[color:var(--sucesso)]">{selectedSpectateState.score.player1Wins}</span>
+                            <span className="[color:var(--tinta-suave)] mx-2">-</span>
+                            <span className="[color:var(--perigo)]">{selectedSpectateState.score.player2Wins}</span>
                           </p>
-                          <p className="text-white/50 text-xs">Jogo {selectedSpectateState.gameNumber}</p>
+                          <p className="[color:var(--tinta-suave)] text-xs">Jogo {selectedSpectateState.gameNumber}</p>
                         </div>
                       </div>
                       {selectedSpectateState.whoseTurn && (
-                        <p className="text-sm mt-2 text-yellow-300">
+                        <p className="text-sm mt-2 [color:var(--ouro)]">
                           Vez de: {selectedSpectateState.whoseTurn === 'player1' 
                             ? selectedSpectateState.player1Name 
                             : selectedSpectateState.player2Name}
@@ -1193,15 +1193,15 @@ function TournamentLobby({
                     </div>
 
                     {/* Aviso de modo espectador */}
-                    <div className="mt-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-2 text-center">
-                      <p className="text-yellow-200 text-xs">
+                    <div className="mt-4 rounded-lg p-2 text-center border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_8%,transparent)]">
+                      <p className="[color:var(--tinta)] text-xs">
                         👁️ Modo espectador - Estás apenas a observar este jogo
                       </p>
                     </div>
                   </>
                 ) : (
                   <div className="flex-1 flex items-center justify-center">
-                    <div className="text-center text-white/50">
+                    <div className="text-center [color:var(--tinta-suave)]">
                       <div className="animate-spin text-4xl mb-4">⏳</div>
                       <p>A carregar estado do jogo...</p>
                     </div>
@@ -1211,22 +1211,22 @@ function TournamentLobby({
             </div>
 
             {/* Nota de rodapé */}
-            <p className="text-white/30 text-xs text-center">
+            <p className="[color:rgb(232_237_245_/_0.55)] text-xs text-center">
               💡 Serás automaticamente redirecionado quando o teu match começar
             </p>
           </div>
         </div>
       )}
 
-      <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
+      <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+          <h2 className="text-2xl font-bold [color:var(--tinta)] flex items-center gap-3">
             <span>🏟️</span>
             {GAME_NAMES[tournamentState.gameId]}
           </h2>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${tournamentState.phase === 'registration'
-            ? 'bg-blue-500/30 text-blue-200'
-            : 'bg-green-500/30 text-green-200'
+            ? 'border [border-color:var(--linha)] [color:var(--tinta-suave)]'
+            : '[background:color-mix(in_srgb,var(--sucesso)_15%,transparent)] [color:var(--sucesso)]'
             }`}>
             {tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer'}
           </span>
@@ -1234,23 +1234,23 @@ function TournamentLobby({
 
         {/* Código de reconexão */}
         {reconnectionCode && (
-          <div className="mb-6 bg-gradient-to-r from-purple-500/20 to-blue-500/20 border border-purple-400/50 rounded-lg p-4">
+          <div className="mb-6 rounded-lg p-4 border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_10%,transparent)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-purple-200 text-sm font-medium mb-1">
+                <p className="[color:var(--tinta-suave)] text-sm font-medium mb-1">
                   🔑 O teu código de reconexão
                 </p>
-                <p className="text-white/60 text-xs">
+                <p className="[color:var(--tinta-suave)] text-xs">
                   Guarda este código! Dá-o ao professor se fores desconectado.
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-2xl font-bold text-white tracking-widest bg-black/30 px-4 py-2 rounded-lg">
+                <span className="font-mono text-2xl font-bold [color:var(--tinta)] tracking-widest px-4 py-2 rounded-lg border [background:var(--fundo)] [border-color:var(--linha)]">
                   {reconnectionCode}
                 </span>
                 <button
                   onClick={copyCode}
-                  className="px-3 py-2 rounded-lg bg-purple-500/30 border border-purple-400/50 text-purple-200 text-sm hover:bg-purple-500/40 transition-colors"
+                  className="px-3 py-2 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] text-sm hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition-colors"
                   title="Copiar código"
                 >
                   📋
@@ -1261,7 +1261,7 @@ function TournamentLobby({
         )}
 
         <div>
-          <h3 className="text-white/80 text-sm font-medium mb-3">
+          <h3 className="[color:var(--tinta)] text-sm font-medium mb-3">
             Jogadores ({tournamentState.players.length})
           </h3>
           <div className="grid grid-cols-2 gap-2">
@@ -1269,13 +1269,13 @@ function TournamentLobby({
               <div
                 key={player.id}
                 className={`px-3 py-2 rounded-lg text-sm ${player.id === playerId
-                  ? 'bg-yellow-500/30 text-yellow-200 border border-yellow-400/50'
-                  : 'bg-white/10 text-white/80'
+                  ? 'border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_15%,transparent)] [color:var(--tinta)]'
+                  : 'border [border-color:var(--linha)] [background:var(--fundo)] [color:var(--tinta)]'
                   }`}
               >
                 <span className="font-medium">{player.name}</span>
                 {player.classId && (
-                  <span className="text-white/50 ml-1">({player.classId})</span>
+                  <span className="[color:var(--tinta-suave)] ml-1">({player.classId})</span>
                 )}
                 {player.id === playerId && (
                   <span className="ml-1">👈</span>
@@ -1286,8 +1286,8 @@ function TournamentLobby({
         </div>
 
         {tournamentState.phase === 'registration' && (
-          <div className="mt-6 bg-blue-500/20 border border-blue-400/50 rounded-lg p-4">
-            <p className="text-blue-200 text-sm">
+          <div className="mt-6 rounded-lg p-4 border [border-color:var(--linha)] [background:var(--fundo)]">
+            <p className="[color:var(--tinta)] text-sm">
               ⏳ A aguardar início do campeonato...
             </p>
           </div>
@@ -1360,21 +1360,21 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const matchContinues = myScore < maxWins && opponentScore < maxWins;
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20">
+    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
       {/* Header do match */}
       <div className="text-center mb-6">
-        <div className="inline-block px-3 py-1 rounded-full bg-purple-500/30 text-purple-200 text-sm mb-3">
+        <div className="inline-block px-3 py-1 rounded-full border [border-color:var(--ouro)] [color:var(--tinta-suave)] text-sm mb-3">
           {match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket'} • Ronda {match.round}
         </div>
-        <h2 className="text-2xl font-bold text-white mb-2">
+        <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">
           Tu vs {opponent?.name}
         </h2>
         <div className="text-4xl font-bold">
-          <span className="text-green-400">{myScore}</span>
-          <span className="text-white/40 mx-2">-</span>
-          <span className="text-red-400">{opponentScore}</span>
+          <span className="[color:var(--sucesso)]">{myScore}</span>
+          <span className="[color:var(--tinta-suave)] mx-2">-</span>
+          <span className="[color:var(--perigo)]">{opponentScore}</span>
         </div>
-        <p className="text-white/60 text-sm mt-1">
+        <p className="[color:var(--tinta-suave)] text-sm mt-1">
           Melhor de 3 • Jogo {currentGameNumber}
         </p>
       </div>
@@ -1382,30 +1382,30 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
       {/* Anúncio de fim de partida individual */}
       {gameJustEnded && matchContinues && (
         <div className="text-center py-8">
-          <div className={`inline-block p-6 rounded-2xl ${iWonLastGame
-            ? 'bg-gradient-to-br from-green-500/30 to-emerald-500/30 border border-green-400/50'
+          <div className={`inline-block p-6 rounded-xl ${iWonLastGame
+            ? 'border [border-color:var(--sucesso)] [background:color-mix(in_srgb,var(--sucesso)_12%,transparent)]'
             : isDraw
-              ? 'bg-gradient-to-br from-gray-500/30 to-slate-500/30 border border-gray-400/50'
-              : 'bg-gradient-to-br from-red-500/30 to-orange-500/30 border border-red-400/50'
+              ? 'border [border-color:var(--linha)] [background:var(--fundo)]'
+              : 'border [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_12%,transparent)]'
             }`}>
             <div className="text-6xl mb-3">
               {iWonLastGame ? '🎉' : isDraw ? '🤝' : '😔'}
             </div>
-            <h3 className="text-2xl font-bold text-white mb-2">
+            <h3 className="text-2xl font-bold [color:var(--tinta)] mb-2">
               {iWonLastGame
                 ? 'Ganhaste esta partida!'
                 : isDraw
                   ? 'Empate!'
                   : 'Perdeste esta partida...'}
             </h3>
-            <p className="text-white/70 mb-4">
-              Resultado do match: <span className="font-bold text-green-400">{myScore}</span> - <span className="font-bold text-red-400">{opponentScore}</span>
+            <p className="[color:var(--tinta-suave)] mb-4">
+              Resultado do match: <span className="font-bold [color:var(--sucesso)]">{myScore}</span> - <span className="font-bold [color:var(--perigo)]">{opponentScore}</span>
             </p>
-            <div className="bg-white/10 rounded-lg p-3 mb-4">
-              <p className="text-white/60 text-sm">
+            <div className="rounded-lg p-3 mb-4 border [background:var(--fundo)] [border-color:var(--linha)]">
+              <p className="[color:var(--tinta-suave)] text-sm">
                 Próxima partida: Jogo {nextGameNumber}
               </p>
-              <p className="text-white/80 text-sm font-medium mb-1">
+              <p className="[color:var(--tinta)] text-sm font-medium mb-1">
                 {nextRolesSwapped
                   ? '🔄 Papéis trocados! '
                   : ''}
@@ -1428,13 +1428,13 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                   <>Serás {iStartNext ? '⚫ Pretas' : '⚪ Brancas'}</>
                 )}
               </p>
-              <p className="text-white/70 text-sm">
+              <p className="[color:var(--tinta-suave)] text-sm">
                 {iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.'}
               </p>
             </div>
             <button
               onClick={onNextGame}
-              className="px-8 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+              className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
             >
               ▶️ Próxima Partida
             </button>
@@ -1445,10 +1445,10 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
       {/* Área de jogo - fase waiting (antes de começar) */}
       {match.phase === 'waiting' && !gameJustEnded && (
         <div className="text-center py-8">
-          <p className="text-white/80 mb-4">Estás pronto para começar?</p>
+          <p className="[color:var(--tinta)] mb-4">Estás pronto para começar?</p>
           <button
             onClick={onReady}
-            className="px-8 py-3 rounded-xl bg-gradient-to-r from-green-500 to-emerald-500 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+            className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
           >
             ✅ Estou pronto!
           </button>
@@ -1460,8 +1460,8 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
           {/* Indicador de vez */}
           <div className="text-center mb-4">
             <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium ${isMyTurn
-              ? 'bg-green-500/30 text-green-200 animate-pulse'
-              : 'bg-gray-500/30 text-gray-300'
+              ? '[background:color-mix(in_srgb,var(--sucesso)_15%,transparent)] [color:var(--sucesso)] animate-pulse'
+              : 'border [border-color:var(--linha)] [background:var(--fundo)] [color:var(--tinta-suave)]'
               }`}>
               {isMyTurn ? '👆 É a tua vez!' : '⏳ A aguardar adversário...'}
             </span>
@@ -1539,27 +1539,27 @@ function TournamentFinished({ tournamentState, playerId, onNewTournament }: Tour
   const champion = tournamentState.players.find(p => p.id === tournamentState.championId);
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 md:p-8 border border-white/20 text-center">
+    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
       <div className="text-8xl mb-4">
         {isChampion ? '🏆' : '🎮'}
       </div>
-      <h2 className="text-3xl font-bold text-white mb-2">
+      <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">
         {isChampion ? 'CAMPEÃO!' : 'Campeonato Terminado'}
       </h2>
       {!isChampion && champion && (
-        <p className="text-white/80 text-lg mb-4">
-          Campeão: <span className="text-yellow-300 font-bold">{champion.name}</span>
+        <p className="[color:var(--tinta)] text-lg mb-4">
+          Campeão: <span className="[color:var(--ouro)] font-bold">{champion.name}</span>
         </p>
       )}
       {isChampion && (
-        <p className="text-yellow-300 text-lg mb-4">
+        <p className="[color:var(--ouro)] text-lg mb-4">
           Parabéns! Representas a escola em {GAME_NAMES[tournamentState.gameId]}!
         </p>
       )}
 
       <button
         onClick={onNewTournament}
-        className="mt-6 px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-500 to-orange-500 text-white font-bold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all"
+        className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
       >
         🔄 Novo Campeonato
       </button>
@@ -1576,10 +1576,10 @@ interface EventLogProps {
 
 function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLogProps) {
   const statusColors: Record<ConnectionStatus, string> = {
-    disconnected: 'bg-gray-500',
-    connecting: 'bg-yellow-500 animate-pulse',
-    connected: 'bg-green-500',
-    error: 'bg-red-500',
+    disconnected: '[background:var(--tinta-suave)]',
+    connecting: '[background:var(--ouro)] animate-pulse',
+    connected: '[background:var(--sucesso)]',
+    error: '[background:var(--perigo)]',
   };
 
   const statusLabels: Record<ConnectionStatus, string> = {
@@ -1590,34 +1590,34 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLog
   };
 
   const typeColors: Record<LogEntry['type'], string> = {
-    info: 'text-white/70',
-    success: 'text-green-400',
-    warning: 'text-yellow-400',
-    error: 'text-red-400',
+    info: '[color:var(--tinta-suave)]',
+    success: '[color:var(--sucesso)]',
+    warning: '[color:var(--ouro)]',
+    error: '[color:var(--perigo)]',
   };
 
   return (
-    <div className="bg-white/10 backdrop-blur-md rounded-3xl p-4 md:p-6 border border-white/20 h-full flex flex-col">
+    <div className="rounded-xl border p-4 md:p-6 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <h3 className="text-lg font-bold [color:var(--tinta)] flex items-center gap-2">
           <span>📋</span>
           Eventos
         </h3>
         <div className="flex items-center gap-2">
           <span className={`w-3 h-3 rounded-full ${statusColors[connectionStatus]}`} />
-          <span className="text-white/60 text-sm">{statusLabels[connectionStatus]}</span>
+          <span className="[color:var(--tinta-suave)] text-sm">{statusLabels[connectionStatus]}</span>
         </div>
       </div>
 
       <div className="flex-1 min-h-[300px] max-h-[400px] overflow-y-auto space-y-1 text-sm font-mono">
         {logs.length === 0 ? (
-          <p className="text-white/40 text-center py-4">
+          <p className="[color:var(--tinta-suave)] text-center py-4">
             Nenhum evento ainda...
           </p>
         ) : (
           logs.map(log => (
             <div key={log.id} className={`${typeColors[log.type]} py-1`}>
-              <span className="text-white/30">
+              <span className="[color:var(--tinta-suave)] opacity-80">
                 {log.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
               {' '}
@@ -1631,7 +1631,7 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLog
       {onDisconnect && (
         <button
           onClick={onDisconnect}
-          className="mt-4 w-full py-2 px-4 rounded-lg bg-red-500/20 border border-red-400/50 text-red-200 text-sm hover:bg-red-500/30 transition-colors"
+          className="mt-4 w-full py-2 px-4 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-sm hover:[background:color-mix(in_srgb,var(--perigo)_10%,transparent)] transition-colors"
         >
           ❌ Sair do Campeonato
         </button>

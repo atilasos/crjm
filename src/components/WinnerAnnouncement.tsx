@@ -1,4 +1,5 @@
-import { GameStatus, GameMode } from '../types';
+import { useEffect, useRef } from 'react';
+import type { GameStatus, GameMode } from '../types';
 
 interface WinnerAnnouncementProps {
   estado: GameStatus;
@@ -19,7 +20,21 @@ export function WinnerAnnouncement({
   onFechar,
   onNovoJogo,
 }: WinnerAnnouncementProps) {
-  if (estado === 'a-jogar') return null;
+  const botaoPrimarioRef = useRef<HTMLButtonElement>(null);
+  const visivel = estado !== 'a-jogar';
+
+  // Foco inicial no botão primário e Escape para fechar
+  useEffect(() => {
+    if (!visivel) return;
+    botaoPrimarioRef.current?.focus();
+    const aoTeclar = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') onFechar();
+    };
+    window.addEventListener('keydown', aoTeclar);
+    return () => window.removeEventListener('keydown', aoTeclar);
+  }, [visivel, onFechar]);
+
+  if (!visivel) return null;
 
   const getNomeJogador2 = () => {
     if (modo === 'vs-computador') return 'Computador';
@@ -29,23 +44,21 @@ export function WinnerAnnouncement({
   const getConteudo = () => {
     // Em modo vs-computador, determinar se o humano ganhou ou perdeu
     if (modo === 'vs-computador') {
-      const humanoGanhou = 
+      const humanoGanhou =
         (estado === 'vitoria-jogador1' && humanoEhJogador1) ||
         (estado === 'vitoria-jogador2' && !humanoEhJogador1);
-      
+
       if (humanoGanhou) {
         return {
           emoji: '🎉',
           titulo: 'Parabéns!',
           mensagem: 'Ganhaste!',
-          corFundo: 'from-yellow-400 via-orange-400 to-pink-500',
         };
       } else if (estado === 'vitoria-jogador1' || estado === 'vitoria-jogador2') {
         return {
           emoji: '🤖',
           titulo: 'Perdeste...',
           mensagem: 'O computador ganhou!',
-          corFundo: 'from-blue-400 via-indigo-400 to-purple-500',
         };
       }
     }
@@ -57,21 +70,18 @@ export function WinnerAnnouncement({
           emoji: '🎉',
           titulo: 'Parabéns!',
           mensagem: `${nomeJogador1} ganhou!`,
-          corFundo: 'from-yellow-400 via-orange-400 to-pink-500',
         };
       case 'vitoria-jogador2':
         return {
           emoji: '🎉',
           titulo: 'Parabéns!',
           mensagem: `${getNomeJogador2()} ganhou!`,
-          corFundo: 'from-cyan-400 via-teal-400 to-green-500',
         };
       case 'empate':
         return {
           emoji: '🤝',
           titulo: 'Empate!',
           mensagem: 'Nenhum jogador ganhou.',
-          corFundo: 'from-gray-400 via-slate-400 to-zinc-500',
         };
       default:
         return null;
@@ -84,25 +94,36 @@ export function WinnerAnnouncement({
   return (
     <div className="winner-announcement" onClick={onFechar}>
       <div
-        className={`winner-card bg-gradient-to-br ${conteudo.corFundo}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="winner-titulo"
+        aria-describedby="winner-mensagem"
+        className="winner-card"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="text-7xl mb-4 animate-float">{conteudo.emoji}</div>
-        <h2 className="text-3xl font-bold text-white text-shadow-lg mb-2">
+        <div className="mb-4 text-6xl" aria-hidden="true">{conteudo.emoji}</div>
+        <h2
+          id="winner-titulo"
+          className="mb-2 text-3xl font-bold [color:var(--tinta)]"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
           {conteudo.titulo}
         </h2>
-        <p className="text-xl text-white/90 mb-6">{conteudo.mensagem}</p>
-        
-        <div className="flex gap-3 justify-center">
+        <p id="winner-mensagem" className="mb-6 text-xl [color:var(--tinta-suave)]">
+          {conteudo.mensagem}
+        </p>
+
+        <div className="flex justify-center gap-3">
           <button
+            ref={botaoPrimarioRef}
             onClick={onNovoJogo}
-            className="btn bg-white text-gray-800 hover:bg-gray-100"
+            className="btn btn-primary"
           >
-            🔄 Jogar Novamente
+            Jogar Novamente
           </button>
           <button
             onClick={onFechar}
-            className="btn bg-white/20 text-white hover:bg-white/30"
+            className="btn btn-secondary"
           >
             Fechar
           </button>
@@ -111,4 +132,3 @@ export function WinnerAnnouncement({
     </div>
   );
 }
-

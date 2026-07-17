@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react';
 import { loadStudentSession, STUDENT_SESSION_CHANGED_EVENT, type StudentSession } from '../utils/student-session';
-import { useGamification } from './gamification/GamificationProvider';
-import { MissionWidget } from './gamification/MissionWidget';
-import { PlayerBadge } from './gamification/PlayerBadge';
-import { SessionXpBar } from './gamification/SessionXpBar';
+import { ProgressChip } from './ProgressChip';
 import { ThemeToggle } from './ThemeToggle';
 
 interface HeaderProps {
@@ -12,7 +9,6 @@ interface HeaderProps {
 }
 
 export function Header({ titulo, onVoltar }: HeaderProps) {
-  const { isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
   const [session, setSession] = useState<StudentSession | null>(() => loadStudentSession());
 
   useEffect(() => {
@@ -26,52 +22,39 @@ export function Header({ titulo, onVoltar }: HeaderProps) {
   }, []);
 
   return (
-    <header className="bg-white/10 backdrop-blur-md border-b border-white/20">
-      <div className="max-w-6xl mx-auto px-4 py-4">
-        <div className="flex items-center gap-4">
-          {!onVoltar && <div className="w-20" />}
-          {onVoltar && (
-            <button
-              onClick={onVoltar}
-              className="flex items-center gap-2 text-white/90 hover:text-white transition-colors"
-              aria-label="Voltar à página inicial"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="font-medium">Voltar</span>
-            </button>
-          )}
-          
-          <div className="flex-1 flex items-center justify-center gap-3">
-            <span className="text-3xl">🎲</span>
-            <h1 className="text-xl md:text-2xl font-bold text-white text-shadow">
-              {titulo || 'Jogos Matemáticos'}
-            </h1>
-          </div>
-          
-          <div className="flex w-20 items-center justify-end text-white">
-            <ThemeToggle />
-          </div>
-        </div>
-        <div className="mt-2 flex justify-end">
+    <header className="border-b [background:var(--painel)] [border-color:var(--linha)]">
+      <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4 md:h-16 md:gap-3">
+        {onVoltar && (
+          <button
+            type="button"
+            onClick={onVoltar}
+            className="flex shrink-0 items-center gap-1 rounded-lg py-1 pr-1 transition-colors [color:var(--tinta-suave)] hover:[color:var(--tinta)]"
+            aria-label="Voltar à página inicial"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            <span className="hidden text-sm font-bold sm:inline">Voltar</span>
+          </button>
+        )}
+
+        <h1
+          className="min-w-0 flex-1 truncate text-lg font-bold md:text-xl [color:var(--tinta)]"
+          style={{ fontFamily: 'var(--font-display)' }}
+        >
+          {titulo || 'Jogos Matemáticos'}
+        </h1>
+
+        <div className="flex shrink-0 items-center gap-1.5 md:gap-2">
+          <ProgressChip />
+          <ThemeToggle />
           <a
             href="#/entrar"
-            className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs text-white/70 transition hover:bg-white/15 hover:text-white"
+            className="max-w-24 truncate rounded-full border px-3 py-1 text-xs font-bold transition-colors [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[color:var(--tinta)] md:max-w-40"
+            title={session ? `Sessão de ${session.name}` : 'Entrar com o teu código'}
           >
-            {session ? `👤 ${session.name}${session.className ? ` · ${session.className}` : ''}` : 'Entrar'}
+            {session ? `${session.name}${session.className ? ` · ${session.className}` : ''}` : 'Entrar'}
           </a>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <PlayerBadge isReady={isReady} level={level} title={levelTitle} streakDays={profile.streakDays} />
-          <SessionXpBar
-            isReady={isReady}
-            currentXp={profile.totalXp}
-            currentLevelXp={xpWindow.current}
-            nextLevelXp={xpWindow.next}
-            sessionXp={profile.sessionXp}
-          />
-          <MissionWidget isReady={isReady} missions={missions} />
         </div>
       </div>
     </header>

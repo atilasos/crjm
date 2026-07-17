@@ -77,3 +77,13 @@ target-test/
 
 # local tournament server persistence (turmas e códigos de login)
 data/
+
+# AlphaZero Atari Go training artefacts
+training/traces/
+training/runs/
+training/.pip-cache/
+training/**/__pycache__/
+
+# segredos locais de deploy
+.env.main
+.env.tournament
