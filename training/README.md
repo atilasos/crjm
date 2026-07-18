@@ -147,7 +147,37 @@ bun run build
 bun run ai:budget:atari-go
 ```
 
-## 6. Testar a robustez dos workers
+## 6. Extração de lições pedagógicas (F2 dos percursos)
+
+`atari_go/extract_lessons.py` interroga o campeão `best.pt` para produzir
+material de ensino (ver `docs/PERCURSOS-CAMPEONATO.md`):
+
+```bash
+docker run --rm --runtime=nvidia --gpus all \
+  -v /home/proteu/crjm/training:/workspace/training -w /workspace/training \
+  pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime \
+  python -m atari_go.extract_lessons --run-id az-v1 \
+    --iters 27,28,29 --sims 800 --max-candidates 30
+```
+
+Resultado de 2026-07-18 (~105 s na RTX 5070 Ti, artefactos em
+`artifacts/atari-go-lessons/2026-07-18T17-33-20/`):
+
+- **Aberturas**: a rede reparte ~25% de preferência por cada uma das casas
+  (3,3), (3,5), (5,3) e (5,5); o ponto central recebe ~0,1% e os cantos
+  ~0,02%. Valor da posição inicial: +0,568 para as pretas.
+- **Candidatos a puzzle**: 30 posições do self-play em que o MCTS fresco a
+  800 simulações concentra ≥60% das visitas numa jogada com queda de valor
+  ≥0,4 para a segunda melhor (25 estratégicas, 5 defesas de captura).
+  Quatro foram curados à mão para o Laboratório (`ag-mestre-*` em
+  `src/ai-core/puzzles.ts`), com os factos táticos confirmados por
+  `rules.py`.
+
+Nota de implementação: `rules._captures_after_placement` muta o tabuleiro
+recebido (o chamador reverte); código novo deve usar a API pública
+`rules.play`, que não muta.
+
+## 7. Testar a robustez dos workers
 
 Os workers enviam envelopes de sucesso/erro e o processo pai usa leituras com
 timeout + inspeção de `exitcode`; uma falha CUDA/Python deixa assim de bloquear

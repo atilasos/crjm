@@ -126,7 +126,7 @@ async function main() {
     await expectText(page, 'Atividade Recente');
     await expectText(page, 'Partida jogada');
     await expectText(page, 'Revisão concluída');
-    await expectText(page, '0/23');
+    await expectText(page, '0/25');
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByRole('link', { name: /ver perfil e progresso/i }).click();

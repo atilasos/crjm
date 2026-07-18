@@ -6,12 +6,13 @@ import { PATTERN_CARDS } from './gamification';
 const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
 
 describe('catálogo de puzzles estratégicos', () => {
-  test('oferece seis puzzles válidos por jogo', () => {
-    expect(PUZZLES).toHaveLength(36);
+  test('oferece o catálogo completo de puzzles válidos por jogo', () => {
+    expect(PUZZLES).toHaveLength(40);
     for (const gameId of GAME_IDS) {
       const puzzles = getPuzzlesForGame(gameId);
-      expect(puzzles).toHaveLength(6);
-      expect(new Set(puzzles.map((puzzle) => puzzle.id)).size).toBe(6);
+      const expected = gameId === 'atari-go' ? 10 : 6;
+      expect(puzzles).toHaveLength(expected);
+      expect(new Set(puzzles.map((puzzle) => puzzle.id)).size).toBe(expected);
       for (const puzzle of puzzles) {
         expect(puzzle.options).toHaveLength(3);
         expect(puzzle.options.some((option) => option.id === puzzle.correctOptionId)).toBe(true);
@@ -64,7 +65,7 @@ describe('apresentação dos puzzles', () => {
   });
 
   test('os diagramas são retangulares e usam apenas símbolos conhecidos', () => {
-    const allowed = new Set(['.', 'X', 'O', 'N', '*', '#']);
+    const allowed = new Set(['.', 'X', 'O', 'N', '*', '#', '1', '2', '3']);
     const withDiagram = PUZZLES.filter((puzzle) => puzzle.diagram);
     expect(withDiagram.length).toBeGreaterThanOrEqual(10);
     for (const puzzle of withDiagram) {

@@ -9,7 +9,8 @@ export interface PuzzleOption {
 /**
  * Diagrama esquemático da posição descrita no enunciado.
  * Caracteres por casa: '.' vazia · 'X' peça tua · 'O' peça adversária ·
- * 'N' neutra · '*' casa em destaque · '#' fora do excerto.
+ * 'N' neutra · '*' casa em destaque · '#' fora do excerto ·
+ * '1'/'2'/'3' casas candidatas de um puzzle «encontra a jogada».
  */
 export interface PuzzleDiagram {
   rows: string[];
@@ -373,6 +374,62 @@ export const PUZZLES: PuzzleDefinition[] = [
     diagram: {
       rows: ['.O...X.', 'OXO.XOX', 'OXO.XOX', '.....*.'],
       caption: 'O teu grupo (esquerda) está em atari, mas o grupo branco (direita) também: capturar em ★ vence já.',
+    },
+  },
+  {
+    id: 'ag-mestre-abertura-1', gameId: 'atari-go', patternId: 'atari-go:abertura', title: 'A abertura do Mestre',
+    prompt: 'A rede AlphaZero treinou com 60 000 partidas contra si própria. Na posição inicial, onde concentra ela quase toda a preferência?',
+    hint: 'A rede avalia a posição inicial em +0,57 para quem começa — a vantagem constrói-se com apoio perto do centro.', correctOptionId: 'diagonais',
+    options: [
+      { id: 'cantos', label: 'Nos cantos, como no Go clássico', explanation: 'No Atari Go os cantos valem pouco: a rede dá-lhes cerca de 0,02% de preferência — sem território para defender, o canto só oferece poucas liberdades.' },
+      { id: 'diagonais', label: 'Nas quatro casas em diagonal junto ao centro', explanation: 'Certo: a rede reparte ~25% por cada uma das casas (3,3), (3,5), (5,3) e (5,5) — perto do centro para ter liberdades, sem ocupar o ponto central exposto.' },
+      { id: 'tengen', label: 'No ponto central exato', explanation: 'Surpresa: o centro exato recebe ~0,1% da preferência da rede — uma pedra isolada no meio é cercável por todos os lados.' },
+    ],
+    diagram: {
+      rows: ['.........', '.........', '.........', '...*.*...', '.........', '...*.*...', '.........', '.........', '.........'],
+      caption: 'As quatro aberturas preferidas da rede az-v1 (★), com ~25% de preferência cada; cantos e centro exato ficam perto de 0%.',
+    },
+  },
+  {
+    id: 'ag-mestre-defesa-1', gameId: 'atari-go', patternId: 'atari-go:atari', title: 'A última liberdade',
+    prompt: 'Posição real do treino do Mestre: uma pedra tua (pretas) está em atari e o adversário captura na próxima jogada. Qual das três casas salva o grupo?',
+    hint: 'Conta as liberdades da pedra ameaçada — e as que cada casa lhe acrescenta.', correctOptionId: 'casa2',
+    options: [
+      { id: 'casa1', label: 'Casa 1', explanation: 'A pedra ameaçada continua com uma só liberdade: ele joga lá e captura — no Atari Go, a primeira captura termina o jogo (a rede avalia esta casa em −0,97).' },
+      { id: 'casa2', label: 'Casa 2', explanation: 'Certo: ocupas a última liberdade da tua pedra, ligas as duas pedras e o grupo novo fica com duas liberdades — a ameaça de captura desaparece (avaliação +0,99).' },
+      { id: 'casa3', label: 'Casa 3', explanation: 'Não toca na ameaça: a captura continua disponível na jogada seguinte e o jogo acaba (avaliação −0,99).' },
+    ],
+    diagram: {
+      rows: ['.........', '.........', '..O.O.X..', '...O.....', '....OX...', '.OXXXOX..', '.OX.OOX..', '.OXOXOX..', '..X123...'],
+      caption: 'Pretas (X) jogam. A pedra preta da penúltima linha tem uma única liberdade; do treino az-v1 (iteração 27), verificado por MCTS a 800 simulações.',
+    },
+  },
+  {
+    id: 'ag-mestre-contra-1', gameId: 'atari-go', patternId: 'atari-go:atari', title: 'Defender atacando',
+    prompt: 'Posição real do treino do Mestre: o teu grupo está a ser cercado. Uma das três casas passa ao ataque; as outras duas recuam e perdem.',
+    hint: 'Procura a casa que, além de dar ar ao teu grupo, deixa uma pedra dele com uma só liberdade.', correctOptionId: 'casa3',
+    options: [
+      { id: 'casa1', label: 'Casa 1', explanation: 'Recuar na diagonal não ameaça nada: ele continua o cerco e a rede avalia a posição em −0,45 para ti.' },
+      { id: 'casa2', label: 'Casa 2', explanation: 'Defende de forma passiva: ele mantém a iniciativa do cerco e a avaliação cai para −0,37.' },
+      { id: 'casa3', label: 'Casa 3', explanation: 'Certo: esta casa dá liberdades ao teu grupo E deixa a pedra dele de cima em atari — ele é obrigado a responder e a iniciativa passa para ti (avaliação +0,72).' },
+    ],
+    diagram: {
+      rows: ['.........', '.1.......', '..3......', '.2OX.....', '..XOO....', '...XOO...', '..X......', '.........', '.........'],
+      caption: 'Tu jogas com X. Depois da Casa 3, a pedra O adjacente fica com uma única liberdade; do treino az-v1, verificado por MCTS a 800 simulações.',
+    },
+  },
+  {
+    id: 'ag-mestre-conexao-1', gameId: 'atari-go', patternId: 'atari-go:conexao', title: 'Ligar antes do corte',
+    prompt: 'Posição real do treino do Mestre: duas pedras tuas quase se tocam. A rede vê aqui uma única jogada certa — qual?',
+    hint: 'O que acontece à tua pedra de (3,3) se for ele a jogar entre as tuas duas pedras?', correctOptionId: 'casa2',
+    options: [
+      { id: 'casa1', label: 'Casa 1', explanation: 'Ataca as pedras dele, mas deixa o corte disponível: ele separa as tuas pedras e a avaliação fica praticamente empatada (+0,05) — a vantagem evapora-se.' },
+      { id: 'casa2', label: 'Casa 2', explanation: 'Certo: liga as tuas duas pedras num só grupo com cinco liberdades. Sem esta ligação, ele corta aqui e caça a pedra de (3,3) — a rede avalia a conexão em +0,73.' },
+      { id: 'casa3', label: 'Casa 3', explanation: 'Mergulha na zona onde ele é mais forte e ignora o corte: a rede avalia esta casa em −0,63 para ti.' },
+    ],
+    diagram: {
+      rows: ['.........', '.........', '.1X2.....', '.OOX.....', '.3XOO....', '...XOO...', '..X......', '.........', '.........'],
+      caption: 'Tu jogas com X. A Casa 2 liga (2,2) a (3,3); do treino az-v1 (iteração 27), verificado por MCTS a 800 simulações.',
     },
   },
   {

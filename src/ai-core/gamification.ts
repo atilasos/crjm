@@ -229,6 +229,8 @@ export const PATTERN_CARDS: PatternCardDefinition[] = [
   { id: 'atari-go:net', gameId: 'atari-go', title: 'Rede', description: 'Capturar por envolvimento sem atari direto.', minimumPhase: 'C' },
   { id: 'atari-go:double-atari', gameId: 'atari-go', title: 'Duplo atari', description: 'Ameaçar dois grupos ao mesmo tempo.', minimumPhase: 'C' },
   { id: 'atari-go:snapback', gameId: 'atari-go', title: 'Snapback', description: 'Usar um sacrifício para recuperar a captura.', minimumPhase: 'D' },
+  { id: 'atari-go:abertura', gameId: 'atari-go', title: 'Abertura', description: 'Começar nas casas com apoio junto ao centro.', minimumPhase: 'A' },
+  { id: 'atari-go:conexao', gameId: 'atari-go', title: 'Conexão', description: 'Ligar grupos antes de o corte os separar.', minimumPhase: 'C' },
   { id: 'nex:ponte', gameId: 'nex', title: 'Ponte', description: 'Criar uma ligação virtual com duas rotas.', minimumPhase: 'A' },
   { id: 'nex:ameaca-dupla', gameId: 'nex', title: 'Ameaça dupla', description: 'Abrir dois caminhos de ligação.', minimumPhase: 'B' },
   { id: 'nex:tripla-ameaca', gameId: 'nex', title: 'Tripla ameaça', description: 'Criar três respostas que não podem ser bloqueadas.', minimumPhase: 'C' },

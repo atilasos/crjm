@@ -16,6 +16,17 @@ function cellContent(symbol: string) {
       return <span className="block h-4 w-4 rounded-full border" style={{ background: '#9aa1ab', borderColor: '#5b6472' }} aria-hidden="true" />;
     case '*':
       return <span className="text-sm font-black leading-none [color:var(--ouro)]" aria-hidden="true">★</span>;
+    case '1':
+    case '2':
+    case '3':
+      return (
+        <span
+          className="flex h-5 w-5 items-center justify-center rounded-full border text-xs font-black [border-color:var(--ouro)] [color:var(--ouro)]"
+          aria-hidden="true"
+        >
+          {symbol}
+        </span>
+      );
     default:
       return null;
   }

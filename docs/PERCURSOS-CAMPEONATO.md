@@ -81,12 +81,17 @@ recomendação automática, como desafio explícito).
 
 ## Implementação por fases
 
-- **F1 (rápida)**: escrever os percursos e conceitos como conteúdo curado
-  no Laboratório — expandir `PUZZLES` de 3 para 6–8 por jogo usando os
-  conceitos da tabela; UI de percurso com as 4 etapas e critérios. Sem
-  pipeline novo.
-- **F2**: pipeline Atari Go (heatmap de aberturas + puzzles automáticos da
-  rede) — é o jogo com melhor oráculo e melhor evidência.
+- **F1 — concluída (2026-07-18)**: 6 puzzles/jogo com opções baralhadas a
+  cada visita e diagramas nas posições concretas; percursos de 4 etapas com
+  progresso automático dos puzzles no Laboratório.
+- **F2 — concluída (2026-07-18)**: `training/atari_go/extract_lessons.py`
+  extraiu da rede az-v1 o mapa de aberturas (~25% por cada casa diagonal ao
+  centro; centro exato ~0,1%; valor inicial +0,568 pretas) e 30 candidatos
+  a puzzle verificados por MCTS a 800 sims; 4 curados como puzzles
+  «encontra a jogada» (`ag-mestre-*`) na etapa Campeonato do Atari Go.
+  Artefactos: `artifacts/atari-go-lessons/2026-07-18T17-33-20/`. Falta de
+  F2 alargada: persistir o nível das vitórias contra a IA (exige migração
+  de schema) para os desafios «vence o Nx» contarem sozinhos.
 - **F3**: `extract-lessons.ts` para os outros 5 jogos, começando por
   Dominório e Quelhas (teoria limpa) e deixando o Produto para depois de
   alargar a amostra da arena (pré-requisito de confiança).

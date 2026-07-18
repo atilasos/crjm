@@ -215,7 +215,14 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         title: 'Campeonato',
         checkpoints: [
           'Aproveitar a iniciativa: quem começa tem vantagem real — disputa-a.',
+          'Resolver os puzzles do Mestre: posições reais do treino AlphaZero.',
           'Rever duas derrotas e encontrar o atari ignorado.',
+        ],
+        puzzleIds: [
+          'ag-mestre-abertura-1',
+          'ag-mestre-defesa-1',
+          'ag-mestre-contra-1',
+          'ag-mestre-conexao-1',
         ],
         desafio: 'Ganha metade dos jogos contra o N4 e desafia o N6 «Mestre».',
       },
