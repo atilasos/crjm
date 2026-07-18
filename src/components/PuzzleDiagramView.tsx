@@ -4,14 +4,16 @@ interface PuzzleDiagramViewProps {
   diagram: PuzzleDiagram;
 }
 
+// Cores fixas (independentes do tema): pedras «pretas» e «brancas» com
+// rebordo de contraste, legíveis sobre fundo claro ou escuro.
 function cellContent(symbol: string) {
   switch (symbol) {
     case 'X':
-      return <span className="block h-4 w-4 rounded-full [background:var(--tinta)]" aria-hidden="true" />;
+      return <span className="block h-4 w-4 rounded-full border" style={{ background: '#1f2733', borderColor: '#f5f1e6' }} aria-hidden="true" />;
     case 'O':
-      return <span className="block h-4 w-4 rounded-full border-2 [background:var(--papel)] [border-color:var(--tinta)]" aria-hidden="true" />;
+      return <span className="block h-4 w-4 rounded-full border" style={{ background: '#f5f1e6', borderColor: '#1f2733' }} aria-hidden="true" />;
     case 'N':
-      return <span className="block h-4 w-4 rounded-full opacity-50 [background:var(--tinta-suave)]" aria-hidden="true" />;
+      return <span className="block h-4 w-4 rounded-full border" style={{ background: '#9aa1ab', borderColor: '#5b6472' }} aria-hidden="true" />;
     case '*':
       return <span className="text-sm font-black leading-none [color:var(--ouro)]" aria-hidden="true">★</span>;
     default:
