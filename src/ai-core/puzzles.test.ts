@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GameId } from './types';
-import { PUZZLES, evaluatePuzzleAnswer, getPuzzlesForGame } from './puzzles';
+import { PUZZLES, evaluatePuzzleAnswer, getDisplayOptions, getPuzzlesForGame } from './puzzles';
 import { PATTERN_CARDS } from './gamification';
 
 const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
@@ -31,5 +31,47 @@ describe('catálogo de puzzles estratégicos', () => {
       correct: false,
       explanation: 'Escolhe uma das três opções antes de confirmar.',
     });
+  });
+});
+
+describe('apresentação dos puzzles', () => {
+  test('a resposta certa não fica sempre na mesma posição', () => {
+    const positionCounts = [0, 0, 0];
+    for (const puzzle of PUZZLES) {
+      const display = getDisplayOptions(puzzle);
+      expect(new Set(display.map((option) => option.id)).size).toBe(3);
+      const index = display.findIndex((option) => option.id === puzzle.correctOptionId);
+      expect(index).toBeGreaterThanOrEqual(0);
+      positionCounts[index] += 1;
+    }
+    for (const count of positionCounts) {
+      expect(count).toBeGreaterThanOrEqual(6);
+    }
+  });
+
+  test('a ordem baralhada é determinística por puzzle', () => {
+    for (const puzzle of PUZZLES) {
+      expect(getDisplayOptions(puzzle).map((option) => option.id)).toEqual(
+        getDisplayOptions(puzzle).map((option) => option.id),
+      );
+    }
+  });
+
+  test('os diagramas são retangulares e usam apenas símbolos conhecidos', () => {
+    const allowed = new Set(['.', 'X', 'O', 'N', '*', '#']);
+    const withDiagram = PUZZLES.filter((puzzle) => puzzle.diagram);
+    expect(withDiagram.length).toBeGreaterThanOrEqual(10);
+    for (const puzzle of withDiagram) {
+      const rows = puzzle.diagram!.rows;
+      expect(rows.length).toBeGreaterThan(0);
+      const width = rows[0]!.length;
+      for (const row of rows) {
+        expect(row.length).toBe(width);
+        for (const symbol of row) {
+          expect(allowed.has(symbol)).toBe(true);
+        }
+      }
+      expect(puzzle.diagram!.caption.length).toBeGreaterThan(20);
+    }
   });
 });

@@ -6,6 +6,18 @@ export interface PuzzleOption {
   explanation: string;
 }
 
+/**
+ * Diagrama esquemático da posição descrita no enunciado.
+ * Caracteres por casa: '.' vazia · 'X' peça tua · 'O' peça adversária ·
+ * 'N' neutra · '*' casa em destaque · '#' fora do excerto.
+ */
+export interface PuzzleDiagram {
+  rows: string[];
+  caption: string;
+  /** Desloca as linhas ímpares meia casa (tabuleiros hexagonais, ex.: Nex). */
+  hexOffset?: boolean;
+}
+
 export interface PuzzleDefinition {
   id: string;
   gameId: GameId;
@@ -15,6 +27,7 @@ export interface PuzzleDefinition {
   hint: string;
   options: PuzzleOption[];
   correctOptionId: string;
+  diagram?: PuzzleDiagram;
 }
 
 export const PUZZLES: PuzzleDefinition[] = [
@@ -27,6 +40,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'centro', label: 'Numa das quatro casas centrais', explanation: 'Certo: a abertura central respeita a regra especial e mantém várias direções disponíveis.' },
       { id: 'borda', label: 'No meio de uma borda', explanation: 'A borda também fica fora das quatro casas centrais exigidas para o primeiro Gato.' },
     ],
+    diagram: {
+      rows: ['......', '......', '..**..', '..**..', '......', '......'],
+      caption: 'Excerto do tabuleiro vazio: o primeiro Gato tem de começar numa das quatro casas centrais (★).',
+    },
   },
   {
     id: 'gc-mobilidade-1', gameId: 'gatos-caes', patternId: 'gatos-caes:casa-em-disputa', title: 'Casa em disputa',
@@ -67,6 +84,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'divide', label: 'Reduz e divide as respostas dos Cães', explanation: 'Certo: uma parede central corta a mobilidade adversária em zonas pequenas, mais fáceis de esgotar.' },
       { id: 'perde', label: 'Prejudica os Gatos por gastar peças', explanation: 'As peças da parede também bloqueiam casas aos Cães; não são jogadas perdidas se dividirem o espaço.' },
     ],
+    diagram: {
+      rows: ['O..O..', '......', 'XXXXXX', '......', '..O..O'],
+      caption: 'Uma parede de Gatos (pretas) atravessa o centro e separa as zonas onde os Cães ainda podem jogar.',
+    },
   },
   {
     id: 'gc-contagem-1', gameId: 'gatos-caes', patternId: 'gatos-caes:jogada-garantida', title: 'Contar o final',
@@ -77,6 +98,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'tu', label: 'Tu, porque ele esgota primeiro', explanation: 'Certo: ele joga a última dele, tu ainda tens resposta, e no turno seguinte ele não tem jogada.' },
       { id: 'empate', label: 'Ninguém, o jogo empata', explanation: 'Gatos & Cães não empata: perde quem primeiro ficar sem jogada legal no seu turno.' },
     ],
+    diagram: {
+      rows: ['XX*...', 'X*....', '......', '....OO', '....O*'],
+      caption: 'À esquerda, duas casas (★) onde só os teus Gatos podem jogar; à direita, uma casa (★) exclusiva dos Cães.',
+    },
   },
   {
     id: 'do-paridade-1', gameId: 'dominorio', patternId: 'dominorio:paridade', title: 'Contar antes de cortar',
@@ -87,6 +112,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'nao', label: 'Não, o segundo fará a quarta', explanation: 'Certo: numa sequência par, quem responde joga a última peça dessa região.' },
       { id: 'depende', label: 'É impossível contar', explanation: 'Quando a região já tem uma sequência forçada, a paridade permite contar exatamente.' },
     ],
+    diagram: {
+      rows: ['****', '****'],
+      caption: 'Uma região isolada de 2×4: cabem exatamente quatro dominós — a paridade é par.',
+    },
   },
   {
     id: 'do-corte-1', gameId: 'dominorio', patternId: 'dominorio:corte', title: 'Duas regiões, dois problemas',
@@ -107,6 +136,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'empate', label: 'Um empate automático', explanation: 'Dominório não termina empatado; as reservas alteram quem fica sem jogada primeiro.' },
       { id: 'ameaça', label: 'Três jogadas do adversário', explanation: 'Se a orientação rival não cabe, esse corredor não lhe oferece jogadas.' },
     ],
+    diagram: {
+      rows: ['#*#', '#*#', '#*#', '#*#', '#*#', '#*#'],
+      caption: 'Um corredor de largura 1: cabem três dominós verticais e nenhum horizontal.',
+    },
   },
   {
     id: 'do-espelho-1', gameId: 'dominorio', patternId: 'dominorio:espelhamento', title: 'Espelho no Dominório',
@@ -117,6 +150,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'centro', label: 'Quando a jogada toca o eixo central', explanation: 'Certo: no eixo, o dominó e o seu reflexo sobrepõem-se; a cópia fica ilegal e a paridade quebra-se.' },
       { id: 'cores', label: 'Quando as orientações trocam', explanation: 'O espelho já conta com orientações diferentes; o problema real são as casas partilhadas no eixo.' },
     ],
+    diagram: {
+      rows: ['..*..', '..*..', '..*..', '..*..'],
+      caption: 'O eixo central do tabuleiro: um dominó que toque estas casas sobrepõe-se ao próprio reflexo.',
+    },
   },
   {
     id: 'do-paridade-2', gameId: 'dominorio', patternId: 'dominorio:paridade', title: 'Reservas contadas',
@@ -207,6 +244,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'equilibrado', label: '6×4, porque vale 24', explanation: 'Certo: equilibrar os dois fatores aumenta o produto de 16 para 24.' },
       { id: 'igual', label: 'São iguais porque usam 10 peças', explanation: 'Com a mesma soma, distribuições mais equilibradas podem produzir valores maiores.' },
     ],
+    diagram: {
+      rows: ['XXXX....', 'XXXX..XX'],
+      caption: 'Esquema: grupos de 8 e 2 dão produto 16; redistribuídos em 6 e 4 dariam 24.',
+    },
   },
   {
     id: 'pr-fusao-1', gameId: 'produto', patternId: 'produto:fusao-adversaria', title: 'Sabotagem por fusão',
@@ -247,6 +288,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'segundo', label: 'Crescer o de 4: fica 8×5=40', explanation: 'Certo: acrescentar ao fator mais pequeno aumenta mais o produto — 40 em vez de 36.' },
       { id: 'indiferente', label: 'É igual, a soma é a mesma', explanation: 'Com a mesma soma, o produto cresce quando aproximas os fatores: 8×5 supera 9×4.' },
     ],
+    diagram: {
+      rows: ['XXXX*.XX', 'XXXX..XX', '......*.'],
+      caption: 'Esquema: as duas casas ★ crescem o grupo de 8 (9×4=36) ou o grupo de 4 (8×5=40).',
+    },
   },
   {
     id: 'pr-cores-1', gameId: 'produto', patternId: 'produto:grupo-isolado', title: 'A peça do rival como muro',
@@ -267,6 +312,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'longe', label: 'Jogar longe para ganhar território', explanation: 'Território não decide esta variante; uma captura imediata tem prioridade.' },
       { id: 'passar', label: 'Passar o turno', explanation: 'A variante implementada não usa passe e a captura disponível pode decidir já o jogo.' },
     ],
+    diagram: {
+      rows: ['..X..', '.XOX.', '.XO*.', '..X..'],
+      caption: 'O grupo branco tem uma única liberdade (★): ocupá-la captura e vence a partida.',
+    },
   },
   {
     id: 'ag-escada-1', gameId: 'atari-go', patternId: 'atari-go:ladder', title: 'Ler a escada',
@@ -297,6 +346,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'medo', label: 'Assusta o adversário', explanation: 'A força é concreta, não psicológica: duas ameaças de captura e uma única resposta possível.' },
       { id: 'liberdades', label: 'Ganha liberdades ao teu grupo', explanation: 'O efeito principal é criar duas ameaças de captura simultâneas, não reforçar o teu grupo.' },
     ],
+    diagram: {
+      rows: ['.....', '.X.X.', '.O*O.', '.X.X.', '.....'],
+      caption: 'Jogar em ★ deixa as duas pedras brancas em atari ao mesmo tempo — só uma pode escapar.',
+    },
   },
   {
     id: 'ag-snapback-1', gameId: 'atari-go', patternId: 'atari-go:snapback', title: 'Cuidado com o snapback',
@@ -317,6 +370,10 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'capturar', label: 'Capturar imediatamente', explanation: 'Certo: a primeira captura vence o jogo — quando podes capturar, nenhuma defesa é prioritária.' },
       { id: 'fugir', label: 'Fugir com o grupo para o centro', explanation: 'Fugir gasta o turno em que podias simplesmente vencer com a captura disponível.' },
     ],
+    diagram: {
+      rows: ['.O...X.', 'OXO.XOX', 'OXO.XOX', '.....*.'],
+      caption: 'O teu grupo (esquerda) está em atari, mas o grupo branco (direita) também: capturar em ★ vence já.',
+    },
   },
   {
     id: 'nx-ponte-1', gameId: 'nex', patternId: 'nex:ponte', title: 'Ligação virtual',
@@ -327,6 +384,11 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'neutra', label: 'Toda casa vazia já é neutra', explanation: 'Casas vazias não são peças neutras; só se tornam neutras por uma colocação.' },
       { id: 'captura', label: 'A ponte captura peças', explanation: 'Nex não tem capturas; a ponte protege conectividade entre as margens-alvo.' },
     ],
+    diagram: {
+      rows: ['X*', '*X'],
+      caption: 'Ponte: as duas casas ★ são alternativas de ligação — uma única jogada rival não corta ambas.',
+      hexOffset: true,
+    },
   },
   {
     id: 'nx-ameaca-1', gameId: 'nex', patternId: 'nex:ameaca-dupla', title: 'Duas rotas',
@@ -382,6 +444,30 @@ export const PUZZLES: PuzzleDefinition[] = [
 
 export function getPuzzlesForGame(gameId: GameId): PuzzleDefinition[] {
   return PUZZLES.filter((puzzle) => puzzle.gameId === gameId);
+}
+
+function hashPuzzleId(text: string): number {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 0;
+}
+
+/**
+ * Ordem de apresentação das opções, baralhada de forma determinística por
+ * puzzle: estável entre visitas, mas sem posição fixa para a resposta certa.
+ */
+export function getDisplayOptions(puzzle: PuzzleDefinition): PuzzleOption[] {
+  const order = puzzle.options.map((_, index) => index);
+  let state = hashPuzzleId(puzzle.id);
+  for (let i = order.length - 1; i > 0; i -= 1) {
+    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
+    const j = state % (i + 1);
+    [order[i], order[j]] = [order[j]!, order[i]!];
+  }
+  return order.map((index) => puzzle.options[index]!);
 }
 
 export function evaluatePuzzleAnswer(

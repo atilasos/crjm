@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react';
 import type { GameId } from '../ai-core/types';
-import { evaluatePuzzleAnswer, getPuzzlesForGame } from '../ai-core/puzzles';
+import { evaluatePuzzleAnswer, getDisplayOptions, getPuzzlesForGame } from '../ai-core/puzzles';
 import { getTrainingPath } from '../ai-core/training-paths';
 import { Header } from './Header';
+import { PuzzleDiagramView } from './PuzzleDiagramView';
 import { useGamification } from './gamification/GamificationProvider';
 
 interface PuzzlePageProps {
@@ -28,6 +29,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
 
   const puzzles = useMemo(() => getPuzzlesForGame(gameId), [gameId]);
   const puzzle = puzzles[puzzleIndex] ?? puzzles[0]!;
+  const displayOptions = useMemo(() => getDisplayOptions(puzzle), [puzzle]);
   const solved = new Set(profile.solvedPuzzleIds);
   const solvedCount = puzzles.filter((candidate) => solved.has(candidate.id)).length;
   const game = GAMES.find((candidate) => candidate.id === gameId) ?? GAMES[0]!;
@@ -107,6 +109,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] [color:var(--ouro)]">Padrão em treino</p>
                 <h3 className="mt-2 text-2xl font-black">{puzzle.title}</h3>
                 <p className="mt-4 text-base leading-relaxed [color:var(--tinta-suave)]">{puzzle.prompt}</p>
+                {puzzle.diagram && <PuzzleDiagramView diagram={puzzle.diagram} />}
                 <button
                   type="button"
                   onClick={() => setUsedHint(true)}
@@ -120,7 +123,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 <fieldset>
                   <legend className="text-sm font-black uppercase tracking-[0.16em] [color:var(--tinta-suave)]">Qual é a melhor leitura?</legend>
                   <div className="mt-3 space-y-3">
-                    {puzzle.options.map((option, index) => {
+                    {displayOptions.map((option, index) => {
                       const selected = selectedOption === option.id;
                       return (
                         <button
