@@ -446,25 +446,18 @@ export function getPuzzlesForGame(gameId: GameId): PuzzleDefinition[] {
   return PUZZLES.filter((puzzle) => puzzle.gameId === gameId);
 }
 
-function hashPuzzleId(text: string): number {
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i += 1) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 0;
-}
-
 /**
- * Ordem de apresentação das opções, baralhada de forma determinística por
- * puzzle: estável entre visitas, mas sem posição fixa para a resposta certa.
+ * Ordem de apresentação das opções, baralhada aleatoriamente a cada visita
+ * ao puzzle (o chamador deve memoizar durante uma tentativa para a ordem
+ * não mudar entre escolher e confirmar). `random` é injetável para testes.
  */
-export function getDisplayOptions(puzzle: PuzzleDefinition): PuzzleOption[] {
+export function getDisplayOptions(
+  puzzle: PuzzleDefinition,
+  random: () => number = Math.random,
+): PuzzleOption[] {
   const order = puzzle.options.map((_, index) => index);
-  let state = hashPuzzleId(puzzle.id);
   for (let i = order.length - 1; i > 0; i -= 1) {
-    state = (Math.imul(state, 1664525) + 1013904223) >>> 0;
-    const j = state % (i + 1);
+    const j = Math.floor(random() * (i + 1));
     [order[i], order[j]] = [order[j]!, order[i]!];
   }
   return order.map((index) => puzzle.options[index]!);

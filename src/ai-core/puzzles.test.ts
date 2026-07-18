@@ -35,24 +35,30 @@ describe('catálogo de puzzles estratégicos', () => {
 });
 
 describe('apresentação dos puzzles', () => {
-  test('a resposta certa não fica sempre na mesma posição', () => {
-    const positionCounts = [0, 0, 0];
+  test('o baralhamento preserva as três opções e cobre todas as posições', () => {
     for (const puzzle of PUZZLES) {
-      const display = getDisplayOptions(puzzle);
-      expect(new Set(display.map((option) => option.id)).size).toBe(3);
-      const index = display.findIndex((option) => option.id === puzzle.correctOptionId);
-      expect(index).toBeGreaterThanOrEqual(0);
-      positionCounts[index] += 1;
-    }
-    for (const count of positionCounts) {
-      expect(count).toBeGreaterThanOrEqual(6);
+      const positions = new Set<number>();
+      for (let trial = 0; trial < 60; trial += 1) {
+        const display = getDisplayOptions(puzzle);
+        expect(new Set(display.map((option) => option.id)).size).toBe(3);
+        positions.add(display.findIndex((option) => option.id === puzzle.correctOptionId));
+      }
+      // P(uma posição nunca sair em 60 tentativas) ≈ 3×(2/3)^60 < 1e-10.
+      expect([...positions].sort()).toEqual([0, 1, 2]);
     }
   });
 
-  test('a ordem baralhada é determinística por puzzle', () => {
+  test('a ordem é reproduzível quando o gerador aleatório é injetado', () => {
+    const seeded = () => {
+      let state = 42;
+      return () => {
+        state = (state * 1664525 + 1013904223) % 4294967296;
+        return state / 4294967296;
+      };
+    };
     for (const puzzle of PUZZLES) {
-      expect(getDisplayOptions(puzzle).map((option) => option.id)).toEqual(
-        getDisplayOptions(puzzle).map((option) => option.id),
+      expect(getDisplayOptions(puzzle, seeded()).map((option) => option.id)).toEqual(
+        getDisplayOptions(puzzle, seeded()).map((option) => option.id),
       );
     }
   });
