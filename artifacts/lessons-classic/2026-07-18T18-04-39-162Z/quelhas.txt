@@ -1,0 +1,130 @@
+## quelhas: 10 posições com única jogada vencedora (demonstrado)
+#0 toPlay=jogador2 legais=6 plies=25 nós=247 vence: início (0,7), comprimento 2, horizontal
+  N..NNNN!.N
+  N..NNNNN.N
+  NNNNN..N.N
+  NNNNNNNNNN
+  N.NNNNNNNN
+  N.NNNNN.NN
+  NNNNN.N..N
+  NNNNNNNNNN
+  ..NNNNNNNN
+  .NNN.NNN.N
+  alternativas (perdem): início (0,1), comprimento 2, horizontal | início (1,1), comprimento 2, horizontal | início (2,5), comprimento 2, horizontal
+
+#1 toPlay=jogador1 legais=10 plies=26 nós=1484 vence: início (1,3), comprimento 2, vertical
+  ..NNNNNNNN
+  NNN!...NNN
+  N.N.NNNNN.
+  NNNNNNN.NN
+  NNNNNNNNNN
+  NN..NNN.NN
+  .N..NNNNNN
+  NN..N.NNNN
+  N.NNNNN..N
+  N.NNNN...N
+  alternativas (perdem): início (8,1), comprimento 2, vertical | início (5,2), comprimento 2, vertical | início (6,2), comprimento 2, vertical
+
+#2 toPlay=jogador1 legais=10 plies=24 nós=435 vence: início (1,2), comprimento 2, vertical
+  N.NNNNNNNN
+  NN!.NNNNNN
+  .N...NNN.N
+  .NNNNNNNNN
+  NN.NN...N.
+  NNNNNNNNNN
+  N.N..NNNNN
+  NNNNN.NN.N
+  .N..N.NN.N
+  .N..N.NNNN
+  alternativas (perdem): início (2,0), comprimento 2, vertical | início (8,0), comprimento 2, vertical | início (8,2), comprimento 2, vertical
+
+#3 toPlay=jogador2 legais=10 plies=19 nós=10498 vence: início (8,6), comprimento 2, horizontal
+  .NNNNN.NNN
+  ..N...NNN.
+  N.NNNNNNN.
+  NNN...NNN.
+  .N.NN.NNN.
+  .NNNNNNNN.
+  .N..N.NNNN
+  NN..NNN.NN
+  NNNNNN!.NN
+  NNNNNNNNN.
+  alternativas (perdem): início (1,0), comprimento 2, horizontal | início (1,3), comprimento 2, horizontal | início (1,4), comprimento 2, horizontal
+
+#4 toPlay=jogador2 legais=10 plies=27 nós=212 vence: início (0,4), comprimento 2, horizontal
+  NNNN!...N.
+  NNN.N..NN.
+  ..N.N.NNNN
+  NNNNNNN.NN
+  NNNNNNNNNN
+  .NNNN.NNN.
+  NNNNNN.NNN
+  NNNNNNNN.N
+  NNNN.NN..N
+  NNNNN..NNN
+  alternativas (perdem): início (0,5), comprimento 2, horizontal | início (0,6), comprimento 2, horizontal | início (0,4), comprimento 3, horizontal
+
+#5 toPlay=jogador1 legais=11 plies=24 nós=281 vence: início (1,8), comprimento 2, vertical
+  ..NNNN.N..
+  N..N.NNN!.
+  N..N.NNN.N
+  .NNNNN.NNN
+  NNNNNNNNNN
+  NNNNNNNNN.
+  NNNNNNNNNN
+  .N.NNNNNNN
+  .N.NN.NNNN
+  NNNNNNNNNN
+  alternativas (perdem): início (7,0), comprimento 2, vertical | início (0,1), comprimento 2, vertical | início (1,1), comprimento 2, vertical
+
+#6 toPlay=jogador2 legais=9 plies=25 nós=501 vence: início (0,6), comprimento 2, horizontal
+  NNNNNN!.NN
+  NNNN..N.NN
+  .N.NN.N.N.
+  NNNNNNNNNN
+  NNNNNNNN..
+  NNN.NN..N.
+  NNNNNN..NN
+  NNNNNNNNNN
+  N..NNN...N
+  NN.NNNNNN.
+  alternativas (perdem): início (1,4), comprimento 2, horizontal | início (4,8), comprimento 2, horizontal | início (5,6), comprimento 2, horizontal
+
+#7 toPlay=jogador2 legais=6 plies=27 nós=60 vence: início (0,6), comprimento 2, horizontal
+  NNNNNN!.NN
+  NNNNNNN.NN
+  .N.NN.N.N.
+  NNNNNNNNNN
+  NNNNNNNN..
+  NNN.NNN.N.
+  NNNNNNN.NN
+  NNNNNNNNNN
+  N..NNN...N
+  NN.NNNNNN.
+  alternativas (perdem): início (4,8), comprimento 2, horizontal | início (8,1), comprimento 2, horizontal | início (8,6), comprimento 2, horizontal
+
+#8 toPlay=jogador2 legais=12 plies=21 nós=2129 vence: início (6,8), comprimento 2, horizontal
+  NNNNNN...N
+  .NNNNNNNNN
+  NNN..NNNNN
+  .N.N..N..N
+  .NNNNNNNNN
+  .NNN.NNNN.
+  NNNNNNNN!.
+  NNNNNNNNNN
+  NNN.NNNN..
+  ...NNNNN..
+  alternativas (perdem): início (0,6), comprimento 2, horizontal | início (0,7), comprimento 2, horizontal | início (0,6), comprimento 3, horizontal
+
+#9 toPlay=jogador1 legais=7 plies=22 nós=728 vence: início (5,9), comprimento 2, vertical
+  NNNNNN...N
+  .NNNNNNNNN
+  NNN..NNNNN
+  .N.N..N..N
+  .NNNNNNNNN
+  .NNN.NNNN!
+  NNNNNNNN..
+  NNNNNNNNNN
+  NNN.NNNN..
+  NNNNNNNN..
+  alternativas (perdem): início (3,0), comprimento 2, vertical | início (4,0), comprimento 2, vertical | início (3,0), comprimento 3, vertical

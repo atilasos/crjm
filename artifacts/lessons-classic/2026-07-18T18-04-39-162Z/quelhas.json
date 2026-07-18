@@ -1,0 +1,301 @@
+{
+  "options": {
+    "playouts": 300,
+    "solveMoves": 12,
+    "max": 10,
+    "seed": 20260718,
+    "nodeBudget": 2000000
+  },
+  "candidates": [
+    {
+      "playoutSeed": 1,
+      "plies": 25,
+      "toPlay": "jogador2",
+      "legalMoves": 6,
+      "rows": [
+        "N..NNNN..N",
+        "N..NNNNN.N",
+        "NNNNN..N.N",
+        "NNNNNNNNNN",
+        "N.NNNNNNNN",
+        "N.NNNNN.NN",
+        "NNNNN.N..N",
+        "NNNNNNNNNN",
+        "..NNNNNNNN",
+        ".NNN.NNN.N"
+      ],
+      "winningMove": "início (0,7), comprimento 2, horizontal",
+      "winningCell": {
+        "linha": 0,
+        "coluna": 7
+      },
+      "losingSample": [
+        "início (0,1), comprimento 2, horizontal",
+        "início (1,1), comprimento 2, horizontal",
+        "início (2,5), comprimento 2, horizontal"
+      ],
+      "solvedNodes": 247
+    },
+    {
+      "playoutSeed": 2,
+      "plies": 26,
+      "toPlay": "jogador1",
+      "legalMoves": 10,
+      "rows": [
+        "..NNNNNNNN",
+        "NNN....NNN",
+        "N.N.NNNNN.",
+        "NNNNNNN.NN",
+        "NNNNNNNNNN",
+        "NN..NNN.NN",
+        ".N..NNNNNN",
+        "NN..N.NNNN",
+        "N.NNNNN..N",
+        "N.NNNN...N"
+      ],
+      "winningMove": "início (1,3), comprimento 2, vertical",
+      "winningCell": {
+        "linha": 1,
+        "coluna": 3
+      },
+      "losingSample": [
+        "início (8,1), comprimento 2, vertical",
+        "início (5,2), comprimento 2, vertical",
+        "início (6,2), comprimento 2, vertical"
+      ],
+      "solvedNodes": 1484
+    },
+    {
+      "playoutSeed": 4,
+      "plies": 24,
+      "toPlay": "jogador1",
+      "legalMoves": 10,
+      "rows": [
+        "N.NNNNNNNN",
+        "NN..NNNNNN",
+        ".N...NNN.N",
+        ".NNNNNNNNN",
+        "NN.NN...N.",
+        "NNNNNNNNNN",
+        "N.N..NNNNN",
+        "NNNNN.NN.N",
+        ".N..N.NN.N",
+        ".N..N.NNNN"
+      ],
+      "winningMove": "início (1,2), comprimento 2, vertical",
+      "winningCell": {
+        "linha": 1,
+        "coluna": 2
+      },
+      "losingSample": [
+        "início (2,0), comprimento 2, vertical",
+        "início (8,0), comprimento 2, vertical",
+        "início (8,2), comprimento 2, vertical"
+      ],
+      "solvedNodes": 435
+    },
+    {
+      "playoutSeed": 10,
+      "plies": 19,
+      "toPlay": "jogador2",
+      "legalMoves": 10,
+      "rows": [
+        ".NNNNN.NNN",
+        "..N...NNN.",
+        "N.NNNNNNN.",
+        "NNN...NNN.",
+        ".N.NN.NNN.",
+        ".NNNNNNNN.",
+        ".N..N.NNNN",
+        "NN..NNN.NN",
+        "NNNNNN..NN",
+        "NNNNNNNNN."
+      ],
+      "winningMove": "início (8,6), comprimento 2, horizontal",
+      "winningCell": {
+        "linha": 8,
+        "coluna": 6
+      },
+      "losingSample": [
+        "início (1,0), comprimento 2, horizontal",
+        "início (1,3), comprimento 2, horizontal",
+        "início (1,4), comprimento 2, horizontal"
+      ],
+      "solvedNodes": 10498
+    },
+    {
+      "playoutSeed": 16,
+      "plies": 27,
+      "toPlay": "jogador2",
+      "legalMoves": 10,
+      "rows": [
+        "NNNN....N.",
+        "NNN.N..NN.",
+        "..N.N.NNNN",
+        "NNNNNNN.NN",
+        "NNNNNNNNNN",
+        ".NNNN.NNN.",
+        "NNNNNN.NNN",
+        "NNNNNNNN.N",
+        "NNNN.NN..N",
+        "NNNNN..NNN"
+      ],
+      "winningMove": "início (0,4), comprimento 2, horizontal",
+      "winningCell": {
+        "linha": 0,
+        "coluna": 4
+      },
+      "losingSample": [
+        "início (0,5), comprimento 2, horizontal",
+        "início (0,6), comprimento 2, horizontal",
+        "início (0,4), comprimento 3, horizontal"
+      ],
+      "solvedNodes": 212
+    },
+    {
+      "playoutSeed": 29,
+      "plies": 24,
+      "toPlay": "jogador1",
+      "legalMoves": 11,
+      "rows": [
+        "..NNNN.N..",
+        "N..N.NNN..",
+        "N..N.NNN.N",
+        ".NNNNN.NNN",
+        "NNNNNNNNNN",
+        "NNNNNNNNN.",
+        "NNNNNNNNNN",
+        ".N.NNNNNNN",
+        ".N.NN.NNNN",
+        "NNNNNNNNNN"
+      ],
+      "winningMove": "início (1,8), comprimento 2, vertical",
+      "winningCell": {
+        "linha": 1,
+        "coluna": 8
+      },
+      "losingSample": [
+        "início (7,0), comprimento 2, vertical",
+        "início (0,1), comprimento 2, vertical",
+        "início (1,1), comprimento 2, vertical"
+      ],
+      "solvedNodes": 281
+    },
+    {
+      "playoutSeed": 34,
+      "plies": 25,
+      "toPlay": "jogador2",
+      "legalMoves": 9,
+      "rows": [
+        "NNNNNN..NN",
+        "NNNN..N.NN",
+        ".N.NN.N.N.",
+        "NNNNNNNNNN",
+        "NNNNNNNN..",
+        "NNN.NN..N.",
+        "NNNNNN..NN",
+        "NNNNNNNNNN",
+        "N..NNN...N",
+        "NN.NNNNNN."
+      ],
+      "winningMove": "início (0,6), comprimento 2, horizontal",
+      "winningCell": {
+        "linha": 0,
+        "coluna": 6
+      },
+      "losingSample": [
+        "início (1,4), comprimento 2, horizontal",
+        "início (4,8), comprimento 2, horizontal",
+        "início (5,6), comprimento 2, horizontal"
+      ],
+      "solvedNodes": 501
+    },
+    {
+      "playoutSeed": 34,
+      "plies": 27,
+      "toPlay": "jogador2",
+      "legalMoves": 6,
+      "rows": [
+        "NNNNNN..NN",
+        "NNNNNNN.NN",
+        ".N.NN.N.N.",
+        "NNNNNNNNNN",
+        "NNNNNNNN..",
+        "NNN.NNN.N.",
+        "NNNNNNN.NN",
+        "NNNNNNNNNN",
+        "N..NNN...N",
+        "NN.NNNNNN."
+      ],
+      "winningMove": "início (0,6), comprimento 2, horizontal",
+      "winningCell": {
+        "linha": 0,
+        "coluna": 6
+      },
+      "losingSample": [
+        "início (4,8), comprimento 2, horizontal",
+        "início (8,1), comprimento 2, horizontal",
+        "início (8,6), comprimento 2, horizontal"
+      ],
+      "solvedNodes": 60
+    },
+    {
+      "playoutSeed": 48,
+      "plies": 21,
+      "toPlay": "jogador2",
+      "legalMoves": 12,
+      "rows": [
+        "NNNNNN...N",
+        ".NNNNNNNNN",
+        "NNN..NNNNN",
+        ".N.N..N..N",
+        ".NNNNNNNNN",
+        ".NNN.NNNN.",
+        "NNNNNNNN..",
+        "NNNNNNNNNN",
+        "NNN.NNNN..",
+        "...NNNNN.."
+      ],
+      "winningMove": "início (6,8), comprimento 2, horizontal",
+      "winningCell": {
+        "linha": 6,
+        "coluna": 8
+      },
+      "losingSample": [
+        "início (0,6), comprimento 2, horizontal",
+        "início (0,7), comprimento 2, horizontal",
+        "início (0,6), comprimento 3, horizontal"
+      ],
+      "solvedNodes": 2129
+    },
+    {
+      "playoutSeed": 48,
+      "plies": 22,
+      "toPlay": "jogador1",
+      "legalMoves": 7,
+      "rows": [
+        "NNNNNN...N",
+        ".NNNNNNNNN",
+        "NNN..NNNNN",
+        ".N.N..N..N",
+        ".NNNNNNNNN",
+        ".NNN.NNNN.",
+        "NNNNNNNN..",
+        "NNNNNNNNNN",
+        "NNN.NNNN..",
+        "NNNNNNNN.."
+      ],
+      "winningMove": "início (5,9), comprimento 2, vertical",
+      "winningCell": {
+        "linha": 5,
+        "coluna": 9
+      },
+      "losingSample": [
+        "início (3,0), comprimento 2, vertical",
+        "início (4,0), comprimento 2, vertical",
+        "início (3,0), comprimento 3, vertical"
+      ],
+      "solvedNodes": 728
+    }
+  ]
+}

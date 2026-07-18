@@ -1,0 +1,110 @@
+## dominorio: 10 posições com única jogada vencedora (demonstrado)
+#0 toPlay=jogador2 legais=7 plies=21 nós=593 vence: (3,3)+(3,4) horizontal
+  OOXXO.O.
+  OO.OO.O.
+  XX.O.OO.
+  XX.!.OOO
+  ..XX.XXO
+  OO...O..
+  OO.XXOXX
+  ..XXXXXX
+  alternativas (perdem): (3,2)+(3,3) horizontal | (4,0)+(4,1) horizontal | (5,2)+(5,3) horizontal
+
+#1 toPlay=jogador1 legais=3 plies=28 nós=2 vence: (4,4)+(5,4) vertical
+  XXOOXXX.
+  XX.XXXX.
+  OOXX.XX.
+  OOXOOXXX
+  OOOO!OOX
+  XXX..XOO
+  XXXOOXOO
+  OOOOOOOO
+  alternativas (perdem): (0,7)+(1,7) vertical | (1,7)+(2,7) vertical
+
+#2 toPlay=jogador2 legais=7 plies=21 nós=167 vence: (6,0)+(6,1) horizontal
+  .XX.....
+  OXXXX.OO
+  O.O.XXOO
+  O.OXXO..
+  OXX.OO.O
+  ..OOOXXO
+  !.OOXXO.
+  .XXXX.O.
+  alternativas (perdem): (0,3)+(0,4) horizontal | (0,4)+(0,5) horizontal | (0,5)+(0,6) horizontal
+
+#3 toPlay=jogador2 legais=4 plies=25 nós=23 vence: (5,4)+(5,5) horizontal
+  OOOOO...
+  OOOOOOXX
+  .OXX.OXX
+  .OXXOXXO
+  XXOOO.OO
+  .OOO!.O.
+  .OXXXXXX
+  XXXXXX..
+  alternativas (perdem): (0,5)+(0,6) horizontal | (0,6)+(0,7) horizontal | (7,6)+(7,7) horizontal
+
+#4 toPlay=jogador1 legais=6 plies=22 nós=148 vence: (4,1)+(5,1) vertical
+  ..OO.X..
+  XOO.XXOO
+  XXOOXXOO
+  .X.XXX..
+  .!.XXXOO
+  X..OOXOO
+  XX.OO.X.
+  .XOOOOX.
+  alternativas (perdem): (3,0)+(4,0) vertical | (3,2)+(4,2) vertical | (4,2)+(5,2) vertical
+
+#5 toPlay=jogador2 legais=3 plies=25 nós=7 vence: (5,1)+(5,2) horizontal
+  ..XX.OXX
+  OXX.OOXX
+  OOXXOOXX
+  OOOOOO..
+  O.OOOOXX
+  O!.XXOXX
+  OO.XX.O.
+  .OXXXXO.
+  alternativas (perdem): (0,0)+(0,1) horizontal | (3,6)+(3,7) horizontal
+
+#6 toPlay=jogador1 legais=7 plies=20 nós=427 vence: (5,1)+(6,1) vertical
+  X.OOOOX.
+  X.OO..XX
+  OO..X..X
+  ..X.XOOX
+  OOXX.XXX
+  .!.X.XX.
+  X..OO.OO
+  XOO...OO
+  alternativas (perdem): (0,1)+(1,1) vertical | (1,5)+(2,5) vertical | (2,3)+(3,3) vertical
+
+#7 toPlay=jogador2 legais=10 plies=17 nós=6213 vence: (2,3)+(2,4) horizontal
+  .O.XXOXX
+  .O...O..
+  .XX!.XXO
+  ...O...O
+  .O.OXXXX
+  .OO.XXO.
+  .OOO..O.
+  .O.OXX..
+  alternativas (perdem): (1,2)+(1,3) horizontal | (1,3)+(1,4) horizontal | (1,6)+(1,7) horizontal
+
+#8 toPlay=jogador2 legais=9 plies=19 nós=870 vence: (2,3)+(2,4) horizontal
+  OO.XXOXX
+  OO...O..
+  .XX!.XXO
+  ...O...O
+  .O.OXXXX
+  .OO.XXO.
+  .OOO..O.
+  .O.OXXXX
+  alternativas (perdem): (1,2)+(1,3) horizontal | (1,3)+(1,4) horizontal | (1,6)+(1,7) horizontal
+
+#9 toPlay=jogador2 legais=7 plies=21 nós=154 vence: (2,3)+(2,4) horizontal
+  OO.XXOXX
+  OO...O..
+  .XX!.XXO
+  XX.O...O
+  .O.OXXXX
+  .OO.XXOO
+  .OOO..OO
+  .O.OXXXX
+  alternativas (perdem): (1,2)+(1,3) horizontal | (1,3)+(1,4) horizontal | (1,6)+(1,7) horizontal

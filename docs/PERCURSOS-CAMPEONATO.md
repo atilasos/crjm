@@ -98,9 +98,19 @@ recomendação automática, como desafio explícito).
   com ≥4 jogos; vitórias em níveis superiores contam para objetivos
   inferiores) e o Laboratório marca ✓ e mostra o progresso real de cada
   desafio. Partidas humano-vs-humano não enviam nível.
-- **F3**: `extract-lessons.ts` para os outros 5 jogos, começando por
-  Dominório e Quelhas (teoria limpa) e deixando o Produto para depois de
-  alargar a amostra da arena (pré-requisito de confiança).
+- **F3 — concluída para 3 jogos (2026-07-18)**: `scripts/extract-lessons.ts`
+  reforça o desenho original — em vez de avaliações heurísticas, joga
+  aberturas aleatórias com seed e **resolve finais por busca completa**
+  (negamax memoizado até ao fim do jogo). Cada candidato é uma posição com
+  ≥3 jogadas legais em que exatamente uma vence — demonstrado, não
+  estimado. 10 candidatos/jogo para Dominório, Quelhas e Gatos & Cães
+  (`artifacts/lessons-classic/2026-07-18T18-04-39-162Z/`); um puzzle
+  «Final resolvido» curado por jogo na etapa Campeonato (`gc-final-1`,
+  `do-final-1`, `qu-final-1`), com os diagramas verificados
+  programaticamente contra os candidatos. Pendente: Nex (jogada composta
+  peça+neutra e substituição exigem adaptador dedicado) e Produto (a
+  pontuação por produto não é «último a jogar»; requer solver próprio e
+  amostra de arena maior).
 - **F4**: revisão de derrotas na app (mostrar o gráfico de avaliação do
   motor sobre um jogo terminado) — a funcionalidade com mais valor de
   treino e mais custo de UI.

@@ -105,6 +105,20 @@ export const PUZZLES: PuzzleDefinition[] = [
     },
   },
   {
+    id: 'gc-final-1', gameId: 'gatos-caes', patternId: 'gatos-caes:jogada-garantida', title: 'Final resolvido: a casa exata',
+    prompt: 'Posição real, resolvida por análise completa: jogam os Gatos (X) e há cinco casas legais, mas só uma vence. Qual?',
+    hint: 'Conta as reservas que cada casa te deixa — e as que deixa ao adversário.', correctOptionId: 'casa2',
+    options: [
+      { id: 'casa1', label: 'Casa 1', explanation: 'Demonstrado que perde: depois desta casa, o adversário consegue sempre esgotar-te as respostas primeiro.' },
+      { id: 'casa2', label: 'Casa 2', explanation: 'Certo — e provado: a análise de todas as continuações mostra que só esta casa garante que é o adversário a ficar sem jogada.' },
+      { id: 'casa3', label: 'Casa 3', explanation: 'Demonstrado que perde: parece guardar mobilidade, mas o adversário responde e fica com a última casa útil.' },
+    ],
+    diagram: {
+      rows: ['OO.X1.OO', '..XX.X.O', '.O..O.2.', 'X.XX.O.O', 'X3.XX.X.', '.XX..O.X', 'O..O.O.X', '.OO.O.X.'],
+      caption: 'Jogam os Gatos (X). Final real resolvido por busca completa (94 posições analisadas): das cinco casas legais, apenas uma vence.',
+    },
+  },
+  {
     id: 'do-paridade-1', gameId: 'dominorio', patternId: 'dominorio:paridade', title: 'Contar antes de cortar',
     prompt: 'Uma região isolada admite exatamente quatro dominós alternados. Quem jogar primeiro nessa região fará também a última jogada?',
     hint: 'Conta as jogadas: 1, 2, 3, 4.', correctOptionId: 'nao',
@@ -177,6 +191,20 @@ export const PUZZLES: PuzzleDefinition[] = [
     ],
   },
   {
+    id: 'do-final-1', gameId: 'dominorio', patternId: 'dominorio:paridade', title: 'Final resolvido: um dominó certo',
+    prompt: 'Posição real, resolvida por análise completa: jogas na horizontal (X) e tens quatro dominós possíveis, mas só um vence. Qual escolhes?',
+    hint: 'Cada colocação muda a paridade das zonas que restam.', correctOptionId: 'casa2',
+    options: [
+      { id: 'casa1', label: 'Dominó a partir da Casa 1 (para a direita)', explanation: 'Demonstrado que perde: gasta uma zona onde ainda cabias duas vezes e entrega a última colocação ao adversário.' },
+      { id: 'casa2', label: 'Dominó a partir da Casa 2 (para a direita)', explanation: 'Certo — e provado: analisadas todas as continuações, só este dominó garante que és tu a fazer a última colocação.' },
+      { id: 'casa3', label: 'Dominó a partir da Casa 3 (para a direita)', explanation: 'Demonstrado que perde: fecha o teu próprio canto e a contagem final fica favorável ao adversário.' },
+    ],
+    diagram: {
+      rows: ['OOOOO1..', 'OOOOOOXX', '.OXX.OXX', '.OXXOXXO', 'XXOOO.OO', '.OOO2.O.', '.OXXXXXX', 'XXXXXX3.'],
+      caption: 'Jogas na horizontal (X); as casas numeradas são o início de cada dominó candidato. Final real resolvido por busca completa (23 posições).',
+    },
+  },
+  {
     id: 'qu-misere-1', gameId: 'quelhas', patternId: 'quelhas:misere-final', title: 'Pensar ao contrário',
     prompt: 'Resta uma única jogada legal no teu turno. Segundo a regra misère de Quelhas, o que acontece se a fizeres?',
     hint: 'Em Quelhas, fazer a última jogada não é o objetivo.', correctOptionId: 'perdes',
@@ -235,6 +263,20 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'eixo', label: 'Uma jogada sobre o eixo de simetria', explanation: 'Certo: uma jogada auto-simétrica não pode ser copiada — o espelho quebra e a paridade muda de mãos.' },
       { id: 'esperar', label: 'Não há defesa contra o espelho', explanation: 'O espelho tem pontos fracos: o eixo central e os momentos em que a cópia fica ilegal.' },
     ],
+  },
+  {
+    id: 'qu-final-1', gameId: 'quelhas', patternId: 'quelhas:misere-final', title: 'Final resolvido: fugir da última',
+    prompt: 'Posição real, resolvida por análise completa: jogas segmentos horizontais de 2 casas e há seis jogadas legais — só uma vence. Onde começas?',
+    hint: 'Em Quelhas perde quem for obrigado a fazer a última jogada: conta a paridade de cada zona.', correctOptionId: 'casa3',
+    options: [
+      { id: 'casa1', label: 'Segmento a partir da Casa 1', explanation: 'Demonstrado que perde: a paridade das zonas restantes obriga-te a ti à última colocação.' },
+      { id: 'casa2', label: 'Segmento a partir da Casa 2', explanation: 'Demonstrado que perde: fecha a zona errada e devolve o controlo do final ao adversário.' },
+      { id: 'casa3', label: 'Segmento a partir da Casa 3', explanation: 'Certo — e provado: com jogo perfeito dos dois lados, só este segmento empurra o adversário para a última jogada.' },
+    ],
+    diagram: {
+      rows: ['N1.NNNN3.N', 'N..NNNNN.N', 'NNNNN2.N.N', 'NNNNNNNNNN', 'N.NNNNNNNN', 'N.NNNNN.NN', 'NNNNN.N..N', 'NNNNNNNNNN', '..NNNNNNNN', '.NNN.NNN.N'],
+      caption: 'As casas cinzentas estão ocupadas; cada número marca o início de um segmento horizontal de 2. Final real resolvido por busca completa (247 posições).',
+    },
   },
   {
     id: 'pr-equilibrio-1', gameId: 'produto', patternId: 'produto:equilibrio', title: 'Dois fatores fortes',

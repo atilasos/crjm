@@ -1,0 +1,110 @@
+## gatos-caes: 10 posições com única jogada vencedora (demonstrado)
+#0 toPlay=jogador2 legais=12 plies=27 nós=24914 vence: casa (2,2)
+  OO.X..OO
+  O...X.O.
+  ..!..X.X
+  .O.O....
+  OO.O.O.X
+  ..X...O.
+  .O..XX..
+  ..X.XXXX
+  alternativas (perdem): casa (0,4) | casa (1,2) | casa (1,3)
+
+#1 toPlay=jogador2 legais=11 plies=29 nós=12888 vence: casa (2,2)
+  OO.X..OO
+  O...X.O.
+  ..!..X.X
+  .O.O..X.
+  OO.O.O.X
+  O.X...O.
+  .O..XX..
+  ..X.XXXX
+  alternativas (perdem): casa (0,4) | casa (1,2) | casa (1,3)
+
+#2 toPlay=jogador1 legais=12 plies=24 nós=19474 vence: casa (0,5)
+  .X...!.O
+  O..OO...
+  ...O..XX
+  XX..XX..
+  ..X.X.OO
+  X.......
+  .OO..X.X
+  .O..O.O.
+  alternativas (perdem): casa (0,2) | casa (1,6) | casa (2,1)
+
+#3 toPlay=jogador1 legais=5 plies=32 nós=94 vence: casa (2,6)
+  OO.X..OO
+  ..XX.X.O
+  .O..O.!.
+  X.XX.O.O
+  X..XX.X.
+  .XX..O.X
+  O..O.O.X
+  .OO.O.X.
+  alternativas (perdem): casa (0,4) | casa (4,1) | casa (4,2)
+
+#4 toPlay=jogador1 legais=4 plies=34 nós=41 vence: casa (2,6)
+  OO.X..OO
+  ..XX.X.O
+  .O..O.!.
+  X.XX.O.O
+  X.XXX.X.
+  .XX..O.X
+  O..O.O.X
+  .OOOO.X.
+  alternativas (perdem): casa (0,4) | casa (4,1) | casa (7,7)
+
+#5 toPlay=jogador2 legais=4 plies=35 nós=31 vence: casa (5,6)
+  O.O.XX.X
+  OO.XX.O.
+  .O.X.O.X
+  X.O.O.XX
+  .OO.OO.X
+  .O.X..!.
+  O.X.O.X.
+  OO.X.XX.
+  alternativas (perdem): casa (5,7) | casa (6,7) | casa (7,7)
+
+#6 toPlay=jogador1 legais=3 plies=36 nós=11 vence: casa (5,5)
+  X.X.OO.O
+  XX.OO.X.
+  .X.O.X.O
+  O.X.X.OO
+  .XX.XX.O
+  .X.O.!.O
+  X.O.X.O.
+  XX.O.OO.
+  alternativas (perdem): casa (0,1) | casa (5,0)
+
+#7 toPlay=jogador2 legais=7 plies=37 nós=555 vence: casa (2,1)
+  OO.OO.OO
+  O..O..O.
+  .!.OOO.X
+  X.O.OOO.
+  XX.O.O.X
+  X.O.X.X.
+  .X..XXXX
+  XXXX.X..
+  alternativas (perdem): casa (5,7) | casa (6,0) | casa (6,3)
+
+#8 toPlay=jogador2 legais=6 plies=39 nós=251 vence: casa (2,1)
+  OO.OO.OO
+  O..OO.O.
+  .!.OOO.X
+  X.O.OOO.
+  XX.O.O.X
+  X.O.X.X.
+  XX..XXXX
+  XXXX.X..
+  alternativas (perdem): casa (5,7) | casa (6,3) | casa (7,4)
+
+#9 toPlay=jogador2 legais=5 plies=41 nós=111 vence: casa (2,1)
+  OO.OO.OO
+  O..OO.O.
+  .!.OOO.X
+  X.OOOOO.
+  XX.O.O.X
+  X.O.X.X.
+  XX..XXXX
+  XXXXXX..
+  alternativas (perdem): casa (5,7) | casa (6,3) | casa (7,6)
