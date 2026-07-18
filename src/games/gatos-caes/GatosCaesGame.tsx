@@ -234,9 +234,9 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
         (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
 
-    recordGameCompleted('gatos-caes', humanWon);
+    recordGameCompleted('gatos-caes', humanWon, state.modo === 'vs-computador' ? difficulty : undefined);
     awardedResultRef.current = state.estado;
-  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
+  }, [difficulty, humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;

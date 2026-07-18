@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { GameId } from '../ai-core/types';
 import { evaluatePuzzleAnswer, getDisplayOptions, getPuzzlesForGame } from '../ai-core/puzzles';
-import { getTrainingPath } from '../ai-core/training-paths';
+import { evaluateDesafioGoals, getTrainingPath } from '../ai-core/training-paths';
 import { Header } from './Header';
 import { PuzzleDiagramView } from './PuzzleDiagramView';
 import { useGamification } from './gamification/GamificationProvider';
@@ -20,7 +20,7 @@ const GAMES: Array<{ id: GameId; label: string; mark: string }> = [
 ];
 
 export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
-  const { profile, recordPatternProgress, recordPuzzleSolved } = useGamification();
+  const { profile, levelProgress, recordPatternProgress, recordPuzzleSolved } = useGamification();
   const [gameId, setGameId] = useState<GameId>('gatos-caes');
   const [puzzleIndex, setPuzzleIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -190,14 +190,17 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 {getTrainingPath(gameId).steps.map((step, stepIndex) => {
                   const stepPuzzles = step.puzzleIds ?? [];
                   const solvedInStep = stepPuzzles.filter((id) => solved.has(id)).length;
-                  const puzzlesDone = stepPuzzles.length > 0 && solvedInStep === stepPuzzles.length;
+                  const puzzlesDone = stepPuzzles.length === 0 || solvedInStep === stepPuzzles.length;
+                  const desafio = evaluateDesafioGoals(step.desafioGoals, levelProgress[gameId]);
+                  const stepDone =
+                    (stepPuzzles.length > 0 || desafio !== null) && puzzlesDone && (desafio?.done ?? true);
                   return (
-                    <div key={step.title} className={`rounded-lg border px-3 py-3 [background:var(--painel)] ${puzzlesDone ? '[border-color:var(--sucesso)]' : '[border-color:var(--linha)]'}`}>
+                    <div key={step.title} className={`rounded-lg border px-3 py-3 [background:var(--painel)] ${stepDone ? '[border-color:var(--sucesso)]' : '[border-color:var(--linha)]'}`}>
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-black [color:var(--tinta)]">{stepIndex + 1}. {step.title}</p>
                         {stepPuzzles.length > 0 && (
-                          <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${puzzlesDone ? 'text-white [background:var(--sucesso)] [border-color:var(--sucesso)]' : '[border-color:var(--linha)] [color:var(--tinta-suave)]'}`}>
-                            {puzzlesDone ? '✓ ' : ''}{solvedInStep}/{stepPuzzles.length} puzzles
+                          <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${solvedInStep === stepPuzzles.length ? 'text-white [background:var(--sucesso)] [border-color:var(--sucesso)]' : '[border-color:var(--linha)] [color:var(--tinta-suave)]'}`}>
+                            {solvedInStep === stepPuzzles.length ? '✓ ' : ''}{solvedInStep}/{stepPuzzles.length} puzzles
                           </span>
                         )}
                       </div>
@@ -207,14 +210,21 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                         ))}
                       </ul>
                       {step.desafio && (
-                        <p className="mt-2 text-xs font-bold [color:var(--ouro)]">Desafio no tabuleiro: {step.desafio}</p>
+                        <p className={`mt-2 text-xs font-bold ${desafio?.done ? '[color:var(--sucesso)]' : '[color:var(--ouro)]'}`}>
+                          {desafio?.done ? '✓ ' : ''}Desafio no tabuleiro: {step.desafio}
+                        </p>
+                      )}
+                      {desafio && (
+                        <p className="mt-1 text-xs [color:var(--tinta-suave)]">
+                          {desafio.progress.join(' · ')}
+                        </p>
                       )}
                     </div>
                   );
                 })}
               </div>
               <p className="mt-3 text-xs [color:var(--tinta-suave)]">
-                Os puzzles contam automaticamente; os desafios contra o computador jogam-se na página de cada jogo.
+                Os puzzles e as vitórias contra o computador contam automaticamente; os desafios jogam-se na página de cada jogo.
               </p>
             </section>
           </div>

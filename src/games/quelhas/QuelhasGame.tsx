@@ -281,9 +281,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
         (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
 
-    recordGameCompleted('quelhas', humanWon);
+    recordGameCompleted('quelhas', humanWon, state.modo === 'vs-computador' ? difficultyLevel : undefined);
     awardedResultRef.current = state.estado;
-  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
+  }, [difficultyLevel, humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   // Limpar posição inicial quando muda o jogador
   useEffect(() => {

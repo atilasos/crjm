@@ -2,11 +2,12 @@ import { STARTER_ACHIEVEMENTS } from '../../ai-core/gamification';
 import type { GameId } from '../../ai-core/types';
 import type { PatternEvidence } from '../../ai-core/learner-gamification';
 import { sanitizeProfile, type AchievementPopupState, type GamificationProfile, type MissionProgress } from './gamification-state';
-import type { LearnerCommandResponse, LearnerDashboardPayload } from '../../types/learner-core';
+import type { LearnerCommandResponse, LearnerDashboardPayload, LevelProgressByGame } from '../../types/learner-core';
 
 export interface GamificationBootstrapResult {
   profile: GamificationProfile;
   missions: MissionProgress[];
+  levelProgress: LevelProgressByGame;
   importFingerprint: string | null;
   legacyImportConsumed: boolean;
 }
@@ -74,10 +75,19 @@ export async function bootstrapGamification(fetchImpl: FetchLike, localProfile: 
   return {
     profile: toClientProfile(payload, 0),
     missions: payload.missions,
+    levelProgress: payload.levelProgress ?? {},
     importFingerprint: payload.importFingerprint,
     legacyImportConsumed,
   };
 }
+
+export type ClientCommandResult = {
+  profile: GamificationProfile;
+  missions: MissionProgress[];
+  popups: AchievementPopupState[];
+  sessionXpDelta: number;
+  levelProgress: LevelProgressByGame;
+};
 
 function popupsFromUnlocks(ids: string[]): AchievementPopupState[] {
   return ids
@@ -86,12 +96,12 @@ function popupsFromUnlocks(ids: string[]): AchievementPopupState[] {
     .map((achievement) => ({ achievement }));
 }
 
-export async function postGameCompleted(fetchImpl: FetchLike, gameId: GameId, won: boolean): Promise<{ profile: GamificationProfile; missions: MissionProgress[]; popups: AchievementPopupState[]; sessionXpDelta: number }> {
+export async function postGameCompleted(fetchImpl: FetchLike, gameId: GameId, won: boolean, difficultyLevel?: number): Promise<ClientCommandResult> {
   const response = await fetchImpl('/api/learner/events/game-completed', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId, won }),
+    body: JSON.stringify(difficultyLevel === undefined ? { gameId, won } : { gameId, won, difficultyLevel }),
   });
   if (!response.ok) {
     throw new Error(`game completion failed: ${response.status}`);
@@ -102,10 +112,11 @@ export async function postGameCompleted(fetchImpl: FetchLike, gameId: GameId, wo
     missions: payload.dashboard.missions,
     popups: popupsFromUnlocks(payload.unlockedAchievementIds),
     sessionXpDelta: payload.sessionXpDelta,
+    levelProgress: payload.dashboard.levelProgress ?? {},
   };
 }
 
-export async function postReviewCompleted(fetchImpl: FetchLike, gameId: GameId): Promise<{ profile: GamificationProfile; missions: MissionProgress[]; popups: AchievementPopupState[]; sessionXpDelta: number }> {
+export async function postReviewCompleted(fetchImpl: FetchLike, gameId: GameId): Promise<ClientCommandResult> {
   const response = await fetchImpl('/api/learner/events/review-completed', {
     method: 'POST',
     credentials: 'include',
@@ -121,15 +132,11 @@ export async function postReviewCompleted(fetchImpl: FetchLike, gameId: GameId):
     missions: payload.dashboard.missions,
     popups: popupsFromUnlocks(payload.unlockedAchievementIds),
     sessionXpDelta: payload.sessionXpDelta,
+    levelProgress: payload.dashboard.levelProgress ?? {},
   };
 }
 
-type ClientCommandResult = {
-  profile: GamificationProfile;
-  missions: MissionProgress[];
-  popups: AchievementPopupState[];
-  sessionXpDelta: number;
-};
+
 
 async function postPedagogicalCommand(
   fetchImpl: FetchLike,
@@ -150,6 +157,7 @@ async function postPedagogicalCommand(
     missions: payload.dashboard.missions,
     popups: popupsFromUnlocks(payload.unlockedAchievementIds),
     sessionXpDelta: payload.sessionXpDelta,
+    levelProgress: payload.dashboard.levelProgress ?? {},
   };
 }
 

@@ -109,8 +109,11 @@ export async function handleAppRequest(req: Request, _server: Server<unknown>): 
   if (url.pathname === '/api/learner/events/game-completed' && req.method === 'POST') {
     try {
       const { userId, headers } = withSession(req);
-      const body = await readJson<{ gameId: GameId; won: boolean }>(req);
-      return json(service.recordGameCompleted(userId, body.gameId, body.won), { headers });
+      const body = await readJson<{ gameId: GameId; won: boolean; difficultyLevel?: number }>(req);
+      return json(
+        service.recordGameCompleted(userId, body.gameId, body.won, body.difficultyLevel),
+        { headers },
+      );
     } catch (error) {
       return errorResponse(error);
     }

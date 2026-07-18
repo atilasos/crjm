@@ -137,7 +137,7 @@ async function main() {
       const gameResponse = await fetch('/api/learner/events/game-completed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ gameId: 'dominorio', won: true }),
+        body: JSON.stringify({ gameId: 'dominorio', won: true, difficultyLevel: 2 }),
         credentials: 'include',
       });
 
@@ -159,6 +159,10 @@ async function main() {
     }
     if (commandResult.review.dashboard.profile.totalXp !== 70) {
       throw new Error(`expected totalXp 70 after review command, got ${commandResult.review.dashboard.profile.totalXp}`);
+    }
+    const levelSnapshot = commandResult.game.dashboard.levelProgress?.dominorio?.[2];
+    if (!levelSnapshot || levelSnapshot.wins !== 1 || levelSnapshot.played !== 1 || levelSnapshot.bestWinStreak !== 1) {
+      throw new Error(`expected level progress N2 {played:1, wins:1}, got ${JSON.stringify(levelSnapshot)}`);
     }
 
     await page.reload({ waitUntil: 'networkidle' });

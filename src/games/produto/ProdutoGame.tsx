@@ -205,9 +205,9 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
         (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
 
-    recordGameCompleted('produto', humanWon);
+    recordGameCompleted('produto', humanWon, state.modo === 'vs-computador' ? difficultyLevel : undefined);
     awardedResultRef.current = state.estado;
-  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
+  }, [difficultyLevel, humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   // Atualizar cor selecionada baseado no jogador atual
   useEffect(() => {

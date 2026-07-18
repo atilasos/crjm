@@ -42,9 +42,20 @@ export interface LearnerActivityEventRecord {
   xpDelta: number;
 }
 
+export interface LevelProgressSnapshot {
+  played: number;
+  wins: number;
+  currentWinStreak: number;
+  bestWinStreak: number;
+}
+
+/** Progresso por nível de dificuldade: gameId → nível (1..6) → contadores. */
+export type LevelProgressByGame = Partial<Record<GameId, Record<number, LevelProgressSnapshot>>>;
+
 export interface LearnerDashboardPayload {
   profile: LearnerProfileRecord;
   gameProgress: Record<GameId, GameProgressSnapshot>;
+  levelProgress: LevelProgressByGame;
   achievements: Record<string, AchievementUnlock>;
   patterns: Record<string, PatternProgress>;
   missionClaims: Record<string, { claimedAt: string }>;

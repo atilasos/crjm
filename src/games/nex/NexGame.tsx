@@ -348,9 +348,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
       ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
         (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
 
-    recordGameCompleted('nex', humanWon);
+    recordGameCompleted('nex', humanWon, state.modo === 'vs-computador' ? difficultyLevel : undefined);
     awardedResultRef.current = state.estado;
-  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
+  }, [difficultyLevel, humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   const handleCellClick = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;

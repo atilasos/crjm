@@ -89,9 +89,15 @@ recomendação automática, como desafio explícito).
   centro; centro exato ~0,1%; valor inicial +0,568 pretas) e 30 candidatos
   a puzzle verificados por MCTS a 800 sims; 4 curados como puzzles
   «encontra a jogada» (`ag-mestre-*`) na etapa Campeonato do Atari Go.
-  Artefactos: `artifacts/atari-go-lessons/2026-07-18T17-33-20/`. Falta de
-  F2 alargada: persistir o nível das vitórias contra a IA (exige migração
-  de schema) para os desafios «vence o Nx» contarem sozinhos.
+  Artefactos: `artifacts/atari-go-lessons/2026-07-18T17-33-20/`.
+- **F2 alargada — concluída (2026-07-18)**: o nível de dificuldade das
+  partidas contra a IA é persistido (migração `004_level_progress.sql`:
+  tabela `learner_level_progress` com contadores e sequências por nível +
+  coluna `difficulty_level` nos eventos). Os desafios do percurso têm
+  objetivos verificáveis (`desafioGoals`: vitórias, sequências, meta ≥50%
+  com ≥4 jogos; vitórias em níveis superiores contam para objetivos
+  inferiores) e o Laboratório marca ✓ e mostra o progresso real de cada
+  desafio. Partidas humano-vs-humano não enviam nível.
 - **F3**: `extract-lessons.ts` para os outros 5 jogos, começando por
   Dominório e Quelhas (teoria limpa) e deixando o Produto para depois de
   alargar a amostra da arena (pré-requisito de confiança).

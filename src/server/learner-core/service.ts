@@ -43,6 +43,16 @@ interface EventRow {
   occurred_at: string;
   won: number | null;
   xp_delta: number;
+  difficulty_level?: number | null;
+}
+
+interface LevelProgressRow {
+  game_id: GameId;
+  difficulty_level: number;
+  played_count: number;
+  win_count: number;
+  current_win_streak: number;
+  best_win_streak: number;
 }
 
 interface PuzzleEventRow {
@@ -161,10 +171,18 @@ export class LearnerCoreService {
     return this.toDashboardPayload(userId, profile);
   }
 
-  recordGameCompleted(userId: string, gameId: GameId, won: boolean): LearnerCommandResponse {
+  recordGameCompleted(
+    userId: string,
+    gameId: GameId,
+    won: boolean,
+    difficultyLevel?: number,
+  ): LearnerCommandResponse {
     const before = this.reconstructProfile(userId);
     const now = this.now();
     const { profile: after } = recordGameCompletion(before, gameId, { won, now });
+    const level = Number.isInteger(difficultyLevel) && difficultyLevel! >= 1 && difficultyLevel! <= 6
+      ? difficultyLevel!
+      : null;
     this.runInTransaction(() => {
       this.insertEvent(userId, {
         id: crypto.randomUUID(),
@@ -173,10 +191,53 @@ export class LearnerCoreService {
         occurred_at: now.toISOString(),
         won: won ? 1 : 0,
         xp_delta: 10 + (won ? 8 : 0),
+        difficulty_level: level,
       });
+      if (level !== null) {
+        this.upsertLevelProgress(userId, gameId, level, won, now.toISOString());
+      }
       this.syncSnapshotTables(userId, after);
     });
     return this.buildCommandResponse(userId, before, after);
+  }
+
+  private upsertLevelProgress(
+    userId: string,
+    gameId: GameId,
+    level: number,
+    won: boolean,
+    nowIso: string,
+  ): void {
+    this.db.query(
+      `INSERT INTO learner_level_progress
+         (user_id, game_id, difficulty_level, played_count, win_count, current_win_streak, best_win_streak, updated_at)
+       VALUES (?, ?, ?, 1, ?, ?, ?, ?)
+       ON CONFLICT (user_id, game_id, difficulty_level) DO UPDATE SET
+         played_count = played_count + 1,
+         win_count = win_count + excluded.win_count,
+         current_win_streak = CASE WHEN excluded.win_count = 1 THEN current_win_streak + 1 ELSE 0 END,
+         best_win_streak = MAX(best_win_streak, CASE WHEN excluded.win_count = 1 THEN current_win_streak + 1 ELSE 0 END),
+         updated_at = excluded.updated_at`,
+    ).run(userId, gameId, level, won ? 1 : 0, won ? 1 : 0, won ? 1 : 0, nowIso);
+  }
+
+  private levelProgressPayload(userId: string): LearnerDashboardPayload['levelProgress'] {
+    const rows = this.db
+      .query<LevelProgressRow, [string]>(
+        'SELECT game_id, difficulty_level, played_count, win_count, current_win_streak, best_win_streak FROM learner_level_progress WHERE user_id = ?',
+      )
+      .all(userId);
+    const byGame: LearnerDashboardPayload['levelProgress'] = {};
+    for (const row of rows) {
+      const game = (byGame[row.game_id] ??= {});
+      game[row.difficulty_level] = {
+        played: row.played_count,
+        wins: row.win_count,
+        currentWinStreak: row.current_win_streak,
+        bestWinStreak: row.best_win_streak,
+      };
+    }
+    return byGame;
   }
 
   recordReviewCompleted(userId: string, gameId: GameId): LearnerCommandResponse {
@@ -392,6 +453,7 @@ export class LearnerCoreService {
     return {
       profile: payloadProfile,
       gameProgress: profile.gameProgress,
+      levelProgress: this.levelProgressPayload(userId),
       achievements: profile.achievements,
       patterns: profile.patterns,
       missionClaims: profile.missionClaims,
@@ -568,8 +630,17 @@ export class LearnerCoreService {
 
   private insertEvent(userId: string, event: EventRow): void {
     this.db.query(
-      'INSERT INTO learner_activity_events (id, user_id, game_id, event_type, occurred_at, won, xp_delta) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    ).run(event.id, userId, event.game_id, event.event_type, event.occurred_at, event.won, event.xp_delta);
+      'INSERT INTO learner_activity_events (id, user_id, game_id, event_type, occurred_at, won, xp_delta, difficulty_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    ).run(
+      event.id,
+      userId,
+      event.game_id,
+      event.event_type,
+      event.occurred_at,
+      event.won,
+      event.xp_delta,
+      event.difficulty_level ?? null,
+    );
   }
 
   private hashProfile(profile: GamificationProfile): string {

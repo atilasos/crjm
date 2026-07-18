@@ -1,12 +1,73 @@
 import type { GameId } from './types';
+import type { LevelProgressSnapshot } from '../types/learner-core';
+
+/** Objetivo verificável de um desafio contra a IA (níveis ≥ `level` contam). */
+export interface DesafioGoal {
+  level: number;
+  /** Vitórias necessárias. */
+  wins?: number;
+  /** Vitórias seguidas necessárias (melhor sequência num nível ≥ level). */
+  streak?: number;
+  /** Meta de ≥50% de vitórias com pelo menos 4 jogos disputados. */
+  half?: boolean;
+}
 
 export interface TrainingPathStep {
   title: string;
   checkpoints: string[];
   /** Puzzles do Laboratório cuja resolução completa esta etapa automaticamente. */
   puzzleIds?: string[];
-  /** Desafio prático contra a IA (registo manual/observado; o nível não é persistido). */
+  /** Desafio prático contra a IA, em texto. */
   desafio?: string;
+  /** Objetivos que tornam o desafio verificável com o progresso por nível. */
+  desafioGoals?: DesafioGoal[];
+}
+
+export interface DesafioEvaluation {
+  done: boolean;
+  /** Progresso legível, ex.: «vitórias N2+: 1/2 seguidas». */
+  progress: string[];
+}
+
+export function evaluateDesafioGoals(
+  goals: DesafioGoal[] | undefined,
+  levelProgress: Record<number, LevelProgressSnapshot> | undefined,
+): DesafioEvaluation | null {
+  if (!goals || goals.length === 0) return null;
+  const levels = levelProgress ?? {};
+  const atLeast = (minimum: number) => {
+    let wins = 0;
+    let played = 0;
+    let bestStreak = 0;
+    for (const [key, snapshot] of Object.entries(levels)) {
+      if (Number(key) < minimum) continue;
+      wins += snapshot.wins;
+      played += snapshot.played;
+      bestStreak = Math.max(bestStreak, snapshot.bestWinStreak);
+    }
+    return { wins, played, bestStreak };
+  };
+
+  let done = true;
+  const progress: string[] = [];
+  for (const goal of goals) {
+    const totals = atLeast(goal.level);
+    if (goal.streak !== undefined) {
+      const met = totals.bestStreak >= goal.streak;
+      done &&= met;
+      progress.push(`N${goal.level}+: ${Math.min(totals.bestStreak, goal.streak)}/${goal.streak} seguidas`);
+    } else if (goal.half) {
+      const met = totals.played >= 4 && totals.wins * 2 >= totals.played;
+      done &&= met;
+      progress.push(`N${goal.level}+: ${totals.wins} vitórias em ${totals.played} jogos (meta: ≥50% em ≥4)`);
+    } else {
+      const target = goal.wins ?? 1;
+      const met = totals.wins >= target;
+      done &&= met;
+      progress.push(`N${goal.level}+: ${Math.min(totals.wins, target)}/${target} vitórias`);
+    }
+  }
+  return { done, progress };
 }
 
 export interface TrainingPath {
@@ -28,6 +89,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['gc-centro-1'],
         desafio: 'Vence o N1 uma vez.',
+        desafioGoals: [{ level: 1, wins: 1 }],
       },
       {
         title: 'Táticas',
@@ -37,6 +99,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['gc-mobilidade-1', 'gc-bloqueio-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
+        desafioGoals: [{ level: 2, streak: 2 }],
       },
       {
         title: 'Estratégia',
@@ -46,6 +109,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['gc-tempo-1', 'gc-parede-1', 'gc-contagem-1'],
         desafio: 'Vence o N3 e depois o N4, uma vez cada.',
+        desafioGoals: [{ level: 3, wins: 1 }, { level: 4, wins: 1 }],
       },
       {
         title: 'Campeonato',
@@ -54,6 +118,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
           'Rever duas derrotas e identificar a jogada que perdeu mobilidade.',
         ],
         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
+        desafioGoals: [{ level: 4, half: true }],
       },
     ],
   },
@@ -69,6 +134,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['do-paridade-1'],
         desafio: 'Vence o N1 uma vez.',
+        desafioGoals: [{ level: 1, wins: 1 }],
       },
       {
         title: 'Táticas',
@@ -78,6 +144,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['do-corte-1', 'do-corredor-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
+        desafioGoals: [{ level: 2, streak: 2 }],
       },
       {
         title: 'Estratégia',
@@ -87,6 +154,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['do-espelho-1', 'do-paridade-2', 'do-corte-2'],
         desafio: 'Vence o N3 e depois o N4, uma vez cada.',
+        desafioGoals: [{ level: 3, wins: 1 }, { level: 4, wins: 1 }],
       },
       {
         title: 'Campeonato',
@@ -95,6 +163,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
           'Rever duas derrotas e encontrar o corte ou corredor mal avaliado.',
         ],
         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
+        desafioGoals: [{ level: 4, half: true }],
       },
     ],
   },
@@ -110,6 +179,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['qu-misere-1'],
         desafio: 'Vence o N1 uma vez.',
+        desafioGoals: [{ level: 1, wins: 1 }],
       },
       {
         title: 'Táticas',
@@ -119,6 +189,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['qu-simetria-1', 'qu-fratura-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
+        desafioGoals: [{ level: 2, streak: 2 }],
       },
       {
         title: 'Estratégia',
@@ -128,6 +199,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['qu-isolamento-1', 'qu-paridade-1', 'qu-tempo-1'],
         desafio: 'Vence o N3 e depois o N4, uma vez cada.',
+        desafioGoals: [{ level: 3, wins: 1 }, { level: 4, wins: 1 }],
       },
       {
         title: 'Campeonato',
@@ -136,6 +208,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
           'Rever duas derrotas e localizar onde a paridade fugiu.',
         ],
         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
+        desafioGoals: [{ level: 4, half: true }],
       },
     ],
   },
@@ -151,6 +224,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['pr-equilibrio-1'],
         desafio: 'Vence o N1 uma vez.',
+        desafioGoals: [{ level: 1, wins: 1 }],
       },
       {
         title: 'Táticas',
@@ -160,6 +234,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['pr-fusao-1', 'pr-grupo-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
+        desafioGoals: [{ level: 2, streak: 2 }],
       },
       {
         title: 'Estratégia',
@@ -169,6 +244,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['pr-dupla-1', 'pr-fim-1', 'pr-cores-1'],
         desafio: 'Vence o N3 e depois o N4, uma vez cada.',
+        desafioGoals: [{ level: 3, wins: 1 }, { level: 4, wins: 1 }],
       },
       {
         title: 'Campeonato',
@@ -177,6 +253,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
           'Rever duas derrotas e encontrar a fusão ou separação decisiva.',
         ],
         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
+        desafioGoals: [{ level: 4, half: true }],
       },
     ],
   },
@@ -192,6 +269,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['ag-atari-1'],
         desafio: 'Vence o N1 uma vez.',
+        desafioGoals: [{ level: 1, wins: 1 }],
       },
       {
         title: 'Táticas',
@@ -201,6 +279,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['ag-escada-1', 'ag-rede-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
+        desafioGoals: [{ level: 2, streak: 2 }],
       },
       {
         title: 'Estratégia',
@@ -210,6 +289,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['ag-duplo-1', 'ag-snapback-1', 'ag-defesa-1'],
         desafio: 'Vence o N3 e depois o N4, uma vez cada.',
+        desafioGoals: [{ level: 3, wins: 1 }, { level: 4, wins: 1 }],
       },
       {
         title: 'Campeonato',
@@ -225,6 +305,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
           'ag-mestre-conexao-1',
         ],
         desafio: 'Ganha metade dos jogos contra o N4 e desafia o N6 «Mestre».',
+        desafioGoals: [{ level: 4, half: true }],
       },
     ],
   },
@@ -240,6 +321,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['nx-ponte-1'],
         desafio: 'Vence o N1 uma vez.',
+        desafioGoals: [{ level: 1, wins: 1 }],
       },
       {
         title: 'Táticas',
@@ -249,6 +331,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['nx-ameaca-1', 'nx-bloqueio-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
+        desafioGoals: [{ level: 2, streak: 2 }],
       },
       {
         title: 'Estratégia',
@@ -258,6 +341,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         ],
         puzzleIds: ['nx-tripla-1', 'nx-substituicao-1', 'nx-defesa-1'],
         desafio: 'Vence o N3 e depois o N4, uma vez cada.',
+        desafioGoals: [{ level: 3, wins: 1 }, { level: 4, wins: 1 }],
       },
       {
         title: 'Campeonato',
@@ -266,6 +350,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
           'Rever duas derrotas e encontrar a neutra desperdiçada.',
         ],
         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
+        desafioGoals: [{ level: 4, half: true }],
       },
     ],
   },

@@ -40,13 +40,14 @@ import { createCommandGate } from './command-gate';
 
 interface GamificationContextValue {
   profile: GamificationProfile;
+  levelProgress: import('../../types/learner-core').LevelProgressByGame;
   level: number;
   levelTitle: string;
   xpWindow: { current: number; next: number };
   missions: MissionProgress[];
   activePopup: AchievementDefinition | null;
   isReady: boolean;
-  recordGameCompleted: (gameId: GameId, won: boolean) => void;
+  recordGameCompleted: (gameId: GameId, won: boolean, difficultyLevel?: number) => void;
   recordReviewCompleted: (gameId: GameId) => void;
   recordPuzzleSolved: (gameId: GameId, puzzleId?: string, usedHint?: boolean) => void;
   recordPatternProgress: (input: { gameId: GameId; patternId: string; evidence: PatternEvidence; contextId: string }) => void;
@@ -106,6 +107,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const [queue, setQueue] = useState<AchievementPopupState[]>([]);
   const [isReady, setIsReady] = useState(false);
   const [adaptiveEvidence, setAdaptiveEvidence] = useState<Partial<Record<GameId, AdaptiveDifficultyEvidence>>>({});
+  const [levelProgress, setLevelProgress] = useState<import('../../types/learner-core').LevelProgressByGame>({});
   const commandGateRef = useRef(createCommandGate());
   const profileRef = useRef(profile);
   const learnerApiEnabled = shouldUseLearnerApi();
@@ -135,6 +137,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setProfile({ ...result.profile, sessionXp: 0 });
         setMissions(result.missions);
+        if ('levelProgress' in result) setLevelProgress(result.levelProgress);
         if (learnerApiEnabled && legacyProfile && 'legacyImportConsumed' in result && result.legacyImportConsumed) {
           clearLegacyProfile();
         }
@@ -159,11 +162,12 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     setProfile((current) => ({ ...result.profile, sessionXp: current.sessionXp + result.sessionXpDelta }));
     setQueue((prev) => [...prev, ...result.popups]);
     setMissions(result.missions);
+    setLevelProgress(result.levelProgress);
   }, []);
 
-  const recordGameCompletedHandler = useCallback((gameId: GameId, won: boolean) => {
+  const recordGameCompletedHandler = useCallback((gameId: GameId, won: boolean, difficultyLevel?: number) => {
     if (learnerApiEnabled) {
-      void commandGateRef.current.run(() => postGameCompleted(fetch, gameId, won)).then(applyCommandResult).catch(() => undefined);
+      void commandGateRef.current.run(() => postGameCompleted(fetch, gameId, won, difficultyLevel)).then(applyCommandResult).catch(() => undefined);
       return;
     }
 
@@ -246,6 +250,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
   const value = useMemo<GamificationContextValue>(
     () => ({
       profile,
+      levelProgress,
       level,
       levelTitle: getLevelTitle(level),
       xpWindow: getXpWindow(profile.totalXp),
@@ -270,6 +275,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
       level,
       missions,
       profile,
+      levelProgress,
       queue,
       acceptDifficultyRecommendation,
       getDifficultyRecommendation,

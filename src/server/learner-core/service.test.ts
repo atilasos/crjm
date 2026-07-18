@@ -49,6 +49,26 @@ describe('learner core service', () => {
     expect(dashboard.profile.lastActiveOn).toBeNull();
   });
 
+  test('persiste o progresso por nível de dificuldade com streaks', () => {
+    const { service } = createService();
+    const session = service.ensureSession(null);
+
+    service.recordGameCompleted(session.userId, 'atari-go', true, 2);
+    service.recordGameCompleted(session.userId, 'atari-go', true, 2);
+    service.recordGameCompleted(session.userId, 'atari-go', false, 2);
+    service.recordGameCompleted(session.userId, 'atari-go', true, 6);
+    // sem nível e nível inválido: contam para gameProgress mas não para levelProgress
+    service.recordGameCompleted(session.userId, 'atari-go', true);
+    const dashboard = service.recordGameCompleted(session.userId, 'atari-go', true, 99).dashboard;
+
+    const n2 = dashboard.levelProgress['atari-go']?.[2];
+    expect(n2).toEqual({ played: 3, wins: 2, currentWinStreak: 0, bestWinStreak: 2 });
+    const n6 = dashboard.levelProgress['atari-go']?.[6];
+    expect(n6).toEqual({ played: 1, wins: 1, currentWinStreak: 1, bestWinStreak: 1 });
+    expect(Object.keys(dashboard.levelProgress['atari-go'] ?? {})).toHaveLength(2);
+    expect(dashboard.gameProgress['atari-go'].played).toBe(6);
+  });
+
   test('records game and review events with derivation parity', () => {
     const { service, setNow } = createService();
     const session = service.ensureSession(null);

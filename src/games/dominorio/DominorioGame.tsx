@@ -335,9 +335,9 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       ((state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
         (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2'));
 
-    recordGameCompleted('dominorio', humanWon);
+    recordGameCompleted('dominorio', humanWon, state.modo === 'vs-computador' ? difficultyLevel : undefined);
     awardedResultRef.current = state.estado;
-  }, [humanPlayer, recordGameCompleted, state.estado, state.modo]);
+  }, [difficultyLevel, humanPlayer, recordGameCompleted, state.estado, state.modo]);
 
   const handleMouseEnter = useCallback(
     (pos: Posicao) => {
