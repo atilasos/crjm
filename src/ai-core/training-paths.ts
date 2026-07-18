@@ -3,6 +3,10 @@ import type { GameId } from './types';
 export interface TrainingPathStep {
   title: string;
   checkpoints: string[];
+  /** Puzzles do Laboratório cuja resolução completa esta etapa automaticamente. */
+  puzzleIds?: string[];
+  /** Desafio prático contra a IA (registo manual/observado; o nível não é persistido). */
+  desafio?: string;
 }
 
 export interface TrainingPath {
@@ -17,25 +21,39 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     commonMistake: 'Fechar cedo as casas centrais ou encostar peças que bloqueiam demasiadas respostas.',
     steps: [
       {
-        title: 'Base',
+        title: 'Descobrir',
         checkpoints: [
           'Aprender as regras especiais das primeiras jogadas.',
-          'Valorizar centro e casas que mantêm várias respostas abertas.',
+          'Perceber que perde quem ficar sem casa legal.',
         ],
+        puzzleIds: ['gc-centro-1'],
+        desafio: 'Vence o N1 uma vez.',
       },
       {
-        title: 'Intermédio',
+        title: 'Táticas',
         checkpoints: [
-          'Contar casas legais tuas vs. do adversário após cada jogada.',
-          'Reconhecer posições em que uma única casa decide a partida.',
+          'Comparar o valor de casas pelas respostas que preservam.',
+          'Reconhecer casas garantidas (só a tua espécie pode lá jogar).',
         ],
+        puzzleIds: ['gc-mobilidade-1', 'gc-bloqueio-1'],
+        desafio: 'Vence o N2 duas vezes seguidas.',
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: [
+          'Ocupar casas em disputa antes das exclusivas.',
+          'Contar reservas de ambos os lados para ler o final.',
+        ],
+        puzzleIds: ['gc-tempo-1', 'gc-parede-1', 'gc-contagem-1'],
+        desafio: 'Vence o N3 e depois o N4, uma vez cada.',
       },
       {
         title: 'Campeonato',
         checkpoints: [
-          'Forçar finais onde o adversário fica sem resposta no turno seguinte.',
-          'Antecipar 2-3 turnos de bloqueio sem perder mobilidade própria.',
+          'Jogar com as duas espécies e gerir o relógio.',
+          'Rever duas derrotas e identificar a jogada que perdeu mobilidade.',
         ],
+        desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
       },
     ],
   },
@@ -44,25 +62,39 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     commonMistake: 'Gastar cedo corredores completos sem garantir vantagem no número de respostas.',
     steps: [
       {
-        title: 'Base',
+        title: 'Descobrir',
         checkpoints: [
           'Ver imediatamente se a posição pede dominó vertical ou horizontal.',
-          'Evitar reduzir demasiado o espaço do teu próprio lado.',
+          'Perceber que perde quem ficar sem jogada legal.',
         ],
+        puzzleIds: ['do-paridade-1'],
+        desafio: 'Vence o N1 uma vez.',
       },
       {
-        title: 'Intermédio',
+        title: 'Táticas',
         checkpoints: [
-          'Ler finais curtos e comparar quantas respostas ficam para cada jogador.',
-          'Treinar escolhas que mantêm duas ou três alternativas fortes.',
+          'Analisar zonas separadas de forma independente.',
+          'Reconhecer corredores exclusivos como reservas de jogadas.',
         ],
+        puzzleIds: ['do-corte-1', 'do-corredor-1'],
+        desafio: 'Vence o N2 duas vezes seguidas.',
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: [
+          'Saber quando o espelho funciona e onde quebra.',
+          'Contar reservas exclusivas e decidir cortes pelo total de respostas.',
+        ],
+        puzzleIds: ['do-espelho-1', 'do-paridade-2', 'do-corte-2'],
+        desafio: 'Vence o N3 e depois o N4, uma vez cada.',
       },
       {
         title: 'Campeonato',
         checkpoints: [
-          'Planear o final desde o meio-jogo e reconhecer posições instáveis.',
-          'Usar a melhor jogada para tirar mobilidade ao adversário sem perder a tua.',
+          'Jogar com as duas orientações e gerir o relógio.',
+          'Rever duas derrotas e encontrar o corte ou corredor mal avaliado.',
         ],
+        desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
       },
     ],
   },
@@ -71,25 +103,39 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     commonMistake: 'Fechar faixas grandes cedo e deixar uma única saída para o fim.',
     steps: [
       {
-        title: 'Base',
+        title: 'Descobrir',
         checkpoints: [
-          'Visualizar segmentos válidos na horizontal e vertical.',
-          'Preferir jogadas que fechem pouco espaço quando ainda há muitas opções.',
+          'Visualizar segmentos válidos na horizontal e na vertical.',
+          'Interiorizar a regra misère: quem faz a última jogada perde.',
         ],
+        puzzleIds: ['qu-misere-1'],
+        desafio: 'Vence o N1 uma vez.',
       },
       {
-        title: 'Intermédio',
+        title: 'Táticas',
         checkpoints: [
-          'Reconhecer quando um segmento curto guarda o controlo do final.',
-          'Comparar quantas saídas restam depois de cada segmento.',
+          'Usar simetria com cuidado, confirmando legalidade e paridade.',
+          'Avaliar componentes fraturadas pelos seus intervalos de jogadas.',
         ],
+        puzzleIds: ['qu-simetria-1', 'qu-fratura-1'],
+        desafio: 'Vence o N2 duas vezes seguidas.',
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: [
+          'Criar e guardar bolsas de uma jogada para ajustar a paridade.',
+          'Contar sequências forçadas e quebrar espelhos pelo eixo.',
+        ],
+        puzzleIds: ['qu-isolamento-1', 'qu-paridade-1', 'qu-tempo-1'],
+        desafio: 'Vence o N3 e depois o N4, uma vez cada.',
       },
       {
         title: 'Campeonato',
         checkpoints: [
-          'Entrar em finais com plano misère: obrigar o adversário a jogar por último.',
-          'Identificar faixas críticas e gerir o comprimento ideal do segmento.',
+          'Entrar em finais com plano misère definido.',
+          'Rever duas derrotas e localizar onde a paridade fugiu.',
         ],
+        desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
       },
     ],
   },
@@ -98,25 +144,39 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     commonMistake: 'Fazer um grupo gigante único e ficar com produto zero.',
     steps: [
       {
-        title: 'Base',
+        title: 'Descobrir',
         checkpoints: [
           'Perceber que cada turno coloca duas peças e que as cores são livres.',
-          'Construir cedo duas zonas promissoras em vez de um só aglomerado.',
+          'Saber que a pontuação multiplica os dois maiores grupos.',
         ],
+        puzzleIds: ['pr-equilibrio-1'],
+        desafio: 'Vence o N1 uma vez.',
       },
       {
-        title: 'Intermédio',
+        title: 'Táticas',
         checkpoints: [
-          'Aprender a usar a cor do adversário para partir ou fundir grupos dele.',
-          'Comparar produto atual e produto potencial depois da tua jogada dupla.',
+          'Avaliar fusões adversárias comparando os produtos antes e depois.',
+          'Proteger o segundo grupo — sem ele o produto cai para zero.',
         ],
+        puzzleIds: ['pr-fusao-1', 'pr-grupo-1'],
+        desafio: 'Vence o N2 duas vezes seguidas.',
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: [
+          'Preferir jogadas com dois efeitos (crescer e ameaçar).',
+          'No fim, reforçar o fator mais pequeno e usar a cor rival como muro.',
+        ],
+        puzzleIds: ['pr-dupla-1', 'pr-fim-1', 'pr-cores-1'],
+        desafio: 'Vence o N3 e depois o N4, uma vez cada.',
       },
       {
         title: 'Campeonato',
         checkpoints: [
-          'Equilibrar os dois maiores grupos para maximizar o produto final.',
-          'Sabotar conscientemente a segunda maior cadeia do adversário.',
+          'Equilibrar os dois maiores grupos até ao último turno.',
+          'Rever duas derrotas e encontrar a fusão ou separação decisiva.',
         ],
+        desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
       },
     ],
   },
@@ -125,25 +185,39 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     commonMistake: 'Atacar sem confirmar se o teu grupo fica em atari no lance seguinte.',
     steps: [
       {
-        title: 'Base',
+        title: 'Descobrir',
         checkpoints: [
           'Contar liberdades de grupos pequenos antes de jogar.',
-          'Defender primeiro grupos em atari.',
+          'Saber que a primeira captura vence a partida.',
         ],
+        puzzleIds: ['ag-atari-1'],
+        desafio: 'Vence o N1 uma vez.',
       },
       {
-        title: 'Intermédio',
+        title: 'Táticas',
         checkpoints: [
-          'Criar ameaças de captura em duas frentes.',
-          'Usar jogadas que aumentam as tuas liberdades e reduzem as do adversário.',
+          'Ler escadas até à borda e procurar pedras de apoio.',
+          'Capturar com redes quando o contacto direto não chega.',
         ],
+        puzzleIds: ['ag-escada-1', 'ag-rede-1'],
+        desafio: 'Vence o N2 duas vezes seguidas.',
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: [
+          'Criar ataris duplos e escolher sempre capturar quando é possível.',
+          'Não confiar em sacrifícios do Go clássico: aqui a primeira captura fecha o jogo.',
+        ],
+        puzzleIds: ['ag-duplo-1', 'ag-snapback-1', 'ag-defesa-1'],
+        desafio: 'Vence o N3 e depois o N4, uma vez cada.',
       },
       {
         title: 'Campeonato',
         checkpoints: [
-          'Reconhecer capturas forçadas e sequências de pressão local.',
-          'Escolher sempre entre ataque imediato e defesa crítica com leitura curta correta.',
+          'Aproveitar a iniciativa: quem começa tem vantagem real — disputa-a.',
+          'Rever duas derrotas e encontrar o atari ignorado.',
         ],
+        desafio: 'Ganha metade dos jogos contra o N4 e desafia o N6 «Mestre».',
       },
     ],
   },
@@ -152,25 +226,39 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     commonMistake: 'Colocar a peça própria bem, mas desperdiçar a neutra sem bloquear a melhor rota adversária.',
     steps: [
       {
-        title: 'Base',
+        title: 'Descobrir',
         checkpoints: [
           'Entender as margens que cada cor liga.',
-          'Separar o papel da peça própria e da peça neutra numa jogada de colocação.',
+          'Separar o papel da peça própria e da peça neutra numa jogada.',
         ],
+        puzzleIds: ['nx-ponte-1'],
+        desafio: 'Vence o N1 uma vez.',
       },
       {
-        title: 'Intermédio',
+        title: 'Táticas',
         checkpoints: [
-          'Comparar caminhos mínimos teus e do adversário.',
-          'Usar a regra da torta quando a abertura rival te oferece melhor cor.',
+          'Construir pontes e ameaças duplas de ligação.',
+          'Colocar neutras nas casas de corte do caminho rival.',
         ],
+        puzzleIds: ['nx-ameaca-1', 'nx-bloqueio-1'],
+        desafio: 'Vence o N2 duas vezes seguidas.',
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: [
+          'Montar ameaças triplas: uma jogada rival só cobre duas casas.',
+          'Usar a substituição quando as neutras convertidas completam a ligação.',
+        ],
+        puzzleIds: ['nx-tripla-1', 'nx-substituicao-1', 'nx-defesa-1'],
+        desafio: 'Vence o N3 e depois o N4, uma vez cada.',
       },
       {
         title: 'Campeonato',
         checkpoints: [
-          'Escolher entre colocação e substituição conforme a ligação disponível.',
-          'Fechar ligações vencedoras ou cortar a rede rival com a neutra certa.',
+          'Decidir entre colocação e substituição pela ligação disponível.',
+          'Rever duas derrotas e encontrar a neutra desperdiçada.',
         ],
+        desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
       },
     ],
   },

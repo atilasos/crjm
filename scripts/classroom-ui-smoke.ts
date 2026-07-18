@@ -146,7 +146,9 @@ async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.locator('[data-puzzle-option="centro"]').click();
   await page.getByRole('button', { name: 'Confirmar resposta' }).click();
   await page.getByText(/Boa leitura|Já dominaste esta ideia/, { exact: false }).waitFor();
-  await page.getByText('1/3 resolvidos', { exact: false }).waitFor({ timeout: 10_000 });
+  await page.getByText('1/6 resolvidos', { exact: false }).waitFor({ timeout: 10_000 });
+  await page.locator('[data-percurso]').waitFor({ state: 'visible' });
+  await page.getByText('Percurso para o campeonato', { exact: false }).first().waitFor();
   await assertViewport(page, 'Laboratório de Estratégias', '[data-puzzle-lab]');
   await page.getByRole('button', { name: 'Voltar à página inicial' }).click();
   await page.getByRole('heading', { name: 'Treino para o CRJM' }).waitFor();

@@ -18,6 +18,6 @@ describe('PuzzlePage', () => {
     expect(html).toContain('Pedir uma pista');
     expect((html.match(/data-puzzle-option=/g) ?? [])).toHaveLength(3);
     expect(html).toContain('min-h-12');
-    expect(html).toContain('0/3 resolvidos');
+    expect(html).toContain('0/6 resolvidos');
   });
 });

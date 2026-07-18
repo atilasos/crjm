@@ -49,6 +49,36 @@ export const PUZZLES: PuzzleDefinition[] = [
     ],
   },
   {
+    id: 'gc-tempo-1', gameId: 'gatos-caes', patternId: 'gatos-caes:casa-em-disputa', title: 'Ordem das casas',
+    prompt: 'Tens casas em disputa (ambos podem lá jogar) e casas exclusivas tuas. Qual deves ocupar primeiro?',
+    hint: 'As exclusivas ninguém tas tira.', correctOptionId: 'disputa',
+    options: [
+      { id: 'exclusivas', label: 'As exclusivas, para garantir', explanation: 'As casas exclusivas já estão garantidas; gastá-las cedo desperdiça as tuas reservas de fim de jogo.' },
+      { id: 'disputa', label: 'As casas em disputa', explanation: 'Certo: as casas em disputa desaparecem se o adversário lá jogar; as exclusivas ficam guardadas para o fim.' },
+      { id: 'tanto-faz', label: 'A ordem é indiferente', explanation: 'A ordem decide quem fica sem jogadas primeiro; disputadas primeiro, exclusivas depois.' },
+    ],
+  },
+  {
+    id: 'gc-parede-1', gameId: 'gatos-caes', patternId: 'gatos-caes:centro', title: 'Parede que divide',
+    prompt: 'Uma linha de Gatos atravessa o centro e separa as zonas onde os Cães podem jogar. Que efeito estratégico tem?',
+    hint: 'Pensa no que acontece às respostas futuras dos Cães.', correctOptionId: 'divide',
+    options: [
+      { id: 'nada', label: 'Nenhum, o jogo é casa a casa', explanation: 'A estrutura global importa: zonas separadas limitam onde cada espécie ainda cabe.' },
+      { id: 'divide', label: 'Reduz e divide as respostas dos Cães', explanation: 'Certo: uma parede central corta a mobilidade adversária em zonas pequenas, mais fáceis de esgotar.' },
+      { id: 'perde', label: 'Prejudica os Gatos por gastar peças', explanation: 'As peças da parede também bloqueiam casas aos Cães; não são jogadas perdidas se dividirem o espaço.' },
+    ],
+  },
+  {
+    id: 'gc-contagem-1', gameId: 'gatos-caes', patternId: 'gatos-caes:jogada-garantida', title: 'Contar o final',
+    prompt: 'Já não há casas em disputa. Tens 2 casas exclusivas, o adversário tem 1, e é ele a jogar. Quem vence?',
+    hint: 'Simula os turnos: ele, tu, ele…', correctOptionId: 'tu',
+    options: [
+      { id: 'ele', label: 'Ele, porque joga primeiro', explanation: 'Simula: ele gasta a única exclusiva, tu jogas uma das tuas, e ele fica sem casa — perde.' },
+      { id: 'tu', label: 'Tu, porque ele esgota primeiro', explanation: 'Certo: ele joga a última dele, tu ainda tens resposta, e no turno seguinte ele não tem jogada.' },
+      { id: 'empate', label: 'Ninguém, o jogo empata', explanation: 'Gatos & Cães não empata: perde quem primeiro ficar sem jogada legal no seu turno.' },
+    ],
+  },
+  {
     id: 'do-paridade-1', gameId: 'dominorio', patternId: 'dominorio:paridade', title: 'Contar antes de cortar',
     prompt: 'Uma região isolada admite exatamente quatro dominós alternados. Quem jogar primeiro nessa região fará também a última jogada?',
     hint: 'Conta as jogadas: 1, 2, 3, 4.', correctOptionId: 'nao',
@@ -76,6 +106,36 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'reserva', label: 'Uma reserva exclusiva de três jogadas', explanation: 'Certo: o corredor guarda respostas que o adversário não consegue consumir.' },
       { id: 'empate', label: 'Um empate automático', explanation: 'Dominório não termina empatado; as reservas alteram quem fica sem jogada primeiro.' },
       { id: 'ameaça', label: 'Três jogadas do adversário', explanation: 'Se a orientação rival não cabe, esse corredor não lhe oferece jogadas.' },
+    ],
+  },
+  {
+    id: 'do-espelho-1', gameId: 'dominorio', patternId: 'dominorio:espelhamento', title: 'Espelho no Dominório',
+    prompt: 'O tabuleiro está simétrico e decides copiar cada jogada adversária na posição espelhada. Quando falha esta estratégia?',
+    hint: 'Olha para o que acontece nas casas centrais.', correctOptionId: 'centro',
+    options: [
+      { id: 'nunca', label: 'Nunca, o espelho é imbatível', explanation: 'O espelho quebra quando uma jogada e a sua imagem partilham casas — aí a cópia deixa de ser legal.' },
+      { id: 'centro', label: 'Quando a jogada toca o eixo central', explanation: 'Certo: no eixo, o dominó e o seu reflexo sobrepõem-se; a cópia fica ilegal e a paridade quebra-se.' },
+      { id: 'cores', label: 'Quando as orientações trocam', explanation: 'O espelho já conta com orientações diferentes; o problema real são as casas partilhadas no eixo.' },
+    ],
+  },
+  {
+    id: 'do-paridade-2', gameId: 'dominorio', patternId: 'dominorio:paridade', title: 'Reservas contadas',
+    prompt: 'Já só existem regiões exclusivas: tu cabes em 3 jogadas, o rival em 2, e é a tua vez. Qual é o desfecho com jogo correto?',
+    hint: 'Alterna os turnos e vê quem fica sem jogada.', correctOptionId: 'vences',
+    options: [
+      { id: 'vences', label: 'Vences: ele esgota primeiro', explanation: 'Certo: tu 3→2, ele 2→1, tu 2→1, ele 1→0, tu ainda jogas — e ele fica sem resposta.' },
+      { id: 'perdes', label: 'Perdes: gastas mais jogadas', explanation: 'Ter mais reservas exclusivas é vantagem: quem tem menos fica sem jogada primeiro.' },
+      { id: 'depende', label: 'Depende do tamanho das regiões', explanation: 'Com regiões exclusivas já contadas em jogadas, só a contagem e a vez importam.' },
+    ],
+  },
+  {
+    id: 'do-corte-2', gameId: 'dominorio', patternId: 'dominorio:corte', title: 'Cortar ou esperar',
+    prompt: 'Podes fechar já uma fronteira que divide o espaço em duas zonas. Que conta deves fazer antes de cortar?',
+    hint: 'O corte fixa o valor de cada zona.', correctOptionId: 'depois',
+    options: [
+      { id: 'sempre', label: 'Cortar é sempre bom', explanation: 'Um corte pode fixar zonas favoráveis ao adversário; sem contar primeiro, é um risco.' },
+      { id: 'depois', label: 'Comparar as respostas de cada lado após o corte', explanation: 'Certo: só vale cortar se, somadas as zonas, ficares tu com a última jogada disponível.' },
+      { id: 'tamanho', label: 'Escolher sempre a zona maior', explanation: 'O que importa não é a área: é quantas jogadas de cada orientação cabem em cada zona.' },
     ],
   },
   {
@@ -109,6 +169,36 @@ export const PUZZLES: PuzzleDefinition[] = [
     ],
   },
   {
+    id: 'qu-isolamento-1', gameId: 'quelhas', patternId: 'quelhas:isolamento-forcado', title: 'A bolsa de uma jogada',
+    prompt: 'Consegues criar uma bolsa isolada onde cabe exatamente um segmento. Qual é o melhor uso dessa bolsa?',
+    hint: 'Quem for obrigado a jogar por último perde.', correctOptionId: 'guardar',
+    options: [
+      { id: 'usar', label: 'Ocupá-la já, antes que desapareça', explanation: 'Gastá-la cedo devolve a iniciativa; a bolsa vale mais como ferramenta de paridade no final.' },
+      { id: 'guardar', label: 'Guardá-la para ajustar a paridade do fim', explanation: 'Certo: a bolsa permite alterar quem faz a última jogada — usá-la no momento certo decide o misère.' },
+      { id: 'ignorar', label: 'Ignorá-la, uma jogada não conta', explanation: 'Em finais misère apertados, uma única jogada extra muda quem é empurrado para a última.' },
+    ],
+  },
+  {
+    id: 'qu-paridade-1', gameId: 'quelhas', patternId: 'quelhas:misere-final', title: 'Par ou ímpar no fim',
+    prompt: 'Contas que restam exatamente 4 jogadas forçadas e é a tua vez. Como corre o final com jogo correto?',
+    hint: 'Distribui as 4 jogadas pelos turnos.', correctOptionId: 'rival',
+    options: [
+      { id: 'tu-perdes', label: 'Perdes: começas a sequência', explanation: 'Começar não obriga a acabar: com 4 jogadas, tu fazes a 1.ª e a 3.ª; a última é dele.' },
+      { id: 'rival', label: 'O rival faz a 4.ª jogada e perde', explanation: 'Certo: num total par de jogadas restantes, quem responde faz a última — e em misère isso é derrota.' },
+      { id: 'sorte', label: 'É imprevisível', explanation: 'Uma sequência forçada conta-se: paridade par com a vez a teu favor é vitória garantida.' },
+    ],
+  },
+  {
+    id: 'qu-tempo-1', gameId: 'quelhas', patternId: 'quelhas:simetria', title: 'Quebrar o espelho',
+    prompt: 'O adversário copia todas as tuas jogadas em espelho. Que tipo de jogada desmonta a estratégia dele?',
+    hint: 'Procura uma jogada que coincida com a própria imagem.', correctOptionId: 'eixo',
+    options: [
+      { id: 'grande', label: 'Um segmento o mais comprido possível', explanation: 'O comprimento não impede a cópia; o que a impede é o reflexo deixar de estar disponível.' },
+      { id: 'eixo', label: 'Uma jogada sobre o eixo de simetria', explanation: 'Certo: uma jogada auto-simétrica não pode ser copiada — o espelho quebra e a paridade muda de mãos.' },
+      { id: 'esperar', label: 'Não há defesa contra o espelho', explanation: 'O espelho tem pontos fracos: o eixo central e os momentos em que a cópia fica ilegal.' },
+    ],
+  },
+  {
     id: 'pr-equilibrio-1', gameId: 'produto', patternId: 'produto:equilibrio', title: 'Dois fatores fortes',
     prompt: 'Os teus dois maiores grupos têm tamanhos 8 e 2. Outra jogada pode deixá-los com 6 e 4. Qual produto é maior?',
     hint: 'Calcula 8×2 e 6×4.', correctOptionId: 'equilibrado',
@@ -136,6 +226,36 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'fator', label: 'Perder o segundo fator do produto', explanation: 'Certo: fundir os dois grupos pode deixar apenas um grupo útil e fazer o produto cair para zero.' },
       { id: 'captura', label: 'As peças serão capturadas', explanation: 'Produto não tem capturas; a ameaça é perder a estrutura de dois grupos.' },
       { id: 'cor', label: 'As peças mudam de cor', explanation: 'Uma ligação não altera cores; altera a composição e o tamanho dos grupos.' },
+    ],
+  },
+  {
+    id: 'pr-dupla-1', gameId: 'produto', patternId: 'produto:fusao-adversaria', title: 'Uma jogada, dois efeitos',
+    prompt: 'Entre duas casas, uma só faz crescer o teu grupo; a outra cresce o teu grupo E ameaça fundir dois grupos rivais. Qual preferes?',
+    hint: 'Conta os efeitos de cada peça colocada.', correctOptionId: 'dupla',
+    options: [
+      { id: 'simples', label: 'A que só faz crescer', explanation: 'Crescer é bom, mas uma jogada com dois efeitos pressiona o adversário ao mesmo tempo.' },
+      { id: 'dupla', label: 'A que cresce e ameaça o rival', explanation: 'Certo: jogadas com efeito duplo obrigam o adversário a escolher que problema resolve — e um fica por resolver.' },
+      { id: 'nenhuma', label: 'Guardar as peças para depois', explanation: 'No Produto não se guardam peças: cada turno coloca duas, e o valor está em maximizar os efeitos.' },
+    ],
+  },
+  {
+    id: 'pr-fim-1', gameId: 'produto', patternId: 'produto:equilibrio', title: 'Última peça, maior produto',
+    prompt: 'Fim de jogo: tens grupos de 8 e 4, e uma peça pode ir para qualquer um. 9×4 ou 8×5 — qual escolhes?',
+    hint: 'Calcula os dois produtos.', correctOptionId: 'segundo',
+    options: [
+      { id: 'maior', label: 'Crescer o de 8: fica 9×4=36', explanation: 'Aumentar o grupo grande rende menos: 36 contra os 40 da outra opção.' },
+      { id: 'segundo', label: 'Crescer o de 4: fica 8×5=40', explanation: 'Certo: acrescentar ao fator mais pequeno aumenta mais o produto — 40 em vez de 36.' },
+      { id: 'indiferente', label: 'É igual, a soma é a mesma', explanation: 'Com a mesma soma, o produto cresce quando aproximas os fatores: 8×5 supera 9×4.' },
+    ],
+  },
+  {
+    id: 'pr-cores-1', gameId: 'produto', patternId: 'produto:grupo-isolado', title: 'A peça do rival como muro',
+    prompt: 'Os teus dois grupos estão quase a tocar-se e queres mantê-los separados. Como pode ajudar a peça de cor adversária que colocas neste turno?',
+    hint: 'Uma peça rival também ocupa espaço.', correctOptionId: 'muro',
+    options: [
+      { id: 'longe', label: 'Colocá-la o mais longe possível', explanation: 'Longe não estraga nada — mas também não protege a tua estrutura de dois fatores.' },
+      { id: 'muro', label: 'Usá-la como muro entre os teus grupos', explanation: 'Certo: uma peça rival no ponto de contacto impede a fusão acidental e preserva os teus dois fatores.' },
+      { id: 'colar', label: 'Colá-la ao maior grupo dele', explanation: 'Colar ao grupo grande dele até o pode ajudar a fundir; pensa primeiro na tua estrutura.' },
     ],
   },
   {
@@ -169,6 +289,36 @@ export const PUZZLES: PuzzleDefinition[] = [
     ],
   },
   {
+    id: 'ag-duplo-1', gameId: 'atari-go', patternId: 'atari-go:double-atari', title: 'Dois ataris de uma vez',
+    prompt: 'Uma jogada tua deixa dois grupos adversários com uma só liberdade cada. Porque é quase sempre decisiva?',
+    hint: 'O adversário só tem um turno de resposta.', correctOptionId: 'um-so',
+    options: [
+      { id: 'um-so', label: 'Ele só consegue salvar um dos grupos', explanation: 'Certo: com uma resposta por turno, o segundo grupo em atari cai — e a primeira captura vence.' },
+      { id: 'medo', label: 'Assusta o adversário', explanation: 'A força é concreta, não psicológica: duas ameaças de captura e uma única resposta possível.' },
+      { id: 'liberdades', label: 'Ganha liberdades ao teu grupo', explanation: 'O efeito principal é criar duas ameaças de captura simultâneas, não reforçar o teu grupo.' },
+    ],
+  },
+  {
+    id: 'ag-snapback-1', gameId: 'atari-go', patternId: 'atari-go:snapback', title: 'Cuidado com o snapback',
+    prompt: 'No Go clássico há sacrifícios em que deixas capturar uma pedra para recapturar de seguida. Porque não podes contar com isso no Atari Go?',
+    hint: 'Relembra a condição de vitória desta variante.', correctOptionId: 'primeira',
+    options: [
+      { id: 'proibido', label: 'Porque o sacrifício é ilegal', explanation: 'Não é uma questão de legalidade: a jogada existe, mas a partida acaba antes da recaptura.' },
+      { id: 'primeira', label: 'Porque a primeira captura termina o jogo', explanation: 'Certo: no Atari Go quem captura primeiro vence — deixar capturar uma pedra é perder de imediato.' },
+      { id: 'funciona', label: 'Podes: o snapback funciona igual', explanation: 'No Atari Go nunca chegas a recapturar: a captura da tua pedra fecha a partida contra ti.' },
+    ],
+  },
+  {
+    id: 'ag-defesa-1', gameId: 'atari-go', patternId: 'atari-go:atari', title: 'Atacar ou defender?',
+    prompt: 'O teu grupo está em atari, mas um grupo adversário também está — e é a tua vez. O que fazes?',
+    hint: 'Só uma das opções termina o jogo já.', correctOptionId: 'capturar',
+    options: [
+      { id: 'defender', label: 'Defender o teu grupo primeiro', explanation: 'Defender dá-lhe o turno seguinte para te capturar noutra frente; a captura disponível vence já.' },
+      { id: 'capturar', label: 'Capturar imediatamente', explanation: 'Certo: a primeira captura vence o jogo — quando podes capturar, nenhuma defesa é prioritária.' },
+      { id: 'fugir', label: 'Fugir com o grupo para o centro', explanation: 'Fugir gasta o turno em que podias simplesmente vencer com a captura disponível.' },
+    ],
+  },
+  {
     id: 'nx-ponte-1', gameId: 'nex', patternId: 'nex:ponte', title: 'Ligação virtual',
     prompt: 'Duas peças tuas têm duas casas alternativas que completam a ligação entre elas. Porque essa ponte é resistente?',
     hint: 'Se o adversário ocupar uma alternativa, ainda tens a outra.', correctOptionId: 'duas',
@@ -196,6 +346,36 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'corte', label: 'Numa casa de corte do caminho rival', explanation: 'Certo: uma neutra na rota mínima pode aumentar a distância de ligação do adversário.' },
       { id: 'canto', label: 'Sempre num canto vazio', explanation: 'Um canto sem ligação ao caminho rival pode não atrasar a ameaça principal.' },
       { id: 'propria', label: 'Em cima de uma peça própria', explanation: 'A colocação normal exige uma casa vazia diferente para a peça neutra.' },
+    ],
+  },
+  {
+    id: 'nx-tripla-1', gameId: 'nex', patternId: 'nex:tripla-ameaca', title: 'Porquê três rotas',
+    prompt: 'No Nex, cada jogada rival coloca uma peça própria E uma neutra. O que muda isso na defesa contra as tuas ameaças?',
+    hint: 'Uma jogada dele pode tapar duas casas.', correctOptionId: 'tres',
+    options: [
+      { id: 'nada', label: 'Nada, uma ameaça dupla continua a chegar', explanation: 'Com peça própria + neutra, uma única jogada rival pode neutralizar duas rotas — a dupla nem sempre basta.' },
+      { id: 'tres', label: 'Podem tapar duas rotas — três ameaças é que garantem', explanation: 'Certo: como cada turno rival cobre até duas casas, só uma terceira rota independente força a ligação.' },
+      { id: 'uma', label: 'Basta uma rota bem escondida', explanation: 'Não há rotas escondidas: com caminhos visíveis, é o número de ameaças independentes que decide.' },
+    ],
+  },
+  {
+    id: 'nx-substituicao-1', gameId: 'nex', patternId: 'nex:ponte', title: 'O valor da substituição',
+    prompt: 'Podes converter duas peças neutras em tuas (tornando uma peça tua neutra). Quando brilha esta jogada?',
+    hint: 'Olha para as neutras que já estão no teu caminho.', correctOptionId: 'caminho',
+    options: [
+      { id: 'sempre', label: 'Sempre: duas peças por uma é lucro', explanation: 'Também entregas uma posição tua ao tabuleiro neutro; só compensa se as convertidas valerem mais.' },
+      { id: 'caminho', label: 'Quando as neutras convertidas completam a tua ligação', explanation: 'Certo: neutras já pousadas na tua rota tornam-se tuas de uma vez — muitas vezes é a jogada que fecha o jogo.' },
+      { id: 'inicio', label: 'Logo na abertura', explanation: 'Na abertura há poucas neutras úteis; a substituição ganha força no meio-jogo, sobre rotas reais.' },
+    ],
+  },
+  {
+    id: 'nx-defesa-1', gameId: 'nex', patternId: 'nex:bloqueio-central', title: 'Defender uma ponte rival',
+    prompt: 'O adversário tem uma ponte (duas casas alternativas de ligação). Colocar uma peça numa das casas resolve?',
+    hint: 'Ele responde na outra casa.', correctOptionId: 'sobreposicao',
+    options: [
+      { id: 'resolve', label: 'Sim, a ponte fica cortada', explanation: 'Cortar uma alternativa deixa a outra livre: ele completa a ligação na jogada seguinte.' },
+      { id: 'sobreposicao', label: 'Não: bloqueia onde as rotas dele se sobrepõem ou cria a tua ameaça', explanation: 'Certo: ou encontras uma casa comum a várias rotas, ou respondes com uma ameaça tua mais rápida.' },
+      { id: 'neutra-dupla', label: 'Só com duas neutras no mesmo turno', explanation: 'Cada turno coloca uma neutra apenas; contra uma ponte sólida, procura sobreposições ou contra-ataque.' },
     ],
   },
 ];

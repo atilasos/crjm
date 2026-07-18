@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { GameId } from '../ai-core/types';
 import { evaluatePuzzleAnswer, getPuzzlesForGame } from '../ai-core/puzzles';
+import { getTrainingPath } from '../ai-core/training-paths';
 import { Header } from './Header';
 import { useGamification } from './gamification/GamificationProvider';
 
@@ -73,7 +74,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 <p className="mt-1 max-w-2xl text-sm [color:var(--tinta-suave)]">Experimenta, pede uma pista se precisares e lê a explicação antes de avançar.</p>
               </div>
               <p className="rounded-full border px-4 py-2 text-sm font-bold [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
-                {game.label}: {solvedCount}/3 resolvidos
+                {game.label}: {solvedCount}/{puzzles.length} resolvidos
               </p>
             </div>
           </div>
@@ -101,7 +102,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
               <div className="rounded-xl border p-6 [background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta)]">
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-4xl" aria-hidden="true">{game.mark}</span>
-                  <span className="rounded-full border px-3 py-1 text-xs font-bold [border-color:var(--linha)] [color:var(--tinta-suave)]">{puzzleIndex + 1} / 3</span>
+                  <span className="rounded-full border px-3 py-1 text-xs font-bold [border-color:var(--linha)] [color:var(--tinta-suave)]">{puzzleIndex + 1} / {puzzles.length}</span>
                 </div>
                 <p className="mt-6 text-xs font-bold uppercase tracking-[0.18em] [color:var(--ouro)]">Padrão em treino</p>
                 <h3 className="mt-2 text-2xl font-black">{puzzle.title}</h3>
@@ -171,6 +172,48 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 )}
               </div>
             </article>
+
+            <section data-percurso aria-label={`Percurso para o campeonato — ${game.label}`} className="mt-8 rounded-xl border p-5 [background:var(--fundo)] [border-color:var(--linha)]">
+              <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.22em] [color:var(--ouro)]">Percurso para o campeonato</p>
+                  <h3 className="mt-1 text-xl font-black [color:var(--tinta)]">{game.label}: quatro etapas até ao torneio</h3>
+                </div>
+                <p className="text-xs font-bold [color:var(--tinta-suave)]">
+                  Vitórias registadas neste jogo: {profile.gameProgress[gameId]?.wins ?? 0}
+                </p>
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {getTrainingPath(gameId).steps.map((step, stepIndex) => {
+                  const stepPuzzles = step.puzzleIds ?? [];
+                  const solvedInStep = stepPuzzles.filter((id) => solved.has(id)).length;
+                  const puzzlesDone = stepPuzzles.length > 0 && solvedInStep === stepPuzzles.length;
+                  return (
+                    <div key={step.title} className={`rounded-lg border px-3 py-3 [background:var(--painel)] ${puzzlesDone ? '[border-color:var(--sucesso)]' : '[border-color:var(--linha)]'}`}>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-black [color:var(--tinta)]">{stepIndex + 1}. {step.title}</p>
+                        {stepPuzzles.length > 0 && (
+                          <span className={`rounded-full border px-2 py-0.5 text-xs font-bold ${puzzlesDone ? 'text-white [background:var(--sucesso)] [border-color:var(--sucesso)]' : '[border-color:var(--linha)] [color:var(--tinta-suave)]'}`}>
+                            {puzzlesDone ? '✓ ' : ''}{solvedInStep}/{stepPuzzles.length} puzzles
+                          </span>
+                        )}
+                      </div>
+                      <ul className="mt-2 space-y-1 text-xs [color:var(--tinta-suave)]">
+                        {step.checkpoints.map((checkpoint) => (
+                          <li key={checkpoint}>• {checkpoint}</li>
+                        ))}
+                      </ul>
+                      {step.desafio && (
+                        <p className="mt-2 text-xs font-bold [color:var(--ouro)]">Desafio no tabuleiro: {step.desafio}</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-xs [color:var(--tinta-suave)]">
+                Os puzzles contam automaticamente; os desafios contra o computador jogam-se na página de cada jogo.
+              </p>
+            </section>
           </div>
         </section>
       </main>

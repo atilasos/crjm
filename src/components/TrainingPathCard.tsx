@@ -22,7 +22,7 @@ export function TrainingPathCard({ gameId }: TrainingPathCardProps) {
       <p className="mt-1">
         <strong>Erro a evitar:</strong> {path.commonMistake}
       </p>
-      <div className="mt-3 grid gap-2 md:grid-cols-3">
+      <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {path.steps.map((step) => (
           <div key={step.title} className="rounded-lg border px-3 py-2 [background:var(--fundo)] [border-color:var(--linha)]">
             <p className="font-bold [color:var(--tinta)]">{step.title}</p>
@@ -31,9 +31,15 @@ export function TrainingPathCard({ gameId }: TrainingPathCardProps) {
                 <li key={checkpoint}>• {checkpoint}</li>
               ))}
             </ul>
+            {step.desafio && (
+              <p className="mt-2 text-xs font-bold [color:var(--ouro)]">Desafio: {step.desafio}</p>
+            )}
           </div>
         ))}
       </div>
+      <p className="mt-3 text-xs [color:var(--tinta-suave)]">
+        Acompanha o teu percurso completo, com os puzzles de cada etapa, no Laboratório de Estratégias.
+      </p>
     </section>
   );
 }
