@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { __internal, searchBestMove } from './engine';
+import { __internal, searchBestMove, trySolveEndgameMove } from './engine';
+import { parseTabuleiroASCII } from '../logic';
 import { DIFFICULTY_PRESETS } from './types';
 
 type Celula = 'vazia' | 'ocupada';
@@ -71,5 +72,33 @@ describe('Quelhas AI (misère)', () => {
 
     const rootWins = __internal.rolloutWinForRoot(occAfter, 0, () => 0.5, 5);
     expect(rootWins).toBe(false);
+  });
+});
+
+describe('solver exato de finais', () => {
+  test('numa posição misère contada, escolhe a jogada que empurra o adversário para a última', () => {
+    // Tabuleiro quase cheio: duas zonas verticais de 2 e uma horizontal de 2.
+    const tabuleiro = parseTabuleiroASCII([
+      '##########',
+      '#.########',
+      '#.########',
+      '##########',
+      '##########',
+      '##########',
+      '#######..#',
+      '##########',
+      '#####.####',
+      '#####.####',
+    ].join('\n'));
+    const move = trySolveEndgameMove(tabuleiro, 'vertical');
+    expect(move).not.toBeNull();
+    // verificação de sanidade: jogada legal vertical de comprimento 2
+    expect(move!.orientacao).toBe('vertical');
+    expect(move!.comprimento).toBe(2);
+  });
+
+  test('devolve null em posições grandes (fora do orçamento de final)', () => {
+    const vazio = parseTabuleiroASCII(Array(10).fill('..........').join('\n'));
+    expect(trySolveEndgameMove(vazio, 'vertical')).toBeNull();
   });
 });

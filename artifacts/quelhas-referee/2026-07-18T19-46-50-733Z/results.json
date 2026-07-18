@@ -1,0 +1,45 @@
+{
+  "games": 20,
+  "levels": [
+    4,
+    5
+  ],
+  "engineKind": "wasm",
+  "summary": [
+    {
+      "level": 4,
+      "engine": "rust-wasm",
+      "wins": 4,
+      "games": 20,
+      "judgedEndgames": 15,
+      "optimal": 15,
+      "blunders": 0,
+      "blunderRate": 0,
+      "chosenLengths": {
+        "2": 258,
+        "3": 73,
+        "4": 54,
+        "5": 4,
+        "6": 6
+      },
+      "blunderExamples": []
+    },
+    {
+      "level": 5,
+      "engine": "rust-wasm",
+      "wins": 16,
+      "games": 20,
+      "judgedEndgames": 52,
+      "optimal": 52,
+      "blunders": 0,
+      "blunderRate": 0,
+      "chosenLengths": {
+        "2": 355,
+        "3": 15,
+        "4": 11,
+        "6": 8
+      },
+      "blunderExamples": []
+    }
+  ]
+}

@@ -698,6 +698,90 @@ function monteCarloSeedHistoryRoot(
   }
 }
 
+// ========== Solver exato de finais (misère) ==========
+//
+// Quando restam poucas jogadas legais, resolve a posição por busca completa
+// (com memo) e devolve uma jogada que preserva o resultado teórico. É a
+// forma perfeita de «gerir as linhas para o fim» — nenhuma heurística de
+// paridade substitui a prova. Orçamento de nós limitado: se estourar,
+// devolve null e a busca normal decide.
+
+const ENDGAME_MAX_MOVES = 16;
+const ENDGAME_NODE_BUDGET = 400_000;
+
+function occKey(occ: Occ, side: 0 | 1): string {
+  return `${occ.low.toString(36)}:${occ.high.toString(36)}:${side}`;
+}
+
+/** true se quem joga (side) vence com jogo perfeito; lança se estourar o orçamento. */
+function solveExact(
+  occ: Occ,
+  side: 0 | 1,
+  memo: Map<string, boolean>,
+  budget: { nodes: number },
+): boolean {
+  const key = occKey(occ, side);
+  const cached = memo.get(key);
+  if (cached !== undefined) return cached;
+  if ((budget.nodes += 1) > ENDGAME_NODE_BUDGET) throw new Error('endgame-budget');
+
+  const myMoves = generateAllMoves(occ, side);
+  // Misère: sem jogadas legais no meu turno, eu ganho (o adversário jogou por último).
+  if (myMoves.length === 0) {
+    memo.set(key, true);
+    return true;
+  }
+  let result = false;
+  for (const move of myMoves) {
+    const next = applyMove(occ, move);
+    if (!solveExact(next, (1 - side) as 0 | 1, memo, budget)) {
+      result = true;
+      break;
+    }
+  }
+  memo.set(key, result);
+  return result;
+}
+
+/**
+ * Jogada exata de final: null se a posição ainda for grande demais, se o
+ * orçamento estourar, ou se não houver jogadas. Preferência: jogada
+ * vencedora; se todas perderem, a que deixa mais jogadas ao adversário
+ * (resistência máxima).
+ */
+export function trySolveEndgameMove(
+  tabuleiro: Celula[][],
+  orientacaoIA: Orientacao,
+): Segmento | null {
+  const occ = boardToOcc(tabuleiro);
+  const side = orientToBit(orientacaoIA);
+  const myMoves = generateAllMoves(occ, side);
+  if (myMoves.length === 0 || myMoves.length > ENDGAME_MAX_MOVES) return null;
+  const oppMoves = generateAllMoves(occ, (1 - side) as 0 | 1);
+  if (myMoves.length + oppMoves.length > ENDGAME_MAX_MOVES * 2) return null;
+
+  const memo = new Map<string, boolean>();
+  const budget = { nodes: 0 };
+  try {
+    let bestLosing: EncMove | -1 = -1;
+    let bestLosingReplies = -1;
+    for (const move of myMoves) {
+      const next = applyMove(occ, move);
+      if (!solveExact(next, (1 - side) as 0 | 1, memo, budget)) {
+        return moveToSegmento(move);
+      }
+      const replies = generateAllMoves(next, (1 - side) as 0 | 1).length;
+      if (replies > bestLosingReplies) {
+        bestLosingReplies = replies;
+        bestLosing = move;
+      }
+    }
+    return bestLosing === -1 ? null : moveToSegmento(bestLosing);
+  } catch {
+    return null;
+  }
+}
+
 export function searchBestMove(
   tabuleiro: Celula[][],
   orientacaoIA: Orientacao,

@@ -1,6 +1,6 @@
 import type { AIRequest, AIResponse } from './types';
 import { DIFFICULTY_PRESETS } from './types';
-import { applyDifficultySelection, searchBestMove } from './engine';
+import { applyDifficultySelection, searchBestMove, trySolveEndgameMove } from './engine';
 
 function post(msg: AIResponse) {
   self.postMessage(msg);
@@ -120,6 +120,28 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
   try {
     const preset = DIFFICULTY_PRESETS[req.difficulty];
     const timeBudgetMs = req.timeBudgetMs ?? preset.timeBudgetMs;
+
+    // Níveis fortes: nos finais pequenos, resolver por busca completa e
+    // jogar de forma comprovadamente ótima (gestão exata da paridade).
+    if (req.difficulty === 'hard' || req.difficulty === 'master') {
+      const solved = trySolveEndgameMove(req.tabuleiro, req.orientacaoIA);
+      if (solved) {
+        post({
+          type: 'result',
+          id: req.id,
+          bestMove: solved,
+          depthReached: 99,
+          nodesSearched: 0,
+          elapsedMs: 0,
+          ttHitRate: 0,
+          score: 0,
+          fromBook: false,
+          engine: 'exact-endgame',
+          usedWasm: false,
+        });
+        return;
+      }
+    }
 
     let result:
       | ReturnType<typeof searchBestMove>
