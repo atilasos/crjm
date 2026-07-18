@@ -1,4 +1,4 @@
-import { chromium, type Locator, type Page } from 'playwright';
+import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -8,6 +8,22 @@ const PORT = 4800 + (process.pid % 500);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
 const DB_PATH = `/tmp/crjm-classroom-ui-${process.pid}.sqlite`;
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+async function launchBrowser(): Promise<Browser> {
+  const configuredChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
+  if (configuredChannel) {
+    return chromium.launch({ headless: true, channel: configuredChannel });
+  }
+  try {
+    return await chromium.launch({ headless: true });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Executable doesn't exist")) {
+      console.warn('[classroom-ui-smoke] Chromium Playwright ausente; a usar channel=chrome.');
+      return chromium.launch({ headless: true, channel: 'chrome' });
+    }
+    throw error;
+  }
+}
 
 const VIEWPORTS = [
   { name: 'desktop', width: 1440, height: 900 },
@@ -125,11 +141,11 @@ async function runGame(page: Page, title: string, play: (page: Page) => Promise<
 
 async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-  await page.locator('button.game-card').filter({ hasText: 'Laboratório de Estratégias' }).click();
+  await page.getByRole('button', { name: 'Resolver puzzles' }).click();
   await page.getByRole('heading', { name: 'Laboratório de Estratégias', exact: true }).first().waitFor();
   await page.locator('[data-puzzle-option="centro"]').click();
   await page.getByRole('button', { name: 'Confirmar resposta' }).click();
-  await page.getByText('Boa leitura', { exact: false }).waitFor();
+  await page.getByText(/Boa leitura|Já dominaste esta ideia/, { exact: false }).waitFor();
   await page.getByText('1/3 resolvidos', { exact: false }).waitFor({ timeout: 10_000 });
   await assertViewport(page, 'Laboratório de Estratégias', '[data-puzzle-lab]');
   await page.getByRole('button', { name: 'Voltar à página inicial' }).click();
@@ -152,7 +168,7 @@ async function main(): Promise<void> {
 
   try {
     await waitForServer();
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser();
     const checks: Array<{ viewport: string; game: string }> = [];
 
     try {

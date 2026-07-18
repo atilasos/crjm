@@ -55,7 +55,7 @@ export interface AIStatsV1 {
   nodes?: number;
   simulations?: number;
   usedWasm: boolean;
-  engine: 'rust-wasm' | 'ts-fallback';
+  engine: 'rust-wasm' | 'ts-fallback' | 'server-nn';
 }
 
 export interface AIPedagogyV1 {

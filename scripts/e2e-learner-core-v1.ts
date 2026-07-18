@@ -1,4 +1,4 @@
-import { chromium } from 'playwright';
+import { chromium, type Browser } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { rm } from 'node:fs/promises';
@@ -9,6 +9,22 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 const DB_PATH = `/tmp/crjm-e2e-learner-core-${process.pid}.sqlite`;
 const LEGACY_PROFILE_KEY = 'crjm.gamification.v1';
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+async function launchBrowser(): Promise<Browser> {
+  const configuredChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
+  if (configuredChannel) {
+    return chromium.launch({ headless: true, channel: configuredChannel });
+  }
+  try {
+    return await chromium.launch({ headless: true });
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("Executable doesn't exist")) {
+      console.warn('[e2e:learner-core] Chromium Playwright ausente; a usar channel=chrome.');
+      return chromium.launch({ headless: true, channel: 'chrome' });
+    }
+    throw error;
+  }
+}
 
 const legacyProfile = {
   totalXp: 42,
@@ -87,7 +103,7 @@ async function main() {
   try {
     await waitForServer();
 
-    const browser = await chromium.launch({ headless: true });
+    const browser = await launchBrowser();
     const context = await browser.newContext({ locale: 'pt-PT', viewport: { width: 1280, height: 900 } });
     const page = await context.newPage();
 
@@ -101,7 +117,7 @@ async function main() {
     );
 
     await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Ver perfil e progresso' }).click();
+    await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
 
     await expectText(page, '42 XP total');
     await expectText(page, '4/29');
@@ -113,7 +129,7 @@ async function main() {
     await expectText(page, '0/23');
 
     await page.reload({ waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Ver perfil e progresso' }).click();
+    await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
     await expectText(page, '42 XP total');
     await expectText(page, '4/29');
 
@@ -146,7 +162,7 @@ async function main() {
     }
 
     await page.reload({ waitUntil: 'networkidle' });
-    await page.getByRole('button', { name: 'Ver perfil e progresso' }).click();
+    await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
     await expectText(page, '70 XP total');
     await expectText(page, '3 partidas');
     await expectText(page, '2 revisões');

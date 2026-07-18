@@ -1,10 +1,12 @@
 import { DIFFICULTY_PROFILES } from '../ai-core/difficulty';
+import type { ExtendedDifficultyLevel } from '../ai-core/difficulty';
 import type { DifficultyLevel } from '../ai-core/types';
 import type { DifficultyRecommendation } from '../ai-core/adaptive-difficulty';
 
-interface DifficultySelectorProps {
-  level: DifficultyLevel;
-  onChange: (level: DifficultyLevel) => void;
+interface DifficultySelectorProps<T extends ExtendedDifficultyLevel> {
+  level: T;
+  onChange: (level: T) => void;
+  maxLevel?: ExtendedDifficultyLevel;
   disabled?: boolean;
   label?: string;
   recommendation?: DifficultyRecommendation;
@@ -12,29 +14,35 @@ interface DifficultySelectorProps {
   onAcceptRecommendation?: (level: DifficultyLevel) => void;
 }
 
-const LEVELS: DifficultyLevel[] = [1, 2, 3, 4, 5];
+const ALL_LEVELS: ExtendedDifficultyLevel[] = [1, 2, 3, 4, 5, 6];
 
 function formatBudget(ms: number): string {
   if (ms < 1000) return `${ms} ms`;
   return `${ms / 1000} s`;
 }
 
-export function DifficultySelector({
+export function DifficultySelector<T extends ExtendedDifficultyLevel = DifficultyLevel>({
   level,
   onChange,
+  maxLevel = 5,
   disabled = false,
   label = 'Desafio da IA',
   recommendation,
   canAcceptRecommendation = false,
   onAcceptRecommendation,
-}: DifficultySelectorProps) {
+}: DifficultySelectorProps<T>) {
   const selected = DIFFICULTY_PROFILES[level];
+  const levels = ALL_LEVELS.filter((candidate) => candidate <= maxLevel) as T[];
 
   return (
     <fieldset className="rounded-xl border p-3 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
       <legend className="px-1 text-sm font-bold [color:var(--tinta)]">{label}</legend>
-      <div className="grid grid-cols-5 gap-1.5" aria-label="Escolher nível de dificuldade">
-        {LEVELS.map((candidate) => {
+      <div
+        className="grid gap-1.5"
+        style={{ gridTemplateColumns: `repeat(${levels.length}, minmax(0, 1fr))` }}
+        aria-label="Escolher nível de dificuldade"
+      >
+        {levels.map((candidate) => {
           const profile = DIFFICULTY_PROFILES[candidate];
           const active = candidate === level;
           return (

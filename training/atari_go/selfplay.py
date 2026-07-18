@@ -11,8 +11,11 @@
 from __future__ import annotations
 
 import multiprocessing as mp
+import os
 import time
+import traceback
 from dataclasses import dataclass
+from queue import Empty
 
 import numpy as np
 import torch
@@ -21,6 +24,7 @@ from atari_go import mcts, rules
 from atari_go.net import AtariGoNet, encode_features
 
 TEMP_MOVES = 8  # temperatura 1.0 nos primeiros 8 lances, depois argmax
+WORKER_STALL_TIMEOUT_S = float(os.environ.get("AZ_WORKER_STALL_TIMEOUT_S", "1800"))
 
 
 @dataclass
@@ -150,53 +154,160 @@ def concat_samples(games: list[GameSamples]) -> dict[str, np.ndarray]:
 
 def _selfplay_worker(state_dict, games: int, sims: int, concurrency: int,
                      seed: int, device: str, queue) -> None:
-    torch.set_num_threads(1)
-    net = AtariGoNet()
-    net.load_state_dict(state_dict)
-    evaluator = NetEvaluator({"best": net}, device)
-    base_rng = np.random.default_rng(seed)
+    try:
+        torch.set_num_threads(1)
+        net = AtariGoNet()
+        net.load_state_dict(state_dict)
+        evaluator = NetEvaluator({"best": net}, device)
+        base_rng = np.random.default_rng(seed)
 
-    def make_game(gid: int):
-        rng = np.random.default_rng(base_rng.integers(0, 2**63))
-        return selfplay_game(sims, rng)
+        def make_game(gid: int):
+            rng = np.random.default_rng(base_rng.integers(0, 2**63))
+            return selfplay_game(sims, rng)
 
-    results = mcts.drive(make_game, games, concurrency, evaluator)
-    queue.put(concat_samples(results) | {
-        "plies": np.array([g.plies for g in results], dtype=np.int32),
-        "winners": np.array([g.winner for g in results], dtype=np.int8),
-    })
+        results = mcts.drive(make_game, games, concurrency, evaluator)
+        payload = concat_samples(results) | {
+            "plies": np.array([g.plies for g in results], dtype=np.int32),
+            "winners": np.array([g.winner for g in results], dtype=np.int8),
+        }
+        queue.put({"ok": True, "pid": os.getpid(), "payload": payload})
+    except BaseException as exc:
+        queue.put({
+            "ok": False,
+            "pid": os.getpid(),
+            "error": f"{type(exc).__name__}: {exc}",
+            "traceback": traceback.format_exc(),
+        })
+        raise
 
 
 def _gate_worker(cand_sd, best_sd, games_cand_black: int, games_best_black: int,
                  sims: int, concurrency: int, seed: int, device: str, queue) -> None:
-    torch.set_num_threads(1)
-    cand, best = AtariGoNet(), AtariGoNet()
-    cand.load_state_dict(cand_sd)
-    best.load_state_dict(best_sd)
-    evaluator = NetEvaluator({"cand": cand, "best": best}, device)
-    base_rng = np.random.default_rng(seed)
-    total = games_cand_black + games_best_black
+    try:
+        torch.set_num_threads(1)
+        cand, best = AtariGoNet(), AtariGoNet()
+        cand.load_state_dict(cand_sd)
+        best.load_state_dict(best_sd)
+        evaluator = NetEvaluator({"cand": cand, "best": best}, device)
+        base_rng = np.random.default_rng(seed)
+        total = games_cand_black + games_best_black
 
-    def make_game(gid: int):
-        rng = np.random.default_rng(base_rng.integers(0, 2**63))
-        if gid < games_cand_black:
-            return gate_game("cand", "best", sims, rng)
-        return gate_game("best", "cand", sims, rng)
+        def make_game(gid: int):
+            rng = np.random.default_rng(base_rng.integers(0, 2**63))
+            if gid < games_cand_black:
+                return gate_game("cand", "best", sims, rng)
+            return gate_game("best", "cand", sims, rng)
 
-    winners = mcts.drive(make_game, total, concurrency, evaluator)
-    cand_wins = draws = 0
-    for gid, w in enumerate(winners):
-        cand_is_black = gid < games_cand_black
-        if w == 0:
-            draws += 1
-        elif (w == rules.BLACK) == cand_is_black:
-            cand_wins += 1
-    queue.put({"cand_wins": cand_wins, "draws": draws, "games": total})
+        winners = mcts.drive(make_game, total, concurrency, evaluator)
+        cand_wins = draws = 0
+        for gid, w in enumerate(winners):
+            cand_is_black = gid < games_cand_black
+            if w == 0:
+                draws += 1
+            elif (w == rules.BLACK) == cand_is_black:
+                cand_wins += 1
+        queue.put({
+            "ok": True,
+            "pid": os.getpid(),
+            "payload": {"cand_wins": cand_wins, "draws": draws, "games": total},
+        })
+    except BaseException as exc:
+        queue.put({
+            "ok": False,
+            "pid": os.getpid(),
+            "error": f"{type(exc).__name__}: {exc}",
+            "traceback": traceback.format_exc(),
+        })
+        raise
 
 
 def _split(n: int, parts: int) -> list[int]:
     base, rem = divmod(n, parts)
     return [base + (1 if i < rem else 0) for i in range(parts)]
+
+
+def _join_until(procs: list[mp.Process], seconds: float) -> None:
+    deadline = time.monotonic() + seconds
+    for proc in procs:
+        proc.join(timeout=max(0.0, deadline - time.monotonic()))
+
+
+def _shutdown_workers(procs: list[mp.Process]) -> None:
+    """Join global limitado, seguido de terminate/kill para processos presos."""
+    _join_until(procs, 5)
+    for proc in procs:
+        if proc.is_alive():
+            proc.terminate()
+    _join_until(procs, 2)
+    for proc in procs:
+        if proc.is_alive():
+            proc.kill()
+    _join_until(procs, 2)
+
+
+def _start_processes(procs: list[mp.Process]) -> list[mp.Process]:
+    """Arranca processos e limpa os anteriores se um start intermédio falhar."""
+    started: list[mp.Process] = []
+    try:
+        for proc in procs:
+            proc.start()
+            started.append(proc)
+        return started
+    except BaseException:
+        _shutdown_workers(started)
+        raise
+
+
+def _collect_worker_parts(
+    procs: list[mp.Process],
+    queue,
+    label: str,
+    stall_timeout_s: float = WORKER_STALL_TIMEOUT_S,
+) -> list[dict]:
+    """Recolhe envelopes e falha se não houver progresso dentro do limite."""
+    parts: list[dict] = []
+    last_progress = time.monotonic()
+    try:
+        while len(parts) < len(procs):
+            try:
+                envelope = queue.get(timeout=1.0)
+            except Empty:
+                failed = [p for p in procs if p.exitcode not in (None, 0)]
+                if failed:
+                    details = ", ".join(f"pid={p.pid} exit={p.exitcode}" for p in failed)
+                    raise RuntimeError(f"{label}: worker terminou sem resultado ({details})")
+                if procs and all(p.exitcode is not None for p in procs):
+                    raise RuntimeError(
+                        f"{label}: todos os workers terminaram, mas faltam "
+                        f"{len(procs) - len(parts)} resultados"
+                    )
+                stalled_for = time.monotonic() - last_progress
+                if stalled_for >= stall_timeout_s:
+                    alive = ", ".join(str(p.pid) for p in procs if p.is_alive()) or "nenhum"
+                    raise RuntimeError(
+                        f"{label}: sem progresso durante {stalled_for:.1f}s "
+                        f"(workers vivos: {alive})"
+                    )
+                continue
+
+            last_progress = time.monotonic()
+            if not envelope.get("ok"):
+                error = envelope.get("error", "erro desconhecido")
+                tb = envelope.get("traceback", "")
+                raise RuntimeError(
+                    f"{label}: worker pid={envelope.get('pid')} falhou: {error}\n{tb}"
+                )
+            parts.append(envelope["payload"])
+
+        _shutdown_workers(procs)
+        failed = [p for p in procs if p.exitcode != 0]
+        if failed:
+            details = ", ".join(f"pid={p.pid} exit={p.exitcode}" for p in failed)
+            raise RuntimeError(f"{label}: worker falhou após enviar resultado ({details})")
+        return parts
+    except BaseException:
+        _shutdown_workers(procs)
+        raise
 
 
 def run_selfplay(net: AtariGoNet, games: int, sims: int, concurrency: int,
@@ -210,14 +321,13 @@ def run_selfplay(net: AtariGoNet, games: int, sims: int, concurrency: int,
     for w, g in enumerate(_split(games, workers)):
         if g == 0:
             continue
-        p = ctx.Process(target=_selfplay_worker,
-                        args=(state_dict, g, sims, min(concurrency, g), seed + 7919 * w,
-                              device, queue))
-        p.start()
-        procs.append(p)
-    parts = [queue.get() for _ in procs]
-    for p in procs:
-        p.join()
+        procs.append(ctx.Process(
+            target=_selfplay_worker,
+            args=(state_dict, g, sims, min(concurrency, g), seed + 7919 * w,
+                  device, queue),
+        ))
+    procs = _start_processes(procs)
+    parts = _collect_worker_parts(procs, queue, "self-play")
     samples = {k: np.concatenate([part[k] for part in parts])
                for k in ("boards", "to_play", "last_move", "legal_mask", "pi", "z")}
     plies = np.concatenate([part["plies"] for part in parts])
@@ -250,14 +360,13 @@ def run_gating(cand: AtariGoNet, best: AtariGoNet, games: int, sims: int,
     for w, (gcb, gbb) in enumerate(zip(cb_split, bb_split)):
         if gcb + gbb == 0:
             continue
-        p = ctx.Process(target=_gate_worker,
-                        args=(cand_sd, best_sd, gcb, gbb, sims,
-                              min(concurrency, gcb + gbb), seed + 104729 * w, device, queue))
-        p.start()
-        procs.append(p)
-    parts = [queue.get() for _ in procs]
-    for p in procs:
-        p.join()
+        procs.append(ctx.Process(
+            target=_gate_worker,
+            args=(cand_sd, best_sd, gcb, gbb, sims,
+                  min(concurrency, gcb + gbb), seed + 104729 * w, device, queue),
+        ))
+    procs = _start_processes(procs)
+    parts = _collect_worker_parts(procs, queue, "gating")
     cand_wins = sum(p["cand_wins"] for p in parts)
     draws = sum(p["draws"] for p in parts)
     total = sum(p["games"] for p in parts)

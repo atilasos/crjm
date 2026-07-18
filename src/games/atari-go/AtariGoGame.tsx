@@ -1,7 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { selectReviewPattern } from '../../ai-core/review-patterns';
-import { getDifficultyProfile } from '../../ai-core/difficulty';
+import {
+  clampDifficultyLevel,
+  getDifficultyProfile,
+  type ExtendedDifficultyLevel,
+} from '../../ai-core/difficulty';
 import { GameLayout } from '../../components/GameLayout';
 import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
@@ -19,7 +23,11 @@ import {
   jogadaComputador,
 } from './logic';
 import { GameMode, Player } from '../../types';
-import { AtariGoAIClient, idxToPos } from './ai/ai-client';
+import {
+  AtariGoAIClient,
+  SERVER_AI_WITH_FALLBACK_TIMEOUT_MS,
+  idxToPos,
+} from './ai/ai-client';
 import { AtariGoV1Adapter, mapLevelToLegacyDifficulty } from './ai/v1-adapter';
 import { INITIAL_METRICS, type AIDifficulty, type AIMetrics } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
@@ -112,8 +120,9 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
-  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
-  const aiDifficulty: AIDifficulty = mapLevelToLegacyDifficulty(difficultyLevel);
+  const [difficultyLevel, setDifficultyLevel] = useState<ExtendedDifficultyLevel>(3);
+  const adaptiveDifficultyLevel: DifficultyLevel = clampDifficultyLevel(difficultyLevel);
+  const aiDifficulty: AIDifficulty = mapLevelToLegacyDifficulty(adaptiveDifficultyLevel);
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>({ ...INITIAL_METRICS });
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<Posicao, AtariGoState> | null>(null);
@@ -166,7 +175,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       requestId,
       gameId: 'atari-go',
       mode: 'tutor',
-      level: difficultyLevel,
+      level: adaptiveDifficultyLevel,
       state,
       locale: 'pt-PT',
     };
@@ -218,8 +227,9 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       let cancelled = false;
       const client = aiRef.current;
       let finished = false;
-      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
-      const maxWaitMs = timeBudgetMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel, 'atari-go').timeBudgetMs;
+      const maxWaitMs =
+        difficultyLevel === 6 ? SERVER_AI_WITH_FALLBACK_TIMEOUT_MS : timeBudgetMs + 250;
 
       const run = async () => {
         // Pequeno delay para UX (e para permitir UI atualizar)
@@ -469,7 +479,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
   const criticalThreat = tutorResponse?.criticalThreats?.[0];
   const postGameTurningPoint = getPostGameTurningPoint(tutorHistory);
   const reviewPattern = selectReviewPattern('atari-go', tutorHistory.at(-1) ?? tutorResponse);
-  const difficultyRecommendation = getDifficultyRecommendation('atari-go', difficultyLevel);
+  const difficultyRecommendation = getDifficultyRecommendation('atari-go', adaptiveDifficultyLevel);
 
   return (
     <GameLayout titulo="Atari Go" regras={REGRAS} onVoltar={onVoltar}>
@@ -507,6 +517,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
           <div className="order-5 md:order-none space-y-2">
             <DifficultySelector
               level={difficultyLevel}
+              maxLevel={6}
               onChange={setDifficultyLevel}
               disabled={aiMetrics.isThinking}
               recommendation={difficultyRecommendation}
@@ -519,7 +530,11 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
             <div className="rounded-xl border p-2 text-center text-xs [border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta-suave)]">
                 {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
                 {' • '}
-                {aiMetrics.usedWasm ? 'WASM' : 'TS fallback'}
+                {aiMetrics.lastEngine === 'server-nn'
+                  ? 'Rede neural · GPU'
+                  : aiMetrics.usedWasm
+                    ? 'WASM'
+                    : 'TS fallback'}
                 {' • '}
                 {aiMetrics.lastTimeMs.toFixed(0)}ms
             </div>

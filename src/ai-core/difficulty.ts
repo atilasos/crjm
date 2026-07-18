@@ -1,7 +1,14 @@
-import type { DifficultyLevel } from './types';
+import type { DifficultyLevel, GameId } from './types';
+
+/**
+ * Nível estendido: o 6 («Mestre», rede neuronal no servidor) só está
+ * disponível nos jogos listados em MAX_DIFFICULTY_LEVEL_BY_GAME.
+ * O contrato V1 (AIRequestV1.level) mantém-se em 1..5.
+ */
+export type ExtendedDifficultyLevel = DifficultyLevel | 6;
 
 export interface DifficultyProfile {
-  level: DifficultyLevel;
+  level: ExtendedDifficultyLevel;
   label: string;
   timeBudgetMs: number;
   searchIntensity: number;
@@ -9,7 +16,7 @@ export interface DifficultyProfile {
   autoHintLevel: 'H0' | 'H1' | 'H2' | 'H3';
 }
 
-export const DIFFICULTY_PROFILES: Record<DifficultyLevel, DifficultyProfile> = {
+export const DIFFICULTY_PROFILES: Record<ExtendedDifficultyLevel, DifficultyProfile> = {
   1: {
     level: 1,
     label: 'Explorar',
@@ -50,7 +57,26 @@ export const DIFFICULTY_PROFILES: Record<DifficultyLevel, DifficultyProfile> = {
     randomness: 0,
     autoHintLevel: 'H1',
   },
+  6: {
+    level: 6,
+    label: 'Mestre',
+    timeBudgetMs: 2000,
+    searchIntensity: 1,
+    randomness: 0,
+    autoHintLevel: 'H1',
+  },
 };
+
+export const DEFAULT_MAX_DIFFICULTY_LEVEL: ExtendedDifficultyLevel = 5;
+
+/** Máximo por jogo — só o Atari Go expõe o nível 6 (IA no servidor). */
+export const MAX_DIFFICULTY_LEVEL_BY_GAME: Partial<Record<GameId, ExtendedDifficultyLevel>> = {
+  'atari-go': 6,
+};
+
+export function getMaxDifficultyLevel(gameId?: GameId): ExtendedDifficultyLevel {
+  return (gameId && MAX_DIFFICULTY_LEVEL_BY_GAME[gameId]) || DEFAULT_MAX_DIFFICULTY_LEVEL;
+}
 
 export function clampDifficultyLevel(level: number): DifficultyLevel {
   const safe = Math.trunc(level);
@@ -59,12 +85,26 @@ export function clampDifficultyLevel(level: number): DifficultyLevel {
   return safe as DifficultyLevel;
 }
 
-export function getDifficultyProfile(level: number | DifficultyLevel): DifficultyProfile {
-  return DIFFICULTY_PROFILES[clampDifficultyLevel(level)];
+export function clampDifficultyLevelForGame(
+  level: number,
+  gameId?: GameId,
+): ExtendedDifficultyLevel {
+  const max = getMaxDifficultyLevel(gameId);
+  const safe = Math.trunc(level);
+  if (safe <= 1) return 1;
+  if (safe >= max) return max;
+  return safe as ExtendedDifficultyLevel;
+}
+
+export function getDifficultyProfile(
+  level: number | ExtendedDifficultyLevel,
+  gameId?: GameId,
+): DifficultyProfile {
+  return DIFFICULTY_PROFILES[clampDifficultyLevelForGame(level, gameId)];
 }
 
 export function withDifficultyOverrides(
-  level: number | DifficultyLevel,
+  level: number | ExtendedDifficultyLevel,
   overrides: Partial<Omit<DifficultyProfile, 'level'>>,
 ): DifficultyProfile {
   const base = getDifficultyProfile(level);

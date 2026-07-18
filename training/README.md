@@ -74,10 +74,20 @@ docker run --rm --runtime=nvidia --gpus all \
   python -m atari_go.loop --run-id az-v1 --iterations 30
 ```
 
-Débito medido: ~367 jogos/min de self-play a 160 sims (12 workers × 128 jogos
-concorrentes) → ~5.5 min de self-play por iteração; iteração completa
-(self-play + treino + gating) ~9–10 min; 30 iterações ≈ 5 h. O campeão fica em
-`runs/az-v1/best.pt`; progresso em `runs/az-v1/log.jsonl`.
+Resultado do treino `az-v1` (2026-07-17): 30 iterações concluídas, 60 000
+jogos de self-play válidos (+2 000 repetidos após uma interrupção antes do
+gating), 22 promoções; policy loss 4,2829 → 2,1394. Débito médio: ~667
+jogos/min a 160 sims. O campeão fica em `runs/az-v1/best.pt`; progresso em
+`runs/az-v1/log.jsonl`. A primeira arena 50–0 usava inadvertidamente o
+fallback TypeScript como N5 e foi descartada. Após corrigir a propagação do
+deadline no N5, a arena emparelhada contra Rust/WASM obteve N6 46–4 (92%),
+zero jogadas ilegais, p95 N6 332 ms e p95 N5 500 ms com budget de 500 ms
+(`artifacts/atari-go-arena/2026-07-18T15-24-50-705Z/results.json`). Nota de
+leitura: o N5 de produção pensa 2000 ms, pelo que o 92% mede a força relativa
+a 500 ms e não transfere diretamente para o budget de produção; em
+contrapartida, a arena passa `seed` ao servidor (ativando ruído Dirichlet que
+enfraquece o N6), enquanto a produção joga determinística — a medição tende a
+subestimar o N6.
 
 ## 4. Retomar um treino interrompido
 
@@ -90,3 +100,62 @@ docker run --rm --runtime=nvidia --gpus all \
 
 Retoma da `next_iteration` guardada em `runs/az-v1/state.json`, com o campeão
 de `best.pt` e o replay buffer reconstruído dos `.npz` em `runs/az-v1/selfplay/`.
+
+## 5. Serviço de inferência N6 («Mestre»)
+
+O FastAPI em `atari_go/serve.py` carrega `runs/az-v1/best.pt`, recarrega-o
+quando o treino promove um checkpoint novo e expõe `GET /health` e
+`POST /move`. O serviço só escuta em localhost; a app Bun faz proxy em
+`/api/ai/atari-go/*`. Em caso de indisponibilidade, ocupação ou limite de
+pedidos, o cliente degrada silenciosamente para N5 WASM/TypeScript. O proxy
+aceita apenas `GET /health` e `POST /move`, limita o corpo a 8 KiB e aplica
+30 pedidos/minuto por sessão; o FastAPI admite uma inferência de cada vez e
+limita cada budget a 2,2 s, evitando filas de trabalhos GPU abandonados.
+
+```bash
+docker rm -f crjm-az-serve 2>/dev/null || true
+docker run -d --name crjm-az-serve --restart unless-stopped \
+  --runtime=nvidia --gpus all \
+  -e HOST=0.0.0.0 \
+  -p 127.0.0.1:8100:8100 \
+  -v /home/proteu/crjm/training:/workspace/training \
+  -v /home/proteu/crjm/training/.pip-cache:/root/.cache/pip \
+  -w /workspace/training \
+  pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime \
+  bash -lc "pip install -q fastapi 'uvicorn[standard]' && python -m atari_go.serve"
+```
+
+Verificação:
+
+```bash
+curl -s http://127.0.0.1:8100/health
+curl -s -X POST http://127.0.0.1:8100/move \
+  -H 'content-type: application/json' \
+  -d '{"board":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],"toPlay":1,"timeBudgetMs":500}'
+```
+
+Arena N6 (HTTP) contra N5 local:
+
+```bash
+bun scripts/atari-go-arena.ts --games 50 --base http://127.0.0.1:8100 --budget 2000
+```
+
+Gate rápido do deadline do N5 WASM (requer build WASM prévio):
+
+```bash
+bun run build
+bun run ai:budget:atari-go
+```
+
+## 6. Testar a robustez dos workers
+
+Os workers enviam envelopes de sucesso/erro e o processo pai usa leituras com
+timeout + inspeção de `exitcode`; uma falha CUDA/Python deixa assim de bloquear
+o treino indefinidamente.
+
+```bash
+docker run --rm \
+  -v /home/proteu/crjm/training:/workspace/training -w /workspace/training \
+  pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime \
+  python -m atari_go.selfplay_test
+```

@@ -129,7 +129,6 @@ pub fn stats() -> JsValue {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::core::board::{Board, SIZE};
     use crate::core::rules::{apply_move as apply_move_rules, legal_moves, Color, State};
     use crate::core::zobrist::Zobrist;

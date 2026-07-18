@@ -1,7 +1,15 @@
 # ROADMAP CRJM — Visão Macro
 
-Data: 2026-03-20
-Repo: `~/dev/crjm`
+Data original: 2026-03-20
+Auditoria corrente: 2026-07-18
+Repo: `/home/proteu/crjm`
+
+> Este roadmap conserva a sequência histórica F0–F9. O estado corrente do
+> treino, motores e próximos gates está em
+> [`AI-TRAINING-STATUS-2026-07-18.md`](./AI-TRAINING-STATUS-2026-07-18.md).
+> Desde março, F6 foi concluída nos seis jogos, F7 recebeu dificuldade
+> adaptativa/gamificação persistente e F8 está ativa com AlphaZero N6 no Atari
+> Go. A observação real com alunos continua pendente.
 
 ## Objetivo final
 Sistema de jogos matemáticos com IA progressiva e instrutora, pronto para uso em sala de aula com crianças de 4–10 anos.

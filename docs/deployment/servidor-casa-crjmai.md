@@ -15,6 +15,7 @@ Notas:
 - O túnel cloudflared desta máquina é o `crjm-macbookpro` (apesar do nome histórico, corre aqui via systemd `cloudflared.service`, remotely-managed). Os hostnames novos são acrescentados a este túnel com a skill `cloudflare-publish`:
   `cf-tunnel.sh expose crjm-macbookpro crjmai 3100` e `cf-tunnel.sh expose crjm-macbookpro crjmai-torneio 4000`.
 - O túnel antigo `crjm` (MacBook, down) e o CNAME `crjm.infantinho.xyz` ficam intocados; opcionalmente podem ser reapontados mais tarde.
+- Proteção do N6: proxy limitado a `/health` e `/move`, corpo ≤8 KiB, 30 pedidos/minuto por sessão; uma inferência GPU concorrente e budget máximo de 2,2 s. Em 429/503 o browser usa N5 local.
 
 ## Segredos e persistência
 

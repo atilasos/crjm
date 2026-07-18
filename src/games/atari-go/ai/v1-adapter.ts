@@ -85,11 +85,14 @@ export class AtariGoV1Adapter {
         depth: this.client.metrics.lastStats?.depth,
         nodes: this.client.metrics.lastStats?.nodes,
         usedWasm: this.client.metrics.usedWasm,
-        engine: this.client.metrics.usedWasm ? 'rust-wasm' : 'ts-fallback',
+        engine:
+          this.client.metrics.lastEngine ??
+          (this.client.metrics.usedWasm ? 'rust-wasm' : 'ts-fallback'),
       },
-      warnings: this.client.metrics.usedWasm
-        ? undefined
-        : ['A análise desta dica usou o fallback atual do Atari Go.'],
+      warnings:
+        this.client.metrics.usedWasm || this.client.metrics.lastEngine === 'server-nn'
+          ? undefined
+          : ['A análise desta dica usou o fallback atual do Atari Go.'],
     };
   }
 

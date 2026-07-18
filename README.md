@@ -298,6 +298,31 @@ Este repositório já inclui um workflow em `.github/workflows/deploy.yml` que f
 Para publicar uma versão funcional para alunos com Bun, SQLite persistente, painel de administração e Cloudflare, consulta:
 
 - [`docs/deployment/vps-cloudflare-bun.md`](./docs/deployment/vps-cloudflare-bun.md)
+- [`docs/deployment/servidor-casa-crjmai.md`](./docs/deployment/servidor-casa-crjmai.md) — deployment atual em `crjmai.infantinho.xyz`
+
+## 🖥️ Produção no servidor de casa
+
+A instalação principal é servida diretamente pelo servidor `ubuntusala`, não
+pelo GitHub Pages:
+
+- `crjmai.infantinho.xyz` → app Bun (SPA + learner-core/SQLite + proxy de IA), porta 3100;
+- `crjmai-torneio.infantinho.xyz` → servidor WebSocket/admin de torneios, porta 4000;
+- `127.0.0.1:8100` → serviço FastAPI/PyTorch da IA N6 do Atari Go, acessível apenas através do proxy da app.
+
+Os processos Bun são unidades `systemd --user`; o serviço de inferência é um
+container Docker com `--restart unless-stopped`; o túnel Cloudflare é gerido
+pelo serviço systemd existente desta máquina.
+
+## 🧠 IA e treino na RTX 5070 Ti
+
+- Os cinco motores Rust/WASM continuam disponíveis offline e são compilados no build de produção.
+- O Nex recebeu TT Zobrist, iterative deepening, move ordering e gestão de tempo; o duelo release reproduzido obteve 82% contra o motor anterior (41/50, zero overshoot).
+- O Produto ganhou uma arena WASM-vs-TS com aberturas emparelhadas e seed fixa: no budget real de N5 (2 s), o WASM obteve 7/10, zero ilegais e p95 2000,49 ms; a amostra ainda é pequena e, a 100/500 ms, ficou em 40%.
+- O Atari Go tem um pipeline AlphaZero em `training/atari_go/`: regras numpy validadas contra 500 jogos/23 746 plies das regras TypeScript (0 divergências), rede residual de ~468 mil parâmetros, MCTS PUCT, self-play e gating.
+- Treino `az-v1`: 30 iterações, 60 000 jogos de self-play concluídos, 22 promoções; policy loss 4,2829 → 2,1394.
+- O nível **N6 · Mestre** usa a rede no servidor/GPU; após corrigir o deadline do N5, a arena emparelhada obteve 92% contra o N5 Rust/WASM (46/50), zero ilegais, p95 N6 332 ms e p95 N5 500 ms num budget de 500 ms. Se o serviço estiver indisponível, ocupado ou limitado, cai silenciosamente para N5 WASM/TypeScript.
+- Comandos de treino, serviço e arena: [`training/README.md`](./training/README.md).
+- Estado auditado e próximos gates: [`docs/agents/AI-TRAINING-STATUS-2026-07-18.md`](./docs/agents/AI-TRAINING-STATUS-2026-07-18.md).
 
 ## 📜 Regras dos Jogos
 

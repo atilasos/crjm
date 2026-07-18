@@ -1,7 +1,10 @@
 import type { AtariGoState, Celula } from '../types';
 import type { DifficultyLevel } from '../../../ai-core/types';
+import type { ExtendedDifficultyLevel } from '../../../ai-core/difficulty';
 
 export type AIDifficulty = 'easy' | 'medium' | 'hard' | 'very-hard';
+
+export type AIEngine = 'rust-wasm' | 'ts-fallback' | 'server-nn';
 
 export interface AtariGoPackedState {
   board: Uint8Array; // 81 cells: 0 empty, 1 black, 2 white
@@ -21,6 +24,7 @@ export interface AIMetrics {
   isThinking: boolean;
   lastTimeMs: number;
   usedWasm: boolean;
+  lastEngine?: AIEngine;
   lastStats?: AISearchStats;
 }
 
@@ -38,7 +42,7 @@ export interface DifficultyPreset {
 export interface AIComputeOverrides {
   timeBudgetMs?: number;
   seed?: number;
-  level?: DifficultyLevel;
+  level?: ExtendedDifficultyLevel;
 }
 
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyPreset> = {

@@ -51,8 +51,10 @@ function decodeSessionCookieValue(rawValue: string | undefined, secret: string):
   const signature = rawValue.slice(separator + 1);
   const expectedSignature = signSessionId(sessionId, secret);
 
-  if (signature.length !== expectedSignature.length) return null;
-  if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature))) return null;
+  const signatureBytes = Buffer.from(signature);
+  const expectedBytes = Buffer.from(expectedSignature);
+  if (signatureBytes.byteLength !== expectedBytes.byteLength) return null;
+  if (!timingSafeEqual(signatureBytes, expectedBytes)) return null;
 
   return sessionId;
 }

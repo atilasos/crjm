@@ -2,6 +2,13 @@
 
 This document outlines a comprehensive plan to upgrade all game AIs from their current state to master-level play, making them genuinely challenging for competitive training.
 
+> **Auditoria de 2026-07-18:** este é um plano histórico e as estimativas ELO
+> abaixo não são ratings medidos. Gatos & Cães já recebeu negamax/TT em worker;
+> Nex recebeu TT/iterative deepening/PVS/LMR; Atari Go recebeu um pipeline
+> AlphaZero N6 treinado. O estado confirmado, resultados reproduzidos e ordem
+> de execução atual estão em
+> [`docs/agents/AI-TRAINING-STATUS-2026-07-18.md`](./agents/AI-TRAINING-STATUS-2026-07-18.md).
+
 ## Executive Summary
 
 | Game | Current ELO | Target ELO | Priority | Effort |

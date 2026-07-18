@@ -23,6 +23,9 @@ pub struct SearchStats {
     pub tt_probes: u64,
     pub cutoffs: u64,
     pub elapsed_ms: u32,
+    /// Sinal interno para propagar o deadline por toda a árvore sem guardar
+    /// resultados parciais na TT. Não faz parte do payload público do WASM.
+    pub timed_out: bool,
 }
 
 fn clamp_i16(v: i32) -> i16 {
@@ -58,7 +61,6 @@ pub fn search_best_move(
     let deadline = start + (time_ms as f64);
 
     let mut stats = SearchStats::default();
-    let mut best_move: u8 = 0;
     let mut best_score: i32 = -INF;
 
     // Root legal moves (captures short-circuit)
@@ -77,6 +79,9 @@ pub fn search_best_move(
     }
 
     order_moves_simple(&mut moves, board);
+    // Mesmo que o budget termine antes de completar profundidade 1, a API
+    // tem sempre de devolver uma jogada legal.
+    let mut best_move = moves[0];
 
     let mut pv_move: Option<u8> = None;
     let mut aspiration = 250;
@@ -219,7 +224,8 @@ fn root_search(
     let mut best = -INF;
 
     for (i, &m) in ordered.iter().enumerate() {
-        if (stats.nodes & 2047) == 0 && now_ms() >= deadline {
+        if stats.timed_out || now_ms() >= deadline {
+            stats.timed_out = true;
             return (best, best_mv, false);
         }
         let (nst, res) = apply_move(root, m, board, zobrist_stone, zobrist_to_play);
@@ -279,6 +285,10 @@ fn root_search(
             )
         };
 
+        if stats.timed_out {
+            return (best, best_mv, false);
+        }
+
         if score > best {
             best = score;
             best_mv = m;
@@ -319,7 +329,13 @@ fn negamax(
     deadline: f64,
     now_ms: &impl Fn() -> f64,
 ) -> i32 {
-    if (stats.nodes & 2047) == 0 && now_ms() >= deadline {
+    if stats.timed_out {
+        return evaluate(st, board);
+    }
+    // `legal_moves` é relativamente caro no 9x9. Verificar a cada 32 nós
+    // mantém o overshoot curto; 2048 nós podiam representar vários segundos.
+    if (stats.nodes & 31) == 0 && now_ms() >= deadline {
+        stats.timed_out = true;
         return evaluate(st, board);
     }
 
@@ -412,6 +428,10 @@ fn negamax(
             )
         };
 
+        if stats.timed_out {
+            return evaluate(st, board);
+        }
+
         if score > best {
             best = score;
             best_mv = m as i16;
@@ -436,4 +456,56 @@ fn negamax(
     }
 
     best
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::board::Board;
+    use crate::core::rules::{Color, State};
+    use crate::core::zobrist::Zobrist;
+    use std::cell::Cell;
+
+    #[test]
+    fn deadline_curto_propaga_e_preserva_fallback_legal() {
+        let board = Board::new();
+        let zobrist = Zobrist::new(&board, 1234);
+        let state = State {
+            black: 1u128 << 40,
+            white: 1u128 << 31,
+            to_play: Color::Black,
+            hash: 0,
+        };
+        let mut tt = TranspositionTable::new(10);
+        let clock = Cell::new(0.0f64);
+        let now = || {
+            let value = clock.get();
+            clock.set(value + 0.25);
+            value
+        };
+        let cfg = SearchConfig {
+            max_depth: 10,
+            use_tt: true,
+            use_pvs: true,
+            noise_top_k: 1,
+            noise_delta: 0,
+        };
+
+        let (_, mv, stats) = search_best_move(
+            state,
+            1,
+            cfg,
+            &board,
+            &mut tt,
+            &zobrist.stone,
+            zobrist.to_play,
+            now,
+            0,
+        );
+        let (legal, _) = legal_moves(state, &board, &zobrist.stone, zobrist.to_play);
+
+        assert!(legal.contains(&mv));
+        assert!(stats.timed_out);
+        assert!(clock.get() < 20.0, "deadline não propagou: relógio={}", clock.get());
+    }
 }

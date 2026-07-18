@@ -3,9 +3,20 @@ export interface TournamentServerPreset {
   url: string;
 }
 
-const configuredTournamentServerUrl = typeof import.meta !== 'undefined'
-  ? (import.meta.env?.VITE_TOURNAMENT_SERVER_URL || '')
-  : '';
+const productionTournamentServerUrl =
+  typeof window !== 'undefined' && window.location.hostname === 'crjmai.infantinho.xyz'
+    ? 'wss://crjmai-torneio.infantinho.xyz'
+    : '';
+
+const configuredTournamentServerUrl =
+  productionTournamentServerUrl ||
+  (typeof import.meta !== 'undefined'
+    ? (
+        import.meta.env?.BUN_PUBLIC_TOURNAMENT_SERVER_URL ||
+        import.meta.env?.VITE_TOURNAMENT_SERVER_URL ||
+        ''
+      )
+    : '');
 
 export const PRESET_TOURNAMENT_SERVERS: TournamentServerPreset[] = [
   ...(configuredTournamentServerUrl
