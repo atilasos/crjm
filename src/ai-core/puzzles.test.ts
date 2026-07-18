@@ -7,10 +7,10 @@ const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'at
 
 describe('catálogo de puzzles estratégicos', () => {
   test('oferece o catálogo completo de puzzles válidos por jogo', () => {
-    expect(PUZZLES).toHaveLength(43);
+    expect(PUZZLES).toHaveLength(45);
     for (const gameId of GAME_IDS) {
       const puzzles = getPuzzlesForGame(gameId);
-      const expected = gameId === 'atari-go' ? 10 : ['dominorio', 'quelhas', 'gatos-caes'].includes(gameId) ? 7 : 6;
+      const expected = gameId === 'atari-go' ? 10 : 7;
       expect(puzzles).toHaveLength(expected);
       expect(new Set(puzzles.map((puzzle) => puzzle.id)).size).toBe(expected);
       for (const puzzle of puzzles) {

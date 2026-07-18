@@ -1,0 +1,242 @@
+{
+  "options": {
+    "playouts": 3000,
+    "solveMoves": 12,
+    "max": 10,
+    "seed": 20260718,
+    "nodeBudget": 2000000
+  },
+  "criterion": "race",
+  "candidates": [
+    {
+      "toPlay": "jogador1",
+      "plies": 26,
+      "rows": [
+        "OXNN..NNXON",
+        ".N.N.N.X.X.",
+        "N....ONXN..",
+        ".N...NX.NNN",
+        ".N.....NON.",
+        ".....OXX...",
+        "......OX..N",
+        "...NO..X...",
+        ".O..O.NXNON",
+        "...O...X...",
+        "O.O...XNN.."
+      ],
+      "winningCell": {
+        "linha": 4,
+        "coluna": 6
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 69
+    },
+    {
+      "toPlay": "jogador2",
+      "plies": 23,
+      "rows": [
+        ".....N.ON.N",
+        "..N....NXXX",
+        ".N....OX.ON",
+        ".O...X..NN.",
+        "...NX.O....",
+        "..NX..O...O",
+        "NXX..NN....",
+        "XN..OO.....",
+        "N.XNNO.....",
+        "....ON..N..",
+        "N..O..N.N.."
+      ],
+      "winningCell": {
+        "linha": 3,
+        "coluna": 6
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 75
+    },
+    {
+      "toPlay": "jogador1",
+      "plies": 26,
+      "rows": [
+        ".....O.NXNN",
+        ".N...NOX.O.",
+        "..N..N.X.X.",
+        ".ONNNNXON..",
+        "O.O.N..X.O.",
+        "......NX.NN",
+        "....N.X....",
+        "...N.NX...N",
+        "..N.O.X...O",
+        "..N.O.X..N.",
+        ".X.N.XNOO.N"
+      ],
+      "winningCell": {
+        "linha": 4,
+        "coluna": 6
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 69
+    },
+    {
+      "toPlay": "jogador2",
+      "plies": 27,
+      "rows": [
+        "......N...N",
+        ".....O.N.O.",
+        "NX.O.N...O.",
+        ".......NNOO",
+        "..NNN.O.NO.",
+        "...NN.....N",
+        "N....NN..NN",
+        "XXXXOXXXXXX",
+        ".N.X....NO.",
+        "X..ONN.N.O.",
+        ".ONN....ON."
+      ],
+      "winningCell": {
+        "linha": 8,
+        "coluna": 4
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 67
+    },
+    {
+      "toPlay": "jogador1",
+      "plies": 30,
+      "rows": [
+        ".......O.NX",
+        ".NXN.N.NOOX",
+        ".O.NNNN.NXX",
+        "..NOOON.X.N",
+        ".OO.N..X.XN",
+        "ON....NXNN.",
+        ".......XNXO",
+        ".N....NX.O.",
+        ".....NO....",
+        ".OON..NXXN.",
+        "N.N..N..X.N"
+      ],
+      "winningCell": {
+        "linha": 8,
+        "coluna": 7
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 61
+    },
+    {
+      "toPlay": "jogador2",
+      "plies": 27,
+      "rows": [
+        "....O.N..N.",
+        "...NO...NNN",
+        "..N.ON.NN..",
+        ".O..N.NN.XX",
+        ".X..OOONX..",
+        "NNXXXX.X...",
+        "XXNN....N..",
+        "N.NONNX....",
+        "..ONO..N..N",
+        "..O.O...X..",
+        ".N..O.O...."
+      ],
+      "winningCell": {
+        "linha": 5,
+        "coluna": 6
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 67
+    },
+    {
+      "toPlay": "jogador1",
+      "plies": 28,
+      "rows": [
+        ".N...XN....",
+        "..N..X...N.",
+        "..N.NX.OO.N",
+        "..N.XNNO..N",
+        "ON..XOO....",
+        ".NNX.X..N.O",
+        "..XN.N...O.",
+        "O.N.X.O..NN",
+        "XONOX...N..",
+        "XN.OXN.O...",
+        "X..NNN..N.."
+      ],
+      "winningCell": {
+        "linha": 7,
+        "coluna": 1
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 65
+    },
+    {
+      "toPlay": "jogador2",
+      "plies": 25,
+      "rows": [
+        "N...N.NO.NX",
+        "N.NXXN.X.X.",
+        "..XNXXXO.N.",
+        "XXN..NO..NO",
+        "N.NN.OO....",
+        "....ONO....",
+        "...NNO..NN.",
+        "....OO....X",
+        ".N.NN.N....",
+        "....O..N...",
+        "...O......."
+      ],
+      "winningCell": {
+        "linha": 1,
+        "coluna": 8
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 71
+    },
+    {
+      "toPlay": "jogador2",
+      "plies": 23,
+      "rows": [
+        ".......NO..",
+        "....N..O.NN",
+        ".N...N.N...",
+        "N......NNO.",
+        ".......O.NX",
+        "....N.NOXXO",
+        ".N....N.NN.",
+        "...XXXXO...",
+        "..X.NO.ONX.",
+        ".X...NNN.O.",
+        "X..NO..O..."
+      ],
+      "winningCell": {
+        "linha": 6,
+        "coluna": 7
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 75
+    },
+    {
+      "toPlay": "jogador2",
+      "plies": 35,
+      "rows": [
+        "...N....NXX",
+        ".N....ONXO.",
+        "N..NN.NX.OO",
+        "X.XXXXX...O",
+        "ONNN.NNNXN.",
+        "O....NNN.NO",
+        ".N.NNN.ONOX",
+        ".N...NOONXX",
+        "..N.XON....",
+        ".NNNOX.O.NO",
+        "NXOO...N..."
+      ],
+      "winningCell": {
+        "linha": 3,
+        "coluna": 1
+      },
+      "opponentThreats": [],
+      "legalPlacementCells": 51
+    }
+  ]
+}

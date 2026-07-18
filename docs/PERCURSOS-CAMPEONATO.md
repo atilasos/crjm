@@ -107,10 +107,20 @@ recomendação automática, como desafio explícito).
   (`artifacts/lessons-classic/2026-07-18T18-04-39-162Z/`); um puzzle
   «Final resolvido» curado por jogo na etapa Campeonato (`gc-final-1`,
   `do-final-1`, `qu-final-1`), com os diagramas verificados
-  programaticamente contra os candidatos. Pendente: Nex (jogada composta
-  peça+neutra e substituição exigem adaptador dedicado) e Produto (a
-  pontuação por produto não é «último a jogar»; requer solver próprio e
-  amostra de arena maior).
+  programaticamente contra os candidatos.
+- **F3 alargada — Nex e Produto (2026-07-18)**: solvers dedicados.
+  Produto: adaptador de turnos de 2 peças com cores livres; o solver
+  booleano prova «única combinação vencedora» (empate conta como
+  não-vitória); puzzle `pr-final-1` (60 jogadas legais, prova em 140
+  posições). Nex: sem ciclos (colocação reduz vazias, substituição reduz
+  neutras), mas playouts aleatórios nunca se aproximam de ligar — usa
+  playouts dirigidos por BFS 0-1 (própria no caminho mínimo, neutra a
+  bloquear). **Nota de honestidade**: o puzzle do Nex (`nx-ligacao-1`)
+  prova apenas «exatamente uma casa liga já» (verificação exaustiva de
+  casas e substituições); não prova que as alternativas perdem o jogo —
+  a neutra bloqueia corridas com uma só jogada, e essa prova exigiria
+  busca profunda. Pendente conhecido: o Nex indexa `tabuleiro[x][y]`
+  (armadilha registada no harness).
 - **F4**: revisão de derrotas na app (mostrar o gráfico de avaliação do
   motor sobre um jogo terminado) — a funcionalidade com mais valor de
   treino e mais custo de UI.

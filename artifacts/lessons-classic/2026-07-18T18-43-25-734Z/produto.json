@@ -1,0 +1,235 @@
+{
+  "options": {
+    "playouts": 120,
+    "solveMoves": 70,
+    "max": 8,
+    "seed": 20260718,
+    "nodeBudget": 2000000
+  },
+  "candidates": [
+    {
+      "playoutSeed": 1,
+      "plies": 28,
+      "toPlay": "jogador1",
+      "legalMoves": 60,
+      "rows": [
+        "##XOOO.##",
+        "#XO.OXX##",
+        "#OXXXXXX#",
+        ".OXX.XXX#",
+        "OXXOXOXXX",
+        "XOOXOOXX#",
+        "#XOXXOOO#",
+        "#XOXO..##",
+        "##XOXOO##"
+      ],
+      "winningMove": "(0,3) preta + (1,3) preta",
+      "winningCell": {
+        "linha": 7,
+        "coluna": 5
+      },
+      "losingSample": [
+        "(-3,-1) preta + (0,3) preta",
+        "(-3,-1) preta + (0,3) branca",
+        "(-3,-1) branca + (0,3) preta"
+      ],
+      "solvedNodes": 140
+    },
+    {
+      "playoutSeed": 3,
+      "plies": 29,
+      "toPlay": "jogador2",
+      "legalMoves": 24,
+      "rows": [
+        "##XOOOX##",
+        "#O.XXXO##",
+        "#OXOOXOO#",
+        "XX.OXXOO#",
+        "XXXXXOXXX",
+        "XXXXX.OX#",
+        "#.XOXOXO#",
+        "#XOXOXO##",
+        "##OXXOO##"
+      ],
+      "winningMove": "(0,-3) branca + (1,1) preta",
+      "winningCell": {
+        "linha": 1,
+        "coluna": 2
+      },
+      "losingSample": [
+        "(-4,2) preta + (-1,-1) preta",
+        "(-4,2) preta + (-1,-1) branca",
+        "(-4,2) branca + (-1,-1) preta"
+      ],
+      "solvedNodes": 24
+    },
+    {
+      "playoutSeed": 8,
+      "plies": 28,
+      "toPlay": "jogador1",
+      "legalMoves": 60,
+      "rows": [
+        "##OXXXX##",
+        "#.OOXXX##",
+        "#XXXOOOX#",
+        "OXXOXO.O#",
+        "OXOXO.OO.",
+        "OOXOXXXX#",
+        "#OXO.XXX#",
+        "#XOOO.X##",
+        "##OXOXO##"
+      ],
+      "winningMove": "(0,3) preta + (1,0) preta",
+      "winningCell": {
+        "linha": 7,
+        "coluna": 5
+      },
+      "losingSample": [
+        "(-1,-3) preta + (-1,2) preta",
+        "(-1,-3) preta + (-1,2) branca",
+        "(-1,-3) branca + (-1,2) preta"
+      ],
+      "solvedNodes": 169
+    },
+    {
+      "playoutSeed": 8,
+      "plies": 30,
+      "toPlay": "jogador1",
+      "legalMoves": 4,
+      "rows": [
+        "##OXXXX##",
+        "#.OOXXX##",
+        "#XXXOOOX#",
+        "OXXOXOOO#",
+        "OXOXOOOOX",
+        "OOXOXXXX#",
+        "#OXO.XXX#",
+        "#XOOOXX##",
+        "##OXOXO##"
+      ],
+      "winningMove": "(-1,-3) preta + (-1,2) preta",
+      "winningCell": {
+        "linha": 1,
+        "coluna": 1
+      },
+      "losingSample": [
+        "(-1,-3) preta + (-1,2) branca",
+        "(-1,-3) branca + (-1,2) preta",
+        "(-1,-3) branca + (-1,2) branca"
+      ],
+      "solvedNodes": 0
+    },
+    {
+      "playoutSeed": 15,
+      "plies": 29,
+      "toPlay": "jogador2",
+      "legalMoves": 24,
+      "rows": [
+        "##XXOOO##",
+        "#OXOXOO##",
+        "#XOXOOXO#",
+        ".X.OOO.O#",
+        "OOXXXOOOO",
+        "OXOXXOOX#",
+        "#O.OXOXO#",
+        "#XOXOOX##",
+        "##OOOXX##"
+      ],
+      "winningMove": "(-3,2) preta + (-1,-1) preta",
+      "winningCell": {
+        "linha": 6,
+        "coluna": 2
+      },
+      "losingSample": [
+        "(-3,-1) preta + (-3,2) preta",
+        "(-3,-1) preta + (-3,2) branca",
+        "(-3,-1) branca + (-3,2) preta"
+      ],
+      "solvedNodes": 24
+    },
+    {
+      "playoutSeed": 18,
+      "plies": 28,
+      "toPlay": "jogador1",
+      "legalMoves": 60,
+      "rows": [
+        "##XOOOO##",
+        "#XOXX.X##",
+        "#XXOXXXO#",
+        "XXO.O.OO#",
+        "OOXXOXOOX",
+        "XXOXX.O.#",
+        "#.OOXOOX#",
+        "#OOXOXX##",
+        "##XXXXX##"
+      ],
+      "winningMove": "(0,-1) branca + (2,-1) branca",
+      "winningCell": {
+        "linha": 3,
+        "coluna": 3
+      },
+      "losingSample": [
+        "(-4,2) preta + (0,-1) preta",
+        "(-4,2) preta + (0,-1) branca",
+        "(-4,2) branca + (0,-1) preta"
+      ],
+      "solvedNodes": 138
+    },
+    {
+      "playoutSeed": 18,
+      "plies": 30,
+      "toPlay": "jogador1",
+      "legalMoves": 4,
+      "rows": [
+        "##XOOOO##",
+        "#XOXXXX##",
+        "#XXOXXXO#",
+        "XXO.O.OO#",
+        "OOXXOXOOX",
+        "XXOXXXOO#",
+        "#XOOXOOX#",
+        "#OOXOXX##",
+        "##XXXXX##"
+      ],
+      "winningMove": "(0,-1) branca + (2,-1) branca",
+      "winningCell": {
+        "linha": 3,
+        "coluna": 3
+      },
+      "losingSample": [
+        "(0,-1) preta + (2,-1) preta",
+        "(0,-1) preta + (2,-1) branca",
+        "(0,-1) branca + (2,-1) preta"
+      ],
+      "solvedNodes": 0
+    },
+    {
+      "playoutSeed": 22,
+      "plies": 29,
+      "toPlay": "jogador2",
+      "legalMoves": 24,
+      "rows": [
+        "##XXOOO##",
+        "#XXXXOO##",
+        "#XXOOXXO#",
+        "OXXOXX..#",
+        "OO.OXXOOX",
+        "OXOXXOOO#",
+        "#OXXXOXX#",
+        "#XOXOX.##",
+        "##OXXOO##"
+      ],
+      "winningMove": "(-2,0) branca + (1,3) branca",
+      "winningCell": {
+        "linha": 4,
+        "coluna": 2
+      },
+      "losingSample": [
+        "(-2,0) preta + (1,3) preta",
+        "(-2,0) preta + (1,3) branca",
+        "(-2,0) branca + (1,3) preta"
+      ],
+      "solvedNodes": 24
+    }
+  ]
+}

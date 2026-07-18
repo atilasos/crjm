@@ -347,6 +347,21 @@ export const PUZZLES: PuzzleDefinition[] = [
     ],
   },
   {
+    id: 'pr-final-1', gameId: 'produto', patternId: 'produto:equilibrio', title: 'Final resolvido: o par exato',
+    prompt: 'Posição real, resolvida por análise completa: faltam 6 casas e jogas com as pretas (X). Das 60 combinações possíveis do teu turno, só uma vence. Qual?',
+    hint: 'Pensa no que cada par de peças faz aos teus dois maiores grupos — e aos dele.', correctOptionId: 'ambas',
+    options: [
+      { id: 'ambas', label: 'Casas 1 e 2, ambas com a tua cor', explanation: 'Certo — e provado: analisadas todas as continuações, só este par garante o produto vencedor no fim.' },
+      { id: 'afastada', label: 'Casas 1 e 3, ambas com a tua cor', explanation: 'Demonstrado: não ganha o jogo — a casa 3 desperdiça a peça longe da estrutura decisiva.' },
+      { id: 'mista', label: 'Casa 1 com a tua cor e casa 2 com a cor dele', explanation: 'Demonstrado: não ganha o jogo — dar-lhe a casa 2 estraga exatamente a ligação de que precisas.' },
+    ],
+    diagram: {
+      rows: ['##XOOO.##', '#XO.OXX##', '#OXXXXXX#', '3OXX.XXX#', 'OXXOXOXXX', 'XOOXOOXX#', '#XOXXOOO#', '#XOXO12##', '##XOXOO##'],
+      caption: 'Jogas com as pretas (X); cada turno coloca duas peças de cores à tua escolha. Final real resolvido por busca completa (140 posições analisadas).',
+      hexOffset: true,
+    },
+  },
+  {
     id: 'ag-atari-1', gameId: 'atari-go', patternId: 'atari-go:atari', title: 'Uma liberdade',
     prompt: 'Um grupo adversário tem exatamente uma liberdade. Como se chama esta situação e qual é a prioridade?',
     hint: 'A próxima pedra nessa liberdade pode terminar a partida.', correctOptionId: 'capturar',
@@ -538,6 +553,21 @@ export const PUZZLES: PuzzleDefinition[] = [
       { id: 'sobreposicao', label: 'Não: bloqueia onde as rotas dele se sobrepõem ou cria a tua ameaça', explanation: 'Certo: ou encontras uma casa comum a várias rotas, ou respondes com uma ameaça tua mais rápida.' },
       { id: 'neutra-dupla', label: 'Só com duas neutras no mesmo turno', explanation: 'Cada turno coloca uma neutra apenas; contra uma ponte sólida, procura sobreposições ou contra-ataque.' },
     ],
+  },
+  {
+    id: 'nx-ligacao-1', gameId: 'nex', patternId: 'nex:ponte', title: 'A casa que liga já',
+    prompt: 'Posição real de uma corrida de ligações: jogas com X (ligas topo a fundo). Verificámos todas as casas do tabuleiro: exatamente uma completa a tua ligação nesta jogada. Qual?',
+    hint: 'Segue a tua cadeia de cima para baixo e procura o único elo em falta.', correctOptionId: 'casa2',
+    options: [
+      { id: 'casa1', label: 'Casa 1', explanation: 'Não liga já: fica encostada à cadeia mas deixa o elo crítico por fechar — e a corrida continua.' },
+      { id: 'casa2', label: 'Casa 2', explanation: 'Certo — e verificado exaustivamente: é a única casa do tabuleiro que completa a tua ligação de imediato (nenhuma substituição vence já).' },
+      { id: 'casa3', label: 'Casa 3', explanation: 'Não liga já: aproxima as tuas pedras, mas a cadeia continua interrompida no elo decisivo.' },
+    ],
+    diagram: {
+      rows: ['..O.NXN', '..NOX.O', '..N.X.X', 'NNNXON.', '.N.2X3O', '...NX.N', '.N1X...', 'N.NX...', '.O.X...', '.O.X..N', 'N.XNOO.'],
+      caption: 'Excerto do tabuleiro (X liga topo↕fundo; N são neutras). Verificação exaustiva: só a Casa 2 liga já — as outras não vencem de imediato.',
+      hexOffset: true,
+    },
   },
 ];
 
