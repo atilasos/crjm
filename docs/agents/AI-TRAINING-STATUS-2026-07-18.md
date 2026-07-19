@@ -12,7 +12,7 @@ já não descrevem o repositório atual.
 | Atari Go | Rust/WASM N1–N5 + AlphaZero/PyTorch N6 | `az-v1`: 30 iterações, 60 000 jogos, 22 promoções; arena emparelhada N6 vs N5; testes de regras, workers, proxy e deadline | N6 integrado; treino longo concluído |
 | Nex | Rust/WASM com TT Zobrist, iterative deepening, PVS/LMR, killers/history e deadline | duelo release de 50 jogos contra o motor legado: 41/50 (82%), zero overshoot | melhoria forte; alvo histórico de 85% ainda aberto |
 | Gatos & Cães | worker TypeScript com negamax, alpha-beta e TT | testes de profundidade, legalidade, TT e budget | reescrita de busca concluída; Rust/WASM não é prioridade imediata |
-| Produto | Rust/WASM MCTS N5 + fallback TypeScript N5 com lookahead e táticas de sabotagem | arena emparelhada com seed fixa: a 2 s, WASM 7–3 TS, 0 ilegais e p95 2000,49 ms; a 100/500 ms, WASM 40% | harness consolidado; força depende muito do budget e a amostra longa ainda é pequena |
+| Produto | Rust/WASM MCTS N5 + fallback TypeScript N5 com lookahead e táticas de sabotagem | arena n=50 a 2 s (2026-07-19): **WASM 19–31 TS (38%)**, 0 ilegais, p95 TS 394 ms vs WASM 2000 ms — o 7–3 de n=10 era ruído; assimetria de 2.º jogador (34/50) | o TS é atualmente o motor mais forte E mais rápido; considerar troca do caminho N5 ou revisão do MCTS WASM |
 | Dominório | Rust/WASM + worker/fallback + livro | baseline e testes de legalidade/latência | topo N5>N4 ainda precisa de evidência estatística estável |
 | Quelhas | Rust/WASM PVS + fallback | testes misère e ladder publicada | consolidado; solver exato de finais continua futuro |
 
@@ -53,8 +53,9 @@ não devem ser usadas como medição de força.
 
 - [x] Produto: criar duelo reproduzível WASM-vs-TS com aberturas emparelhadas,
   seed fixa, troca de jogador, legalidade e deadline;
-- [ ] Produto: aumentar a amostra a 2 s e estudar a quebra de força em budgets
-  curtos antes de alterar ou promover o motor;
+- [x] Produto: amostra alargada a n=50 a 2 s (2026-07-19) — resultado
+  invertido: TS 31–19 WASM; próxima ação: preferir o TS no caminho N5 ou
+  diagnosticar o MCTS WASM (artifacts/produto-arena/2026-07-19T10-11-25-733Z);
 - [ ] Nex: fechar a diferença 82% → 85% sem regressão de budget/legalidade;
 - [ ] Dominório: repetir N5>N4 em WASM com amostra maior e seed fixa;
 - [ ] Gatos & Cães: acrescentar arena novo-vs-baseline antes de considerar um

@@ -77,7 +77,8 @@ function fnv1a32(text: string): number {
 
 function opening(seed: number): ProdutoState {
   const positions = INDEX_MAPS.idxToPos;
-  const pos = positions[seed % positions.length]!;
+  // seed pode chegar negativo (XOR com bit 31); força uint32 antes do módulo
+  const pos = positions[(seed >>> 0) % positions.length]!;
   const color = (seed >>> 8) % 2 === 0 ? 'preta' : 'branca';
   return colocarPeca(criarEstadoInicial('vs-computador'), pos, color);
 }
