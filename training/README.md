@@ -177,7 +177,33 @@ Nota de implementação: `rules._captures_after_placement` muta o tabuleiro
 recebido (o chamador reverte); código novo deve usar a API pública
 `rules.play`, que não muta.
 
-## 7. Testar a robustez dos workers
+## 7. AlphaZero para Quelhas (qz-v1)
+
+Pipeline em `training/quelhas/` (porte do atari_go; regras validadas contra
+14 813 plies de traces TS, 0 divergências; sem augmentação D4 — rotações
+trocariam os jogadores). Treino de 2026-07-19: 30 iterações × 2000 jogos a
+160 sims na RTX 5070 Ti (~700 jogos/min), policy loss 3,87 → 2,34.
+
+Motivação e veredicto: o utilizador reportou que o motor clássico «joga
+sempre 2 e não gere o fim». O árbitro exato confirmou (86% comprimento 2 no
+N5) e a arena da rede contra o N5 WASM + solver de finais deu **39–1
+(97,5%)** com 0 ilegais — e uma distribuição de comprimentos muito mais
+rica (31% das jogadas com comprimento ≥3, incluindo linhas quase completas)
+(`artifacts/quelhas-arena/2026-07-19T09-23-00-373Z/results.json`).
+
+Serviço de inferência (porta 8101, com solver exato de finais no serviço):
+
+```bash
+docker run -d --name crjm-qz-serve --restart unless-stopped \
+  --runtime=nvidia --gpus all -e HOST=0.0.0.0 -e PORT=8101 \
+  -p 127.0.0.1:8101:8101 -v /home/proteu/crjm/training:/workspace/training \
+  -w /workspace/training pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime \
+  bash -lc "pip install -q fastapi 'uvicorn[standard]' && python -m quelhas.serve"
+
+bun scripts/quelhas-arena.ts --games 40 --budget 2000
+```
+
+## 8. Testar a robustez dos workers
 
 Os workers enviam envelopes de sucesso/erro e o processo pai usa leituras com
 timeout + inspeção de `exitcode`; uma falha CUDA/Python deixa assim de bloquear

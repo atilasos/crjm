@@ -1,0 +1,378 @@
+{
+  "generatedAt": "2026-07-19T09:23:00.372Z",
+  "options": {
+    "games": 40,
+    "base": "http://127.0.0.1:8101",
+    "seed": 20260719,
+    "budgetMs": 2000
+  },
+  "service": {
+    "status": "ok",
+    "model": "/workspace/training/runs/qz-v1/best.pt",
+    "device": "cuda"
+  },
+  "wins": {
+    "server-nn": 39,
+    "local-n5": 1
+  },
+  "winrateServer": 0.975,
+  "illegalMoves": {
+    "server-nn": 0,
+    "local-n5": 0
+  },
+  "latencyMs": {
+    "server-nn": {
+      "p50": 340.1,
+      "p95": 364
+    },
+    "local-n5": {
+      "p50": 1999.4,
+      "p95": 2000.4
+    }
+  },
+  "chosenLengths": {
+    "server-nn": {
+      "2": 390,
+      "3": 41,
+      "4": 35,
+      "5": 26,
+      "6": 22,
+      "7": 16,
+      "8": 9,
+      "9": 19,
+      "10": 5
+    },
+    "local-n5": {
+      "2": 502,
+      "3": 35,
+      "4": 22,
+      "5": 5,
+      "6": 5,
+      "7": 3,
+      "8": 3,
+      "9": 7
+    }
+  },
+  "records": [
+    {
+      "gameId": 0,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 38,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 1,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 29,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 2,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 34,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 3,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 37,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 4,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 36,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 5,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 37,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 6,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 34,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 7,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 35,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 8,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 28,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 9,
+      "serverAs": "jogador2",
+      "winner": "local-n5",
+      "plies": 36,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 10,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 11,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 35,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 12,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 30,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 13,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 31,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 14,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 26,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 15,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 29,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 16,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 36,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 17,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 33,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 18,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 36,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 19,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 33,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 20,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 34,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 21,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 33,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 22,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 28,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 23,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 33,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 24,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 25,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 31,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 26,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 27,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 35,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 28,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 29,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 35,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 30,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 30,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 31,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 23,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 32,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 33,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 37,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 34,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 35,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 29,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 36,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 30,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 37,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 35,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 38,
+      "serverAs": "jogador1",
+      "winner": "server-nn",
+      "plies": 32,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": 39,
+      "serverAs": "jogador2",
+      "winner": "server-nn",
+      "plies": 35,
+      "openingPlies": 4,
+      "illegalBy": null
+    }
+  ]
+}
