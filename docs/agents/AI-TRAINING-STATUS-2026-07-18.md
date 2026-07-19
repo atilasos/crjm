@@ -77,7 +77,8 @@ Uma alteração de motor só é promovida quando cumpre simultaneamente:
 
 1. 0 jogadas ilegais;
 2. deadline dentro de `budget + 100 ms` no teste local relevante;
-3. cores/aberturas emparelhadas e seed registada;
+3. cores/aberturas emparelhadas, seed registada e **amostra n≥50** (amostras
+   pequenas invertem-se: Produto 7–3 em n=10 → 19–31 em n=50);
 4. resultado contra baseline guardado em `artifacts/`;
 5. build WASM e suite de testes sem falhas;
 6. sem alegações de “jogo perfeito” fora do que está demonstrado nas fontes.
