@@ -210,6 +210,14 @@ struct Ctx<'a, F: Fn() -> f64> {
 
 impl<'a, F: Fn() -> f64> Ctx<'a, F> {
     #[inline]
+    /// Verificação imediata do relógio (para loops de geração/avaliação
+    /// que não passam por tick() com frequência suficiente).
+    fn check_time(&mut self) {
+        if !self.stopped && (self.now)() >= self.deadline {
+            self.stopped = true;
+        }
+    }
+
     fn tick(&mut self) {
         self.nodes += 1;
         if self.nodes & 127 == 0 && (self.now)() >= self.deadline {
@@ -331,7 +339,13 @@ fn negamax<F: Fn() -> f64>(
         // avaliação estática (melhora drasticamente os cortes alpha-beta).
         let mut children: Vec<(i32, StateView, GroupsInc, GroupsInc)> =
             Vec::with_capacity(moves.len());
-        for mv in &moves {
+        for (i, mv) in moves.iter().enumerate() {
+            if i & 31 == 0 {
+                ctx.check_time();
+                if ctx.stopped {
+                    return best;
+                }
+            }
             let Some(next) = apply_move(st, *mv) else { continue };
             let (nb, nw) = apply_groups(gb, gw, *mv, ctx.board);
             let order = signed(eval_black(&nb, &nw), st.player_to_move);
@@ -396,7 +410,7 @@ struct ExactCtx<'a, F: Fn() -> f64> {
 
 fn exact_minimax<F: Fn() -> f64>(state: StateView, ctx: &mut ExactCtx<'_, F>) -> i8 {
     ctx.nodes += 1;
-    if ctx.nodes & 255 == 0 && (ctx.now)() >= ctx.deadline {
+    if ctx.nodes & 63 == 0 && (ctx.now)() >= ctx.deadline {
         ctx.stopped = true;
     }
     if ctx.stopped {
@@ -511,6 +525,23 @@ fn exact_minimax<F: Fn() -> f64>(state: StateView, ctx: &mut ExactCtx<'_, F>) ->
 // Jogada aleatória (nível 0 e último recurso)
 // ============================================================================
 
+/// Fallback total: nunca entra em pânico. Par de casas se possível; com uma
+/// única casa vazia devolve colocação simples; sem casas vazias devolve uma
+/// colocação estruturalmente válida na casa 0, que o cliente rejeita como
+/// ilegal sem abortar (estado inalcançável em jogo normal).
+fn safe_fallback_move(state: StateView, rng: &mut SplitMix64) -> Move {
+    if let Some(mv) = choose_random_move(state, rng) {
+        return mv;
+    }
+    let empty = empty_mask(state);
+    for i in 0..61u8 {
+        if empty & (1u64 << i) != 0 {
+            return Move { pos_a: i, color_a: Stone::Black, pos_b: -1, color_b: Stone::Black };
+        }
+    }
+    Move { pos_a: 0, color_a: Stone::Black, pos_b: -1, color_b: Stone::Black }
+}
+
 fn choose_random_move(state: StateView, rng: &mut SplitMix64) -> Option<Move> {
     let empty = empty_mask(state);
     if empty == 0 {
@@ -594,7 +625,13 @@ fn search_root<F: Fn() -> f64>(
 
     // Profundidade 1: avalia todos os filhos da raiz e ordena.
     let mut children: Vec<RootChild> = Vec::with_capacity(root_moves.len());
-    for mv in &root_moves {
+    for (i, mv) in root_moves.iter().enumerate() {
+        if i & 31 == 0 {
+            ctx.check_time();
+            if ctx.stopped {
+                break;
+            }
+        }
         let Some(next) = apply_move(state, *mv) else { continue };
         let (nb, nw) = apply_groups(&gb0, &gw0, *mv, board);
         ctx.leaves += 1;
@@ -753,6 +790,7 @@ fn choose_move_inner(
     let empty_count = empty.count_ones() as u8;
 
     if empty_count == 0 {
+        // Sem casas: sentinela estrutural (o cliente rejeita como ilegal).
         return Move { pos_a: 0, color_a: Stone::Black, pos_b: -1, color_b: Stone::Black };
     }
 
@@ -764,7 +802,7 @@ fn choose_move_inner(
         let moves = generate_candidate_moves(state, board, (empty_count as usize).max(6));
         stats.root_moves = moves.len() as u32;
         if moves.is_empty() {
-            return choose_random_move(state, &mut rng).unwrap();
+            return safe_fallback_move(state, &mut rng);
         }
 
         let mut ctx = ExactCtx {
@@ -815,12 +853,12 @@ fn choose_move_inner(
     match cfg.difficulty {
         0 => {
             stats.mode = "random";
-            choose_random_move(state, &mut rng).unwrap()
+            safe_fallback_move(state, &mut rng)
         }
         1 => {
             stats.mode = "greedy";
             greedy_move(state, board, (cfg.candidate_k as usize).min(12), stats)
-                .unwrap_or_else(|| choose_random_move(state, &mut rng).unwrap())
+                .unwrap_or_else(|| safe_fallback_move(state, &mut rng))
         }
         d => {
             // Níveis 2+: alpha-beta com iterative deepening.
@@ -831,7 +869,7 @@ fn choose_move_inner(
                 _ => ((cfg.candidate_k as usize).clamp(6, 16), 32u8),
             };
             search_root(state, board, root_cells, depth_cap, deadline, now_ms, stats)
-                .unwrap_or_else(|| choose_random_move(state, &mut rng).unwrap())
+                .unwrap_or_else(|| safe_fallback_move(state, &mut rng))
         }
     }
 }
@@ -869,6 +907,38 @@ mod tests {
         }
         let b = mv.pos_b as usize;
         b < 61 && b != a && (empty & bit(b)) != 0
+    }
+
+    /// Estados degenerados aceites pela API não podem abortar o motor.
+    #[test]
+    fn estados_degenerados_nao_entram_em_panico() {
+        let b = board();
+        let start = std::time::Instant::now();
+        let now = move || start.elapsed().as_secs_f64() * 1000.0;
+
+        // Tabuleiro cheio: sentinela estrutural, sem panic.
+        let cheio = StateView {
+            black: FULL_MASK,
+            white: 0,
+            player_to_move: Stone::Black,
+            first_move: false,
+        };
+        let mv = choose_move(cheio, cfg(4, 100), &b, now);
+        assert!(mv.pos_b < 0);
+
+        // Uma única casa vazia fora do primeiro lance: colocação simples,
+        // estruturalmente válida, sem panic.
+        let start2 = std::time::Instant::now();
+        let now2 = move || start2.elapsed().as_secs_f64() * 1000.0;
+        let quase_cheio = StateView {
+            black: FULL_MASK & !bit(30),
+            white: 0,
+            player_to_move: Stone::White,
+            first_move: false,
+        };
+        let mv = choose_move(quase_cheio, cfg(4, 100), &b, now2);
+        assert_eq!(mv.pos_a, 30);
+        assert!(mv.pos_b < 0);
     }
 
     /// Joga um jogo completo motor-contra-motor e valida legalidade de todas
