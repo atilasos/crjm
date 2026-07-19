@@ -1,6 +1,18 @@
-use super::board::{bit, Board, FULL_MASK};
+//! Motor de pesquisa do Produto.
+//!
+//! Arquitetura (redesenho 2026-07): negamax alpha-beta com iterative deepening,
+//! tabela de transposições, ordenação de jogadas por avaliação estática e
+//! avaliação incremental de grupos (union-find, ver `GroupsInc`). Substitui o
+//! antigo bandit UCT plano sem árvore. O endgame exato (empty <= endgameEmptyN)
+//! mantém-se, agora com proteção de deadline.
+
+use super::board::{bit, Board};
+use super::groups::GroupsInc;
 use super::movegen::{apply_move, empty_mask, generate_candidate_moves, Move, StateView, Stone};
-use super::scoring::{score_for, winner, Winner};
+use super::scoring::{winner, Winner};
+
+use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hasher};
 
 #[derive(Clone, Copy, Debug)]
 pub struct AiConfig {
@@ -67,149 +79,303 @@ impl SplitMix64 {
     }
 }
 
-/// Count cells that would connect two or more groups if filled
-fn count_bridge_cells(mask: u64, board: &Board) -> i32 {
-    use super::groups::group_sizes;
-    let empty = empty_mask(StateView { black: mask, white: !mask & FULL_MASK, player_to_move: Stone::Black, first_move: false });
-    let current_groups = group_sizes(mask, board);
-    let num_groups = current_groups.len();
-    if num_groups <= 1 {
-        return 0;
+// ============================================================================
+// Avaliação (perspetiva fixa: positivo favorece as Pretas)
+// ============================================================================
+
+const INF: i32 = i32::MAX / 4;
+const WIN: i32 = 1_000_000;
+
+#[inline]
+fn signed(e_black: i32, side: Stone) -> i32 {
+    match side {
+        Stone::Black => e_black,
+        Stone::White => -e_black,
     }
+}
 
-    let mut bridges = 0i32;
-    let mut tmp = empty & FULL_MASK;
-    while tmp != 0 {
-        let idx = tmp.trailing_zeros() as usize;
-        tmp &= !bit(idx);
-
-        // Check if placing here would reduce group count
-        let test_mask = mask | bit(idx);
-        let new_groups = group_sizes(test_mask, board);
-        if new_groups.len() < num_groups {
-            bridges += (num_groups - new_groups.len()) as i32;
+/// Valor terminal exato: vitória pelo maior produto; desempate por MENOS peças.
+fn eval_terminal_black(gb: &GroupsInc, gw: &GroupsInc) -> i32 {
+    let pb = gb.product() as i32;
+    let pw = gw.product() as i32;
+    if pb != pw {
+        return if pb > pw { WIN + (pb - pw) } else { -(WIN + (pw - pb)) };
+    }
+    let cb = gb.count() as i32;
+    let cw = gw.count() as i32;
+    if cb != cw {
+        if cb < cw {
+            WIN
+        } else {
+            -WIN
         }
+    } else {
+        0
     }
-    bridges
 }
 
-/// Evaluate potential future product after optimal group merging
-fn evaluate_potential(mask: u64, board: &Board) -> i32 {
-    use super::groups::group_sizes;
-    let mut sizes: Vec<u32> = group_sizes(mask, board).into_iter().map(|s| s as u32).collect();
-    if sizes.len() <= 1 {
-        return 0;
-    }
-    sizes.sort_unstable();
-    sizes.reverse();
+/// Valor heurístico de uma cor (escala: produto x130).
+fn side_value(g: &GroupsInc) -> i32 {
+    let (t1, t2) = g.top2();
+    let product = if t2 == 0 { 0 } else { t1 as i32 * t2 as i32 };
+    let mut v = product * 130;
 
-    // Current product
-    let current = (sizes[0] * sizes[1]) as i32;
-
-    // If we could merge top 2 groups, what would the new product be?
-    // (merged group becomes sizes[0] + sizes[1], next largest is sizes[2] if exists)
-    if sizes.len() >= 3 {
-        let merged = sizes[0] + sizes[1];
-        let potential = (merged * sizes[2]) as i32;
-        return (potential - current) / 3; // Discount by 3 (not guaranteed)
+    // Estrutura: com <2 grupos o produto é 0 — penaliza ficar sem segundo grupo.
+    if g.count() > 0 && g.groups < 2 {
+        v -= 18_000;
     }
-    0
+
+    // Equilíbrio: produto maximiza-se com grupos de tamanhos próximos.
+    if t2 > 0 {
+        let bal = (t2 as i32 * 100) / (t1 as i32).max(1);
+        v += bal * 80;
+    }
+
+    // Eficiência/desempate: menos peças ganha em produto igual.
+    v -= g.count() as i32 * 12;
+
+    v
 }
 
-fn eval_heuristic(state: StateView, board: &Board, root_player: Stone) -> i32 {
-    let (my_mask, opp_mask) = match root_player {
-        Stone::Black => (state.black, state.white),
-        Stone::White => (state.white, state.black),
-    };
+#[inline]
+fn eval_black(gb: &GroupsInc, gw: &GroupsInc) -> i32 {
+    side_value(gb) - side_value(gw)
+}
 
-    let my = score_for(my_mask, board);
-    let opp = score_for(opp_mask, board);
+// ============================================================================
+// Tabela de transposições
+// ============================================================================
 
-    // Base score: product difference (most important)
-    let mut score = (my.product as i32 - opp.product as i32) * 100;
+#[derive(Clone, Copy)]
+enum Bound {
+    Exact,
+    Lower,
+    Upper,
+}
 
-    // ========== GROUP STRUCTURE ANALYSIS ==========
+#[derive(Clone, Copy)]
+struct TtEntry {
+    depth: u8,
+    value: i32,
+    bound: Bound,
+}
 
-    // 1. Single group penalty/bonus (important for strategy)
-    // Having only 1 group = 0 points, very bad
-    if my.top2 == 0 && my.top1 > 0 {
-        // My single group: severe penalty scaled by group size
-        // Larger single group = closer to splitting, less penalty
-        let size_factor = (my.top1 as i32).min(20);
-        score -= 800 - size_factor * 15;
-    }
-    if opp.top2 == 0 && opp.top1 > 0 {
-        // Opponent has single group: bonus for us (they score 0)
-        // Larger opponent group = harder to keep them at 0, less bonus
-        let size_factor = (opp.top1 as i32).min(20);
-        score += 600 - size_factor * 10;
-    }
+/// Hasher trivial para chaves u128 (as máscaras já são quase uniformes com a
+/// mistura multiplicativa; SipHash seria desperdício por nó).
+#[derive(Default)]
+struct FxU128Hasher(u64);
 
-    // 2. Equilibrium bonus for having balanced groups
-    // Product is maximized when groups are similar size (e.g., 10*10 > 5*15)
-    if my.top2 > 0 {
-        let minv = my.top1.min(my.top2) as i32;
-        let maxv = my.top1.max(my.top2) as i32;
-        // Balance ratio: 1.0 = perfect balance, 0.0 = very unbalanced
-        let balance = (minv * 100) / maxv.max(1);
-        score += balance * 2; // Up to +200 for perfect balance
-    }
-    if opp.top2 > 0 {
-        let minv = opp.top1.min(opp.top2) as i32;
-        let maxv = opp.top1.max(opp.top2) as i32;
-        let balance = (minv * 100) / maxv.max(1);
-        score -= balance; // Penalize opponent's balance
+impl Hasher for FxU128Hasher {
+    fn finish(&self) -> u64 {
+        self.0
     }
 
-    // 3. Bridge cells (cells that would merge groups)
-    // Having more bridge opportunities = more flexible
-    let my_bridges = count_bridge_cells(my_mask, board);
-    let opp_bridges = count_bridge_cells(opp_mask, board);
-    score += (my_bridges - opp_bridges) * 25;
-
-    // 4. Potential scoring (future product if we merge)
-    let my_potential = evaluate_potential(my_mask, board);
-    let opp_potential = evaluate_potential(opp_mask, board);
-    score += my_potential - opp_potential;
-
-    // 5. Stone count (tiebreaker, favor efficiency)
-    score -= (my.count as i32 - opp.count as i32) * 3;
-
-    // 6. Territorial advantage (empty cells adjacent to our pieces)
-    let empty = empty_mask(state);
-    let my_adjacent = count_adjacent_empty(my_mask, empty, board);
-    let opp_adjacent = count_adjacent_empty(opp_mask, empty, board);
-    score += (my_adjacent - opp_adjacent) * 5;
-
-    // 7. Sabotage detection (preventing opponent from scoring)
-    // If opponent has only 1 group, we want to keep it that way
-    if opp.top2 == 0 && opp.top1 > 0 {
-        let opp_bridges = count_bridge_cells(opp_mask, board);
-        if opp_bridges == 0 {
-            // Opponent has no way to split their group - huge bonus!
-            score += 400;
-        } else if opp_bridges <= 2 {
-            // Very few split opportunities for opponent
-            score += 150;
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = (self.0 ^ b as u64).wrapping_mul(0x100000001b3);
         }
     }
 
-    score
+    fn write_u128(&mut self, n: u128) {
+        let lo = n as u64;
+        let hi = (n >> 64) as u64;
+        let mut h = lo.wrapping_mul(0x9e3779b97f4a7c15) ^ hi.wrapping_mul(0xbf58476d1ce4e5b9);
+        h ^= h >> 29;
+        h = h.wrapping_mul(0x94d049bb133111eb);
+        self.0 = h ^ (h >> 32);
+    }
 }
 
-/// Count empty cells adjacent to a mask
-fn count_adjacent_empty(mask: u64, empty: u64, board: &Board) -> i32 {
-    let mut count = 0i32;
-    let mut tmp = mask;
-    while tmp != 0 {
-        let idx = tmp.trailing_zeros() as usize;
-        tmp &= !bit(idx);
-        // neighbours[idx] is a bitmask, count empty cells that are neighbours
-        let adj_empty = board.neighbours[idx] & empty;
-        count += adj_empty.count_ones() as i32;
-    }
-    count
+type TtMap = HashMap<u128, TtEntry, BuildHasherDefault<FxU128Hasher>>;
+
+#[inline]
+fn tt_key(st: StateView) -> u128 {
+    let side_bit = if st.player_to_move == Stone::White { 1u64 << 62 } else { 0 };
+    (st.black | side_bit) as u128 | ((st.white as u128) << 64)
 }
+
+// ============================================================================
+// Alpha-beta com deadline
+// ============================================================================
+
+struct Ctx<'a, F: Fn() -> f64> {
+    board: &'a Board,
+    now: &'a F,
+    deadline: f64,
+    nodes: u64,
+    leaves: u64,
+    stopped: bool,
+    tt: TtMap,
+}
+
+impl<'a, F: Fn() -> f64> Ctx<'a, F> {
+    #[inline]
+    fn tick(&mut self) {
+        self.nodes += 1;
+        if self.nodes & 127 == 0 && (self.now)() >= self.deadline {
+            self.stopped = true;
+        }
+    }
+}
+
+fn apply_groups(gb: &GroupsInc, gw: &GroupsInc, mv: Move, board: &Board) -> (GroupsInc, GroupsInc) {
+    let mut nb = gb.clone();
+    let mut nw = gw.clone();
+    match mv.color_a {
+        Stone::Black => nb.add(mv.pos_a as usize, board),
+        Stone::White => nw.add(mv.pos_a as usize, board),
+    }
+    if mv.pos_b >= 0 {
+        match mv.color_b {
+            Stone::Black => nb.add(mv.pos_b as usize, board),
+            Stone::White => nw.add(mv.pos_b as usize, board),
+        }
+    }
+    (nb, nw)
+}
+
+/// Nº de casas candidatas em nós internos, em função da profundidade restante.
+#[inline]
+fn inner_cells(depth: u8) -> usize {
+    match depth {
+        0 | 1 => 8,
+        2 => 10,
+        _ => 12,
+    }
+}
+
+fn negamax<F: Fn() -> f64>(
+    st: StateView,
+    gb: &GroupsInc,
+    gw: &GroupsInc,
+    depth: u8,
+    mut alpha: i32,
+    beta: i32,
+    ctx: &mut Ctx<'_, F>,
+) -> i32 {
+    ctx.tick();
+    if ctx.stopped {
+        return 0;
+    }
+
+    let empty = empty_mask(st);
+    let empty_n = empty.count_ones();
+    if empty_n == 0 || (empty_n < 2 && !st.first_move) {
+        ctx.leaves += 1;
+        return signed(eval_terminal_black(gb, gw), st.player_to_move);
+    }
+    if depth == 0 {
+        ctx.leaves += 1;
+        return signed(eval_black(gb, gw), st.player_to_move);
+    }
+
+    let key = tt_key(st);
+    if let Some(e) = ctx.tt.get(&key) {
+        if e.depth >= depth {
+            match e.bound {
+                Bound::Exact => return e.value,
+                Bound::Lower => {
+                    if e.value >= beta {
+                        return e.value;
+                    }
+                    if e.value > alpha {
+                        alpha = e.value;
+                    }
+                }
+                Bound::Upper => {
+                    if e.value <= alpha {
+                        return e.value;
+                    }
+                }
+            }
+        }
+    }
+
+    let moves = generate_candidate_moves(st, ctx.board, inner_cells(depth));
+    if moves.is_empty() {
+        ctx.leaves += 1;
+        return signed(eval_black(gb, gw), st.player_to_move);
+    }
+
+    let alpha0 = alpha;
+    let mut best = -INF;
+
+    if depth == 1 {
+        // Nós pré-folha: itera preguiçosamente, sem vetor de filhos.
+        for mv in &moves {
+            if ctx.stopped {
+                return best;
+            }
+            let Some(next) = apply_move(st, *mv) else { continue };
+            let (nb, nw) = apply_groups(gb, gw, *mv, ctx.board);
+            ctx.leaves += 1;
+            let child_empty = empty_mask(next).count_ones();
+            let e_black = if child_empty == 0 {
+                eval_terminal_black(&nb, &nw)
+            } else {
+                eval_black(&nb, &nw)
+            };
+            let v = signed(e_black, st.player_to_move);
+            if v > best {
+                best = v;
+            }
+            if v > alpha {
+                alpha = v;
+            }
+            if alpha >= beta {
+                break;
+            }
+        }
+    } else {
+        // Nós interiores: expande filhos com grupos incrementais e ordena por
+        // avaliação estática (melhora drasticamente os cortes alpha-beta).
+        let mut children: Vec<(i32, StateView, GroupsInc, GroupsInc)> =
+            Vec::with_capacity(moves.len());
+        for mv in &moves {
+            let Some(next) = apply_move(st, *mv) else { continue };
+            let (nb, nw) = apply_groups(gb, gw, *mv, ctx.board);
+            let order = signed(eval_black(&nb, &nw), st.player_to_move);
+            children.push((order, next, nb, nw));
+        }
+        children.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+
+        for (_, next, nb, nw) in &children {
+            if ctx.stopped {
+                return best;
+            }
+            let v = -negamax(*next, nb, nw, depth - 1, -beta, -alpha, ctx);
+            if ctx.stopped {
+                return best;
+            }
+            if v > best {
+                best = v;
+            }
+            if v > alpha {
+                alpha = v;
+            }
+            if alpha >= beta {
+                break;
+            }
+        }
+    }
+
+    if !ctx.stopped {
+        let bound = if best <= alpha0 {
+            Bound::Upper
+        } else if best >= beta {
+            Bound::Lower
+        } else {
+            Bound::Exact
+        };
+        ctx.tt.insert(key, TtEntry { depth, value: best, bound });
+    }
+
+    best
+}
+
+// ============================================================================
+// Endgame exato (com proteção de deadline)
+// ============================================================================
 
 fn utility_exact(state: StateView, board: &Board) -> i8 {
     match winner(state.black, state.white, board) {
@@ -219,14 +385,28 @@ fn utility_exact(state: StateView, board: &Board) -> i8 {
     }
 }
 
-fn exact_minimax(
-    state: StateView,
-    board: &Board,
-    memo: &mut std::collections::HashMap<u128, i8>,
-) -> i8 {
+struct ExactCtx<'a, F: Fn() -> f64> {
+    board: &'a Board,
+    now: &'a F,
+    deadline: f64,
+    nodes: u64,
+    stopped: bool,
+    memo: HashMap<u128, i8>,
+}
+
+fn exact_minimax<F: Fn() -> f64>(state: StateView, ctx: &mut ExactCtx<'_, F>) -> i8 {
+    ctx.nodes += 1;
+    if ctx.nodes & 255 == 0 && (ctx.now)() >= ctx.deadline {
+        ctx.stopped = true;
+    }
+    if ctx.stopped {
+        return 0;
+    }
+
     let empty = empty_mask(state);
-    if empty == 0 {
-        return utility_exact(state, board);
+    let empty_n = empty.count_ones();
+    if empty_n == 0 || (empty_n < 2 && !state.first_move) {
+        return utility_exact(state, ctx.board);
     }
 
     let mut black_key = state.black;
@@ -237,7 +417,7 @@ fn exact_minimax(
         black_key |= 1u64 << 62;
     }
     let key = (black_key as u128) | ((state.white as u128) << 64);
-    if let Some(&v) = memo.get(&key) {
+    if let Some(&v) = ctx.memo.get(&key) {
         return v;
     }
 
@@ -250,66 +430,63 @@ fn exact_minimax(
     }
 
     let colors = [Stone::Black, Stone::White];
-
     let mut best: i8 = if state.player_to_move == Stone::Black { -2 } else { 2 };
 
-    if state.first_move {
-        for &pos in &empties {
-            for &c in &colors {
-                let mv = Move {
-                    pos_a: pos,
-                    color_a: c,
-                    pos_b: -1,
-                    color_b: c,
-                };
-                if let Some(next) = apply_move(state, mv) {
-                    let u = exact_minimax(next, board, memo);
-                    if state.player_to_move == Stone::Black {
-                        if u > best {
-                            best = u;
+    'outer: {
+        if state.first_move {
+            for &pos in &empties {
+                for &c in &colors {
+                    let mv = Move { pos_a: pos, color_a: c, pos_b: -1, color_b: c };
+                    if let Some(next) = apply_move(state, mv) {
+                        let u = exact_minimax(next, ctx);
+                        if ctx.stopped {
+                            return 0;
                         }
-                        if best == 1 {
-                            break;
-                        }
-                    } else {
-                        if u < best {
-                            best = u;
-                        }
-                        if best == -1 {
-                            break;
+                        if state.player_to_move == Stone::Black {
+                            if u > best {
+                                best = u;
+                            }
+                            if best == 1 {
+                                break 'outer;
+                            }
+                        } else {
+                            if u < best {
+                                best = u;
+                            }
+                            if best == -1 {
+                                break 'outer;
+                            }
                         }
                     }
                 }
             }
-        }
-    } else {
-        for i in 0..empties.len() {
-            for j in (i + 1)..empties.len() {
-                let a = empties[i];
-                let b = empties[j];
-                for &c1 in &colors {
-                    for &c2 in &colors {
-                        let mv = Move {
-                            pos_a: a,
-                            color_a: c1,
-                            pos_b: b as i8,
-                            color_b: c2,
-                        };
-                        if let Some(next) = apply_move(state, mv) {
-                            let u = exact_minimax(next, board, memo);
-                            if state.player_to_move == Stone::Black {
-                                if u > best {
-                                    best = u;
+        } else {
+            for i in 0..empties.len() {
+                for j in (i + 1)..empties.len() {
+                    let a = empties[i];
+                    let b = empties[j];
+                    for &c1 in &colors {
+                        for &c2 in &colors {
+                            let mv = Move { pos_a: a, color_a: c1, pos_b: b as i8, color_b: c2 };
+                            if let Some(next) = apply_move(state, mv) {
+                                let u = exact_minimax(next, ctx);
+                                if ctx.stopped {
+                                    return 0;
                                 }
-                                if best == 1 {
-                                    break;
-                                }
-                            } else {
-                                if u < best {
-                                    best = u;
-                                }
-                                if best == -1 {
-                                    break;
+                                if state.player_to_move == Stone::Black {
+                                    if u > best {
+                                        best = u;
+                                    }
+                                    if best == 1 {
+                                        break 'outer;
+                                    }
+                                } else {
+                                    if u < best {
+                                        best = u;
+                                    }
+                                    if best == -1 {
+                                        break 'outer;
+                                    }
                                 }
                             }
                         }
@@ -326,9 +503,13 @@ fn exact_minimax(
         best = 1;
     }
 
-    memo.insert(key, best);
+    ctx.memo.insert(key, best);
     best
 }
+
+// ============================================================================
+// Jogada aleatória (nível 0 e último recurso)
+// ============================================================================
 
 fn choose_random_move(state: StateView, rng: &mut SplitMix64) -> Option<Move> {
     let empty = empty_mask(state);
@@ -349,12 +530,7 @@ fn choose_random_move(state: StateView, rng: &mut SplitMix64) -> Option<Move> {
     if state.first_move {
         let pos = empties[rng.gen_range(empties.len())];
         let c = colors[rng.gen_range(2)];
-        return Some(Move {
-            pos_a: pos,
-            color_a: c,
-            pos_b: -1,
-            color_b: c,
-        });
+        return Some(Move { pos_a: pos, color_a: c, pos_b: -1, color_b: c });
     }
 
     if empties.len() < 2 {
@@ -365,122 +541,154 @@ fn choose_random_move(state: StateView, rng: &mut SplitMix64) -> Option<Move> {
     if j >= i {
         j += 1;
     }
-    let a = empties[i];
-    let b = empties[j];
-    let c1 = colors[rng.gen_range(2)];
-    let c2 = colors[rng.gen_range(2)];
     Some(Move {
-        pos_a: a,
-        color_a: c1,
-        pos_b: b as i8,
-        color_b: c2,
+        pos_a: empties[i],
+        color_a: colors[rng.gen_range(2)],
+        pos_b: empties[j] as i8,
+        color_b: colors[rng.gen_range(2)],
     })
 }
 
-/// Negamax search with alpha-beta pruning
-fn negamax(
+// ============================================================================
+// Pesquisa de raiz (iterative deepening)
+// ============================================================================
+
+struct RootChild {
+    mv: Move,
+    st: StateView,
+    gb: GroupsInc,
+    gw: GroupsInc,
+    score: i32,
+    nodes: u64,
+}
+
+#[allow(clippy::too_many_arguments)]
+fn search_root<F: Fn() -> f64>(
     state: StateView,
     board: &Board,
-    depth: u8,
-    mut alpha: i32,
-    beta: i32,
-    maximizing_player: Stone,
-    candidate_k: usize,
+    root_cells: usize,
+    max_depth_cap: u8,
     deadline: f64,
-    now_ms: &impl Fn() -> f64,
-    nodes: &mut u32,
-) -> i32 {
-    *nodes += 1;
+    now_ms: &F,
+    stats: &mut SearchStats,
+) -> Option<Move> {
+    stats.mode = "alphabeta";
 
-    // Time check every 256 nodes
-    if *nodes & 255 == 0 && now_ms() >= deadline {
-        return 0; // Will be ignored due to timeout
+    let root_moves = generate_candidate_moves(state, board, root_cells);
+    if root_moves.is_empty() {
+        return None;
     }
 
-    let empty = empty_mask(state);
-    if empty == 0 || depth == 0 {
-        let raw = eval_heuristic(state, board, maximizing_player);
-        // Negate if we're not the maximizing player
-        return if state.player_to_move == maximizing_player { raw } else { -raw };
-    }
+    let gb0 = GroupsInc::from_mask(state.black, board);
+    let gw0 = GroupsInc::from_mask(state.white, board);
 
-    let moves = generate_candidate_moves(state, board, candidate_k);
-    if moves.is_empty() {
-        let raw = eval_heuristic(state, board, maximizing_player);
-        return if state.player_to_move == maximizing_player { raw } else { -raw };
-    }
+    let mut ctx = Ctx {
+        board,
+        now: now_ms,
+        deadline,
+        nodes: 0,
+        leaves: 0,
+        stopped: false,
+        tt: TtMap::default(),
+    };
 
-    let mut best_score = i32::MIN / 2;
-
-    for mv in moves {
-        if now_ms() >= deadline {
-            break;
-        }
-        let Some(next) = apply_move(state, mv) else { continue };
-        let score = -negamax(next, board, depth - 1, -beta, -alpha, maximizing_player, candidate_k, deadline, now_ms, nodes);
-
-        if score > best_score {
-            best_score = score;
-        }
-        if score > alpha {
-            alpha = score;
-        }
-        if alpha >= beta {
-            break; // Beta cutoff
-        }
-    }
-
-    best_score
-}
-
-/// UCT selection formula for MCTS
-fn uct_score(wins: f32, visits: u32, parent_visits: u32, exploration: f32) -> f32 {
-    if visits == 0 {
-        return f32::MAX; // Unvisited nodes have highest priority
-    }
-    let exploitation = wins / visits as f32;
-    let exploration_term = exploration * ((parent_visits as f32).ln() / visits as f32).sqrt();
-    exploitation + exploration_term
-}
-
-/// Heuristic-guided rollout (better than random)
-fn heuristic_rollout(mut state: StateView, board: &Board, rng: &mut SplitMix64, max_steps: u32) -> StateView {
-    let mut steps = 0u32;
-    while (state.black | state.white) != FULL_MASK && steps < max_steps {
-        // Generate a few candidate moves and pick the best one (light heuristic)
-        let moves = generate_candidate_moves(state, board, 8);
-        if moves.is_empty() {
-            break;
-        }
-
-        // With 70% probability, pick a "good" move; otherwise random
-        let mv = if rng.gen_range(10) < 7 && moves.len() > 1 {
-            // Quick 1-ply evaluation
-            let mut best_mv = moves[0];
-            let mut best_score = i32::MIN;
-            for m in &moves {
-                if let Some(next) = apply_move(state, *m) {
-                    let s = eval_heuristic(next, board, state.player_to_move);
-                    if s > best_score {
-                        best_score = s;
-                        best_mv = *m;
-                    }
-                }
-            }
-            best_mv
+    // Profundidade 1: avalia todos os filhos da raiz e ordena.
+    let mut children: Vec<RootChild> = Vec::with_capacity(root_moves.len());
+    for mv in &root_moves {
+        let Some(next) = apply_move(state, *mv) else { continue };
+        let (nb, nw) = apply_groups(&gb0, &gw0, *mv, board);
+        ctx.leaves += 1;
+        let child_empty = empty_mask(next).count_ones();
+        let e_black = if child_empty == 0 {
+            eval_terminal_black(&nb, &nw)
         } else {
-            moves[rng.gen_range(moves.len())]
+            eval_black(&nb, &nw)
         };
+        children.push(RootChild {
+            mv: *mv,
+            st: next,
+            gb: nb,
+            gw: nw,
+            score: signed(e_black, state.player_to_move),
+            nodes: 1,
+        });
+    }
+    if children.is_empty() {
+        return None;
+    }
+    children.sort_by(|a, b| b.score.cmp(&a.score));
 
-        if let Some(next) = apply_move(state, mv) {
-            state = next;
+    stats.root_moves = children.len() as u32;
+    stats.depth = 1;
+    stats.best_score = children[0].score;
+
+    let empty_n = empty_mask(state).count_ones();
+    let max_depth = ((empty_n / 2) + 1).min(max_depth_cap as u32) as u8;
+
+    let mut best_idx = 0usize;
+
+    for depth in 2..=max_depth {
+        let mut alpha = -INF;
+        let mut iter_best = -INF;
+        let mut iter_best_i: Option<usize> = None;
+        let mut completed = 0usize;
+
+        for (i, ch) in children.iter_mut().enumerate() {
+            if (now_ms)() >= ctx.deadline {
+                ctx.stopped = true;
+            }
+            if ctx.stopped {
+                break;
+            }
+            let n0 = ctx.nodes;
+            let v = -negamax(ch.st, &ch.gb, &ch.gw, depth - 1, -INF, -alpha, &mut ctx);
+            ch.nodes += ctx.nodes - n0;
+            if ctx.stopped {
+                break;
+            }
+            completed += 1;
+            ch.score = v;
+            if v > iter_best {
+                iter_best = v;
+                iter_best_i = Some(i);
+            }
+            if v > alpha {
+                alpha = v;
+            }
+        }
+
+        if completed == children.len() {
+            // Iteração completa: reordena tudo pelos scores novos.
+            children.sort_by(|a, b| b.score.cmp(&a.score));
+            best_idx = 0;
+            stats.depth = depth;
+            stats.best_score = children[0].score;
+            if children[0].score >= WIN {
+                break; // vitória provada
+            }
         } else {
+            // Iteração parcial: só aceita jogadas pesquisadas a esta profundidade.
+            if let Some(i) = iter_best_i {
+                best_idx = i;
+                stats.best_score = iter_best;
+            }
             break;
         }
-        steps += 1;
+
+        if ctx.stopped {
+            break;
+        }
     }
-    state
+
+    stats.nodes = ctx.nodes;
+    stats.rollouts = ctx.leaves;
+    stats.best_visits = children[best_idx].nodes;
+    Some(children[best_idx].mv)
 }
+
+// ============================================================================
+// Entrada principal
+// ============================================================================
 
 pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl Fn() -> f64) -> Move {
     choose_move_with_stats(state, cfg, board, now_ms).0
@@ -499,6 +707,39 @@ pub fn choose_move_with_stats(
     (mv, stats)
 }
 
+fn greedy_move(
+    state: StateView,
+    board: &Board,
+    candidate_cells: usize,
+    stats: &mut SearchStats,
+) -> Option<Move> {
+    let moves = generate_candidate_moves(state, board, candidate_cells);
+    if moves.is_empty() {
+        return None;
+    }
+    let gb0 = GroupsInc::from_mask(state.black, board);
+    let gw0 = GroupsInc::from_mask(state.white, board);
+    let mut best_mv = None;
+    let mut best_score = -INF;
+    for mv in moves {
+        let Some(next) = apply_move(state, mv) else { continue };
+        let (nb, nw) = apply_groups(&gb0, &gw0, mv, board);
+        stats.rollouts += 1;
+        let e_black = if empty_mask(next) == 0 {
+            eval_terminal_black(&nb, &nw)
+        } else {
+            eval_black(&nb, &nw)
+        };
+        let s = signed(e_black, state.player_to_move);
+        if s > best_score {
+            best_score = s;
+            best_mv = Some(mv);
+        }
+    }
+    stats.best_score = best_score;
+    best_mv
+}
+
 fn choose_move_inner(
     state: StateView,
     cfg: AiConfig,
@@ -508,206 +749,247 @@ fn choose_move_inner(
 ) -> Move {
     let mut rng = SplitMix64::new(cfg.seed);
 
-    let root_player = state.player_to_move;
     let empty = empty_mask(state);
     let empty_count = empty.count_ones() as u8;
 
     if empty_count == 0 {
-        return Move {
-            pos_a: 0,
-            color_a: Stone::Black,
-            pos_b: -1,
-            color_b: Stone::Black,
-        };
+        return Move { pos_a: 0, color_a: Stone::Black, pos_b: -1, color_b: Stone::Black };
     }
 
-    // Endgame exact solver
-    if empty_count <= cfg.endgame_empty_n {
+    let deadline = now_ms() + cfg.time_ms as f64;
+
+    // Endgame exato (mantido), agora com deadline e fallback.
+    if empty_count <= cfg.endgame_empty_n && cfg.difficulty >= 1 {
         stats.mode = "exact";
-        let mut memo = std::collections::HashMap::new();
         let moves = generate_candidate_moves(state, board, (empty_count as usize).max(6));
         stats.root_moves = moves.len() as u32;
         if moves.is_empty() {
             return choose_random_move(state, &mut rng).unwrap();
         }
-        let mut best_mv = moves[0];
-        let mut best = if root_player == Stone::Black { -2 } else { 2 };
-        for mv in moves {
-            if let Some(next) = apply_move(state, mv) {
-                let u = exact_minimax(next, board, &mut memo);
+
+        let mut ctx = ExactCtx {
+            board,
+            now: now_ms,
+            deadline,
+            nodes: 0,
+            stopped: false,
+            memo: HashMap::new(),
+        };
+
+        let root_player = state.player_to_move;
+        let mut best_mv: Option<Move> = None;
+        let mut best = if root_player == Stone::Black { -2i8 } else { 2i8 };
+        for mv in &moves {
+            if ctx.stopped {
+                break;
+            }
+            if let Some(next) = apply_move(state, *mv) {
+                let u = exact_minimax(next, &mut ctx);
+                if ctx.stopped {
+                    break;
+                }
                 if root_player == Stone::Black {
-                    if u > best {
+                    if u > best || best_mv.is_none() {
                         best = u;
-                        best_mv = mv;
+                        best_mv = Some(*mv);
                     }
-                } else if u < best {
+                } else if u < best || best_mv.is_none() {
                     best = u;
-                    best_mv = mv;
+                    best_mv = Some(*mv);
                 }
             }
         }
-        return best_mv;
+        stats.nodes = ctx.nodes;
+        stats.rollouts = ctx.nodes;
+        stats.best_score = best as i32 * WIN;
+        stats.depth = empty_count / 2;
+
+        if let Some(mv) = best_mv {
+            if !ctx.stopped || best == if root_player == Stone::Black { 1 } else { -1 } {
+                return mv;
+            }
+        }
+        // Deadline rebentou sem resolver: cai para a pesquisa heurística abaixo.
     }
 
     match cfg.difficulty {
         0 => {
-            // Easy: random move
             stats.mode = "random";
             choose_random_move(state, &mut rng).unwrap()
         }
         1 => {
-            // Medium: greedy 1-ply
             stats.mode = "greedy";
-            let moves = generate_candidate_moves(state, board, cfg.candidate_k as usize);
-            if moves.is_empty() {
-                return choose_random_move(state, &mut rng).unwrap();
-            }
-            let mut best_mv = moves[0];
-            let mut best_score = i32::MIN;
-            for mv in moves {
-                if let Some(next) = apply_move(state, mv) {
-                    let s = eval_heuristic(next, board, root_player);
-                    if s > best_score {
-                        best_score = s;
-                        best_mv = mv;
-                    }
-                }
-            }
-            best_mv
+            greedy_move(state, board, (cfg.candidate_k as usize).min(12), stats)
+                .unwrap_or_else(|| choose_random_move(state, &mut rng).unwrap())
         }
-        2 => {
-            // Hard: Iterative deepening negamax (depth 2-4)
-            stats.mode = "negamax";
-            let deadline = now_ms() + cfg.time_ms as f64;
-            let mut root_moves = generate_candidate_moves(state, board, cfg.candidate_k as usize);
-            if root_moves.is_empty() {
-                return choose_random_move(state, &mut rng).unwrap();
-            }
-
-            // Sort moves by 1-ply heuristic for better pruning
-            root_moves.sort_unstable_by(|a, b| {
-                let sa = apply_move(state, *a).map(|st| eval_heuristic(st, board, root_player)).unwrap_or(i32::MIN);
-                let sb = apply_move(state, *b).map(|st| eval_heuristic(st, board, root_player)).unwrap_or(i32::MIN);
-                sb.cmp(&sa)
-            });
-
-            stats.root_moves = root_moves.len() as u32;
-            let mut best_mv = root_moves[0];
-
-            // Iterative deepening from depth 2 to 4
-            for depth in 2..=4u8 {
-                if now_ms() >= deadline {
-                    break;
-                }
-
-                let mut depth_best_mv = root_moves[0];
-                let mut depth_best_score = i32::MIN;
-                let mut alpha = i32::MIN / 2;
-                let beta = i32::MAX / 2;
-                let mut nodes = 0u32;
-
-                for mv in &root_moves {
-                    if now_ms() >= deadline {
-                        break;
-                    }
-                    let Some(next) = apply_move(state, *mv) else { continue };
-                    let score = -negamax(next, board, depth - 1, -beta, -alpha, root_player, cfg.candidate_k as usize, deadline, &now_ms, &mut nodes);
-
-                    if score > depth_best_score {
-                        depth_best_score = score;
-                        depth_best_mv = *mv;
-                    }
-                    if score > alpha {
-                        alpha = score;
-                    }
-                }
-
-                stats.nodes += nodes as u64;
-                stats.rollouts += nodes as u64;
-
-                // Only update best if we completed this depth
-                if now_ms() < deadline {
-                    best_mv = depth_best_mv;
-                    stats.depth = depth;
-                    stats.best_score = depth_best_score;
-
-                    // Move best move to front for next iteration
-                    if let Some(pos) = root_moves.iter().position(|m| *m == best_mv) {
-                        root_moves.remove(pos);
-                        root_moves.insert(0, best_mv);
-                    }
-                }
-            }
-
-            best_mv
-        }
-        _ => {
-            // Very Hard / Max: UCT MCTS with heuristic rollouts
-            stats.mode = "uct-bandit";
-            let deadline = now_ms() + cfg.time_ms as f64;
-            let root_moves = generate_candidate_moves(state, board, cfg.candidate_k as usize);
-            if root_moves.is_empty() {
-                return choose_random_move(state, &mut rng).unwrap();
-            }
-
-            let n = root_moves.len();
-            let mut visits = vec![0u32; n];
-            let mut wins = vec![0f32; n];
-            let mut total_visits = 0u32;
-
-            let exploration = 1.41f32; // sqrt(2) is standard UCT exploration constant
-            let max_rollout_steps = 60u32;
-
-            while now_ms() < deadline {
-                // UCT Selection: pick child with best UCT score
-                let mut best_i = 0usize;
-                let mut best_uct = f32::MIN;
-                for i in 0..n {
-                    let uct = uct_score(wins[i], visits[i], total_visits.max(1), exploration);
-                    if uct > best_uct {
-                        best_uct = uct;
-                        best_i = i;
-                    }
-                }
-
-                let mv = root_moves[best_i];
-                let Some(next) = apply_move(state, mv) else { continue };
-
-                // Simulation: heuristic-guided rollout
-                let terminal = heuristic_rollout(next, board, &mut rng, max_rollout_steps);
-                let u = utility_exact(terminal, board);
-
-                // Backpropagation
-                let win = match (root_player, u) {
-                    (Stone::Black, 1) => 1.0,
-                    (Stone::Black, -1) => 0.0,
-                    (Stone::White, -1) => 1.0,
-                    (Stone::White, 1) => 0.0,
-                    _ => 0.5,
-                };
-
-                visits[best_i] += 1;
-                wins[best_i] += win;
-                total_visits += 1;
-            }
-
-            // Select move with most visits (more robust than highest win rate)
-            let mut best_i = 0usize;
-            let mut max_visits = 0u32;
-            for i in 0..n {
-                if visits[i] > max_visits {
-                    max_visits = visits[i];
-                    best_i = i;
-                }
-            }
-            stats.root_moves = n as u32;
-            stats.nodes = total_visits as u64;
-            stats.rollouts = total_visits as u64;
-            stats.best_visits = max_visits as u64;
-            stats.depth = 1;
-            stats.best_score = (wins[best_i] * 1000.0 / (visits[best_i].max(1) as f32)) as i32;
-            root_moves[best_i]
+        d => {
+            // Níveis 2+: alpha-beta com iterative deepening.
+            // A largura de raiz e o teto de profundidade escalam com o nível.
+            let (root_cells, depth_cap) = match d {
+                2 => (10usize, 2u8),
+                3 => (12usize, 3u8),
+                _ => ((cfg.candidate_k as usize).clamp(6, 16), 32u8),
+            };
+            search_root(state, board, root_cells, depth_cap, deadline, now_ms, stats)
+                .unwrap_or_else(|| choose_random_move(state, &mut rng).unwrap())
         }
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::core::board::FULL_MASK;
+
+    fn board() -> Board {
+        Board::new()
+    }
+
+    fn cfg(difficulty: u8, time_ms: u32) -> AiConfig {
+        AiConfig {
+            difficulty,
+            time_ms,
+            candidate_k: 28,
+            endgame_empty_n: 8,
+            seed: 99,
+        }
+    }
+
+    fn is_legal(state: StateView, mv: Move) -> bool {
+        let empty = empty_mask(state);
+        let a = mv.pos_a as usize;
+        if a >= 61 || (empty & bit(a)) == 0 {
+            return false;
+        }
+        if state.first_move {
+            return mv.pos_b < 0;
+        }
+        if mv.pos_b < 0 {
+            return false;
+        }
+        let b = mv.pos_b as usize;
+        b < 61 && b != a && (empty & bit(b)) != 0
+    }
+
+    /// Joga um jogo completo motor-contra-motor e valida legalidade de todas
+    /// as jogadas até ao tabuleiro cheio.
+    #[test]
+    fn full_game_all_moves_legal() {
+        let b = board();
+        for seed in [1u64, 7, 42] {
+            let mut st = StateView {
+                black: 0,
+                white: 0,
+                player_to_move: Stone::Black,
+                first_move: true,
+            };
+            let mut turn = 0u32;
+            while empty_mask(st) != 0 {
+                let start = std::time::Instant::now();
+                let now = move || start.elapsed().as_secs_f64() * 1000.0;
+                let c = AiConfig { seed: seed + turn as u64, ..cfg(4, 30) };
+                let mv = choose_move(st, c, &b, now);
+                assert!(is_legal(st, mv), "jogada ilegal no turno {turn}: {mv:?}");
+                st = apply_move(st, mv).expect("apply_move falhou em jogada legal");
+                turn += 1;
+                assert!(turn <= 32, "jogo não terminou em 32 turnos");
+            }
+        }
+    }
+
+    /// Todas as dificuldades devolvem jogadas legais em posições aleatórias.
+    #[test]
+    fn all_difficulties_return_legal_moves() {
+        let b = board();
+        let mut rng = SplitMix64::new(0xabcdef);
+        for _ in 0..20 {
+            // Gera posição aleatória com nº par de pedras (estado pós-abertura).
+            let mut st = StateView {
+                black: 1u64 << (rng.gen_range(61)),
+                white: 0,
+                player_to_move: Stone::White,
+                first_move: false,
+            };
+            let n_moves = rng.gen_range(12);
+            for _ in 0..n_moves {
+                if let Some(mv) = choose_random_move(st, &mut rng) {
+                    st = apply_move(st, mv).unwrap();
+                }
+            }
+            for diff in 0..=4u8 {
+                let start = std::time::Instant::now();
+                let now = move || start.elapsed().as_secs_f64() * 1000.0;
+                let mv = choose_move(st, cfg(diff, 20), &b, now);
+                assert!(is_legal(st, mv), "diff={diff} jogada ilegal: {mv:?}");
+            }
+        }
+    }
+
+    /// A pesquisa respeita o deadline: nunca excede timeMs + 100.
+    #[test]
+    fn search_respects_deadline() {
+        let b = board();
+        let mut rng = SplitMix64::new(1234);
+        let mut st = StateView {
+            black: 1u64 << 30,
+            white: 0,
+            player_to_move: Stone::White,
+            first_move: false,
+        };
+        for _ in 0..4 {
+            if let Some(mv) = choose_random_move(st, &mut rng) {
+                st = apply_move(st, mv).unwrap();
+            }
+        }
+        for time_ms in [50u32, 150, 300] {
+            let start = std::time::Instant::now();
+            let now = move || start.elapsed().as_secs_f64() * 1000.0;
+            let (_, stats) = choose_move_with_stats(st, cfg(4, time_ms), &b, now);
+            let elapsed = start.elapsed().as_millis() as u32;
+            assert!(
+                elapsed <= time_ms + 100,
+                "excedeu deadline: {elapsed}ms > {}ms (stats: {stats:?})",
+                time_ms + 100
+            );
+        }
+    }
+
+    /// O endgame exato devolve jogada legal e não excede o deadline.
+    #[test]
+    fn endgame_exact_is_legal_and_bounded() {
+        let b = board();
+        let mut rng = SplitMix64::new(777);
+        // Constrói posição com exatamente 8 casas vazias.
+        let mut st = StateView {
+            black: 1u64 << 5,
+            white: 0,
+            player_to_move: Stone::White,
+            first_move: false,
+        };
+        while empty_mask(st).count_ones() > 8 {
+            let mv = choose_random_move(st, &mut rng).unwrap();
+            st = apply_move(st, mv).unwrap();
+        }
+        let start = std::time::Instant::now();
+        let now = move || start.elapsed().as_secs_f64() * 1000.0;
+        let (mv, stats) = choose_move_with_stats(st, cfg(4, 2000), &b, now);
+        assert_eq!(stats.mode, "exact");
+        assert!(is_legal(st, mv), "endgame devolveu jogada ilegal: {mv:?}");
+        assert!(start.elapsed().as_millis() < 2100);
+    }
+
+    /// Avaliação: simetria preto/branco.
+    #[test]
+    fn eval_is_antisymmetric() {
+        let b = board();
+        let mut rng = SplitMix64::new(9);
+        for _ in 0..100 {
+            let m1 = rng.next_u64() & FULL_MASK;
+            let m2 = rng.next_u64() & FULL_MASK & !m1;
+            let g1 = GroupsInc::from_mask(m1, &b);
+            let g2 = GroupsInc::from_mask(m2, &b);
+            assert_eq!(eval_black(&g1, &g2), -eval_black(&g2, &g1));
+            assert_eq!(eval_terminal_black(&g1, &g2), -eval_terminal_black(&g2, &g1));
+        }
+    }
+}
