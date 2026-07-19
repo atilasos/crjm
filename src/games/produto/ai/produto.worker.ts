@@ -38,13 +38,12 @@ async function init(): Promise<void> {
 
 const initPromise = init().catch(e => console.error('[ProdutoAI] init failed:', e));
 
-// O motor TS é atualmente o N5 efetivo do Produto: na arena emparelhada de
-// n=50 a 2 s venceu o WASM 31-19 com p95 394 ms vs 2000 ms
-// (artifacts/produto-arena/2026-07-19T10-11-25-733Z). O caminho WASM é um
-// bandit UCT plano sem árvore nem camada adversarial (diagnóstico em
-// AI-TRAINING-STATUS-2026-07-18.md) e fica preservado atrás desta flag até
-// ser redesenhado.
-const PREFER_TS_ENGINE = true;
+// Histórico: o bandit UCT plano original perdia 19-31 contra o TS e esteve
+// atrás desta flag. Após o redesenho (alpha-beta com iterative deepening,
+// TT e avaliação incremental), o WASM vence o TS 50-0 (n=50, seed 20260720)
+// e 20-0 pós-correções da revisão (artifacts/produto-arena/2026-07-19T*),
+// pelo que volta a ser o caminho preferido.
+const PREFER_TS_ENGINE = false;
 
 async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promise<void> {
   if (!initDone) await initPromise;

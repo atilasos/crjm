@@ -1,0 +1,252 @@
+{
+  "generatedAt": "2026-07-18T15:30:32.634Z",
+  "options": {
+    "games": 20,
+    "seed": 20260718,
+    "budgetMs": 100,
+    "endgameEmptyN": 8
+  },
+  "games": 20,
+  "wins": {
+    "wasm-n5": 6,
+    "ts-n5": 14
+  },
+  "draws": 0,
+  "wasmScore": 0.3,
+  "illegalMoves": {
+    "wasm-n5": 0,
+    "ts-n5": 0
+  },
+  "latencyMs": {
+    "wasm-n5": {
+      "p50": 100.1,
+      "p95": 100.71
+    },
+    "ts-n5": {
+      "p50": 99.67,
+      "p95": 100.01
+    }
+  },
+  "records": [
+    {
+      "gameId": "g0",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g1",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 480,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g2",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g3",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g4",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g5",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g6",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g7",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 667,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g8",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g9",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g10",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 16
+      }
+    },
+    {
+      "gameId": "g11",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g12",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g13",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 624,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g14",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g15",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g16",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g17",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 576,
+        "white": 0
+      }
+    },
+    {
+      "gameId": "g18",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1
+      }
+    },
+    {
+      "gameId": "g19",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    }
+  ]
+}

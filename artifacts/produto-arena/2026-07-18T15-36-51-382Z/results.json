@@ -1,0 +1,162 @@
+{
+  "generatedAt": "2026-07-18T15:36:51.381Z",
+  "options": {
+    "games": 10,
+    "seed": 20260718,
+    "budgetMs": 500,
+    "endgameEmptyN": 8
+  },
+  "games": 10,
+  "wins": {
+    "wasm-n5": 3,
+    "ts-n5": 7
+  },
+  "draws": 0,
+  "wasmScore": 0.3,
+  "illegalMoves": {
+    "wasm-n5": 0,
+    "ts-n5": 0
+  },
+  "latencyMs": {
+    "wasm-n5": {
+      "p50": 499.79,
+      "p95": 500.53
+    },
+    "ts-n5": {
+      "p50": 248.12,
+      "p95": 388.25
+    }
+  },
+  "records": [
+    {
+      "gameId": "g0",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1,
+        "blackStones": 55,
+        "whiteStones": 6
+      }
+    },
+    {
+      "gameId": "g1",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 2,
+        "white": 0,
+        "blackStones": 12,
+        "whiteStones": 49
+      }
+    },
+    {
+      "gameId": "g2",
+      "wasmAs": "jogador1",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 112,
+        "white": 0,
+        "blackStones": 28,
+        "whiteStones": 33
+      }
+    },
+    {
+      "gameId": "g3",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 70,
+        "white": 0,
+        "blackStones": 24,
+        "whiteStones": 37
+      }
+    },
+    {
+      "gameId": "g4",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 4,
+        "blackStones": 50,
+        "whiteStones": 11
+      }
+    },
+    {
+      "gameId": "g5",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 24,
+        "white": 0,
+        "blackStones": 21,
+        "whiteStones": 40
+      }
+    },
+    {
+      "gameId": "g6",
+      "wasmAs": "jogador1",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 60,
+        "white": 0,
+        "blackStones": 28,
+        "whiteStones": 33
+      }
+    },
+    {
+      "gameId": "g7",
+      "wasmAs": "jogador2",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 16,
+        "white": 0,
+        "blackStones": 19,
+        "whiteStones": 42
+      }
+    },
+    {
+      "gameId": "g8",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 1,
+        "blackStones": 56,
+        "whiteStones": 5
+      }
+    },
+    {
+      "gameId": "g9",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 104,
+        "white": 144,
+        "blackStones": 35,
+        "whiteStones": 26
+      }
+    }
+  ]
+}

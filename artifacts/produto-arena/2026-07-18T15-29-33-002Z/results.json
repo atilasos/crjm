@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-07-18T15:29:33.002Z",
+  "options": {
+    "games": 2,
+    "seed": 20260718,
+    "budgetMs": 25,
+    "endgameEmptyN": 8
+  },
+  "games": 2,
+  "wins": {
+    "wasm-n5": 1,
+    "ts-n5": 1
+  },
+  "draws": 0,
+  "wasmScore": 0.5,
+  "illegalMoves": {
+    "wasm-n5": 0,
+    "ts-n5": 0
+  },
+  "latencyMs": {
+    "wasm-n5": {
+      "p50": 25.16,
+      "p95": 25.67
+    },
+    "ts-n5": {
+      "p50": 24.66,
+      "p95": 25.16
+    }
+  },
+  "records": [
+    {
+      "gameId": "g0",
+      "wasmAs": "jogador1",
+      "winner": "ts-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 36
+      }
+    },
+    {
+      "gameId": "g1",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 0
+      }
+    }
+  ]
+}

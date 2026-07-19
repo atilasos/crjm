@@ -1,0 +1,88 @@
+{
+  "generatedAt": "2026-07-18T15:44:31.680Z",
+  "options": {
+    "games": 4,
+    "seed": 20260718,
+    "budgetMs": 2000,
+    "endgameEmptyN": 8
+  },
+  "games": 4,
+  "wins": {
+    "wasm-n5": 4,
+    "ts-n5": 0
+  },
+  "draws": 0,
+  "wasmScore": 1,
+  "wasmByPlayer": {
+    "jogador1": "2/2",
+    "jogador2": "2/2"
+  },
+  "illegalMoves": {
+    "wasm-n5": 0,
+    "ts-n5": 0
+  },
+  "latencyMs": {
+    "wasm-n5": {
+      "p50": 1999.86,
+      "p95": 2000.64
+    },
+    "ts-n5": {
+      "p50": 244.22,
+      "p95": 367.38
+    }
+  },
+  "records": [
+    {
+      "gameId": "g0",
+      "wasmAs": "jogador1",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 90,
+        "white": 35,
+        "blackStones": 25,
+        "whiteStones": 36
+      }
+    },
+    {
+      "gameId": "g1",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 8,
+        "blackStones": 48,
+        "whiteStones": 13
+      }
+    },
+    {
+      "gameId": "g2",
+      "wasmAs": "jogador1",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 64,
+        "white": 30,
+        "blackStones": 29,
+        "whiteStones": 32
+      }
+    },
+    {
+      "gameId": "g3",
+      "wasmAs": "jogador2",
+      "winner": "wasm-n5",
+      "turns": 31,
+      "illegalBy": null,
+      "finalScore": {
+        "black": 0,
+        "white": 4,
+        "blackStones": 53,
+        "whiteStones": 8
+      }
+    }
+  ]
+}
