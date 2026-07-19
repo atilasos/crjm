@@ -11,6 +11,36 @@ pub struct AiConfig {
     pub seed: u64,
 }
 
+/// Estatísticas da última pesquisa (instrumentação para explain_last e arenas).
+#[derive(Clone, Copy, Debug, Default)]
+pub struct SearchStats {
+    /// Nós internos visitados (alpha-beta) ou iterações UCT (bandit).
+    pub nodes: u64,
+    /// Folhas avaliadas / rollouts completos.
+    pub rollouts: u64,
+    /// Visitas (nós gastos) no melhor braço/jogada de raiz.
+    pub best_visits: u64,
+    /// Profundidade completa atingida (0 = sem pesquisa em profundidade).
+    pub depth: u8,
+    /// Score interno da melhor jogada (escala da heurística).
+    pub best_score: i32,
+    /// Jogadas candidatas na raiz.
+    pub root_moves: u32,
+    /// Tempo consumido em ms (relógio now_ms).
+    pub elapsed_ms: f64,
+    /// Modo de pesquisa usado.
+    pub mode: &'static str,
+}
+
+impl SearchStats {
+    pub fn sims_per_sec(&self) -> f64 {
+        if self.elapsed_ms <= 0.0 {
+            return 0.0;
+        }
+        (self.rollouts as f64) * 1000.0 / self.elapsed_ms
+    }
+}
+
 #[derive(Clone, Copy)]
 struct SplitMix64 {
     state: u64,
@@ -453,6 +483,29 @@ fn heuristic_rollout(mut state: StateView, board: &Board, rng: &mut SplitMix64, 
 }
 
 pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl Fn() -> f64) -> Move {
+    choose_move_with_stats(state, cfg, board, now_ms).0
+}
+
+pub fn choose_move_with_stats(
+    state: StateView,
+    cfg: AiConfig,
+    board: &Board,
+    now_ms: impl Fn() -> f64,
+) -> (Move, SearchStats) {
+    let started = now_ms();
+    let mut stats = SearchStats::default();
+    let mv = choose_move_inner(state, cfg, board, &now_ms, &mut stats);
+    stats.elapsed_ms = now_ms() - started;
+    (mv, stats)
+}
+
+fn choose_move_inner(
+    state: StateView,
+    cfg: AiConfig,
+    board: &Board,
+    now_ms: &impl Fn() -> f64,
+    stats: &mut SearchStats,
+) -> Move {
     let mut rng = SplitMix64::new(cfg.seed);
 
     let root_player = state.player_to_move;
@@ -470,8 +523,10 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
 
     // Endgame exact solver
     if empty_count <= cfg.endgame_empty_n {
+        stats.mode = "exact";
         let mut memo = std::collections::HashMap::new();
         let moves = generate_candidate_moves(state, board, (empty_count as usize).max(6));
+        stats.root_moves = moves.len() as u32;
         if moves.is_empty() {
             return choose_random_move(state, &mut rng).unwrap();
         }
@@ -497,10 +552,12 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
     match cfg.difficulty {
         0 => {
             // Easy: random move
+            stats.mode = "random";
             choose_random_move(state, &mut rng).unwrap()
         }
         1 => {
             // Medium: greedy 1-ply
+            stats.mode = "greedy";
             let moves = generate_candidate_moves(state, board, cfg.candidate_k as usize);
             if moves.is_empty() {
                 return choose_random_move(state, &mut rng).unwrap();
@@ -520,6 +577,7 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
         }
         2 => {
             // Hard: Iterative deepening negamax (depth 2-4)
+            stats.mode = "negamax";
             let deadline = now_ms() + cfg.time_ms as f64;
             let mut root_moves = generate_candidate_moves(state, board, cfg.candidate_k as usize);
             if root_moves.is_empty() {
@@ -533,6 +591,7 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
                 sb.cmp(&sa)
             });
 
+            stats.root_moves = root_moves.len() as u32;
             let mut best_mv = root_moves[0];
 
             // Iterative deepening from depth 2 to 4
@@ -563,10 +622,14 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
                     }
                 }
 
+                stats.nodes += nodes as u64;
+                stats.rollouts += nodes as u64;
+
                 // Only update best if we completed this depth
                 if now_ms() < deadline {
                     best_mv = depth_best_mv;
-                    let _ = depth_best_score; // mark as used
+                    stats.depth = depth;
+                    stats.best_score = depth_best_score;
 
                     // Move best move to front for next iteration
                     if let Some(pos) = root_moves.iter().position(|m| *m == best_mv) {
@@ -580,6 +643,7 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
         }
         _ => {
             // Very Hard / Max: UCT MCTS with heuristic rollouts
+            stats.mode = "uct-bandit";
             let deadline = now_ms() + cfg.time_ms as f64;
             let root_moves = generate_candidate_moves(state, board, cfg.candidate_k as usize);
             if root_moves.is_empty() {
@@ -636,6 +700,12 @@ pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl 
                     best_i = i;
                 }
             }
+            stats.root_moves = n as u32;
+            stats.nodes = total_visits as u64;
+            stats.rollouts = total_visits as u64;
+            stats.best_visits = max_visits as u64;
+            stats.depth = 1;
+            stats.best_score = (wins[best_i] * 1000.0 / (visits[best_i].max(1) as f32)) as i32;
             root_moves[best_i]
         }
     }

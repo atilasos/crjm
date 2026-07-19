@@ -1,6 +1,6 @@
 mod core;
 
-use core::ai::{choose_move as choose_move_core, AiConfig};
+use core::ai::{choose_move_with_stats, AiConfig};
 use core::board::{Board, CELLS, FULL_MASK};
 use core::movegen::{Move as CoreMove, StateView, Stone};
 
@@ -100,11 +100,22 @@ pub fn choose_move(state: JsValue, cfg: JsValue) -> Result<JsValue, JsValue> {
     };
 
     let before_empty = (FULL_MASK & !(black | white)).count_ones() as usize;
-    let mv: CoreMove = choose_move_core(st, cfg, board(), now);
+    let (mv, stats): (CoreMove, _) = choose_move_with_stats(st, cfg, board(), now);
 
     LAST_EXPLAIN.with(|e| {
         *e.borrow_mut() = format!(
-            "cells={CELLS} empty_before={before_empty} diff={difficulty} time_ms={time_ms} cand={candidate_k} endgame_n={endgame_empty_n}"
+            "cells={CELLS} empty_before={before_empty} diff={difficulty} time_ms={time_ms} cand={candidate_k} endgame_n={endgame_empty_n} \
+             mode={mode} depth={depth} nodes={nodes} rollouts={rollouts} best_visits={best_visits} best_score={best_score} \
+             root_moves={root_moves} elapsed_ms={elapsed:.1} sims_s={sims:.0}",
+            mode = stats.mode,
+            depth = stats.depth,
+            nodes = stats.nodes,
+            rollouts = stats.rollouts,
+            best_visits = stats.best_visits,
+            best_score = stats.best_score,
+            root_moves = stats.root_moves,
+            elapsed = stats.elapsed_ms,
+            sims = stats.sims_per_sec(),
         );
     });
 
@@ -157,6 +168,56 @@ mod tests {
     }
 
     #[test]
+    fn stats_bench_midgame_prints_sims() {
+        use crate::core::ai::{choose_move as choose_move_core, choose_move_with_stats};
+        use crate::core::movegen::apply_move;
+
+        let b = board();
+        // Posição de meio-jogo determinística: aplica jogadas gulosas a partir da abertura.
+        let mut st = StateView {
+            black: 1u64 << 30,
+            white: 0,
+            player_to_move: Stone::White,
+            first_move: false,
+        };
+        let cfg_greedy = AiConfig {
+            difficulty: 1,
+            time_ms: 5,
+            candidate_k: 12,
+            endgame_empty_n: 0,
+            seed: 7,
+        };
+        for _ in 0..10 {
+            let mv = choose_move_core(st, cfg_greedy, b, || 0.0);
+            st = apply_move(st, mv).expect("jogada gulosa legal");
+        }
+
+        let start = std::time::Instant::now();
+        let now = move || start.elapsed().as_secs_f64() * 1000.0;
+        let cfg = AiConfig {
+            difficulty: 4,
+            time_ms: 200,
+            candidate_k: 28,
+            endgame_empty_n: 8,
+            seed: 42,
+        };
+        let (mv, stats) = choose_move_with_stats(st, cfg, b, now);
+        assert!(apply_move(st, mv).is_some(), "jogada devolvida tem de ser legal");
+        println!(
+            "bench: mode={} depth={} nodes={} rollouts={} best_visits={} root_moves={} elapsed_ms={:.1} sims_s={:.0}",
+            stats.mode,
+            stats.depth,
+            stats.nodes,
+            stats.rollouts,
+            stats.best_visits,
+            stats.root_moves,
+            stats.elapsed_ms,
+            stats.sims_per_sec(),
+        );
+        assert!(stats.rollouts > 0);
+    }
+
+    #[test]
     fn apply_move_opening_places_one_stone() {
         let b = board();
         let st = StateView {
@@ -172,7 +233,7 @@ mod tests {
             endgame_empty_n: 0,
             seed: 1,
         };
-        let mv = choose_move_core(st, cfg, b, || 0.0);
+        let mv = crate::core::ai::choose_move(st, cfg, b, || 0.0);
         assert!(mv.pos_b < 0);
     }
 }
