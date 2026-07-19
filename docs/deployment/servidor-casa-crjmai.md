@@ -67,3 +67,33 @@ modelo `training/runs/qz-v1/best.pt`; proxy Bun em `/api/ai/quelhas/*` com as
 mesmas proteções do Atari Go (HMAC de sessão, rate-limit 30/min, corpo ≤8 KiB).
 Env opcional: `QUELHAS_AI_URL` (default `http://127.0.0.1:8101`). Comando de
 arranque no `training/README.md` §7. Fallback silencioso para o N5 WASM local.
+
+## Arranque e paragem rápidos
+
+Arrancar tudo (site + torneios + IA na GPU):
+
+```bash
+systemctl --user start crjm-main crjm-tournament
+docker start crjm-az-serve crjm-qz-serve   # N6 Atari Go (8100) e N6 Quelhas (8101)
+curl -s https://crjmai.infantinho.xyz/api/health
+curl -s https://crjmai.infantinho.xyz/api/ai/atari-go/health
+curl -s https://crjmai.infantinho.xyz/api/ai/quelhas/health
+```
+
+Parar tudo (liberta a GPU por completo):
+
+```bash
+systemctl --user stop crjm-main crjm-tournament
+docker stop crjm-az-serve crjm-qz-serve
+```
+
+Notas:
+- Só os dois containers docker usam a GPU; o site e os torneios são CPU.
+- `docker stop` impede o rearranque automático mesmo com `--restart
+  unless-stopped` (e sobrevive a reboots); `docker start` reativa.
+- Os serviços systemd estão `enabled`: após um reboot, site e torneios
+  voltam sozinhos, mas os containers GPU ficam parados até `docker start`.
+- Com os serviços parados, o túnel Cloudflare continua ativo e os domínios
+  públicos devolvem erro de gateway até novo arranque.
+- Sem os containers, o site continua 100% funcional: o nível N6 degrada em
+  silêncio para o N5 local (WASM no browser).

@@ -1,0 +1,118 @@
+{
+  "generatedAt": "2026-07-18T15:20:36.734Z",
+  "options": {
+    "games": 10,
+    "base": "http://127.0.0.1:8100",
+    "seed": 20260717,
+    "budgetMs": 500
+  },
+  "service": {
+    "status": "ok",
+    "model": "/workspace/training/runs/az-v1/best.pt",
+    "device": "cuda"
+  },
+  "games": 10,
+  "wins": {
+    "server-n6": 9,
+    "local-n5": 1
+  },
+  "draws": 0,
+  "serverWinrate": 0.9,
+  "serverWinrateAllGames": 0.9,
+  "illegalMoves": {
+    "server-n6": 0,
+    "local-n5": 0
+  },
+  "latencyMs": {
+    "server-n6": {
+      "p50": 315.42,
+      "p95": 342.15
+    },
+    "local-n5": {
+      "p50": 499.55,
+      "p95": 500
+    }
+  },
+  "records": [
+    {
+      "gameId": "g0",
+      "serverAs": "jogador1",
+      "winner": "server-n6",
+      "plies": 13,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g1",
+      "serverAs": "jogador2",
+      "winner": "server-n6",
+      "plies": 12,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g2",
+      "serverAs": "jogador1",
+      "winner": "server-n6",
+      "plies": 33,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g3",
+      "serverAs": "jogador2",
+      "winner": "server-n6",
+      "plies": 14,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g4",
+      "serverAs": "jogador1",
+      "winner": "server-n6",
+      "plies": 21,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g5",
+      "serverAs": "jogador2",
+      "winner": "server-n6",
+      "plies": 14,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g6",
+      "serverAs": "jogador1",
+      "winner": "server-n6",
+      "plies": 7,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g7",
+      "serverAs": "jogador2",
+      "winner": "local-n5",
+      "plies": 9,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g8",
+      "serverAs": "jogador1",
+      "winner": "server-n6",
+      "plies": 9,
+      "openingPlies": 4,
+      "illegalBy": null
+    },
+    {
+      "gameId": "g9",
+      "serverAs": "jogador2",
+      "winner": "server-n6",
+      "plies": 38,
+      "openingPlies": 4,
+      "illegalBy": null
+    }
+  ]
+}
