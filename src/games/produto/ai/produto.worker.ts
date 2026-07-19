@@ -38,6 +38,14 @@ async function init(): Promise<void> {
 
 const initPromise = init().catch(e => console.error('[ProdutoAI] init failed:', e));
 
+// O motor TS é atualmente o N5 efetivo do Produto: na arena emparelhada de
+// n=50 a 2 s venceu o WASM 31-19 com p95 394 ms vs 2000 ms
+// (artifacts/produto-arena/2026-07-19T10-11-25-733Z). O caminho WASM é um
+// bandit UCT plano sem árvore nem camada adversarial (diagnóstico em
+// AI-TRAINING-STATUS-2026-07-18.md) e fica preservado atrás desta flag até
+// ser redesenhado.
+const PREFER_TS_ENGINE = true;
+
 async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promise<void> {
   if (!initDone) await initPromise;
 
@@ -49,7 +57,7 @@ async function handleChoose(req: Extract<AIRequest, { type: 'choose' }>): Promis
   const start = performance.now();
 
   try {
-    if (useWasm && wasm) {
+    if (!PREFER_TS_ENGINE && useWasm && wasm) {
       const cfg = {
         difficulty:
           req.difficulty === 'easy'
