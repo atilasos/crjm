@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-07-19T10:16:20.567Z",
+  "options": {
+    "games": 4,
+    "seed": 999,
+    "budgetCapMs": 2000
+  },
+  "wins": {
+    "n5": 3,
+    "n4": 1
+  },
+  "n5Winrate": 0.75,
+  "illegalMoves": {
+    "n5": 0,
+    "n4": 0
+  },
+  "records": [
+    {
+      "gameId": 0,
+      "n5As": "jogador1",
+      "winner": "n4",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 1,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 24,
+      "illegalBy": null
+    },
+    {
+      "gameId": 2,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 3,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    }
+  ]
+}

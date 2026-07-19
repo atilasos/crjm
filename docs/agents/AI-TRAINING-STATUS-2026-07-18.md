@@ -13,8 +13,8 @@ já não descrevem o repositório atual.
 | Nex | Rust/WASM com TT Zobrist, iterative deepening, PVS/LMR, killers/history e deadline | duelo release de 50 jogos contra o motor legado: 41/50 (82%), zero overshoot | melhoria forte; alvo histórico de 85% ainda aberto |
 | Gatos & Cães | worker TypeScript com negamax, alpha-beta e TT | testes de profundidade, legalidade, TT e budget | reescrita de busca concluída; Rust/WASM não é prioridade imediata |
 | Produto | Rust/WASM MCTS N5 + fallback TypeScript N5 com lookahead e táticas de sabotagem | arena n=50 a 2 s (2026-07-19): **WASM 19–31 TS (38%)**, 0 ilegais, p95 TS 394 ms vs WASM 2000 ms — o 7–3 de n=10 era ruído; assimetria de 2.º jogador (34/50) | o TS é atualmente o motor mais forte E mais rápido; considerar troca do caminho N5 ou revisão do MCTS WASM |
-| Dominório | Rust/WASM + worker/fallback + livro | baseline e testes de legalidade/latência | topo N5>N4 ainda precisa de evidência estatística estável |
-| Quelhas | Rust/WASM PVS + fallback | testes misère e ladder publicada | consolidado; solver exato de finais continua futuro |
+| Dominório | Rust/WASM + worker/fallback + livro | arena n=60 (2026-07-19): N5 (hardPlus) 51–9 N4 (hard), 0 ilegais | hierarquia de topo demonstrada |
+| Quelhas | Rust/WASM PVS + solver exato de finais (N4/N5) + rede az-quelhas | árbitro exato: 0 blunders em 67 finais; arena az vs N5 WASM: 39–1 (97,5%) | rede muito superior ao motor clássico; integração como N6 pendente de decisão |
 
 As estimativas ELO do plano de 2025 não foram produzidas por um rating pool e
 não devem ser usadas como medição de força.
@@ -57,7 +57,9 @@ não devem ser usadas como medição de força.
   invertido: TS 31–19 WASM; próxima ação: preferir o TS no caminho N5 ou
   diagnosticar o MCTS WASM (artifacts/produto-arena/2026-07-19T10-11-25-733Z);
 - [ ] Nex: fechar a diferença 82% → 85% sem regressão de budget/legalidade;
-- [ ] Dominório: repetir N5>N4 em WASM com amostra maior e seed fixa;
+- [x] Dominório: N5>N4 demonstrado em WASM com n=60 e seed fixa (2026-07-19):
+  **51–9 (85%)**, 0 ilegais, aberturas emparelhadas
+  (artifacts/dominorio-arena/2026-07-19T10-35-16-884Z);
 - [ ] Gatos & Cães: acrescentar arena novo-vs-baseline antes de considerar um
   porte Rust/WASM.
 

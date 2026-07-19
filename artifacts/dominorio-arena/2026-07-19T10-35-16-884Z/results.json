@@ -1,0 +1,439 @@
+{
+  "generatedAt": "2026-07-19T10:35:16.884Z",
+  "options": {
+    "games": 60,
+    "seed": 20260719,
+    "budgetCapMs": 2000
+  },
+  "wins": {
+    "n5": 51,
+    "n4": 9
+  },
+  "n5Winrate": 0.85,
+  "illegalMoves": {
+    "n5": 0,
+    "n4": 0
+  },
+  "records": [
+    {
+      "gameId": 0,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 1,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 2,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 3,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 4,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 5,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 6,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 7,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 8,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 9,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 10,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 29,
+      "illegalBy": null
+    },
+    {
+      "gameId": 11,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 24,
+      "illegalBy": null
+    },
+    {
+      "gameId": 12,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 13,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 23,
+      "illegalBy": null
+    },
+    {
+      "gameId": 14,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 29,
+      "illegalBy": null
+    },
+    {
+      "gameId": 15,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 29,
+      "illegalBy": null
+    },
+    {
+      "gameId": 16,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 17,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 18,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 19,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 29,
+      "illegalBy": null
+    },
+    {
+      "gameId": 20,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 21,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 22,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 23,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 24,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 25,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 26,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 27,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 24,
+      "illegalBy": null
+    },
+    {
+      "gameId": 28,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 23,
+      "illegalBy": null
+    },
+    {
+      "gameId": 29,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 30,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 29,
+      "illegalBy": null
+    },
+    {
+      "gameId": 31,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 32,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 33,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 22,
+      "illegalBy": null
+    },
+    {
+      "gameId": 34,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 35,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 36,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 37,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 38,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 39,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 40,
+      "n5As": "jogador1",
+      "winner": "n4",
+      "plies": 30,
+      "illegalBy": null
+    },
+    {
+      "gameId": 41,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 24,
+      "illegalBy": null
+    },
+    {
+      "gameId": 42,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 43,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 44,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 23,
+      "illegalBy": null
+    },
+    {
+      "gameId": 45,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 46,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 29,
+      "illegalBy": null
+    },
+    {
+      "gameId": 47,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 48,
+      "n5As": "jogador1",
+      "winner": "n4",
+      "plies": 30,
+      "illegalBy": null
+    },
+    {
+      "gameId": 49,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 50,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 51,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 52,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 27,
+      "illegalBy": null
+    },
+    {
+      "gameId": 53,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 28,
+      "illegalBy": null
+    },
+    {
+      "gameId": 54,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 55,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 56,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 57,
+      "n5As": "jogador2",
+      "winner": "n5",
+      "plies": 26,
+      "illegalBy": null
+    },
+    {
+      "gameId": 58,
+      "n5As": "jogador1",
+      "winner": "n5",
+      "plies": 25,
+      "illegalBy": null
+    },
+    {
+      "gameId": 59,
+      "n5As": "jogador2",
+      "winner": "n4",
+      "plies": 27,
+      "illegalBy": null
+    }
+  ]
+}
