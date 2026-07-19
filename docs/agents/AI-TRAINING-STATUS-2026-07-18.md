@@ -10,7 +10,7 @@ já não descrevem o repositório atual.
 | Jogo | Motor atual | Evidência reproduzível | Estado |
 |---|---|---|---|
 | Atari Go | Rust/WASM N1–N5 + AlphaZero/PyTorch N6 | `az-v1`: 30 iterações, 60 000 jogos, 22 promoções; arena emparelhada N6 vs N5; testes de regras, workers, proxy e deadline | N6 integrado; treino longo concluído |
-| Nex | Rust/WASM com TT Zobrist, iterative deepening, PVS/LMR, killers/history e deadline | duelo release de 50 jogos contra o motor legado: 41/50 (82%), zero overshoot | melhoria forte; alvo histórico de 85% ainda aberto |
+| Nex | Rust/WASM com TT Zobrist, iterative deepening, killers/history, deadline e ordenação por caminho mínimo 0-1 BFS | duelo release 50 jogos vs legado (2026-07-19): agente 48/50, verificação independente 47/50 (94%), overshoot 0 ms | **meta 85% fechada** (ordenação: própria no caminho próprio, neutra no caminho rival) |
 | Gatos & Cães | worker TypeScript com negamax, alpha-beta e TT | testes de profundidade, legalidade, TT e budget | reescrita de busca concluída; Rust/WASM não é prioridade imediata |
 | Produto | Rust/WASM MCTS N5 + fallback TypeScript N5 com lookahead e táticas de sabotagem | arena n=50 a 2 s (2026-07-19): **WASM 19–31 TS (38%)**, 0 ilegais, p95 TS 394 ms vs WASM 2000 ms — o 7–3 de n=10 era ruído; assimetria de 2.º jogador (34/50) | **aplicado (2026-07-19)**: o worker prefere o TS (PREFER_TS_ENGINE); o WASM é um bandit UCT plano sem árvore (diagnóstico Codex confirmado em wasm/produto_ai/src/core/ai.rs:406,597-630) e fica preservado para redesenho |
 | Dominório | Rust/WASM + worker/fallback + livro | arena n=60 (2026-07-19): N5 (hardPlus) 51–9 N4 (hard), 0 ilegais | hierarquia de topo demonstrada |
@@ -56,7 +56,8 @@ não devem ser usadas como medição de força.
 - [x] Produto: amostra alargada a n=50 a 2 s (2026-07-19) — resultado
   invertido: TS 31–19 WASM; próxima ação: preferir o TS no caminho N5 ou
   diagnosticar o MCTS WASM (artifacts/produto-arena/2026-07-19T10-11-25-733Z);
-- [ ] Nex: fechar a diferença 82% → 85% sem regressão de budget/legalidade;
+- [x] Nex: meta fechada (2026-07-19) — 94-96% vs legado com ordenação por
+  caminho mínimo 0-1 BFS; zero overshoot, suite verde;
 - [x] Dominório: N5>N4 demonstrado em WASM com n=60 e seed fixa (2026-07-19):
   **51–9 (85%)**, 0 ilegais, aberturas emparelhadas
   (artifacts/dominorio-arena/2026-07-19T10-35-16-884Z);
