@@ -16,9 +16,9 @@ describe('dificuldade — nível 6 (Mestre) apenas no Atari Go', () => {
     });
   });
 
-  test('máximo por jogo: 6 no atari-go, 5 nos restantes', () => {
+  test('máximo por jogo: 6 no atari-go e quelhas, 5 nos restantes', () => {
     expect(getMaxDifficultyLevel('atari-go')).toBe(6);
-    expect(getMaxDifficultyLevel('quelhas')).toBe(5);
+    expect(getMaxDifficultyLevel('quelhas')).toBe(6);
     expect(getMaxDifficultyLevel('nex')).toBe(5);
     expect(getMaxDifficultyLevel()).toBe(5);
   });
@@ -29,10 +29,11 @@ describe('dificuldade — nível 6 (Mestre) apenas no Atari Go', () => {
     expect(clampDifficultyLevel(0)).toBe(1);
   });
 
-  test('clamp por jogo permite 6 só no atari-go', () => {
+  test('clamp por jogo permite 6 no atari-go e quelhas', () => {
     expect(clampDifficultyLevelForGame(6, 'atari-go')).toBe(6);
     expect(clampDifficultyLevelForGame(9, 'atari-go')).toBe(6);
-    expect(clampDifficultyLevelForGame(6, 'quelhas')).toBe(5);
+    expect(clampDifficultyLevelForGame(6, 'quelhas')).toBe(6);
+    expect(clampDifficultyLevelForGame(6, 'nex')).toBe(5);
     expect(clampDifficultyLevelForGame(6)).toBe(5);
   });
 

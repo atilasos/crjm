@@ -10,9 +10,17 @@ import {
 
 const port = parseInt(process.env.PORT || '3000', 10);
 const atariGoAiBase = process.env.ATARI_GO_AI_URL || 'http://127.0.0.1:8100';
+const quelhasAiBase = process.env.QUELHAS_AI_URL || 'http://127.0.0.1:8101';
 const learnerCoreConfig = getLearnerCoreConfig();
 const proxyAtariGoAi = createAtariGoAiProxy({
   upstreamBaseUrl: atariGoAiBase,
+  sessionCookieName: learnerCoreConfig.sessionCookieName,
+  sessionSecret: learnerCoreConfig.sessionSecret,
+});
+const QUELHAS_AI_PROXY_PREFIX = '/api/ai/quelhas';
+const proxyQuelhasAi = createAtariGoAiProxy({
+  upstreamBaseUrl: quelhasAiBase,
+  prefix: QUELHAS_AI_PROXY_PREFIX,
   sessionCookieName: learnerCoreConfig.sessionCookieName,
   sessionSecret: learnerCoreConfig.sessionSecret,
 });
@@ -37,6 +45,13 @@ const server = serve({
       url.pathname.startsWith(`${ATARI_GO_AI_PROXY_PREFIX}/`)
     ) {
       return proxyAtariGoAi(request, url);
+    }
+
+    if (
+      url.pathname === QUELHAS_AI_PROXY_PREFIX ||
+      url.pathname.startsWith(`${QUELHAS_AI_PROXY_PREFIX}/`)
+    ) {
+      return proxyQuelhasAi(request, url);
     }
 
     if (url.pathname.startsWith('/ai/')) {

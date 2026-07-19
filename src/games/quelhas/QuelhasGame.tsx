@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
-import { getDifficultyProfile } from '../../ai-core/difficulty';
+import { clampDifficultyLevel, getDifficultyProfile , type ExtendedDifficultyLevel } from '../../ai-core/difficulty';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { selectReviewPattern } from '../../ai-core/review-patterns';
 import { GameLayout } from '../../components/GameLayout';
@@ -26,6 +26,7 @@ import {
 import { GameMode, Player } from '../../types';
 import {
   QuelhasAIClient,
+  QUELHAS_SERVER_AI_WITH_FALLBACK_TIMEOUT_MS,
   QuelhasV1Adapter,
   mapLevelToQuelhasDifficulty,
   buildQuickReviewItems,
@@ -103,8 +104,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [posicaoInicial, setPosicaoInicial] = useState<Posicao | null>(null);
   const [humanPlayer, setHumanPlayer] = useState<Player>('jogador1');
-  const [difficultyLevel, setDifficultyLevel] = useState<DifficultyLevel>(3);
-  const difficulty: AIDifficulty = mapLevelToQuelhasDifficulty(difficultyLevel);
+  const [difficultyLevel, setDifficultyLevel] = useState<ExtendedDifficultyLevel>(3);
+  // O contrato clássico (presets, tutor V1) trabalha em 1..5; o nível 6 usa o caminho servidor.
+  const difficulty: AIDifficulty = mapLevelToQuelhasDifficulty(clampDifficultyLevel(difficultyLevel));
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
   const [aiReady, setAiReady] = useState(false);
   const [tutorResponse, setTutorResponse] =
@@ -172,14 +174,17 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       let cancelled = false;
       let finished = false;
       const client = aiClientRef.current;
-      const timeBudgetMs = getDifficultyProfile(difficultyLevel).timeBudgetMs;
-      const maxWaitMs = timeBudgetMs + 250;
+      const timeBudgetMs = getDifficultyProfile(difficultyLevel, 'quelhas').timeBudgetMs;
+      const maxWaitMs =
+        difficultyLevel === 6 ? QUELHAS_SERVER_AI_WITH_FALLBACK_TIMEOUT_MS : timeBudgetMs + 250;
       const timer = setTimeout(async () => {
         if (cancelled || !client) return;
 
         try {
           const bestMove = await withTimeout(
-            client.getBestMove(state, difficulty, { timeBudgetMs }),
+            difficultyLevel === 6
+              ? client.getBestMoveN6(state, { timeBudgetMs })
+              : client.getBestMove(state, difficulty, { timeBudgetMs }),
             maxWaitMs,
             () => client.cancel()
           );
@@ -229,7 +234,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       requestId: `quelhas-tutor-${Date.now()}`,
       gameId: 'quelhas',
       mode: 'tutor',
-      level: difficultyLevel,
+      level: clampDifficultyLevel(difficultyLevel),
       state,
       locale: 'pt-PT',
     };
@@ -386,11 +391,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setHintLevel('H2');
   }, []);
 
-  const handleChangeDifficulty = useCallback((level: DifficultyLevel) => {
+  const handleChangeDifficulty = useCallback((level: ExtendedDifficultyLevel) => {
     setDifficultyLevel(level);
   }, []);
 
-  const difficultyRecommendation = getDifficultyRecommendation('quelhas', difficultyLevel);
+  const difficultyRecommendation = getDifficultyRecommendation('quelhas', clampDifficultyLevel(difficultyLevel));
 
   const handleTroca = useCallback(() => {
     setState(prev => trocarOrientacoes(prev));
@@ -488,6 +493,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           onTrocarModo={trocarModo}
           difficulty={difficultyLevel}
           onChangeDifficulty={handleChangeDifficulty}
+          maxDifficultyLevel={6}
           difficultyRecommendation={difficultyRecommendation}
           canAcceptDifficultyRecommendation={state.estado !== 'a-jogar'}
           onAcceptDifficultyRecommendation={(level) => {
@@ -497,6 +503,19 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           aiMetrics={aiMetrics}
           aiReady={aiReady}
         />
+        {state.modo === 'vs-computador' && difficultyLevel === 6 && (
+          <div className="mt-2 rounded-xl border p-2 text-center text-xs [border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta-suave)]">
+            {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
+            {' • '}
+            {aiMetrics.lastEngine === 'server-nn'
+              ? 'Rede neural · GPU'
+              : aiMetrics.lastEngine === 'exact-endgame'
+                ? 'Final resolvido'
+                : aiMetrics.lastEngine === 'rust-wasm'
+                  ? 'N5 local (WASM)'
+                  : 'N5 local'}
+          </div>
+        )}
         </div>
 
         <div className="order-5 lg:order-none">

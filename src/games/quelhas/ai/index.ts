@@ -1,4 +1,4 @@
-export { QuelhasAIClient } from './ai-client';
+export { QuelhasAIClient, QUELHAS_SERVER_AI_WITH_FALLBACK_TIMEOUT_MS } from './ai-client';
 export type { AIClientOptions, AIRequestOverrides } from './ai-client';
 export type { AIDifficulty, AIMetrics } from './types';
 export { DIFFICULTY_PRESETS, INITIAL_METRICS } from './types';

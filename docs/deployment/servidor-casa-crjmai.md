@@ -59,3 +59,11 @@ curl -s https://crjmai-torneio.infantinho.xyz/health
 ## GitHub Pages
 
 O workflow `.github/workflows/deploy.yml` continua a publicar o site estático no GitHub Pages como espelho de segurança (sem backend: sem login de alunos, sem campeonato ligado por defeito, sem N6). O deploy «a sério» é o desta máquina.
+
+## Serviço N6 do Quelhas (az-quelhas)
+
+Container `crjm-qz-serve` (porta 127.0.0.1:8101, `--restart unless-stopped`),
+modelo `training/runs/qz-v1/best.pt`; proxy Bun em `/api/ai/quelhas/*` com as
+mesmas proteções do Atari Go (HMAC de sessão, rate-limit 30/min, corpo ≤8 KiB).
+Env opcional: `QUELHAS_AI_URL` (default `http://127.0.0.1:8101`). Comando de
+arranque no `training/README.md` §7. Fallback silencioso para o N5 WASM local.

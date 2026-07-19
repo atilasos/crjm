@@ -1,5 +1,6 @@
 import type { Player, GameMode, GameStatus } from '../types';
 import type { DifficultyLevel } from '../ai-core/types';
+import type { ExtendedDifficultyLevel } from '../ai-core/difficulty';
 import type { DifficultyRecommendation } from '../ai-core/adaptive-difficulty';
 import { DifficultySelector } from './DifficultySelector';
 
@@ -13,7 +14,7 @@ export interface AIMetrics {
   fromBook: boolean;
 }
 
-interface PlayerInfoProps {
+interface PlayerInfoProps<L extends ExtendedDifficultyLevel = DifficultyLevel> {
   modo: GameMode;
   jogadorAtual: Player;
   estado: GameStatus;
@@ -26,8 +27,9 @@ interface PlayerInfoProps {
   onNovoJogo: () => void;
   onTrocarModo: () => void;
   // AI-specific props (optional)
-  difficulty?: DifficultyLevel;
-  onChangeDifficulty?: (difficulty: DifficultyLevel) => void;
+  difficulty?: L;
+  onChangeDifficulty?: (difficulty: L) => void;
+  maxDifficultyLevel?: L;
   difficultyRecommendation?: DifficultyRecommendation;
   canAcceptDifficultyRecommendation?: boolean;
   onAcceptDifficultyRecommendation?: (difficulty: DifficultyLevel) => void;
@@ -35,7 +37,7 @@ interface PlayerInfoProps {
   aiReady?: boolean;
 }
 
-export function PlayerInfo({
+export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>({
   modo,
   jogadorAtual,
   estado,
@@ -50,12 +52,13 @@ export function PlayerInfo({
   // AI props
   difficulty,
   onChangeDifficulty,
+  maxDifficultyLevel,
   difficultyRecommendation,
   canAcceptDifficultyRecommendation,
   onAcceptDifficultyRecommendation,
   aiMetrics,
   aiReady = true,
-}: PlayerInfoProps) {
+}: PlayerInfoProps<L>) {
   const jogoTerminado = estado !== 'a-jogar';
   const hasAISupport = difficulty !== undefined && onChangeDifficulty !== undefined;
   
@@ -133,6 +136,7 @@ export function PlayerInfo({
           <DifficultySelector
             level={difficulty!}
             onChange={onChangeDifficulty!}
+            maxLevel={maxDifficultyLevel}
             recommendation={difficultyRecommendation}
             canAcceptRecommendation={canAcceptDifficultyRecommendation}
             onAcceptRecommendation={onAcceptDifficultyRecommendation}

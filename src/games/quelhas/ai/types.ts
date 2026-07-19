@@ -27,7 +27,7 @@ export interface AIMetrics {
   lastTTHitRate: number;
   lastScore: number;
   fromBook: boolean;
-  lastEngine?: 'rust-wasm' | 'ts-fallback';
+  lastEngine?: 'rust-wasm' | 'ts-fallback' | 'server-nn' | 'exact-endgame';
   lastUsedWasm?: boolean;
 }
 

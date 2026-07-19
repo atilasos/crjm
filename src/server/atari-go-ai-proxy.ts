@@ -17,6 +17,8 @@ interface RateBucket {
 
 export interface AtariGoAiProxyOptions {
   upstreamBaseUrl: string;
+  /** Prefixo do caminho público; default ATARI_GO_AI_PROXY_PREFIX. */
+  prefix?: string;
   sessionCookieName: string;
   sessionSecret: string;
   fetchImpl?: typeof fetch;
@@ -124,6 +126,7 @@ async function readLimitedBody(request: Request, timeoutMs: number): Promise<Uin
 
 export function createAtariGoAiProxy(options: AtariGoAiProxyOptions) {
   const rateLimits = new Map<string, RateBucket>();
+  const prefix = options.prefix ?? ATARI_GO_AI_PROXY_PREFIX;
   const upstreamBaseUrl = options.upstreamBaseUrl.replace(/\/$/, '');
   const fetchImpl = options.fetchImpl ?? fetch;
   const upstreamTimeoutMs = options.upstreamTimeoutMs ?? DEFAULT_UPSTREAM_TIMEOUT_MS;
@@ -169,7 +172,7 @@ export function createAtariGoAiProxy(options: AtariGoAiProxyOptions) {
   }
 
   return async function proxyAtariGoAi(request: Request, url = new URL(request.url)): Promise<Response> {
-    const suffix = url.pathname.slice(ATARI_GO_AI_PROXY_PREFIX.length) || '/';
+    const suffix = url.pathname.slice(prefix.length) || '/';
     const allowedMethod = suffix === '/health' ? 'GET' : suffix === '/move' ? 'POST' : null;
     if (!allowedMethod) return Response.json({ error: 'not-found' }, { status: 404 });
     if (request.method !== allowedMethod) {

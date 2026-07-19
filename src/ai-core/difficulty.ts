@@ -72,6 +72,7 @@ export const DEFAULT_MAX_DIFFICULTY_LEVEL: ExtendedDifficultyLevel = 5;
 /** Máximo por jogo — só o Atari Go expõe o nível 6 (IA no servidor). */
 export const MAX_DIFFICULTY_LEVEL_BY_GAME: Partial<Record<GameId, ExtendedDifficultyLevel>> = {
   'atari-go': 6,
+  quelhas: 6,
 };
 
 export function getMaxDifficultyLevel(gameId?: GameId): ExtendedDifficultyLevel {
