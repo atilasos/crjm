@@ -283,6 +283,125 @@ fn dist_min(board: &[u8; NN], color: u8, neutral_cost: u16) -> u16 {
     u16::MAX
 }
 
+/// Campo de distâncias 0-1 (custo de entrada por célula) a partir da aresta
+/// inicial (`from_end == false`) ou final (`from_end == true`) de `color`,
+/// sem early-return: devolve o campo completo.
+fn dist_field(board: &[u8; NN], color: u8, neutral_cost: u16, from_end: bool) -> [u16; NN] {
+    let mut dist = [u16::MAX; NN];
+    let mut inq = [false; NN];
+
+    // Deque 0-1 em ring buffer modular (mesma técnica de dist_min).
+    struct Deque {
+        buf: [u8; NN],
+        head: usize,
+        tail: usize,
+    }
+    impl Deque {
+        fn is_empty(&self) -> bool {
+            self.head == self.tail
+        }
+        fn push_back(&mut self, v: u8) {
+            self.buf[self.tail] = v;
+            self.tail = (self.tail + 1) % NN;
+        }
+        fn push_front(&mut self, v: u8) {
+            self.head = (self.head + NN - 1) % NN;
+            self.buf[self.head] = v;
+        }
+        fn pop_front(&mut self) -> Option<u8> {
+            if self.is_empty() {
+                return None;
+            }
+            let v = self.buf[self.head];
+            self.head = (self.head + 1) % NN;
+            Some(v)
+        }
+    }
+    let mut deque = Deque {
+        buf: [0u8; NN],
+        head: 0,
+        tail: 0,
+    };
+
+    for i in 0..N {
+        let s = match (color, from_end) {
+            (BLACK, false) => Pos::from_xy(i, 0).idx,
+            (BLACK, true) => Pos::from_xy(i, N - 1).idx,
+            (WHITE, false) => Pos::from_xy(0, i).idx,
+            _ => Pos::from_xy(N - 1, i).idx,
+        };
+        if let Some(c) = cell_cost(board[s as usize], color, neutral_cost) {
+            dist[s as usize] = c;
+            inq[s as usize] = true;
+            if c == 0 {
+                deque.push_front(s);
+            } else {
+                deque.push_back(s);
+            }
+        }
+    }
+
+    let mut neigh = [0u8; 6];
+    while let Some(cur) = deque.pop_front() {
+        inq[cur as usize] = false;
+        let dcur = dist[cur as usize];
+        let cnt = neighbours(cur as usize, &mut neigh);
+        for i in 0..cnt {
+            let nb = neigh[i];
+            let nbi = nb as usize;
+            if let Some(step) = cell_cost(board[nbi], color, neutral_cost) {
+                let nd = dcur.saturating_add(step);
+                if nd < dist[nbi] {
+                    dist[nbi] = nd;
+                    if !inq[nbi] {
+                        inq[nbi] = true;
+                        if step == 0 {
+                            deque.push_front(nb);
+                        } else {
+                            deque.push_back(nb);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    dist
+}
+
+/// Máscara das células que pertencem a algum caminho mínimo da ligação de
+/// `color` (custo de neutras = 2). Devolve também a distância mínima total.
+fn min_path_mask(board: &[u8; NN], color: u8) -> ([bool; NN], u16) {
+    let ds = dist_field(board, color, 2, false);
+    let de = dist_field(board, color, 2, true);
+    let mut total = u16::MAX;
+    for i in 0..NN {
+        if ds[i] == u16::MAX || de[i] == u16::MAX {
+            continue;
+        }
+        if let Some(w) = cell_cost(board[i], color, 2) {
+            let t = ds[i] + de[i] - w;
+            if t < total {
+                total = t;
+            }
+        }
+    }
+    let mut mask = [false; NN];
+    if total != u16::MAX {
+        for i in 0..NN {
+            if ds[i] == u16::MAX || de[i] == u16::MAX {
+                continue;
+            }
+            if let Some(w) = cell_cost(board[i], color, 2) {
+                if ds[i] + de[i] - w == total {
+                    mask[i] = true;
+                }
+            }
+        }
+    }
+    (mask, total)
+}
+
 fn eval_advantage(board: &[u8; NN], my_color: u8) -> i32 {
     let opp = other(my_color);
     if has_win(board, my_color) {
@@ -905,9 +1024,19 @@ fn gen_moves_new_until(
 
     let cand_mask = gen_candidates(board);
 
+    // Máscaras de caminho mínimo (0-1 BFS dos dois lados): células no caminho
+    // mínimo próprio constroem a ligação; no do adversário, bloqueiam-na.
+    let opp = other(my_color);
+    let (my_path, _) = min_path_mask(board, my_color);
+    let (opp_path, _) = min_path_mask(board, opp);
+    if deadline_reached(deadline) {
+        return None;
+    }
+
     if can_place {
         // Colocações próprias: candidatos a distância <= 2 de qualquer peça,
-        // pontuados por centralidade + adjacência (construir ligação / bloquear).
+        // pontuados por centralidade + adjacência (construir ligação / bloquear)
+        // + pertença ao caminho mínimo próprio ou do adversário.
         let mut scored_own: Vec<(i32, u8)> = Vec::new();
         for &e in &empties {
             if deadline_reached(deadline) {
@@ -921,7 +1050,14 @@ fn gen_moves_new_until(
             let y = (idx % N) as i32;
             let center = -((x - 5).abs() + (y - 5).abs());
             let (oa, pa) = adj_counts(board, idx, my_color);
-            scored_own.push((center * 2 + oa * 5 + pa * 4, e));
+            let mut s = center * 2 + oa * 5 + pa * 4;
+            if my_path[idx] {
+                s += 48;
+            }
+            if opp_path[idx] {
+                s += 20;
+            }
+            scored_own.push((s, e));
         }
         if scored_own.is_empty() {
             for &e in &empties {
@@ -945,7 +1081,11 @@ fn gen_moves_new_until(
             let y = (idx % N) as i32;
             let center = -((x - 5).abs() + (y - 5).abs());
             let (oa, pa) = adj_counts(board, idx, my_color);
-            scored_neu.push((pa * 5 + center - oa, e));
+            let mut s = pa * 5 + center - oa;
+            if opp_path[idx] {
+                s += 48;
+            }
+            scored_neu.push((s, e));
         }
         let k = (k_neu + 3).min(scored_neu.len());
         let pool = pick_top_k(&mut scored_neu, k);
@@ -983,7 +1123,11 @@ fn gen_moves_new_until(
             let y = (idx % N) as i32;
             let center = -((x - 5).abs() + (y - 5).abs());
             let (oa, pa) = adj_counts(board, idx, my_color);
-            scored_n.push((oa * 6 + pa * 2 + center, nu));
+            let mut s = oa * 6 + pa * 2 + center;
+            if my_path[idx] {
+                s += 32;
+            }
+            scored_n.push((s, nu));
         }
         let k = k_sub_n.min(scored_n.len());
         let n_cands = pick_top_k(&mut scored_n, k);
@@ -2265,6 +2409,73 @@ mod tests {
                 return (0.5, max_overshoot);
             }
             color = other(color);
+        }
+    }
+
+    /// Replay instrumentado de jogos do duelo: NEX_DUEL_GAMES="4,11" (índices
+    /// 0-based) imprime cada lance com as distâncias 0-1 de ambos os lados.
+    #[test]
+    #[ignore = "replay de diagnóstico; correr explicitamente com NEX_DUEL_GAMES"]
+    fn duel_replay_dump() {
+        let spec = std::env::var("NEX_DUEL_GAMES").unwrap_or_default();
+        for g in spec.split(',').filter_map(|s| s.trim().parse::<usize>().ok()) {
+            let new_black = g % 2 == 0;
+            let seed = 0xC0FFEE ^ (g as u32 * 2654435761);
+            println!("=== jogo {} (novo com {}) seed {seed} ===", g + 1, if new_black { "pretas" } else { "brancas" });
+
+            let mut board = [EMPTY; NN];
+            let mut color = BLACK;
+            let mut rng = Rng32::new(seed);
+            let mut ply = 0usize;
+            loop {
+                let is_new = (color == BLACK) == new_black;
+                let mut work = board;
+                let action = if is_new {
+                    search_best(&mut work, color, 4, DUEL_BUDGET_MS, &mut rng)
+                } else {
+                    search_best_legacy(&mut work, color, 4, DUEL_BUDGET_MS, &mut rng)
+                };
+                let Some(mv) = action else {
+                    println!("ply {ply}: sem jogadas — empate");
+                    break;
+                };
+                apply_action(&mut board, color, mv);
+                let db = dist_min(&board, BLACK, 2);
+                let dw = dist_min(&board, WHITE, 2);
+                let desc = match mv {
+                    Action::Place { own, neutral } => format!(
+                        "coloca própria ({},{}) neutra ({},{})",
+                        own as usize / N, own as usize % N,
+                        neutral as usize / N, neutral as usize % N
+                    ),
+                    Action::Substitute { n1, n2, sac } => format!(
+                        "substitui n1 ({},{}) n2 ({},{}) sac ({},{})",
+                        n1 as usize / N, n1 as usize % N,
+                        n2 as usize / N, n2 as usize % N,
+                        sac as usize / N, sac as usize % N
+                    ),
+                    _ => "swap".into(),
+                };
+                println!(
+                    "ply {ply:3} {} ({}): {desc} | dB={db} dW={dw}",
+                    if is_new { "NOVO" } else { "LEG " },
+                    if color == BLACK { "pretas" } else { "brancas" },
+                );
+                if has_win(&board, color) {
+                    println!(
+                        ">>> vence {} ({})",
+                        if is_new { "NOVO" } else { "LEGADO" },
+                        if color == BLACK { "pretas" } else { "brancas" }
+                    );
+                    break;
+                }
+                ply += 1;
+                if ply > 200 {
+                    println!(">>> empate por limite de lances");
+                    break;
+                }
+                color = other(color);
+            }
         }
     }
 
