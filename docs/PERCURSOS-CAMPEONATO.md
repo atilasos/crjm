@@ -121,9 +121,12 @@ recomendação automática, como desafio explícito).
   a neutra bloqueia corridas com uma só jogada, e essa prova exigiria
   busca profunda. Pendente conhecido: o Nex indexa `tabuleiro[x][y]`
   (armadilha registada no harness).
-- **F4**: revisão de derrotas na app (mostrar o gráfico de avaliação do
-  motor sobre um jogo terminado) — a funcionalidade com mais valor de
-  treino e mais custo de UI.
+- **F4 — primeira entrega (2026-07-19)**: no Quelhas vs computador, cada
+  «vez» da IA regista a avaliação do motor na perspetiva do aluno
+  (`ai-core/eval-trace.ts`); no fim do jogo, o `EvalChart` mostra a curva
+  com o ponto de viragem marcado («foi aí que a avaliação mais caiu —
+  revê o que jogaste»). Extensível aos outros jogos pelo mesmo padrão
+  (onMetricsUpdate → normalizeEngineScore).
 
 ## Salvaguardas
 

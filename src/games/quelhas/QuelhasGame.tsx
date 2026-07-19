@@ -10,6 +10,8 @@ import { TrainingPathCard } from '../../components/TrainingPathCard';
 import { HintLegend } from '../../components/tutor/HintLegend';
 import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
+import { EvalChart } from '../../components/EvalChart';
+import { normalizeEngineScore } from '../../ai-core/eval-trace';
 import { QuelhasState, Posicao } from './types';
 import { 
   criarEstadoInicial, 
@@ -108,6 +110,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   // O contrato clássico (presets, tutor V1) trabalha em 1..5; o nível 6 usa o caminho servidor.
   const difficulty: AIDifficulty = mapLevelToQuelhasDifficulty(clampDifficultyLevel(difficultyLevel));
   const [aiMetrics, setAiMetrics] = useState<AIMetrics>(INITIAL_METRICS);
+  // F4: uma amostra de avaliação por «vez» da IA (perspetiva do humano)
+  const [evalTrace, setEvalTrace] = useState<number[]>([]);
+  const wasThinkingRef = useRef(false);
   const [aiReady, setAiReady] = useState(false);
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState> | null>(null);
@@ -124,7 +129,13 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   // Inicializar cliente de IA (Worker) uma vez
   useEffect(() => {
     const client = new QuelhasAIClient({
-      onMetricsUpdate: setAiMetrics,
+      onMetricsUpdate: (m) => {
+        if (wasThinkingRef.current && !m.isThinking && typeof m.lastScore === 'number') {
+          setEvalTrace((prev) => [...prev, normalizeEngineScore(m.lastScore)]);
+        }
+        wasThinkingRef.current = m.isThinking;
+        setAiMetrics(m);
+      },
       onReady: () => setAiReady(true),
     });
     aiClientRef.current = client;
@@ -358,6 +369,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setMostrarVencedor(false);
     setPosicaoInicial(null);
     setAiMetrics(INITIAL_METRICS);
+    setEvalTrace([]);
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
@@ -372,6 +384,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setMostrarVencedor(false);
     setPosicaoInicial(null);
     setAiMetrics(INITIAL_METRICS);
+    setEvalTrace([]);
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
@@ -385,6 +398,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setMostrarVencedor(false);
     setPosicaoInicial(null);
     setAiMetrics(INITIAL_METRICS);
+    setEvalTrace([]);
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
@@ -515,6 +529,15 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
                   ? 'N5 local (WASM)'
                   : 'N5 local'}
           </div>
+        )}
+        {state.modo === 'vs-computador' && state.estado !== 'a-jogar' && (
+          <EvalChart
+            values={evalTrace}
+            humanWon={
+              (state.estado === 'vitoria-jogador1' && humanPlayer === 'jogador1') ||
+              (state.estado === 'vitoria-jogador2' && humanPlayer === 'jogador2')
+            }
+          />
         )}
         </div>
 
