@@ -1,0 +1,82 @@
+Nex
+Language
+Português
+English
+नेपाली
+L1 · 0 XP
+🌙
+Sign in
+Game mode:
+👥 2 players
+👤
+Black (↖↘)
+VS
+👤
+White (↗↙)
+
+Turn: Black (↖↘)
+
+🔄 New game
+
+Learning path
+
+championship practice
+
+Current focus: Shorten your connection distance and use the neutral piece to block your opponent's path.
+
+Mistake to avoid: Placing your own piece well but wasting the neutral piece without blocking the best opponent route.
+
+Discover
+
+• Understand which sides each colour connects.
+• Distinguish the roles of your own piece and the neutral piece in a move.
+
+Challenge: Beat L1 once.
+
+Tactics
+
+• Build bridges and double connection threats.
+• Place neutral pieces on cutting squares in your opponent's path.
+
+Challenge: Beat L2 twice in a row.
+
+Strategy
+
+• Create three immediate connection threats and check that your opponent cannot win first.
+• Use replacement when the converted neutral pieces complete your connection.
+
+Challenge: Beat L3 and then L4, once each.
+
+Championship
+
+• Choose placement or replacement based on the available connection.
+• Review two losses and find the wasted neutral piece.
+
+Challenge: Win at least half your games against L4.
+
+Follow your full path, with puzzles for every stage, in the Strategy Lab.
+
+Placement
+Replacement
+Cancel
+
+Executing...
+
+Your own
+Neutral
+Black
+White
+Neutral
+📜
+Rules for Nex
+Diamond-shaped hexagonal grid (11×11 squares).
+Black connects the ↖ upper-left and lower-right ↘ sides.
+White connects the ↗ upper-right and lower-left ↙ sides.
+On each turn, choose ONE action:
+• Placement: 1 of your own pieces + 1 neutral (grey)
+• Replacement: 2 neutral→own + 1 own→neutral
+Pie rule: after the first move, White may swap colours.
+The first player to connect their two sides wins!
+
+💡
+Tip: think carefully before each move!

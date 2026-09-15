@@ -1,3 +1,5 @@
+import type { QuelhasEngine } from './wasm/pkg/quelhas_wasm.js';
+import type { Segmento } from '../types';
 import type { AIRequest, AIResponse } from './types';
 import { DIFFICULTY_PRESETS } from './types';
 import { applyDifficultySelection, searchBestMove, trySolveEndgameMove } from './engine';
@@ -6,31 +8,7 @@ function post(msg: AIResponse) {
   self.postMessage(msg);
 }
 
-interface WasmEngine {
-  new(tt_size_bits: number): WasmEngine;
-  search(
-    low_lo: number,
-    low_hi: number,
-    high_lo: number,
-    high_hi: number,
-    side: number,
-    time_budget_ms: number,
-    max_depth: number,
-    top_n: number,
-    score_delta: number
-  ): {
-    best_move: number;
-    depth_reached: number;
-    nodes_searched: bigint;
-    elapsed_ms: number;
-    tt_hits: bigint;
-    tt_probes: bigint;
-    score: number;
-  };
-  clear_tt(): void;
-}
-
-let wasmEngine: WasmEngine | null = null;
+let wasmEngine: QuelhasEngine | null = null;
 let useWasm = false;
 
 function boardToU64Parts(tabuleiro: ('vazia' | 'ocupada')[][]): {
@@ -58,7 +36,7 @@ function boardToU64Parts(tabuleiro: ('vazia' | 'ocupada')[][]): {
   };
 }
 
-function decodeMoveToSegmento(move: number, orientacaoIA: 'vertical' | 'horizontal') {
+function decodeMoveToSegmento(move: number): Segmento {
   // Move encoding: start | (len<<7) | (orient<<11)
   const start = move & 0x7f;
   const comprimento = (move >> 7) & 0x0f;
@@ -120,19 +98,20 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
   try {
     const preset = DIFFICULTY_PRESETS[req.difficulty];
     const timeBudgetMs = req.timeBudgetMs ?? preset.timeBudgetMs;
+    const requestStarted = performance.now();
 
     // Níveis fortes: nos finais pequenos, resolver por busca completa e
     // jogar de forma comprovadamente ótima (gestão exata da paridade).
     if (req.difficulty === 'hard' || req.difficulty === 'master') {
-      const solved = trySolveEndgameMove(req.tabuleiro, req.orientacaoIA);
+      const solved = trySolveEndgameMove(req.tabuleiro, req.orientacaoIA, Math.min(50, timeBudgetMs * 0.1));
       if (solved) {
         post({
           type: 'result',
           id: req.id,
           bestMove: solved,
-          depthReached: 99,
+          depthReached: 0,
           nodesSearched: 0,
-          elapsedMs: 0,
+          elapsedMs: performance.now() - requestStarted,
           ttHitRate: 0,
           score: 0,
           fromBook: false,
@@ -143,17 +122,8 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
       }
     }
 
-    let result:
-      | ReturnType<typeof searchBestMove>
-      | {
-          bestMove: any;
-          depthReached: number;
-          nodesSearched: number;
-          elapsedMs: number;
-          ttHitRate: number;
-          score: number;
-          fromBook: boolean;
-        };
+    let result: ReturnType<typeof searchBestMove>;
+    const remainingMs = Math.max(1, timeBudgetMs - (performance.now() - requestStarted));
 
     if (useWasm && wasmEngine) {
       const { lowLo, lowHi, highLo, highHi } = boardToU64Parts(req.tabuleiro);
@@ -165,7 +135,7 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
         highLo,
         highHi,
         side,
-        timeBudgetMs,
+        remainingMs,
         preset.maxDepth,
         preset.topN,
         preset.scoreDelta
@@ -176,7 +146,7 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
         bestMove: applyDifficultySelection(
           req.tabuleiro,
           req.orientacaoIA,
-          r.best_move >= 0 ? decodeMoveToSegmento(r.best_move, req.orientacaoIA) : null,
+          r.best_move >= 0 ? decodeMoveToSegmento(r.best_move) : null,
           preset.selectionQuantile,
         ),
         depthReached: r.depth_reached,
@@ -188,7 +158,7 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
       };
     } else {
       result = searchBestMove(req.tabuleiro, req.orientacaoIA, {
-        timeBudgetMs,
+        timeBudgetMs: remainingMs,
         maxDepth: preset.maxDepth,
         topN: preset.topN,
         scoreDelta: preset.scoreDelta,
@@ -202,7 +172,7 @@ self.onmessage = (event: MessageEvent<AIRequest>) => {
       bestMove: result.bestMove,
       depthReached: result.depthReached,
       nodesSearched: result.nodesSearched,
-      elapsedMs: result.elapsedMs,
+      elapsedMs: performance.now() - requestStarted,
       ttHitRate: result.ttHitRate,
       score: result.score,
       fromBook: result.fromBook,

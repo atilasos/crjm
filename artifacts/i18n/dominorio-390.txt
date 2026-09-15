@@ -1,0 +1,90 @@
+Dominório (Domineering)
+Language
+Português
+English
+नेपाली
+L1 · 0 XP
+🌙
+Sign in
+Game mode:
+👥 2 players
+👤
+Vertical
+VS
+👤
+Horizontal
+
+Turn: Horizontal
+
+🔄 New game
+
+Learning path
+
+championship practice
+
+Current focus: Control useful space and the pace of the endgame.
+
+Mistake to avoid: Using whole corridors early without securing an advantage in available moves.
+
+Discover
+
+• See immediately whether the position needs a vertical or horizontal domino.
+• Understand that whoever runs out of legal moves loses.
+
+Challenge: Beat L1 once.
+
+Tactics
+
+• Analyse separate areas independently.
+• Recognise exclusive corridors as reserve moves.
+
+Challenge: Beat L2 twice in a row.
+
+Strategy
+
+• Know when mirroring works and where it breaks.
+• Count exclusive reserves and decide cuts by the total available moves.
+
+Challenge: Beat L3 and then L4, once each.
+
+Championship
+
+• Play in both directions and manage the clock.
+• Review two losses and find the cut or corridor you misjudged.
+
+Challenge: Win at least half your games against L4.
+
+Follow your full path, with puzzles for every stage, in the Strategy Lab.
+
+Vertical (P1)
+Horizontal (P2)
+Click to place a HORIZONTAL domino • Available moves: 54
+Opening book
+Strong plan
+3 useful options
+
+VISUAL GUIDE
+
+Recommended move
+Alternative/support
+AI
+Hint for this turn
+H1
+E-DO-01
+
+Analysing the position...
+
+Calculating the best moves...
+
+📜
+Rules for Dominório (Domineering)
+8×8 board.
+The Vertical player places VERTICAL dominoes (2 squares).
+The Horizontal player places HORIZONTAL dominoes (2 squares).
+Vertical goes first.
+Each domino occupies two adjacent empty squares.
+The player who places the LAST piece wins.
+If you have no moves on your turn, you LOSE.
+
+💡
+Tip: think carefully before each move!

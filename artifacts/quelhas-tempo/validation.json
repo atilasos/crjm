@@ -1,0 +1,109 @@
+{
+  "tests": {
+    "passed": 525,
+    "failed": 0,
+    "assertions": 15398
+  },
+  "rust": {
+    "passed": 3,
+    "endgamePositionSideCombinations": 1024
+  },
+  "classroomUI": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:5183",
+    "checks": [
+      {
+        "viewport": "desktop",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Produto"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Nex"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Produto"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Nex"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Produto"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Nex"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório de Estratégias"
+      }
+    ]
+  },
+  "learnerCoreE2E": "passed",
+  "fullBuild": "passed",
+  "tsc": {
+    "newDiagnosticSignatures": 0,
+    "resolvedDiagnosticSignatures": 17,
+    "preexistingErrorsRemain": true
+  },
+  "finalWasmMatchesArena": true
+}

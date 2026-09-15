@@ -14,8 +14,8 @@ export interface DifficultyParams {
 export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
   beginner: { timeBudgetMs: 100, maxDepth: 2, topN: 0, scoreDelta: 0, selectionQuantile: 0.99 },
   easy: { timeBudgetMs: 250, maxDepth: 4, topN: 0, scoreDelta: 0, selectionQuantile: 0.8 },
-  medium: { timeBudgetMs: 500, maxDepth: 8, topN: 0, scoreDelta: 0, selectionQuantile: 0.3 },
-  hard: { timeBudgetMs: 1000, maxDepth: 13, topN: 0, scoreDelta: 0, selectionQuantile: 0.08 },
+  medium: { timeBudgetMs: 500, maxDepth: 8, topN: 0, scoreDelta: 0, selectionQuantile: 0 },
+  hard: { timeBudgetMs: 1000, maxDepth: 13, topN: 0, scoreDelta: 0, selectionQuantile: 0 },
   master: { timeBudgetMs: 2000, maxDepth: 18, topN: 0, scoreDelta: 0, selectionQuantile: 0 },
 };
 
@@ -63,7 +63,7 @@ export type AIResponse =
       ttHitRate: number;
       score: number;
       fromBook: boolean;
-      engine: 'rust-wasm' | 'ts-fallback';
+      engine: 'rust-wasm' | 'ts-fallback' | 'exact-endgame';
       usedWasm: boolean;
     }
   | {

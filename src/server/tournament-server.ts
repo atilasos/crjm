@@ -1,9 +1,10 @@
+import { isLocale, localeOrDefault } from '../i18n/locale';
 /**
  * Servidor de torneios WebSocket usando Bun.
- * 
+ *
  * Para executar:
  *   bun run src/server/tournament-server.ts
- * 
+ *
  * Para expor via túnel (ngrok ou cloudflare):
  *   ngrok http 4000
  *   -- ou --
@@ -1904,6 +1905,23 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     return Response.json({ ok: true }, { headers: corsHeaders });
   }
 
+  // The pupil's existing login code authorizes their language preference only.
+  if (url.pathname === '/api/student/locale' && req.method === 'POST') {
+    try {
+      const body: unknown = await req.json();
+      if (!body || typeof body !== 'object' || !('code' in body) ||
+          typeof body.code !== 'string' || !('locale' in body) || !isLocale(body.locale)) {
+        return Response.json({ error: 'invalid_locale_request' }, { status: 400, headers: corsHeaders });
+      }
+      if (!classStore.setStudentLocale(body.code, body.locale)) {
+        return Response.json({ error: 'codigo_invalido' }, { status: 404, headers: corsHeaders });
+      }
+      return Response.json({ locale: body.locale }, { headers: corsHeaders });
+    } catch {
+      return Response.json({ error: 'invalid_locale_request' }, { status: 400, headers: corsHeaders });
+    }
+  }
+
   // Login de aluno via código (sem autenticação)
   // POST /api/login  body: { code: string }
   if (url.pathname === '/api/login' && req.method === 'POST') {
@@ -1920,7 +1938,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       }
 
       return Response.json({
-        student: { id: result.student.id, name: result.student.name },
+        student: { id: result.student.id, name: result.student.name, locale: localeOrDefault(result.student.locale) },
         class: { id: result.schoolClass.id, name: result.schoolClass.name },
       }, { headers: corsHeaders });
     } catch (e) {

@@ -12,7 +12,7 @@ describe('EvalChart (F4)', () => {
 
   test('sem viragem, mensagem depende do resultado', () => {
     const won = renderToStaticMarkup(<EvalChart values={[0.2, 0.3, 0.5]} humanWon={true} />);
-    expect(won).toContain('jogo controlado');
+    expect(won).toContain('segundo esta análise, conservaste vantagem');
     expect(won).not.toContain('circle cx');
   });
 

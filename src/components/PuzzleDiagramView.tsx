@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import type { PuzzleDiagram } from '../ai-core/puzzles';
 
 interface PuzzleDiagramViewProps {
@@ -33,6 +34,7 @@ function cellContent(symbol: string) {
 }
 
 export function PuzzleDiagramView({ diagram }: PuzzleDiagramViewProps) {
+  const { t } = useTranslation();
   return (
     <figure className="mt-5" data-puzzle-diagram>
       <div className="inline-block rounded-lg border p-2 [background:var(--papel)] [border-color:var(--linha)]">
@@ -51,14 +53,14 @@ export function PuzzleDiagramView({ diagram }: PuzzleDiagramViewProps) {
                     : 'border [background:var(--fundo)] [border-color:var(--linha)]'
                 }`}
               >
-                {cellContent(symbol)}
+                {t(cellContent(symbol))}
               </span>
             ))}
           </div>
         ))}
       </div>
       <figcaption className="mt-2 max-w-xs text-xs leading-relaxed [color:var(--tinta-suave)]">
-        {diagram.caption}
+        {t(diagram.caption)}
       </figcaption>
     </figure>
   );

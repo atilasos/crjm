@@ -1,3 +1,5 @@
+import { formatDateTime } from '../i18n/format';
+import { useTranslation } from '../i18n/LanguageProvider';
 import {
   PATTERN_CARDS,
   STARTER_ACHIEVEMENTS,
@@ -6,6 +8,7 @@ import {
 } from '../ai-core/gamification';
 import { useGamification } from './gamification/GamificationProvider';
 import { GameProgressBars, GAME_LABELS } from './gamification/GameProgressBars';
+import { StrategyProgressSummary } from './StrategyPractice';
 import { Header } from './Header';
 
 interface PerfilPageProps {
@@ -31,6 +34,7 @@ export function formatStreak(days: number): string {
 }
 
 export function PerfilPage({ onVoltar }: PerfilPageProps) {
+  const { t, locale } = useTranslation();
   const { claimMissionReward, isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
   const shieldUsedThisWeek = profile.streakShieldWeeks.includes(currentWeekKey());
   const missionHistory = Object.entries(profile.missionClaims)
@@ -54,19 +58,18 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
         <section className="rounded-xl border p-6 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm uppercase tracking-wide [color:var(--tinta-suave)]">Perfil</p>
-              <h2 className="text-3xl font-bold">{isReady ? levelTitle : 'A sincronizar...'}</h2>
+              <p className="text-sm uppercase tracking-wide [color:var(--tinta-suave)]">{t("Perfil")}</p>
+              <h2 className="text-3xl font-bold">{t(isReady ? levelTitle : 'A sincronizar...')}</h2>
               <p className="mt-1 [color:var(--tinta-suave)]">
-                {isReady ? `Nível ${level} · ${profile.totalXp} XP total · ${formatStreak(profile.streakDays)}` : 'A carregar dados do jogador...'}
+                {t(isReady ? `Nível ${level} · ${profile.totalXp} XP total · ${t(formatStreak(profile.streakDays))}` : 'A carregar dados do jogador...')}
               </p>
-              <p className="mt-2 text-sm font-bold [color:var(--ouro)]">
-                🛡️ Escudo semanal: {shieldUsedThisWeek ? 'usado — renova na próxima segunda-feira' : 'disponível para proteger um dia em falta'}
+              <p className="mt-2 text-sm font-bold [color:var(--ouro)]">{t("🛡️ Escudo semanal: ")}{t(shieldUsedThisWeek ? 'usado — renova na próxima segunda-feira' : 'disponível para proteger um dia em falta')}
               </p>
             </div>
             <div className="min-w-[220px]">
               <div className="flex justify-between text-xs [color:var(--tinta-suave)]">
-                <span>XP atual</span>
-                <span>{isReady ? `${profile.totalXp - xpWindow.current} / ${xpWindow.next - xpWindow.current}` : '- / -'}</span>
+                <span>{t("XP atual")}</span>
+                <span>{t(isReady ? `${profile.totalXp - xpWindow.current} / ${xpWindow.next - xpWindow.current}` : '- / -')}</span>
               </div>
               <div className="mt-2 h-3 overflow-hidden rounded-full [background:var(--linha)]">
                 <div
@@ -79,17 +82,19 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                   }}
                 />
               </div>
-              <p className="mt-2 text-xs [color:var(--tinta-suave)]">{isReady ? `+${profile.sessionXp} XP acumulado nesta sessão` : 'A calcular sessão...'}</p>
+              <p className="mt-2 text-xs [color:var(--tinta-suave)]">{t(isReady ? `+${profile.sessionXp} XP acumulado nesta sessão` : 'A calcular sessão...')}</p>
             </div>
           </div>
         </section>
+
+        <StrategyProgressSummary />
 
         <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
           <GameProgressBars isReady={isReady} gameProgress={profile.gameProgress} />
 
           <div className="space-y-6">
             <div className="rounded-xl border p-5 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
-              <p className="text-lg font-bold">Missões</p>
+              <p className="text-lg font-bold">{t("Missões")}</p>
               <div className="mt-4 space-y-3">
                 {!isReady ? (
                   <div className="rounded-lg border p-3 animate-pulse [background:var(--fundo)] [border-color:var(--linha)]">
@@ -100,12 +105,12 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                 ) : missions.map((mission) => (
                   <div key={mission.id} className="rounded-lg border p-3 [background:var(--fundo)] [border-color:var(--linha)]">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="font-semibold">{mission.title}</p>
+                      <p className="font-semibold">{t(mission.title)}</p>
                       <span className="text-xs [color:var(--tinta-suave)]">
-                        {mission.progress}/{mission.target}
+                        {t(mission.progress)}/{t(mission.target)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm [color:var(--tinta-suave)]">{mission.description}</p>
+                    <p className="mt-1 text-sm [color:var(--tinta-suave)]">{t(mission.description)}</p>
                     <div className="mt-2 h-2 overflow-hidden rounded-full [background:var(--linha)]">
                       <div
                         className="h-full rounded-full transition-all duration-500 [background:var(--sucesso)]"
@@ -119,23 +124,23 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                         disabled={mission.claimed}
                         className="mt-3 min-h-12 w-full rounded-lg px-3 py-2 text-sm font-bold text-white transition [background:var(--sucesso)] hover:opacity-90 disabled:cursor-default disabled:opacity-100 disabled:[background:var(--linha)] disabled:[color:var(--tinta-suave)]"
                       >
-                        {mission.claimed ? 'Recompensa recebida' : `Receber +${mission.rewardXp} XP`}
+                        {t(mission.claimed ? 'Recompensa recebida' : `Receber +${mission.rewardXp} XP`)}
                       </button>
                     )}
                   </div>
                 ))}
               </div>
               <div className="mt-5 border-t pt-4 [border-color:var(--linha)]">
-                <p className="text-sm font-bold">Histórico de recompensas</p>
+                <p className="text-sm font-bold">{t("Histórico de recompensas")}</p>
                 {missionHistory.length === 0 ? (
-                  <p className="mt-2 text-sm [color:var(--tinta-suave)]">Ainda não recebeste recompensas de missões.</p>
+                  <p className="mt-2 text-sm [color:var(--tinta-suave)]">{t("Ainda não recebeste recompensas de missões.")}</p>
                 ) : (
                   <ul className="mt-2 space-y-2">
                     {missionHistory.map(({ mission, claim }) => (
                       <li key={`${mission.id}:${claim.claimedAt}`} className="flex items-center justify-between gap-3 text-sm [color:var(--tinta-suave)]">
-                        <span>{mission.title}</span>
+                        <span>{t(mission.title)}</span>
                         <span className="whitespace-nowrap text-xs font-bold [color:var(--sucesso)]">
-                          +{mission.rewardXp} XP · {new Date(claim.claimedAt).toLocaleDateString('pt-PT')}
+                          +{t(mission.rewardXp)}{t(" XP · ")}{t(formatDateTime(new Date(claim.claimedAt), locale))}
                         </span>
                       </li>
                     ))}
@@ -145,7 +150,7 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
             </div>
 
             <div className="rounded-xl border p-5 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
-              <p className="text-lg font-bold">Atividade Recente</p>
+              <p className="text-lg font-bold">{t("Atividade Recente")}</p>
               <div className="mt-4 space-y-3">
                 {!isReady ? (
                   Array.from({ length: 3 }).map((_, i) => (
@@ -155,29 +160,29 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                     </div>
                   ))
                 ) : profile.recentEvents.length === 0 ? (
-                  <p className="text-sm text-center py-4 [color:var(--tinta-suave)]">Ainda não há atividade recente.</p>
+                  <p className="text-sm text-center py-4 [color:var(--tinta-suave)]">{t("Ainda não há atividade recente.")}</p>
                 ) : (
                   [...profile.recentEvents].reverse().slice(0, 5).map((event, i) => (
                     <div key={`${event.at}-${i}`} className="rounded-lg border p-3 flex items-center justify-between gap-3 [background:var(--fundo)] [border-color:var(--linha)]">
                       <div>
                         <p className="font-semibold text-sm">
-                          {event.type === 'game_completed'
+                          {t(event.type === 'game_completed'
                             ? 'Partida jogada'
                             : event.type === 'review_completed'
                               ? 'Revisão concluída'
-                              : 'Puzzle resolvido'}
+                              : 'Puzzle resolvido')}
                         </p>
                         <p className="text-xs [color:var(--tinta-suave)]">
-                          {GAME_LABELS[event.gameId] || event.gameId}
+                          {t(GAME_LABELS[event.gameId] || event.gameId)}
                           {event.type === 'game_completed' && (
                             <span className={event.won ? 'font-bold [color:var(--sucesso)]' : '[color:var(--tinta-suave)]'}>
-                              {event.won ? ' • Vitória' : ' • Derrota'}
+                              {t(event.won ? ' • Vitória' : ' • Derrota')}
                             </span>
                           )}
                         </p>
                       </div>
                       <span className="text-xs whitespace-nowrap [color:var(--tinta-suave)]">
-                        {new Date(event.at).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                        {t(formatDateTime(new Date(event.at), locale, { day: 'numeric', month: 'short' }))}
                       </span>
                     </div>
                   ))
@@ -189,16 +194,16 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
 
         <section className="rounded-xl border p-5 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-lg font-bold">Conquistas</p>
+            <p className="text-lg font-bold">{t("Conquistas")}</p>
             <span className="text-sm [color:var(--tinta-suave)]">
-              {isReady ? `${Object.keys(profile.achievements).length}/${STARTER_ACHIEVEMENTS.length}` : '-/-'}
+              {t(isReady ? `${Object.keys(profile.achievements).length}/${STARTER_ACHIEVEMENTS.length}` : '-/-')}
             </span>
           </div>
           <div className="mt-5 space-y-7">
             {ACHIEVEMENT_GROUPS.map((group) => (
               <section key={group.category} aria-labelledby={`achievement-${group.category}`}>
                 <h3 id={`achievement-${group.category}`} className="text-sm font-black uppercase tracking-[0.16em] [color:var(--ouro)]">
-                  {group.title}
+                  {t(group.title)}
                 </h3>
                 <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                   {STARTER_ACHIEVEMENTS.filter((achievement) => achievement.category === group.category).map((achievement) => {
@@ -213,14 +218,14 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                         } ${!isReady ? 'animate-pulse opacity-70' : ''}`}
                       >
                         <div className="flex items-center justify-between gap-2">
-                          <p className="font-semibold">{achievement.title}</p>
-                          <span className={`text-xs font-medium ${unlocked ? '[color:var(--sucesso)]' : ''}`}>{unlocked ? '✓' : '🔒'}</span>
+                          <p className="font-semibold">{t(achievement.title)}</p>
+                          <span className={`text-xs font-medium ${unlocked ? '[color:var(--sucesso)]' : ''}`}>{t(unlocked ? '✓' : '🔒')}</span>
                         </div>
                         <p className="mt-2 text-sm [color:var(--tinta-suave)]">
-                          {achievement.description}
+                          {t(achievement.description)}
                         </p>
                         <p className={`mt-3 text-xs ${unlocked ? 'font-bold [color:var(--sucesso)]' : '[color:var(--tinta-suave)]'}`}>
-                          +{achievement.xp} XP {achievement.gameId ? `· ${GAME_LABELS[achievement.gameId]}` : ''}
+                          +{t(achievement.xp)}{t(" XP ")}{t(achievement.gameId ? `· ${GAME_LABELS[achievement.gameId]}` : '')}
                         </p>
                       </div>
                     );
@@ -234,20 +239,20 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
         <section className="rounded-xl border p-5 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-lg font-bold">Cartões de estratégia</p>
-              <p className="mt-1 text-sm [color:var(--tinta-suave)]">Descobre um padrão, usa-o com apoio e depois sozinho em três situações diferentes.</p>
+              <p className="text-lg font-bold">{t("Cartões de estratégia")}</p>
+              <p className="mt-1 text-sm [color:var(--tinta-suave)]">{t('Cartões das ideias que exploraste. Confirma a aprendizagem na atividade Escolhe e prevê.')}</p>
             </div>
             <span className="text-sm [color:var(--tinta-suave)]">
-              {Object.keys(profile.patterns).length}/{PATTERN_CARDS.length}
+              {t(Object.keys(profile.patterns).length)}/{t(PATTERN_CARDS.length)}
             </span>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {PATTERN_CARDS.map((card) => {
               const progress = profile.patterns[card.id];
               const stateLabel = progress?.state === 'mastered'
-                ? '⭐ Dominado'
+                ? '⭐ Praticado em várias situações'
                 : progress?.state === 'used_alone'
-                  ? '✅ Usado sozinho'
+                  ? '✅ Resposta registada'
                   : progress?.state === 'used_with_help'
                     ? '🛠️ Usado com ajuda'
                     : progress?.state === 'seen'
@@ -259,11 +264,11 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
                   className={`rounded-lg border p-4 [background:var(--fundo)] ${progress ? '[border-color:var(--ouro)]' : '[border-color:var(--linha)]'}`}
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <p className="font-semibold">{card.title}</p>
-                    <span className="text-xs [color:var(--tinta-suave)]">Fase {card.minimumPhase}</span>
+                    <p className="font-semibold">{t(card.title)}</p>
+                    <span className="text-xs [color:var(--tinta-suave)]">{t("Fase ")}{t(card.minimumPhase)}</span>
                   </div>
-                  <p className="mt-2 text-sm [color:var(--tinta-suave)]">{card.description}</p>
-                  <p className={`mt-3 text-xs font-bold ${progress ? '[color:var(--ouro)]' : '[color:var(--tinta-suave)]'}`}>{stateLabel}</p>
+                  <p className="mt-2 text-sm [color:var(--tinta-suave)]">{t(card.description)}</p>
+                  <p className={`mt-3 text-xs font-bold ${progress ? '[color:var(--ouro)]' : '[color:var(--tinta-suave)]'}`}>{t(stateLabel)}</p>
                 </article>
               );
             })}

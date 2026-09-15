@@ -1,30 +1,35 @@
+import { selectReviewPattern } from '../../../ai-core/review-patterns';
 import type {
   AIRequestV1,
   AIResponseV1,
   AIMoveCandidate,
   AICriticalThreat,
-  DifficultyLevel,
   AIPedagogyV1,
 } from '../../../ai-core';
-import { getDifficultyProfile } from '../../../ai-core/difficulty';
+import { getDifficultyProfile, type ExtendedDifficultyLevel } from '../../../ai-core/difficulty';
 import type { QuelhasState, Segmento } from '../types';
 import { QuelhasAIClient } from './ai-client';
-import { DIFFICULTY_PRESETS, type AIDifficulty } from './types';
+import type { AIDifficulty } from './types';
+import { analyzeTurnCounts } from './engine';
+import { colocarSegmento, getOrientacaoJogador } from '../logic';
+
+type AnalysisClient = Pick<QuelhasAIClient, 'getBestMove' | 'metrics' | 'cancel' | 'terminate'>;
 
 export interface QuelhasV1AdapterOptions {
-  client?: QuelhasAIClient;
+  client?: AnalysisClient;
 }
 
-const LEVEL_MAP: Record<DifficultyLevel, AIDifficulty> = {
+const LEVEL_MAP: Record<ExtendedDifficultyLevel, AIDifficulty> = {
   1: 'beginner',
   2: 'easy',
   3: 'medium',
   4: 'hard',
   5: 'master',
+  6: 'master',
 };
 
 export class QuelhasV1Adapter {
-  private readonly client: QuelhasAIClient;
+  private readonly client: AnalysisClient;
   private readonly ownsClient: boolean;
 
   constructor(options: QuelhasV1AdapterOptions = {}) {
@@ -41,7 +46,7 @@ export class QuelhasV1Adapter {
   async compute(
     request: AIRequestV1<QuelhasState, Segmento>,
   ): Promise<AIResponseV1<Segmento, QuelhasState>> {
-    const difficulty = mapLevelToQuelhasDifficulty(request.level);
+    const difficulty = request.mode === 'tutor' ? 'master' : mapLevelToQuelhasDifficulty(request.level);
     const timeBudgetMs =
       typeof request.timeBudgetMs === 'number' && Number.isFinite(request.timeBudgetMs)
         ? Math.max(1, Math.trunc(request.timeBudgetMs))
@@ -50,10 +55,17 @@ export class QuelhasV1Adapter {
     const bestMove = await this.client.getBestMove(request.state, difficulty, {
       timeBudgetMs,
     });
-    const topMoves = buildTopMoves(request.state, bestMove);
+    const metrics = this.client.metrics;
+    const explanation = bestMove ? describeMove(request.state, bestMove) : null;
+    // Only the searched action is ranked. Geometric alternatives were never
+    // searched and must not appear as the second/third best moves.
+    const topMoves: AIMoveCandidate<Segmento>[] = bestMove && explanation ? [{
+      move: bestMove, rank: 1, score: metrics.lastScore,
+      confidence: metrics.lastEngine === 'exact-endgame' ? 1 : 0.6,
+      reasonShort: explanation.counts,
+    }] : [];
     const criticalThreats = buildCriticalThreats(request.state, topMoves);
     const pedagogy = buildPedagogy(request.state, topMoves);
-    const metrics = this.client.metrics;
 
     return {
       version: '1.0',
@@ -62,9 +74,10 @@ export class QuelhasV1Adapter {
       mode: request.mode,
       bestMove,
       topMoves,
-      explainText: buildExplainText(request.state, bestMove, topMoves),
+      explainText: explanation?.explanation ?? 'Sem jogadas válidas: nesta posição ganhas, porque o adversário foi o último a jogar.',
       confidence: topMoves[0]?.confidence ?? 0.48,
       criticalThreats,
+      reviewPatternId: selectReviewPattern('quelhas', { criticalThreats }).id,
       pedagogy,
       stats: {
         elapsedMs: metrics.lastTimeMs,
@@ -91,75 +104,33 @@ export class QuelhasV1Adapter {
   }
 }
 
-export function mapLevelToQuelhasDifficulty(level: DifficultyLevel): AIDifficulty {
+export function mapLevelToQuelhasDifficulty(level: ExtendedDifficultyLevel): AIDifficulty {
   return LEVEL_MAP[level];
 }
 
-function segmentKey(move: Segmento): string {
-  return `${move.inicio.linha}:${move.inicio.coluna}:${move.comprimento}:${move.orientacao}`;
-}
-
-function sameSegment(a: Segmento, b: Segmento): boolean {
-  return segmentKey(a) === segmentKey(b);
-}
-
-function formatSegment(move: Segmento): string {
-  return `L${move.inicio.linha + 1} C${move.inicio.coluna + 1}, ${move.orientacao}, ${move.comprimento} casas`;
-}
-
-function estimateMovePriority(move: Segmento, state: QuelhasState): number {
-  const center = 4.5;
-  const startDistance =
-    Math.abs(move.inicio.linha - center) + Math.abs(move.inicio.coluna - center);
-  const legalMoves = state.jogadasValidas.length;
-  const shortSegmentBonus = move.comprimento <= 2 ? 14 : move.comprimento === 3 ? 8 : 2;
-  return shortSegmentBonus + legalMoves * 0.5 - startDistance;
-}
-
-function buildReasonShort(move: Segmento): string {
-  if (move.comprimento <= 2) {
-    return 'Fecha poucas casas e mantém mais respostas para o fim.';
+function describeMove(state: QuelhasState, move: Segmento) {
+  const next = colocarSegmento(state, move);
+  const turns = analyzeTurnCounts(next.tabuleiro);
+  const my = turns[getOrientacaoJogador(state, state.jogadorAtual)];
+  const opponent = turns[getOrientacaoJogador(state, state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1')];
+  const counts = `Após esta jogada: tu, ${my.min} a ${my.max} turnos; adversário, ${opponent.min} a ${opponent.max}.`;
+  let explanation: string;
+  if (opponent.max === 0) {
+    explanation = 'Esta jogada deixa o adversário sem jogadas e dá-lhe a vitória.';
+  } else if (my.max === 0) {
+    explanation = 'Esgotas as tuas faixas. O adversário ainda tem de jogar; depois ganhas por não teres jogada.';
+  } else {
+    explanation = 'Compara o mínimo e o máximo de turnos de cada lado. Se o adversário cortar uma faixa, a contagem muda. Quem pode ficar primeiro sem jogar?';
   }
-  if (move.comprimento >= 4) {
-    return 'Avança já nesta faixa, mas sem gastar todo o espaço útil.';
-  }
-  return 'Equilibra avanço e opções para a próxima sequência.';
-}
-
-function buildTopMoves(
-  state: QuelhasState,
-  bestMove: Segmento | null,
-): AIMoveCandidate<Segmento>[] {
-  const ranked = [...state.jogadasValidas]
-    .sort((a, b) => estimateMovePriority(b, state) - estimateMovePriority(a, state))
-    .slice(0, 6);
-  const unique: Segmento[] = [];
-
-  if (bestMove) {
-    unique.push(bestMove);
-  }
-
-  for (const move of ranked) {
-    if (!unique.some((candidate) => sameSegment(candidate, move))) {
-      unique.push(move);
-    }
-    if (unique.length >= 3) break;
-  }
-
-  return unique.slice(0, 3).map((move, index) => ({
-    move,
-    rank: (index + 1) as 1 | 2 | 3,
-    score: Math.round(estimateMovePriority(move, state) * 10),
-    confidence: Math.max(0.35, 0.82 - index * 0.12),
-    reasonShort: buildReasonShort(move),
-  }));
+  return { counts, explanation };
 }
 
 function buildCriticalThreats(
   state: QuelhasState,
   topMoves: AIMoveCandidate<Segmento>[],
 ): AICriticalThreat<Segmento>[] {
-  if (state.jogadasValidas.length === 0 || topMoves.length === 0) {
+  const best = topMoves[0];
+  if (state.jogadasValidas.length === 0 || !best) {
     return [];
   }
 
@@ -170,7 +141,7 @@ function buildCriticalThreats(
         severity: 'high',
         title: 'Tens uma única saída',
         description: 'Se fechares esta opção sem plano, podes ficar preso à última jogada.',
-        counterMove: topMoves[0].move,
+        counterMove: best.move,
       },
     ];
   }
@@ -181,8 +152,8 @@ function buildCriticalThreats(
         id: 'low-mobility',
         severity: 'medium',
         title: 'Poucas alternativas',
-        description: 'Escolhe um segmento curto para não fechar demasiado o tabuleiro já.',
-        counterMove: topMoves[0].move,
+        description: 'Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.',
+        counterMove: best.move,
       },
     ];
   }
@@ -218,29 +189,4 @@ function buildPedagogy(
     turningPointScore: state.jogadasValidas.length <= 5 ? 0.72 : 0.48,
     aeCompetency: ['planeamento', 'observação de padrões'],
   };
-}
-
-function buildExplainText(
-  state: QuelhasState,
-  bestMove: Segmento | null,
-  topMoves: AIMoveCandidate<Segmento>[],
-): string {
-  if (state.jogadasValidas.length === 0) {
-    return 'Sem jogadas válidas: nesta posição ganhas, porque o adversário foi o último a jogar.';
-  }
-
-  const move = bestMove ?? topMoves[0]?.move;
-  if (!move) {
-    return 'Procura um segmento curto que não feche demasiado o tabuleiro já.';
-  }
-
-  if (state.jogadasValidas.length <= 2) {
-    return 'Entra no fim com um segmento que te mantenha vivo e não feche a última faixa útil cedo demais.';
-  }
-
-  if (move.comprimento <= 2) {
-    return 'Dá prioridade a um segmento curto numa faixa ainda aberta; assim guardas mais opções para o final.';
-  }
-
-  return 'Avança numa faixa que prolongue o teu plano sem consumir logo demasiadas casas úteis.';
 }

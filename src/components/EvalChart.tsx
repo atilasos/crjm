@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import { findTurningPoint } from '../ai-core/eval-trace';
 
 interface EvalChartProps {
@@ -11,6 +12,7 @@ const HEIGHT = 120;
 const PAD = 12;
 
 export function EvalChart({ values, humanWon }: EvalChartProps) {
+  const { t } = useTranslation();
   if (values.length < 3) return null;
   const turningPoint = findTurningPoint(values);
 
@@ -20,18 +22,16 @@ export function EvalChart({ values, humanWon }: EvalChartProps) {
 
   return (
     <figure data-eval-chart className="mt-3">
-      <p className="text-xs font-black uppercase tracking-[0.18em] [color:var(--ouro)]">
-        Revisão do jogo
-      </p>
+      <p className="text-xs font-black uppercase tracking-[0.18em] [color:var(--ouro)]">{t("Revisão do jogo")}</p>
       <svg
         viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
         className="mt-2 w-full max-w-sm rounded-lg border [background:var(--fundo)] [border-color:var(--linha)]"
         role="img"
-        aria-label="Avaliação do computador ao longo do jogo, na tua perspetiva"
+        aria-label={t("Avaliação do computador ao longo do jogo, na tua perspetiva")}
       >
         <line x1={PAD} y1={HEIGHT / 2} x2={WIDTH - PAD} y2={HEIGHT / 2} stroke="var(--linha)" strokeDasharray="4 4" />
-        <text x={PAD} y={PAD + 2} fontSize="9" fill="var(--tinta-suave)">a teu favor</text>
-        <text x={PAD} y={HEIGHT - 4} fontSize="9" fill="var(--tinta-suave)">contra ti</text>
+        <text x={PAD} y={PAD + 2} fontSize="9" fill="var(--tinta-suave)">{t("a teu favor")}</text>
+        <text x={PAD} y={HEIGHT - 4} fontSize="9" fill="var(--tinta-suave)">{t("contra ti")}</text>
         <polyline points={points} fill="none" stroke="var(--ouro)" strokeWidth="2" strokeLinejoin="round" />
         {turningPoint && (
           <circle
@@ -45,11 +45,11 @@ export function EvalChart({ values, humanWon }: EvalChartProps) {
         )}
       </svg>
       <figcaption className="mt-1 max-w-sm text-xs leading-relaxed [color:var(--tinta-suave)]">
-        {turningPoint
+        {t(turningPoint
           ? `O ponto vermelho marca a vez ${turningPoint.turn + 1}: foi aí que a avaliação mais caiu — revê o que jogaste nesse momento.`
           : humanWon
             ? 'A avaliação manteve-se do teu lado — jogo controlado do início ao fim.'
-            : 'Sem uma única queda decisiva: a desvantagem acumulou-se aos poucos.'}
+            : 'Sem uma única queda decisiva: a desvantagem acumulou-se aos poucos.')}
       </figcaption>
     </figure>
   );

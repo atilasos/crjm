@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../i18n/LanguageProvider';
 import type { AIMoveCandidate } from '../../../ai-core';
 import type { Segmento } from '../types';
 
@@ -11,10 +12,11 @@ function formatMove(move: Segmento): string {
 }
 
 export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
+  const { t } = useTranslation();
   if (isLoading) {
     return (
       <section className="rounded-xl border px-4 py-3 [background:var(--painel)] [border-color:var(--linha)]">
-        <p className="text-sm [color:var(--tinta-suave)]">A calcular melhores jogadas...</p>
+        <p className="text-sm [color:var(--tinta-suave)]">{t("A calcular melhores jogadas...")}</p>
       </section>
     );
   }
@@ -25,9 +27,7 @@ export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
 
   return (
     <section className="rounded-xl border px-4 py-3 [background:var(--painel)] [border-color:var(--linha)]">
-      <p className="text-xs font-semibold uppercase tracking-wide [color:var(--tinta-suave)]">
-        Top jogadas
-      </p>
+      <p className="text-xs font-semibold uppercase tracking-wide [color:var(--tinta-suave)]">{t("Top jogadas")}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         {moves.slice(0, 3).map((candidate) => (
           <div
@@ -35,9 +35,9 @@ export function TopMovesRail({ moves, isLoading = false }: TopMovesRailProps) {
             className="rounded-lg border px-3 py-2 text-xs [border-color:var(--linha)] [background:var(--fundo)] [color:var(--tinta-suave)]"
           >
             <p className="font-semibold [color:var(--tinta)]">
-              #{candidate.rank} {formatMove(candidate.move)}
+              #{t(candidate.rank)} {t(formatMove(candidate.move))}
             </p>
-            {candidate.reasonShort && <p className="mt-1">{candidate.reasonShort}</p>}
+            {candidate.reasonShort && <p className="mt-1">{t(candidate.reasonShort)}</p>}
           </div>
         ))}
       </div>

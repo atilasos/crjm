@@ -1,3 +1,4 @@
+import { selectReviewPattern } from '../../../ai-core/review-patterns';
 import type {
   AIRequestV1,
   AIResponseV1,
@@ -55,6 +56,7 @@ export class GatosCaesV1Adapter {
       explainText: buildExplainText(request.state, bestMove, topMoves),
       confidence: topMoves[0]?.confidence ?? 0.5,
       criticalThreats,
+      reviewPatternId: selectReviewPattern('gatos-caes', { criticalThreats }).id,
       pedagogy: buildPedagogy(request.state, legalMoves.length),
       stats: {
         elapsedMs: stats.timeMs,

@@ -246,11 +246,13 @@ function generateMovesDynamic(occ: Occ, orient: 0 | 1): EncMove[] {
   return generateCandidateMoves(occ, orient);
 }
 
-type Metrics = {
+export type TurnCounts = {
   min: number;
   max: number;
   minExcl: number;
   maxExcl: number;
+  /** Runs containing an adjacent pair that the opponent can never occupy. */
+  protectedMin: number;
 };
 
 function addRunCells(mask: Occ, run: Run): Occ {
@@ -270,160 +272,73 @@ function runOverlaps(mask: Occ, run: Run): boolean {
   return false;
 }
 
-function computeMetricsForOrient(occ: Occ, myOrient: 0 | 1, oppPlayableMask: Occ): Metrics {
-  const runs = extractRuns(occ, myOrient);
-  let min = 0;
-  let max = 0;
-  let minExcl = 0;
-  let maxExcl = 0;
-
+function countTurns(runs: Run[], oppPlayableMask: Occ): TurnCounts {
+  const counts: TurnCounts = { min: 0, max: 0, minExcl: 0, maxExcl: 0, protectedMin: 0 };
   for (const run of runs) {
-    min += 1;
-    max += Math.floor(run.len / 2);
-    const exclusive = !runOverlaps(oppPlayableMask, run);
-    if (exclusive) {
-      minExcl += 1;
-      maxExcl += Math.floor(run.len / 2);
+    counts.min++;
+    counts.max += Math.floor(run.len / 2);
+    if (!runOverlaps(oppPlayableMask, run)) {
+      counts.minExcl++;
+      counts.maxExcl += Math.floor(run.len / 2);
+    }
+    const step = run.orient === 0 ? BOARD_SIZE : 1;
+    for (let i = 1; i < run.len; i++) {
+      if (!hasBit(oppPlayableMask, run.start + (i - 1) * step) &&
+          !hasBit(oppPlayableMask, run.start + i * step)) {
+        counts.protectedMin++;
+        break;
+      }
     }
   }
+  return counts;
+}
 
-  return { min, max, minExcl, maxExcl };
+function analyzeOccupancy(occ: Occ): { vertical: TurnCounts; horizontal: TurnCounts } {
+  const vertical = extractRuns(occ, 0);
+  const horizontal = extractRuns(occ, 1);
+  let maskV: Occ = { low: 0n, high: 0n };
+  let maskH: Occ = { low: 0n, high: 0n };
+  for (const run of vertical) maskV = addRunCells(maskV, run);
+  for (const run of horizontal) maskH = addRunCells(maskH, run);
+  return { vertical: countTurns(vertical, maskH), horizontal: countTurns(horizontal, maskV) };
+}
+
+/** Min/max turns to exhaust today's runs without interference, not legal placements.
+ * Shared runs can be split or removed by the opponent. Only protectedMin is an
+ * unavoidable lower bound on one's own work while the game continues.
+ */
+export function analyzeTurnCounts(tabuleiro: Celula[][]) {
+  return analyzeOccupancy(boardToOcc(tabuleiro));
+}
+
+function tempoOutcome(my: TurnCounts, opp: TurnCounts): boolean | null {
+  if (my.max === 0) return true;
+  if (opp.max === 0) return false;
+  // With no intersections, both players can empty one whole run per turn.
+  // The first player wins ties: the other player must still take their turn.
+  if (my.min === my.minExcl && opp.min === opp.minExcl) return my.min <= opp.min;
+  if (my.max <= opp.protectedMin) return true;
+  if (opp.max < my.protectedMin) return false;
+  return null;
 }
 
 function evaluateMisere(occ: Occ, sideToMove: 0 | 1): number {
-  const myOrient = sideToMove;
-  const oppOrient = (1 - sideToMove) as 0 | 1;
-
-  const runsV = extractRuns(occ, 0);
-  const runsH = extractRuns(occ, 1);
-
-  let maskV: Occ = { low: 0n, high: 0n };
-  let maskH: Occ = { low: 0n, high: 0n };
-  for (const r of runsV) maskV = addRunCells(maskV, r);
-  for (const r of runsH) maskH = addRunCells(maskH, r);
-
-  const mV = computeMetricsForOrient(occ, 0, maskH);
-  const mH = computeMetricsForOrient(occ, 1, maskV);
-
-  const my = myOrient === 0 ? mV : mH;
-  const opp = myOrient === 0 ? mH : mV;
-
-  // Casos terminais misère:
-  // - Se eu não tenho jogadas, eu ganho (não posso jogar).
-  // - Se o adversário não tem jogadas e eu tenho, sou forçado a jogar = perco.
-  if (my.min === 0) return 100000;
-  if (opp.min === 0) return -100000;
-
-  // ========== ANÁLISE DE PARIDADE MISÈRE ==========
-  //
-  // Em misère com jogadas alternadas:
-  // - Quem faz a última jogada PERDE
-  // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
-  // - O objetivo é forçar o adversário a fazer a última jogada
-  //
-  // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
-  // do total de jogadas para forçar o adversário a ser o último.
-
-  const myFlex = my.max - my.min;   // Quantas jogadas extra posso escolher fazer
-  const oppFlex = opp.max - opp.min; // Quantas jogadas extra o adversário pode fazer
-
-  // Análise de controlo baseada em zonas exclusivas:
-  // - Blocos exclusivos são "reservas de tempo" - só eu posso jogar lá
-  // - Se maxExcl >= opp.max: posso sempre "responder" a qualquer jogada do adversário
-  //   usando minhas exclusivas, forçando-o a esgotar primeiro
-
-  let score = 0;
-
-  // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
-  if (my.maxExcl >= opp.max && my.maxExcl > 0) {
-    // Posição dominante: posso acompanhar todas as jogadas do adversário
-    // O adversário não tem como evitar ser o último
-    const controlo = my.maxExcl - opp.max;
-    score += 8000 + controlo * 500;
-  }
-  // Se o adversário tem este controlo sobre mim
-  else if (opp.maxExcl >= my.max && opp.maxExcl > 0) {
-    const controloAdv = opp.maxExcl - my.max;
-    score -= 8000 + controloAdv * 500;
-  }
-
-  // 2. ANÁLISE DE PARIDADE PARA ENDGAME
-  // Quando restam poucas jogadas, calcular paridade exata
-  const totalMax = my.max + opp.max;
-  const totalMin = my.min + opp.min;
-
-  if (totalMax <= 20) {
-    // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
-    // se o total for PAR, o adversário faz a última = EU GANHO
-    // se o total for ÍMPAR, eu faço a última = EU PERCO
-
-    // Com flexibilidade, posso escolher o total dentro de [totalMin, totalMax]
-    // Se tenho mais flexibilidade, posso escolher a paridade a meu favor
-
-    // Verificar se posso forçar paridade favorável
-    const canForceEven = myFlex > 0 && (totalMin % 2 === 0 || my.max - 1 >= my.min);
-    const canForceOdd = myFlex > 0 && (totalMin % 2 === 1 || my.max - 1 >= my.min);
-
-    // Se posso escolher qualquer paridade e adversário não pode compensar
-    if (myFlex > oppFlex) {
-      // Eu controlo a paridade - posição vantajosa
-      score += 3000 + (myFlex - oppFlex) * 200;
-    } else if (oppFlex > myFlex) {
-      // Adversário controla a paridade
-      score -= 3000 + (oppFlex - myFlex) * 200;
-    } else {
-      // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
-      // Se totalMin é ímpar e nenhum tem flexibilidade extra, eu perco
-      if (myFlex === 0 && oppFlex === 0) {
-        if (totalMin % 2 === 1) {
-          score -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
-        } else {
-          score += 2000; // Total par = adversário faz última = ganho
-        }
-      }
-    }
-
-    // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
-    // Se adversário tem mais jogadas mínimas, ele será forçado a jogar mais
-    if (opp.min > my.min) {
-      score += (opp.min - my.min) * 400;
-    } else if (my.min > opp.min) {
-      score -= (my.min - opp.min) * 400;
-    }
-
-    // 4. ZONAS EXCLUSIVAS COMO RESERVA
-    // Ter exclusivas quando adversário não tem é enorme vantagem
-    if (my.minExcl > 0 && opp.minExcl === 0) {
-      score += 2500;
-    } else if (opp.minExcl > 0 && my.minExcl === 0) {
-      score -= 2500;
-    }
-  }
-
-  // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
-  // Reserva exclusiva como "banco de tempo"
-  score += (my.maxExcl - opp.maxExcl) * 80;
-
-  // Flexibilidade é valiosa em misère
-  score += (myFlex - oppFlex) * 60;
-
-  // Eficiência dos blocos (blocos maiores = mais opções)
-  const effOpp = opp.min > 0 ? opp.max / opp.min : 0;
-  const effMy = my.min > 0 ? my.max / my.min : 0;
-  score += Math.floor((effMy - effOpp) * 30);
-
-  // Penalizar ter muitas jogadas forçadas sem controlo
-  if (my.maxExcl < opp.max) {
-    score -= my.min * 20;
-  }
-
-  return score;
+  const counts = analyzeOccupancy(occ);
+  const my = sideToMove === 0 ? counts.vertical : counts.horizontal;
+  const opp = sideToMove === 0 ? counts.horizontal : counts.vertical;
+  const outcome = tempoOutcome(my, opp);
+  if (outcome !== null) return outcome ? 90_000 : -90_000;
+  // Positive means favourable for the player to move. Exhausting one's own
+  // work sooner is useful; forcing the opponent to keep playing is useful.
+  // These are estimates in contested space, never a proof from total parity.
+  return (opp.min - my.min) * 200
+    + (opp.max - my.max) * 40
+    + (opp.protectedMin - my.protectedMin) * 160
+    + ((my.max - my.min) - (opp.max - opp.min)) * 20;
 }
 
-// As métricas acima estimam sobretudo a carga/reserva de jogadas. Em misère,
-// mais carga própria é uma desvantagem: a folha do negamax usa o sinal oposto.
 function evaluateSearchLeaf(occ: Occ, sideToMove: 0 | 1): number {
-  return -evaluateMisere(occ, sideToMove);
+  return evaluateMisere(occ, sideToMove);
 }
 
 function hashStringToU32(str: string): number {
@@ -536,6 +451,7 @@ type SearchStats = {
   ttProbes: number;
   ttHits: number;
   deadline: number;
+  aborted: boolean;
 };
 
 const killerMoves: Array<[EncMove | -1, EncMove | -1]> = [];
@@ -560,12 +476,8 @@ function orderMoves(
 
     p += history.get(m) || 0;
 
-    // barato: encorajar lances curtos e "seguros"
-    const { len } = decMove(m);
-    p -= len * 10;
-
-    // no topo, gastar um pouco mais
-    if (depth >= 6) {
+    // Search lengths by their consequences, not by an automatic short-move bonus.
+    if (depth >= 2 || ttBest === undefined) {
       p += cheapMoveScore(occ, m, side) * 0.1;
     }
 
@@ -586,6 +498,7 @@ function negamax(
 ): { score: number; bestMove: EncMove | -1 } {
   stats.nodes++;
   if ((stats.nodes & 2047) === 0 && Date.now() >= stats.deadline) {
+    stats.aborted = true;
     return { score: 0, bestMove: -1 };
   }
 
@@ -624,7 +537,10 @@ function negamax(
       }
     }
 
-    if (Date.now() >= stats.deadline) break;
+    if (stats.aborted || Date.now() >= stats.deadline) {
+      stats.aborted = true;
+      return { score: 0, bestMove: -1 };
+    }
 
     if (score > bestScore) {
       bestScore = score;
@@ -706,7 +622,8 @@ function monteCarloSeedHistoryRoot(
 // paridade substitui a prova. Orçamento de nós limitado: se estourar,
 // devolve null e a busca normal decide.
 
-const ENDGAME_MAX_MOVES = 16;
+const ENDGAME_MAX_TURNS = 18;
+class EndgameBudgetExceeded extends Error {}
 const ENDGAME_NODE_BUDGET = 400_000;
 
 function occKey(occ: Occ, side: 0 | 1): string {
@@ -718,12 +635,16 @@ function solveExact(
   occ: Occ,
   side: 0 | 1,
   memo: Map<string, boolean>,
-  budget: { nodes: number },
+  budget: { nodes: number; deadline: number },
 ): boolean {
   const key = occKey(occ, side);
   const cached = memo.get(key);
   if (cached !== undefined) return cached;
-  if ((budget.nodes += 1) > ENDGAME_NODE_BUDGET) throw new Error('endgame-budget');
+  if ((budget.nodes += 1) > ENDGAME_NODE_BUDGET ||
+      ((budget.nodes & 63) === 0 && Date.now() >= budget.deadline)) throw new EndgameBudgetExceeded();
+  const counts = analyzeOccupancy(occ);
+  const proven = side === 0 ? tempoOutcome(counts.vertical, counts.horizontal) : tempoOutcome(counts.horizontal, counts.vertical);
+  if (proven !== null) { memo.set(key, proven); return proven; }
 
   const myMoves = generateAllMoves(occ, side);
   // Misère: sem jogadas legais no meu turno, eu ganho (o adversário jogou por último).
@@ -752,20 +673,24 @@ function solveExact(
 export function trySolveEndgameMove(
   tabuleiro: Celula[][],
   orientacaoIA: Orientacao,
+  timeBudgetMs = 50,
 ): Segmento | null {
+  const deadline = Date.now() + Math.max(1, timeBudgetMs);
   const occ = boardToOcc(tabuleiro);
   const side = orientToBit(orientacaoIA);
   const myMoves = generateAllMoves(occ, side);
-  if (myMoves.length === 0 || myMoves.length > ENDGAME_MAX_MOVES) return null;
-  const oppMoves = generateAllMoves(occ, (1 - side) as 0 | 1);
-  if (myMoves.length + oppMoves.length > ENDGAME_MAX_MOVES * 2) return null;
+  if (myMoves.length === 0) return null;
+  const counts = analyzeOccupancy(occ);
+  const independent = counts.vertical.min === counts.vertical.minExcl && counts.horizontal.min === counts.horizontal.minExcl;
+  if (!independent && counts.vertical.max + counts.horizontal.max > ENDGAME_MAX_TURNS) return null;
 
   const memo = new Map<string, boolean>();
-  const budget = { nodes: 0 };
+  const budget = { nodes: 0, deadline };
   try {
     let bestLosing: EncMove | -1 = -1;
     let bestLosingReplies = -1;
     for (const move of myMoves) {
+      if (Date.now() >= deadline) throw new EndgameBudgetExceeded();
       const next = applyMove(occ, move);
       if (!solveExact(next, (1 - side) as 0 | 1, memo, budget)) {
         return moveToSegmento(move);
@@ -777,8 +702,9 @@ export function trySolveEndgameMove(
       }
     }
     return bestLosing === -1 ? null : moveToSegmento(bestLosing);
-  } catch {
-    return null;
+  } catch (error) {
+    if (error instanceof EndgameBudgetExceeded) return null;
+    throw error;
   }
 }
 
@@ -793,13 +719,21 @@ export function searchBestMove(
   const occ0 = boardToOcc(tabuleiro);
   const side: 0 | 1 = orientToBit(orientacaoIA);
 
+  if (params.maxDepth >= 8 && (params.selectionQuantile ?? 0) === 0) {
+    const solved = trySolveEndgameMove(tabuleiro, orientacaoIA, Math.min(50, params.timeBudgetMs * 0.1));
+    if (solved) return {
+      bestMove: solved, depthReached: 0, nodesSearched: 0, elapsedMs: performance.now() - start,
+      ttHitRate: 0, score: cheapMoveScore(occ0, segmentoToMove(solved), side), fromBook: false,
+    };
+  }
+
   ttAge = (ttAge + 1) & 0xff;
   killerMoves.length = 0;
   history.clear();
 
   monteCarloSeedHistoryRoot(occ0, side, params.timeBudgetMs, deadline);
 
-  const stats: SearchStats = { nodes: 0, ttHits: 0, ttProbes: 0, deadline };
+  const stats: SearchStats = { nodes: 0, ttHits: 0, ttProbes: 0, deadline, aborted: false };
 
   const INF = 1_000_000;
   let bestMove: EncMove | -1 = -1;
@@ -816,7 +750,7 @@ export function searchBestMove(
       nodesSearched: 0,
       elapsedMs: performance.now() - start,
       ttHitRate: 0,
-      score: -INF,
+      score: 100000,
       fromBook: false,
     };
   }
@@ -875,6 +809,7 @@ export function searchBestMove(
     if (depth > 1 && (iterationBestScore <= alphaOrig || iterationBestScore >= beta)) {
       window = Math.min(1200, window * 2);
       const full = negamax(occ0, side, depth, -INF, INF, stats);
+      if (stats.aborted || Date.now() >= deadline) break;
       iterationBestScore = full.score;
       iterationBestMove = full.bestMove;
     } else if (depth > 1) {
@@ -975,6 +910,8 @@ export const __internal = {
   decMove,
   generateMovesDynamic,
   evaluateMisere,
+  analyzeOccupancy,
+  tempoOutcome,
   rolloutWinForRoot,
   selectMoveBySkill,
 };

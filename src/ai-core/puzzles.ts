@@ -58,18 +58,18 @@ export const PUZZLES: PuzzleDefinition[] = [
   },
   {
     id: 'gc-bloqueio-1', gameId: 'gatos-caes', patternId: 'gatos-caes:jogada-garantida', title: 'Reserva segura',
-    prompt: 'Descobriste uma casa que só a tua espécie poderá ocupar mais tarde. O que representa essa casa?',
+    prompt: 'Descobriste uma casa tua que continuará legal depois de qualquer jogada adversária. O que representa essa casa?',
     hint: 'Pensa nela como uma jogada guardada para o fim.', correctOptionId: 'reserva',
     options: [
       { id: 'perigo', label: 'Uma casa inútil', explanation: 'Uma casa exclusiva é útil porque o adversário não a consegue transformar numa resposta própria.' },
-      { id: 'reserva', label: 'Uma reserva de mobilidade', explanation: 'Certo: uma jogada garantida pode funcionar como reserva quando as casas partilhadas desaparecerem.' },
+      { id: 'reserva', label: 'Uma reserva de mobilidade', explanation: 'Certo: esta casa é uma reserva segura porque o adversário não a consegue bloquear.' },
       { id: 'captura', label: 'Uma captura imediata', explanation: 'Gatos & Cães não tem capturas; o valor está na mobilidade que a casa reserva.' },
     ],
   },
   {
     id: 'gc-tempo-1', gameId: 'gatos-caes', patternId: 'gatos-caes:casa-em-disputa', title: 'Ordem das casas',
-    prompt: 'Tens casas em disputa (ambos podem lá jogar) e casas exclusivas tuas. Qual deves ocupar primeiro?',
-    hint: 'As exclusivas ninguém tas tira.', correctOptionId: 'disputa',
+    prompt: 'Tens casas em disputa e reservas seguras tuas, que nenhuma jogada adversária consegue bloquear. Qual deves ocupar primeiro?',
+    hint: 'Compara uma casa em disputa com uma reserva que continuará legal. Nem todas as casas exclusivas são reservas seguras.', correctOptionId: 'disputa',
     options: [
       { id: 'exclusivas', label: 'As exclusivas, para garantir', explanation: 'As casas exclusivas já estão garantidas; gastá-las cedo desperdiça as tuas reservas de fim de jogo.' },
       { id: 'disputa', label: 'As casas em disputa', explanation: 'Certo: as casas em disputa desaparecem se o adversário lá jogar; as exclusivas ficam guardadas para o fim.' },
@@ -92,7 +92,7 @@ export const PUZZLES: PuzzleDefinition[] = [
   },
   {
     id: 'gc-contagem-1', gameId: 'gatos-caes', patternId: 'gatos-caes:jogada-garantida', title: 'Contar o final',
-    prompt: 'Já não há casas em disputa. Tens 2 casas exclusivas, o adversário tem 1, e é ele a jogar. Quem vence?',
+    prompt: 'Restam reservas seguras e separadas: tens 2 casas, o adversário tem 1, e é ele a jogar. Nenhuma jogada bloqueia as outras reservas. Quem vence?',
     hint: 'Simula os turnos: ele, tu, ele…', correctOptionId: 'tu',
     options: [
       { id: 'ele', label: 'Ele, porque joga primeiro', explanation: 'Simula: ele gasta a única exclusiva, tu jogas uma das tuas, e ele fica sem casa — perde.' },

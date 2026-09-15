@@ -1,7 +1,7 @@
 use crate::eval;
 use crate::tt::{TTEntry, TranspositionTable};
 use crate::zobrist::ZobristKeys;
-use quelhas_core::{apply_move, decode_move, generate_moves_dynamic, EncMove, Occupancy};
+use quelhas_core::{apply_move, generate_moves_dynamic, EncMove, Occupancy};
 
 pub struct SearchStats {
     pub nodes: u64,
@@ -27,6 +27,7 @@ pub struct Searcher<'a> {
     pub stats: SearchStats,
     killers: Vec<[u16; 2]>,
     history: Vec<i32>,
+    aborted: bool,
 }
 
 const INF: i32 = 1_000_000;
@@ -53,6 +54,7 @@ impl<'a> Searcher<'a> {
             },
             killers: Vec::new(),
             history: vec![0; 4096],
+            aborted: false,
         }
     }
 
@@ -61,7 +63,14 @@ impl<'a> Searcher<'a> {
         now_ms >= deadline_ms
     }
 
-    fn order_moves(&mut self, occ: Occupancy, side: u8, depth: usize, moves: &mut [EncMove], tt_best: Option<EncMove>) {
+    fn order_moves(
+        &mut self,
+        occ: Occupancy,
+        side: u8,
+        depth: usize,
+        moves: &mut [EncMove],
+        tt_best: Option<EncMove>,
+    ) {
         let tt_best_u16 = tt_best.unwrap_or(0);
         if self.killers.len() <= depth {
             self.killers.resize(depth + 1, [0, 0]);
@@ -76,7 +85,15 @@ impl<'a> Searcher<'a> {
     }
 
     #[inline]
-    fn move_priority(&self, occ: Occupancy, side: u8, depth: usize, mv: EncMove, tt_best: u16, killers: [u16; 2]) -> i32 {
+    fn move_priority(
+        &self,
+        occ: Occupancy,
+        side: u8,
+        depth: usize,
+        mv: EncMove,
+        tt_best: u16,
+        killers: [u16; 2],
+    ) -> i32 {
         let mut p = 0i32;
         if mv == tt_best {
             p += 1_000_000;
@@ -88,17 +105,21 @@ impl<'a> Searcher<'a> {
         }
         p += self.history[mv as usize & 4095];
 
-        let (_start, len, _o) = decode_move(mv);
-        p -= (len as i32) * 10;
-
-        if depth >= 6 {
+        // Rank lengths by their consequences, not an automatic short-move bonus.
+        if depth >= 2 || tt_best == 0 {
             p += (eval::cheap_move_score(occ, mv, side) / 10).clamp(-50_000, 50_000);
         }
         p
     }
 
-    pub fn iterative_deepening(&mut self, occ: Occupancy, side: u8, top_n: u32, score_delta: i32, now: impl Fn() -> f64) -> SearchResult {
-        let mut best_move: Option<EncMove> = None;
+    pub fn iterative_deepening(
+        &mut self,
+        occ: Occupancy,
+        side: u8,
+        top_n: u32,
+        score_delta: i32,
+        now: impl Fn() -> f64,
+    ) -> SearchResult {
         let mut best_score = -INF;
         let mut depth_reached = 0u32;
 
@@ -112,12 +133,17 @@ impl<'a> Searcher<'a> {
                 nodes_searched: 0,
                 tt_hits: self.stats.tt_hits,
                 tt_probes: self.stats.tt_probes,
-                score: -MATE,
+                score: MATE,
             };
         }
 
         // ordenar raiz inicialmente por heurística barata (history já começa 0)
         self.order_moves(occ, side, 1, &mut root_moves, None);
+        // A legal, evaluated action remains available even before depth one.
+        let mut best_move = root_moves.first().copied();
+        if let Some(mv) = best_move {
+            best_score = eval::cheap_move_score(occ, mv, side);
+        }
 
         for depth in 1..=self.max_depth {
             if Self::time_up(now(), self.deadline_ms) {
@@ -132,7 +158,7 @@ impl<'a> Searcher<'a> {
 
             let alpha_orig = alpha;
             let mut alpha_i = alpha;
-            let mut beta_i = beta;
+            let beta_i = beta;
 
             let mut iter_best_move = root_moves[0];
             let mut iter_best_score = -INF;
@@ -145,11 +171,19 @@ impl<'a> Searcher<'a> {
                 let child = apply_move(occ, mv);
                 let opp = 1u8 - side;
 
-                let mut score = if first {
+                let score = if first {
                     first = false;
                     -self.negamax(child, opp, depth as i32 - 1, -beta_i, -alpha_i, 1, &now)
                 } else {
-                    let narrow = -self.negamax(child, opp, depth as i32 - 1, -alpha_i - 1, -alpha_i, 1, &now);
+                    let narrow = -self.negamax(
+                        child,
+                        opp,
+                        depth as i32 - 1,
+                        -alpha_i - 1,
+                        -alpha_i,
+                        1,
+                        &now,
+                    );
                     if narrow > alpha_i && narrow < beta_i {
                         -self.negamax(child, opp, depth as i32 - 1, -beta_i, -alpha_i, 1, &now)
                     } else {
@@ -182,7 +216,15 @@ impl<'a> Searcher<'a> {
                 window = (window * 2).min(1200);
                 let full = self.negamax(occ, side, depth as i32, -INF, INF, 0, &now);
                 iter_best_score = full;
-                // best move do TT (se existir) passa para frente
+                if self.aborted || Self::time_up(now(), self.deadline_ms) {
+                    break;
+                }
+                let entry = self.tt.probe(self.zobrist.hash(occ, side));
+                if entry.key == self.zobrist.hash(occ, side)
+                    && root_moves.contains(&entry.best_move)
+                {
+                    iter_best_move = entry.best_move;
+                }
             } else if depth > 1 {
                 window = (window as f64 * 0.75).max(60.0) as i32;
             }
@@ -247,6 +289,7 @@ impl<'a> Searcher<'a> {
     ) -> i32 {
         self.stats.nodes += 1;
         if (self.stats.nodes & 2047) == 0 && Self::time_up(now(), self.deadline_ms) {
+            self.aborted = true;
             return 0;
         }
 
@@ -295,7 +338,8 @@ impl<'a> Searcher<'a> {
         let mut first = true;
         for mv in moves {
             if Self::time_up(now(), self.deadline_ms) {
-                break;
+                self.aborted = true;
+                return 0;
             }
             let child = apply_move(occ, mv);
             let opp = 1u8 - side;
@@ -311,6 +355,9 @@ impl<'a> Searcher<'a> {
                 }
             };
 
+            if self.aborted {
+                return 0;
+            }
             if score > best_score {
                 best_score = score;
                 best_move = mv;
@@ -336,6 +383,10 @@ impl<'a> Searcher<'a> {
             }
         }
 
+        if self.aborted || Self::time_up(now(), self.deadline_ms) {
+            self.aborted = true;
+            return 0;
+        }
         let flag = if best_score <= alpha_orig {
             2u8
         } else if best_score >= beta {

@@ -375,7 +375,7 @@ describe("Quelhas - Colocação de Segmentos", () => {
 describe("Quelhas - Intervalos de Jogadas (Heurística Min/Max)", () => {
   test("calcularIntervalosJogadas deve retornar estrutura válida", () => {
     const tabuleiro = criarTabuleiroInicial();
-    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal', 1);
+    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal');
     
     expect(typeof intervalos.minJogadasIA).toBe('number');
     expect(typeof intervalos.maxJogadasIA).toBe('number');
@@ -385,23 +385,20 @@ describe("Quelhas - Intervalos de Jogadas (Heurística Min/Max)", () => {
 
   test("intervalos devem ter min <= max", () => {
     const tabuleiro = criarTabuleiroInicial();
-    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal', 1);
+    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal');
     
     expect(intervalos.minJogadasIA).toBeLessThanOrEqual(intervalos.maxJogadasIA);
     expect(intervalos.minJogadasAdversario).toBeLessThanOrEqual(intervalos.maxJogadasAdversario);
   });
 
-  test("calcularIntervalosJogadas com profundidade 0 deve retornar contagem direta", () => {
+  test("tabuleiro vazio permite 10 a 50 turnos por orientação", () => {
     const tabuleiro = criarTabuleiroInicial();
-    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal', 0);
+    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal');
     
-    const jogadasVertical = calcularJogadasValidas(tabuleiro, 'vertical');
-    const jogadasHorizontal = calcularJogadasValidas(tabuleiro, 'horizontal');
-    
-    expect(intervalos.minJogadasIA).toBe(jogadasVertical.length);
-    expect(intervalos.maxJogadasIA).toBe(jogadasVertical.length);
-    expect(intervalos.minJogadasAdversario).toBe(jogadasHorizontal.length);
-    expect(intervalos.maxJogadasAdversario).toBe(jogadasHorizontal.length);
+    expect(intervalos.minJogadasIA).toBe(10);
+    expect(intervalos.maxJogadasIA).toBe(50);
+    expect(intervalos.minJogadasAdversario).toBe(10);
+    expect(intervalos.maxJogadasAdversario).toBe(50);
   });
 
   test("tabuleiro parcialmente preenchido deve ter menos jogadas", () => {

@@ -12,9 +12,9 @@ describe('selectReviewPattern', () => {
   });
 
   test('uses tutor evidence to choose a more specific card', () => {
-    expect(selectReviewPattern('dominorio', { explainText: 'Este corredor força as próximas peças.' }).id)
+    expect(selectReviewPattern('dominorio', { reviewPatternId: 'dominorio:corredor' }).id)
       .toBe('dominorio:corredor');
-    expect(selectReviewPattern('produto', { explainText: 'A melhor defesa é a fusão dos grupos adversários.' }).id)
+    expect(selectReviewPattern('produto', { reviewPatternId: 'produto:fusao-adversaria' }).id)
       .toBe('produto:fusao-adversaria');
     expect(selectReviewPattern('nex', { criticalThreats: [{}, {}, {}] }).id)
       .toBe('nex:tripla-ameaca');
@@ -22,3 +22,11 @@ describe('selectReviewPattern', () => {
       .toBe('atari-go:atari');
   });
 });
+
+ test('translated or edited explanations never change recorded evidence', () => {
+   for (const explainText of ['Este corredor força as próximas peças.', 'This corridor forces the next moves.', 'Texto revisto.']) {
+     expect(selectReviewPattern('dominorio', { reviewPatternId: 'dominorio:corredor', explainText }).id).toBe('dominorio:corredor');
+   }
+   expect(selectReviewPattern('dominorio', { reviewPatternId: 'produto:equilibrio' }).id).toBe('dominorio:paridade');
+   expect(selectReviewPattern('produto', { reviewPatternId: 'produto:grupo-isolado' }).id).toBe('produto:grupo-isolado');
+ });

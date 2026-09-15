@@ -1,3 +1,4 @@
+import { selectReviewPattern } from '../../../ai-core/review-patterns';
 import type {
   AIRequestV1,
   AIResponseV1,
@@ -78,6 +79,7 @@ export class AtariGoV1Adapter {
       explainText: buildExplainText(bestMove, criticalThreats),
       confidence: topMoves[0]?.confidence,
       criticalThreats,
+      reviewPatternId: selectReviewPattern('atari-go', { criticalThreats }).id,
       turningPoints,
       pedagogy: buildPedagogy(topMoves, criticalThreats),
       stats: {

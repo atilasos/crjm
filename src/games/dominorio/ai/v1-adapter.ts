@@ -1,3 +1,4 @@
+import { selectReviewPattern } from '../../../ai-core/review-patterns';
 import type {
   AIRequestV1,
   AIResponseV1,
@@ -69,6 +70,7 @@ export class DominorioV1Adapter {
       explainTags: buildExplainTags(runtimeInfo),
       confidence: topMoves[0]?.confidence,
       criticalThreats,
+      reviewPatternId: selectReviewPattern('dominorio', { criticalThreats }).id,
       pedagogy,
       stats: {
         elapsedMs,

@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import { useEffect, useRef } from 'react';
 import type { GameStatus, GameMode } from '../types';
 
@@ -20,6 +21,7 @@ export function WinnerAnnouncement({
   onFechar,
   onNovoJogo,
 }: WinnerAnnouncementProps) {
+  const { t } = useTranslation();
   const botaoPrimarioRef = useRef<HTMLButtonElement>(null);
   const visivel = estado !== 'a-jogar';
 
@@ -69,13 +71,13 @@ export function WinnerAnnouncement({
         return {
           emoji: '🎉',
           titulo: 'Parabéns!',
-          mensagem: `${nomeJogador1} ganhou!`,
+          mensagem: `${t(nomeJogador1)} ganhou!`,
         };
       case 'vitoria-jogador2':
         return {
           emoji: '🎉',
           titulo: 'Parabéns!',
-          mensagem: `${getNomeJogador2()} ganhou!`,
+          mensagem: `${t(getNomeJogador2())} ganhou!`,
         };
       case 'empate':
         return {
@@ -101,16 +103,16 @@ export function WinnerAnnouncement({
         className="winner-card"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 text-6xl" aria-hidden="true">{conteudo.emoji}</div>
+        <div className="mb-4 text-6xl" aria-hidden="true">{t(conteudo.emoji)}</div>
         <h2
           id="winner-titulo"
           className="mb-2 text-3xl font-bold [color:var(--tinta)]"
           style={{ fontFamily: 'var(--font-display)' }}
         >
-          {conteudo.titulo}
+          {t(conteudo.titulo)}
         </h2>
         <p id="winner-mensagem" className="mb-6 text-xl [color:var(--tinta-suave)]">
-          {conteudo.mensagem}
+          {t(conteudo.mensagem)}
         </p>
 
         <div className="flex justify-center gap-3">
@@ -118,15 +120,11 @@ export function WinnerAnnouncement({
             ref={botaoPrimarioRef}
             onClick={onNovoJogo}
             className="btn btn-primary"
-          >
-            Jogar Novamente
-          </button>
+          >{t("Jogar Novamente")}</button>
           <button
             onClick={onFechar}
             className="btn btn-secondary"
-          >
-            Fechar
-          </button>
+          >{t("Fechar")}</button>
         </div>
       </div>
     </div>

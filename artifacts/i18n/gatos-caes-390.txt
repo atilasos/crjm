@@ -1,0 +1,78 @@
+Gatos & Cães (Cats & Dogs)
+Language
+Português
+English
+नेपाली
+L1 · 0 XP
+🌙
+Sign in
+Game mode:
+👥 2 players
+👤
+Cats
+VS
+👤
+Dogs
+
+Turn: Dogs
+
+🔄 New game
+
+Learning path
+
+championship practice
+
+Current focus: Keep your options open: play to keep more legal squares than your opponent.
+
+Mistake to avoid: Closing the centre squares early or placing pieces that block too many of your own moves.
+
+Discover
+
+• Learn the special rules for the first moves.
+• Understand that whoever runs out of legal squares loses.
+
+Challenge: Beat L1 once.
+
+Tactics
+
+• Compare squares by the future moves they preserve.
+• Recognise guaranteed squares that only your species can use.
+
+Challenge: Beat L2 twice in a row.
+
+Strategy
+
+• Use contested squares before exclusive ones.
+• Count both sides' reserves to read the endgame.
+
+Challenge: Beat L3 and then L4, once each.
+
+Championship
+
+• Play as both species and manage the clock.
+• Review two losses and find the move that reduced your options.
+
+Challenge: Win at least half your games against L4.
+
+Follow your full path, with puzzles for every stage, in the Strategy Lab.
+
+🐱
+🐱
+Cats (P1): 1
+🐶
+Dogs (P2): 0
+Centre squares (first Cat)
+Place your first Dog outside the centre squares • Available moves: 58
+📜
+Rules for Gatos & Cães (Cats & Dogs)
+8×8 board.
+Players take turns placing ONE piece (Cat or Dog).
+Cats go first.
+The first Cat must go on one of the 4 centre squares.
+The first Dog must go OUTSIDE the centre squares.
+You can never place a Cat next to a Dog (↑↓←→), or a Dog next to a Cat.
+The player who places the LAST piece wins.
+If you have no legal squares on your turn, you LOSE.
+
+💡
+Tip: think carefully before each move!

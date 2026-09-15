@@ -1,3 +1,6 @@
+import { ThinkingTutor, useThinkingTutor } from '../../components/tutor/ThinkingTutor';
+import { thinkingTurnKey } from '../../ai-core/thinking-tutor';
+import { useTranslation } from '../../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { clampDifficultyLevel, getDifficultyProfile , type ExtendedDifficultyLevel } from '../../ai-core/difficulty';
@@ -12,9 +15,9 @@ import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { EvalChart } from '../../components/EvalChart';
 import { normalizeEngineScore } from '../../ai-core/eval-trace';
-import { QuelhasState, Posicao } from './types';
-import { 
-  criarEstadoInicial, 
+import type { QuelhasState, Posicao } from './types';
+import {
+  criarEstadoInicial,
   colocarSegmento,
   atualizarPreview,
   getCelulasSegmento,
@@ -25,24 +28,30 @@ import {
   recusarTroca,
   decidirTrocaComputador,
 } from './logic';
-import { GameMode, Player } from '../../types';
+import type { GameMode, Player } from '../../types';
 import {
   QuelhasAIClient,
   QUELHAS_SERVER_AI_WITH_FALLBACK_TIMEOUT_MS,
   QuelhasV1Adapter,
   mapLevelToQuelhasDifficulty,
   buildQuickReviewItems,
-  resolveHintLevel,
   INITIAL_METRICS,
   type AIDifficulty,
   type AIMetrics,
 } from './ai';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
+import { searchBestMove } from './ai/engine';
 import { withTimeout } from '../../utils/withTimeout';
 
 interface QuelhasGameProps {
   onVoltar: () => void;
+}
+
+function emergencyMove(state: QuelhasState) {
+  return searchBestMove(state.tabuleiro, getOrientacaoJogador(state, state.jogadorAtual), {
+    timeBudgetMs: 40, maxDepth: 2, topN: 0, scoreDelta: 0,
+  }).bestMove;
 }
 
 const REGRAS = [
@@ -71,26 +80,8 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   return '[border-color:color-mix(in_srgb,var(--jogo-dominorio)_55%,var(--linha))] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,var(--painel))] [color:var(--tinta)]';
 }
 
-function getSuggestedAction(
-  response: AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState> | null,
-  hintLevel: 'H1' | 'H2' | 'H3',
-): string {
-  if (hintLevel === 'H1') {
-    return 'Compara segmentos curtos em zonas abertas e evita fechar cedo a faixa central.';
-  }
-
-  if (hintLevel === 'H2') {
-    return response?.criticalThreats?.[0]
-      ? 'Defende primeiro a faixa onde podes ficar preso e só depois alarga o teu plano.'
-      : 'Procura um segmento que te deixe outra faixa útil disponível para a jogada seguinte.';
-  }
-
-  return response?.bestMove
-    ? 'Se estiveres preso, testa primeiro o segmento destacado e confirma que ainda sobram outras faixas úteis.'
-    : 'Escolhe um segmento curto e evita fechar demasiado o tabuleiro agora.';
-}
-
 export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
+  const { t, msg } = useTranslation();
   const {
     acceptDifficultyRecommendation,
     getDifficultyRecommendation,
@@ -100,7 +91,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     recordReviewCompleted,
     resetAdaptiveSession,
   } = useGamification();
-  const [state, setState] = useState<QuelhasState>(() => 
+  const [state, setState] = useState<QuelhasState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
@@ -120,7 +111,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     Array<AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState>>
   >([]);
   const [tutorLoading, setTutorLoading] = useState(false);
-  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const tutorTurn = thinkingTurnKey(state, humanPlayer, difficultyLevel);
+  const thinking = useThinkingTutor(tutorTurn);
+  const hintLevel = 'H3' as const;
+  const [tutorPosition, setTutorPosition] = useState<string | null>(null);
+  const showTutorSolution = thinking.showSolution && tutorPosition === tutorTurn && !tutorLoading
+    && state.modo === 'vs-computador' && state.estado === 'a-jogar' && state.jogadorAtual === humanPlayer;
   const aiClientRef = useRef<QuelhasAIClient | null>(null);
   const tutorAdapterRef = useRef<QuelhasV1Adapter | null>(null);
   const awardedResultRef = useRef<string | null>(null);
@@ -139,9 +135,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       onReady: () => setAiReady(true),
     });
     aiClientRef.current = client;
-    tutorAdapterRef.current = new QuelhasV1Adapter({ client });
+    // The tutor owns its worker: its cancelled search cannot queue ahead of the opponent.
+    const tutor = new QuelhasV1Adapter();
+    tutorAdapterRef.current = tutor;
     return () => {
       tutorAdapterRef.current = null;
+      tutor.terminate();
       client.terminate();
     };
   }, []);
@@ -178,9 +177,9 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     if (state.modo !== 'vs-computador') return;
     if (state.estado !== 'a-jogar') return;
     if (state.trocaDisponivel) return; // Aguardar decisão de troca primeiro
-    
+
     const isVezDaIA = state.jogadorAtual !== humanPlayer;
-    
+
     if (isVezDaIA && aiClientRef.current) {
       let cancelled = false;
       let finished = false;
@@ -202,7 +201,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           if (cancelled) return;
           finished = true;
           setState(prev => {
-            const mv = bestMove ?? prev.jogadasValidas[0] ?? null;
+            const mv = bestMove ?? emergencyMove(prev);
             return mv ? colocarSegmento(prev, mv) : prev;
           });
         } catch (e) {
@@ -211,7 +210,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           if (cancelled) return;
           finished = true;
           setState(prev => {
-            const mv = prev.jogadasValidas[0] ?? null;
+            const mv = emergencyMove(prev);
             return mv ? colocarSegmento(prev, mv) : prev;
           });
         }
@@ -257,8 +256,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       .then((response) => {
         if (cancelled) return;
         setTutorResponse(response);
+        setTutorPosition(tutorTurn);
         setTutorHistory((prev) => [...prev.slice(-5), response]);
-        setHintLevel((current) => resolveHintLevel(response, current));
       })
       .catch((error) => {
         if (!cancelled) {
@@ -275,7 +274,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       cancelled = true;
       adapter.cancel();
     };
-  }, [difficultyLevel, isVezDoHumano, state]);
+  }, [difficultyLevel, isVezDoHumano, tutorTurn]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -321,12 +320,12 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
       // Segundo clique: tentar criar segmento
       const segmento = criarSegmentoEntrePosicoes(state, posicaoInicial, pos);
       if (segmento) {
-        if (tutorResponse) {
+        if (tutorResponse && tutorPosition === tutorTurn && !tutorLoading && state.modo === 'vs-computador') {
           recordAdaptiveDecision('quelhas', {
             successful: tutorResponse.topMoves.some(({ move }) =>
               formatSegmento(move) === formatSegmento(segmento)
             ),
-            usedHint: hintLevel === 'H3',
+            usedHint: thinking.usedHint,
           });
         }
         setState(prev => colocarSegmento(prev, segmento));
@@ -340,14 +339,14 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         }
       }
     }
-  }, [state, posicaoInicial, isVezDoHumano, tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [state, posicaoInicial, isVezDoHumano, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const handleMouseEnter = useCallback((pos: Posicao) => {
     if (state.estado !== 'a-jogar') return;
     if (!isVezDoHumano()) return;
     if (state.trocaDisponivel) return;
     if (state.tabuleiro[pos.linha][pos.coluna] === 'ocupada') return;
-    
+
     if (posicaoInicial) {
       // Mostrar preview do segmento entre posição inicial e atual
       const segmento = criarSegmentoEntrePosicoes(state, posicaoInicial, pos);
@@ -373,7 +372,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
     resetAdaptiveSession('quelhas');
   }, [resetAdaptiveSession, state.modo]);
 
@@ -388,7 +387,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -402,7 +401,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
   }, []);
 
   const handleChangeDifficulty = useCallback((level: ExtendedDifficultyLevel) => {
@@ -428,8 +427,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
 
   // Verificar se uma célula é a posição inicial selecionada
   const isPosicaoInicialSelecionada = (linha: number, coluna: number): boolean => {
-    return posicaoInicial !== null && 
-           posicaoInicial.linha === linha && 
+    return posicaoInicial !== null &&
+           posicaoInicial.linha === linha &&
            posicaoInicial.coluna === coluna;
   };
 
@@ -441,24 +440,24 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     const celula = state.tabuleiro[linha][coluna];
     const preview = isPreview(linha, coluna);
     const inicioSelecionado = isPosicaoInicialSelecionada(linha, coluna);
-    const recommended = tutorResponse?.bestMove
+    const recommended = showTutorSolution && tutorResponse?.bestMove
       ? getCelulasSegmento(tutorResponse.bestMove).some((cell) => cell.linha === linha && cell.coluna === coluna)
       : false;
     const threatened = criticalThreat?.counterMove
       ? getCelulasSegmento(criticalThreat.counterMove).some((cell) => cell.linha === linha && cell.coluna === coluna)
       : false;
-    
+
     let classes = 'aspect-square rounded-sm flex items-center justify-center transition-all duration-150 text-xs font-bold ';
-    
+
     if (celula === 'ocupada') {
       classes += 'bg-indigo-600';
     } else if (inicioSelecionado) {
       classes += orientacaoAtual === 'vertical'
-        ? 'bg-pink-500 ring-2 ring-pink-300 cursor-pointer scale-110' 
+        ? 'bg-pink-500 ring-2 ring-pink-300 cursor-pointer scale-110'
         : 'bg-cyan-500 ring-2 ring-cyan-300 cursor-pointer scale-110';
     } else if (preview) {
       classes += orientacaoAtual === 'vertical'
-        ? 'bg-pink-400 ring-2 ring-pink-300 cursor-pointer' 
+        ? 'bg-pink-400 ring-2 ring-pink-300 cursor-pointer'
         : 'bg-cyan-400 ring-2 ring-cyan-300 cursor-pointer';
     } else {
       classes += 'bg-gray-200 hover:bg-gray-300 cursor-pointer';
@@ -469,7 +468,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     } else if (threatened) {
       classes += ' ring-4 ring-rose-400 ring-offset-1 ring-offset-white ';
     }
-    
+
     return classes;
   };
 
@@ -478,7 +477,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     state.estado === 'a-jogar' &&
     getOrientacaoJogador(state, state.jogadorAtual) === 'horizontal' &&
     (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer);
-  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const criticalThreat = showTutorSolution ? tutorResponse?.criticalThreats?.[0] : undefined;
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
   const reviewPattern = selectReviewPattern('quelhas', tutorHistory.at(-1) ?? tutorResponse);
 
@@ -519,15 +518,15 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         />
         {state.modo === 'vs-computador' && difficultyLevel === 6 && (
           <div className="mt-2 rounded-xl border p-2 text-center text-xs [border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta-suave)]">
-            {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
-            {' • '}
-            {aiMetrics.lastEngine === 'server-nn'
+            {t(aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta')}
+            {t(' • ')}
+            {t(aiMetrics.lastEngine === 'server-nn'
               ? 'Rede neural · GPU'
               : aiMetrics.lastEngine === 'exact-endgame'
                 ? 'Final resolvido'
                 : aiMetrics.lastEngine === 'rust-wasm'
                   ? 'N5 local (WASM)'
-                  : 'N5 local'}
+                  : 'N5 local')}
           </div>
         )}
         {state.modo === 'vs-computador' && state.estado !== 'a-jogar' && (
@@ -548,41 +547,30 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
         {/* UI de decisão de troca */}
         {mostrarUiTroca && (
           <div className="order-3 lg:order-none rounded-xl border-2 p-4 [background:var(--painel)] [border-color:var(--jogo-quelhas)]">
-            <p className="font-semibold text-sm mb-2 text-center [color:var(--tinta)]">
-              🔄 Regra de Troca
-            </p>
-            <p className="text-xs mb-3 text-center [color:var(--tinta-suave)]">
-              Podes trocar de papel e ficar com a jogada que o Vertical acabou de fazer.
-              A troca consome a tua jogada — a seguir joga o adversário.
-            </p>
+            <p className="font-semibold text-sm mb-2 text-center [color:var(--tinta)]">{t("🔄 Regra de Troca")}</p>
+            <p className="text-xs mb-3 text-center [color:var(--tinta-suave)]">{t("Podes trocar de papel e ficar com a jogada que o Vertical acabou de fazer. A troca consome a tua jogada — a seguir joga o adversário.")}</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={handleTroca}
                 className="px-4 py-2 text-white rounded-lg font-medium text-sm transition-[filter] [background:var(--jogo-quelhas)] hover:brightness-110"
-              >
-                Trocar papéis
-              </button>
+              >{t("Trocar papéis")}</button>
               <button
                 onClick={handleRecusarTroca}
                 className="px-4 py-2 border rounded-lg font-medium text-sm transition-colors [background:var(--painel)] [color:var(--jogo-quelhas)] [border-color:var(--linha)] hover:[border-color:var(--jogo-quelhas)]"
-              >
-                Manter como está
-              </button>
+              >{t("Manter como está")}</button>
             </div>
           </div>
         )}
 
         {/* Aviso Misère (objetivo) — compacto, fica acima do tabuleiro em mobile */}
         <div className="order-1 lg:order-none rounded-xl border px-3 py-2 text-center [background:color-mix(in_srgb,var(--ouro)_14%,var(--painel))] [border-color:var(--ouro)]">
-          <p className="font-semibold text-sm [color:var(--tinta)]">
-            ⚠️ MISÈRE: Quem fizer a última jogada PERDE!
-          </p>
+          <p className="font-semibold text-sm [color:var(--tinta)]">{t("⚠️ MISÈRE: Quem fizer a última jogada PERDE!")}</p>
         </div>
 
         {/* Tabuleiro */}
         <div className="game-container order-2 lg:order-none">
           <div className="aspect-square max-w-lg mx-auto">
-            <div 
+            <div
               className="grid grid-cols-10 gap-0.5 h-full bg-gray-400 p-1 rounded-xl"
               onMouseLeave={handleMouseLeave}
             >
@@ -604,11 +592,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
           <div className="mt-4 flex justify-center gap-6 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-3 h-6 bg-pink-500 rounded"></div>
-              <span>Vertical</span>
+              <span>{t("Vertical")}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-6 h-3 bg-cyan-500 rounded"></div>
-              <span>Horizontal</span>
+              <span>{t("Horizontal")}</span>
             </div>
           </div>
 
@@ -618,77 +606,69 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
               isVezDoHumano() ? (
                 <>
                   {posicaoInicial ? (
-                    <span className="font-medium [color:var(--jogo-quelhas)]">
-                      Clica na casa final do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
+                    <span className="font-medium [color:var(--jogo-quelhas)]">{t("Clica na casa final do segmento ")}{t(orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL')}
                     </span>
                   ) : (
-                    <span>
-                      Clica na casa inicial do segmento {orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL'}
+                    <span>{t("Clica na casa inicial do segmento ")}{t(orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL')}
                     </span>
                   )}
-                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                  {t(' ')}{msg("• Segmentos possíveis agora: {0}", [state.jogadasValidas.length])}
                 </>
               ) : (
                 <span className="flex items-center justify-center gap-2 font-medium [color:var(--jogo-quelhas)]">
-                  <span className="inline-block w-4 h-4 border-2 rounded-full animate-spin [border-color:var(--jogo-quelhas)] [border-top-color:transparent]"></span>
-                  IA a pensar…
-                </span>
+                  <span className="inline-block w-4 h-4 border-2 rounded-full animate-spin [border-color:var(--jogo-quelhas)] [border-top-color:transparent]"></span>{t("IA a pensar…")}</span>
               )
             )}
             {state.trocaDisponivel && !mostrarUiTroca && (
-              <span className="font-medium [color:var(--jogo-quelhas)]">
-                A IA está a decidir sobre a troca de papéis...
-              </span>
+              <span className="font-medium [color:var(--jogo-quelhas)]">{t("A IA está a decidir sobre a troca de papéis...")}</span>
             )}
           </div>
         </div>
 
         {state.estado === 'a-jogar' && !state.trocaDisponivel && isVezDoHumano() && (
           <div className="order-6 lg:order-none space-y-3">
-            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
-            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
-            <TutorHintCard
-              insight={
-                tutorResponse?.explainText ||
-                'Escolhe um segmento curto que não feche demasiado o tabuleiro já.'
-              }
-              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
-              hintLevel={hintLevel}
-              errorCode={tutorResponse?.pedagogy?.errorCode}
-              isLoading={tutorLoading}
-            />
+            <ThinkingTutor gameId="quelhas" tutor={thinking} solutionReady={showTutorSolution}>
+              {showTutorSolution && <>
+                <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative={false} />
+                <TutorHintCard
+                  insight={
+                    tutorResponse?.explainText ||
+                    'Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.'
+                  }
+                  suggestedAction="Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro."
+                  hintLevel={hintLevel}
+                  errorCode={tutorResponse?.pedagogy?.errorCode}
+                  isLoading={tutorLoading}
+                />
 
-            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+                <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
 
-            {criticalThreat && (
-              <section
-                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
-              >
-                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
-                <p className="mt-1">{criticalThreat.description}</p>
-                {criticalThreat.counterMove && (
-                  <p className="mt-1 font-medium">
-                    Resposta mínima: {formatSegmento(criticalThreat.counterMove)}
-                  </p>
+                {criticalThreat && (
+                  <section
+                    className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+                  >
+                    <p className="font-semibold">{t("Ameaça crítica: ")}{t(criticalThreat.title)}</p>
+                    <p className="mt-1">{t(criticalThreat.description)}</p>
+                    {criticalThreat.counterMove && (
+                      <p className="mt-1 font-medium">{t("Resposta mínima: ")}{t(formatSegmento(criticalThreat.counterMove))}
+                      </p>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
+              </>}
+            </ThinkingTutor>
           </div>
         )}
 
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
           <section className="order-7 lg:order-none rounded-xl border px-4 py-3 text-sm [background:var(--painel)] [border-color:color-mix(in_srgb,var(--sucesso)_45%,var(--linha))] [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--sucesso)_15%,var(--painel))] [color:var(--sucesso)]">
-                2-4 min
-              </span>
+              <p className="font-semibold">{t("Revisão rápida pós-jogo")}</p>
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--sucesso)_15%,var(--painel))] [color:var(--sucesso)]">{t("2-4 min")}</span>
             </div>
-            <p className="mt-1 [color:var(--tinta-suave)]">
-              Revê até 2 momentos e tenta repetir a alternativa mais segura.
-            </p>
-            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_12%,var(--painel))]">
-              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            <p className="mt-1 [color:var(--tinta-suave)]">{t("Revê até 2 momentos e tenta repetir a alternativa mais segura.")}</p>
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_12%,var(--painel))]">{t("Cartão descoberto: ")}{t(reviewPattern.title)} — {t(reviewPattern.description)}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
@@ -696,8 +676,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
                   key={item.title}
                   className="rounded-lg border px-3 py-2 [border-color:var(--linha)] [background:var(--fundo)]"
                 >
-                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
-                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{t(item.title)}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{t(item.insight)}</p>
                 </div>
               ))}
             </div>
@@ -714,7 +694,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
               }}
               className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-[filter] [background:var(--sucesso)] hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+              {t(reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)')}
             </button>
           </section>
         )}

@@ -1,0 +1,22 @@
+{
+  "reports": [
+    {
+      "level": 5,
+      "engine": "rust-wasm",
+      "depth": 3,
+      "elapsedMs": 2000.5,
+      "move": {
+        "inicio": {
+          "linha": 0,
+          "coluna": 4
+        },
+        "comprimento": 10,
+        "orientacao": "vertical"
+      }
+    }
+  ],
+  "serverSides": [],
+  "failures": [],
+  "hints": "H0/H1/H2 hidden, H3 counts on request",
+  "mobile": "390px without overflow"
+}

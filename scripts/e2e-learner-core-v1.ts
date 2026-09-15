@@ -11,6 +11,7 @@ const LEGACY_PROFILE_KEY = 'crjm.gamification.v1';
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 async function launchBrowser(): Promise<Browser> {
+  if (process.env.HUB_CDP_URL) return chromium.connectOverCDP(process.env.HUB_CDP_URL);
   const configuredChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
   if (configuredChannel) {
     return chromium.launch({ headless: true, channel: configuredChannel });

@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locale';
 /**
  * Persistência de turmas e códigos de login de alunos.
  *
@@ -12,6 +13,7 @@ export interface StudentAccount {
   id: string;
   name: string;
   code: string;
+  locale?: Locale;
 }
 
 export interface SchoolClass {
@@ -139,6 +141,14 @@ export class ClassStore {
     const removed = schoolClass.students.length !== initialLength;
     if (removed) this.save();
     return removed;
+  }
+
+  setStudentLocale(code: string, locale: Locale): boolean {
+    const match = this.findByCode(code);
+    if (!match) return false;
+    match.student.locale = locale;
+    this.save();
+    return true;
   }
 
   findByCode(code: string): { student: StudentAccount; schoolClass: SchoolClass } | null {

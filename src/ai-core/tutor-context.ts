@@ -15,6 +15,8 @@ export function buildTutorContextItems<Move, State>(
 
   if (fromBook) {
     items.push({ label: 'Livro de abertura', tone: 'info' });
+  } else if (response.stats.engine === 'exact-endgame') {
+    items.push({ label: 'Final resolvido', tone: 'success' });
   } else if (response.stats.engine === 'rust-wasm') {
     items.push({ label: 'Análise WASM', tone: 'success' });
   } else {
@@ -35,9 +37,8 @@ export function buildTutorContextItems<Move, State>(
     items.push({ label: 'Plano frágil', tone: 'warning' });
   }
 
-  if ((response.topMoves?.length ?? 0) <= 1) {
-    items.push({ label: 'Linha forçada', tone: 'danger' });
-  } else if ((response.topMoves?.length ?? 0) >= 3) {
+  // A single reported candidate does not mean it is the only legal move.
+  if ((response.topMoves?.length ?? 0) >= 3) {
     items.push({ label: '3 opções úteis', tone: 'info' });
   }
 

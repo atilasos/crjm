@@ -1,0 +1,48 @@
+{
+  "total": 144,
+  "failures": 0,
+  "report": [
+    {
+      "gameId": "gatos-caes",
+      "checked": 24,
+      "families": 6,
+      "firstOptionCorrect": 13,
+      "gameRuleChecks": 0
+    },
+    {
+      "gameId": "dominorio",
+      "checked": 24,
+      "families": 6,
+      "firstOptionCorrect": 13,
+      "gameRuleChecks": 24
+    },
+    {
+      "gameId": "quelhas",
+      "checked": 24,
+      "families": 6,
+      "firstOptionCorrect": 11,
+      "gameRuleChecks": 24
+    },
+    {
+      "gameId": "produto",
+      "checked": 24,
+      "families": 6,
+      "firstOptionCorrect": 12,
+      "gameRuleChecks": 0
+    },
+    {
+      "gameId": "atari-go",
+      "checked": 24,
+      "families": 12,
+      "firstOptionCorrect": 14,
+      "gameRuleChecks": 24
+    },
+    {
+      "gameId": "nex",
+      "checked": 24,
+      "families": 3,
+      "firstOptionCorrect": 12,
+      "gameRuleChecks": 24
+    }
+  ]
+}

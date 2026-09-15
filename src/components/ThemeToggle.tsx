@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import { useEffect, useState } from 'react';
 
 type Tema = 'claro' | 'escuro';
@@ -35,6 +36,7 @@ if (typeof document !== 'undefined') {
 }
 
 export function ThemeToggle() {
+  const { t } = useTranslation();
   const [tema, setTema] = useState<Tema>(temaInicial);
 
   useEffect(() => {
@@ -49,10 +51,10 @@ export function ThemeToggle() {
       type="button"
       onClick={alternar}
       className="rounded-full border p-2 text-xl leading-none transition-colors [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]"
-      aria-label={tema === 'claro' ? 'Ativar modo noite' : 'Ativar modo dia'}
-      title={tema === 'claro' ? 'Modo noite' : 'Modo dia'}
+      aria-label={t(tema === 'claro' ? 'Ativar modo noite' : 'Ativar modo dia')}
+      title={t(tema === 'claro' ? 'Modo noite' : 'Modo dia')}
     >
-      {tema === 'claro' ? '🌙' : '☀️'}
+      {t(tema === 'claro' ? '🌙' : '☀️')}
     </button>
   );
 }

@@ -44,7 +44,9 @@ systemctl --user enable --now crjm-main crjm-tournament
 systemctl --user status crjm-main crjm-tournament
 ```
 
-O serviço de inferência corre em Docker com `--restart unless-stopped` (ver `training/README.md`). O treino AlphaZero (`crjm-az-train`) é pontual e pode partilhar a GPU com a inferência.
+Os serviços de inferência correm em Docker com arranque manual (`--restart
+no`; ver `training/README.md`). O treino AlphaZero (`crjm-az-train`) é pontual
+e pode partilhar a GPU com a inferência.
 
 ## Verificação pós-deploy
 
@@ -62,7 +64,7 @@ O workflow `.github/workflows/deploy.yml` continua a publicar o site estático n
 
 ## Serviço N6 do Quelhas (az-quelhas)
 
-Container `crjm-qz-serve` (porta 127.0.0.1:8101, `--restart unless-stopped`),
+Container `crjm-qz-serve` (porta 127.0.0.1:8101, `--restart no`),
 modelo `training/runs/qz-v1/best.pt`; proxy Bun em `/api/ai/quelhas/*` com as
 mesmas proteções do Atari Go (HMAC de sessão, rate-limit 30/min, corpo ≤8 KiB).
 Env opcional: `QUELHAS_AI_URL` (default `http://127.0.0.1:8101`). Comando de
@@ -89,8 +91,8 @@ docker stop crjm-az-serve crjm-qz-serve
 
 Notas:
 - Só os dois containers docker usam a GPU; o site e os torneios são CPU.
-- `docker stop` impede o rearranque automático mesmo com `--restart
-  unless-stopped` (e sobrevive a reboots); `docker start` reativa.
+- Os contentores usam `--restart no`: nunca arrancam com o Ubuntu.
+  `docker start` ativa-os apenas quando a IA N6 é necessária.
 - Os serviços systemd estão `enabled`: após um reboot, site e torneios
   voltam sozinhos, mas os containers GPU ficam parados até `docker start`.
 - Com os serviços parados, o túnel Cloudflare continua ativo e os domínios

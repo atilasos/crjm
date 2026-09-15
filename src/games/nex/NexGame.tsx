@@ -1,3 +1,6 @@
+import { ThinkingTutor, useThinkingTutor } from '../../components/tutor/ThinkingTutor';
+import { thinkingTurnKey } from '../../ai-core/thinking-tutor';
+import { useTranslation } from '../../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { getDifficultyProfile } from '../../ai-core/difficulty';
@@ -13,8 +16,8 @@ import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { LADO_TABULEIRO, posToKey } from './types';
 import type { NexState, Posicao, TipoAcao } from './types';
-import { 
-  criarEstadoInicial, 
+import {
+  criarEstadoInicial,
   executarColocacao,
   executarSubstituicao,
   executarSwap,
@@ -34,7 +37,7 @@ import { NexAIClient, type AIDifficulty, type AIMetrics, INITIAL_METRICS } from 
 import { withTimeout } from '../../utils/withTimeout';
 import type { NexAiAction } from './ai/types';
 import { NexV1Adapter, mapLevelToNexDifficulty } from './ai/v1-adapter';
-import { buildQuickReviewItems, resolveHintLevel } from './ai/pedagogy-mvp';
+import { buildQuickReviewItems } from './ai/pedagogy-mvp';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
 
@@ -133,6 +136,7 @@ function actionTouchesPos(action: NexAiAction | undefined | null, pos: Posicao):
 }
 
 export function NexGame({ onVoltar }: NexGameProps) {
+  const { t } = useTranslation();
   const {
     acceptDifficultyRecommendation,
     getDifficultyRecommendation,
@@ -142,7 +146,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     recordReviewCompleted,
     resetAdaptiveSession,
   } = useGamification();
-  const [state, setState] = useState<NexState>(() => 
+  const [state, setState] = useState<NexState>(() =>
     criarEstadoInicial('vs-computador')
   );
   const [mostrarVencedor, setMostrarVencedor] = useState(false);
@@ -156,12 +160,17 @@ export function NexGame({ onVoltar }: NexGameProps) {
     useState<AIResponseV1<NexAiAction, NexState> | null>(null);
   const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<NexAiAction, NexState>>>([]);
   const [tutorLoading, setTutorLoading] = useState(false);
-  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const tutorTurn = thinkingTurnKey(state, humanPlayer, difficultyLevel);
+  const thinking = useThinkingTutor(tutorTurn);
+  const hintLevel = 'H3' as const;
+  const [tutorPosition, setTutorPosition] = useState<string | null>(null);
+  const showTutorSolution = thinking.showSolution && tutorPosition === tutorTurn && !tutorLoading
+    && state.modo === 'vs-computador' && state.estado === 'a-jogar' && state.jogadorAtual === humanPlayer;
   const aiClientRef = useRef<NexAIClient | null>(null);
   const tutorAdapterRef = useRef<NexV1Adapter | null>(null);
   const awardedResultRef = useRef<string | null>(null);
   const [reviewRewarded, setReviewRewarded] = useState(false);
-  
+
   // Estado para pan/drag do tabuleiro
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -205,8 +214,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
   // Efeito para jogada do computador
   useEffect(() => {
     if (
-      state.modo === 'vs-computador' && 
-      state.jogadorAtual !== humanPlayer && 
+      state.modo === 'vs-computador' &&
+      state.jogadorAtual !== humanPlayer &&
       state.estado === 'a-jogar' &&
       !state.swapDisponivel && // Esperar decisão de swap
       aiClientRef.current
@@ -245,7 +254,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   // Efeito para IA decidir swap
   useEffect(() => {
     if (
-      state.modo === 'vs-computador' && 
+      state.modo === 'vs-computador' &&
       state.swapDisponivel &&
       state.jogadorAtual !== humanPlayer &&
       aiClientRef.current
@@ -307,8 +316,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
       .then((response) => {
         if (!cancelled) {
           setTutorResponse(response);
+          setTutorPosition(tutorTurn);
           setTutorHistory((prev) => [...prev, response]);
-          setHintLevel((current) => resolveHintLevel(response, current));
         }
       })
       .catch((error) => {
@@ -326,7 +335,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
       cancelled = true;
       adapter.cancel();
     };
-  }, [difficultyLevel, humanPlayer, state]);
+  }, [difficultyLevel, humanPlayer, tutorTurn]);
 
   // Mostrar anúncio de vencedor quando o jogo termina
   useEffect(() => {
@@ -356,20 +365,20 @@ export function NexGame({ onVoltar }: NexGameProps) {
     if (state.estado !== 'a-jogar') return;
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
     if (state.swapDisponivel) return; // Deve decidir swap primeiro
-    
+
     const celula = state.tabuleiro[pos.x][pos.y];
     const acao = state.acaoEmCurso;
     const corJogador = getCorJogador(state, state.jogadorAtual);
-    
+
     // Se não há tipo de ação selecionado, selecionar colocação por defeito
     if (acao.tipo === null) {
       setState(prev => selecionarTipoAcao(prev, 'colocacao'));
       return;
     }
-    
+
     if (acao.tipo === 'colocacao') {
       if (celula !== 'vazia') return;
-      
+
       setState(prev => adicionarPosicaoAcao(prev, pos, tipoSelecao));
     } else if (acao.tipo === 'substituicao') {
       if (tipoSelecao === 'neutra' && celula === 'neutra') {
@@ -394,10 +403,10 @@ export function NexGame({ onVoltar }: NexGameProps) {
               sacrifice: acao.propriaParaNeutra!,
             }
           : null;
-      if (played && tutorResponse) {
+      if (played && tutorResponse && tutorPosition === tutorTurn && !tutorLoading) {
         recordAdaptiveDecision('nex', {
           successful: tutorResponse.topMoves.some(({ move }) => sameNexAction(move, played)),
-          usedHint: hintLevel === 'H3',
+          usedHint: thinking.usedHint,
         });
       }
       const timer = setTimeout(() => {
@@ -405,7 +414,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
       }, 300);
       return () => clearTimeout(timer);
     }
-  }, [state.acaoEmCurso, tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [state.acaoEmCurso, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const handleSelectTipoAcao = useCallback((tipo: TipoAcao) => {
     setState(prev => selecionarTipoAcao(prev, tipo));
@@ -418,24 +427,24 @@ export function NexGame({ onVoltar }: NexGameProps) {
   }, []);
 
   const handleSwap = useCallback(() => {
-    if (tutorResponse) {
+    if (tutorResponse && tutorPosition === tutorTurn && !tutorLoading && state.modo === 'vs-computador') {
       recordAdaptiveDecision('nex', {
         successful: tutorResponse.topMoves.some(({ move }) => move.type === 'swap'),
-        usedHint: hintLevel === 'H3',
+        usedHint: thinking.usedHint,
       });
     }
     setState(prev => executarSwap(prev));
-  }, [tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const handleRecusarSwap = useCallback(() => {
-    if (tutorResponse) {
+    if (tutorResponse && tutorPosition === tutorTurn && !tutorLoading && state.modo === 'vs-computador') {
       recordAdaptiveDecision('nex', {
         successful: tutorResponse.topMoves.some(({ move }) => move.type === 'recusar_swap'),
-        usedHint: hintLevel === 'H3',
+        usedHint: thinking.usedHint,
       });
     }
     setState(prev => recusarSwap(prev));
-  }, [tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const novoJogo = useCallback(() => {
     aiClientRef.current?.cancel();
@@ -445,7 +454,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
     resetAdaptiveSession('nex');
   }, [resetAdaptiveSession, state.modo]);
 
@@ -459,7 +468,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -471,7 +480,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
   }, []);
 
   // Handlers para pan/drag do tabuleiro
@@ -514,9 +523,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
     }
     if (e.touches.length === 1) {
       setIsDragging(true);
-      setDragStart({ 
-        x: e.touches[0].clientX - panOffset.x, 
-        y: e.touches[0].clientY - panOffset.y 
+      setDragStart({
+        x: e.touches[0].clientX - panOffset.x,
+        y: e.touches[0].clientY - panOffset.y
       });
     }
   }, [panOffset]);
@@ -590,7 +599,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const HEX_SIZE = 16; // Raio do hexágono
   const HEX_WIDTH = Math.sqrt(3) * HEX_SIZE;  // Largura do hexágono
   const HEX_HEIGHT = 2 * HEX_SIZE;  // Altura do hexágono
-  
+
   // Calcular posição do hexágono no layout LOSANGO HORIZONTAL
   // Rotação de 90° do layout anterior para corresponder ao tabuleiro físico
   // - (0,0) está na ESQUERDA do losango
@@ -603,7 +612,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     const y = (row - col) * HEX_WIDTH / 2;
     return { x, y };
   };
-  
+
   // Gerar pontos para hexágono flat-top (aresta no topo, após rotação 90°)
   const hexPoints = (cx: number, cy: number, size: number): string => {
     const points: string[] = [];
@@ -624,7 +633,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
     // y varia de -10 * HEX_WIDTH/2 a +10 * HEX_WIDTH/2
     const xRange = (LADO_TABULEIRO * 2 - 1) * HEX_HEIGHT * 0.75;
     const yRange = LADO_TABULEIRO * HEX_WIDTH;
-    return { 
+    return {
       width: xRange + HEX_SIZE * 4,
       height: yRange + HEX_SIZE * 4,
       centerY: yRange / 2 + HEX_SIZE * 2  // Centro vertical
@@ -636,7 +645,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
   const podeFazerColocacao = podeColocar(state.tabuleiro);
   const podeFazerSubstituicao = podeSubstituir(state.tabuleiro, state.jogadorAtual, state.swapEfetuado);
-  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const criticalThreat = showTutorSolution ? tutorResponse?.criticalThreats?.[0] : undefined;
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
   const reviewPattern = selectReviewPattern('nex', tutorHistory.at(-1) ?? tutorResponse);
   const difficultyRecommendation = getDifficultyRecommendation('nex', difficultyLevel);
@@ -684,28 +693,32 @@ export function NexGame({ onVoltar }: NexGameProps) {
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
           <div className="order-4 lg:order-none space-y-3">
-            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
-            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
-            <TutorHintCard
-              insight={
-                tutorResponse?.explainText ??
-                'Compara a tua distância de ligação com a do adversário e usa a neutra como bloqueio ativo.'
-              }
-              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
-              hintLevel={hintLevel}
-              errorCode={tutorResponse?.pedagogy?.errorCode}
-              isLoading={tutorLoading}
-            />
-            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
-            {criticalThreat && (
-              <section className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}>
-                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
-                <p className="mt-1">{criticalThreat.description}</p>
-                {criticalThreat.counterMove && (
-                  <p className="mt-1 font-medium">Resposta mínima: {formatAction(criticalThreat.counterMove)}</p>
+            <ThinkingTutor gameId="nex" tutor={thinking} solutionReady={showTutorSolution}>
+              {showTutorSolution && <>
+                <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
+                <TutorHintCard
+                  insight={
+                    tutorResponse?.explainText ??
+                    'Compara a tua distância de ligação com a do adversário e usa a neutra como bloqueio ativo.'
+                  }
+                  suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+                  hintLevel={hintLevel}
+                  errorCode={tutorResponse?.pedagogy?.errorCode}
+                  isLoading={tutorLoading}
+                />
+                <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+                {criticalThreat && (
+                  <section className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}>
+                    <p className="font-semibold">{t("Ameaça crítica: ")}{t(criticalThreat.title)}</p>
+                    <p className="mt-1">{t(criticalThreat.description)}</p>
+                    {criticalThreat.counterMove && (
+                      <p className="mt-1 font-medium">{t("Resposta mínima: ")}{t(formatAction(criticalThreat.counterMove))}</p>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
+              </>}
+            </ThinkingTutor>
           </div>
         )}
 
@@ -727,9 +740,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
               }}
             />
             <div className="text-xs [color:var(--tinta-suave)] flex items-center justify-between">
-              <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
+              <span>{t(aiMetrics.isThinking ? 'A pensar…' : 'Pronto')}</span>
               <span>
-                {aiReady ? (aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback') : 'A carregar…'}
+                {t(aiReady ? (aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback') : 'A carregar…')}
               </span>
             </div>
           </div>
@@ -740,7 +753,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
           <div className="order-2 lg:order-none [background:var(--painel)] border [border-color:var(--linha)] rounded-xl p-3 text-center">
             <span className="flex items-center justify-center gap-2 [color:var(--tinta-suave)] font-medium text-sm">
               <span className="inline-block w-4 h-4 border-2 [border-color:transparent_var(--jogo-nex)_var(--jogo-nex)_var(--jogo-nex)] rounded-full animate-spin"></span>
-              {state.swapDisponivel ? 'IA a decidir sobre o swap…' : 'IA a pensar…'}
+              {t(state.swapDisponivel ? 'IA a decidir sobre o swap…' : 'IA a pensar…')}
             </span>
           </div>
         )}
@@ -748,25 +761,17 @@ export function NexGame({ onVoltar }: NexGameProps) {
         {/* Swap disponível */}
         {state.swapDisponivel && isVezDoHumano && (
           <div className="order-2 lg:order-none [background:var(--painel)] border-2 [border-color:color-mix(in_srgb,var(--jogo-nex)_55%,var(--linha))] rounded-xl p-4">
-            <p className="[color:var(--tinta)] font-semibold text-sm mb-2 text-center">
-              🔄 Regra da Torta (Swap)
-            </p>
-            <p className="[color:var(--tinta-suave)] text-xs mb-3 text-center">
-              Podes trocar de cor e ficar com a posição das Pretas!
-            </p>
+            <p className="[color:var(--tinta)] font-semibold text-sm mb-2 text-center">{t("🔄 Regra da Torta (Swap)")}</p>
+            <p className="[color:var(--tinta-suave)] text-xs mb-3 text-center">{t("Podes trocar de cor e ficar com a posição das Pretas!")}</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={handleSwap}
                 className="px-4 py-2 [background:var(--tinta)] [color:var(--fundo)] rounded-lg font-medium text-sm hover:opacity-90 transition-opacity"
-              >
-                Trocar cores
-              </button>
+              >{t("Trocar cores")}</button>
               <button
                 onClick={handleRecusarSwap}
                 className="px-4 py-2 [background:transparent] [color:var(--tinta)] border [border-color:var(--linha)] rounded-lg font-medium text-sm hover:[border-color:var(--tinta-suave)] transition-colors"
-              >
-                Manter
-              </button>
+              >{t("Manter")}</button>
             </div>
           </div>
         )}
@@ -783,9 +788,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
                     ? '[background:var(--tinta)] [color:var(--fundo)] ring-2 [--tw-ring-color:var(--ouro)]'
                     : '[background:transparent] [color:var(--tinta)] border [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                 } ${!podeFazerColocacao ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                Colocação
-              </button>
+              >{t("Colocação")}</button>
               <button
                 onClick={() => handleSelectTipoAcao('substituicao')}
                 disabled={!podeFazerSubstituicao}
@@ -794,72 +797,60 @@ export function NexGame({ onVoltar }: NexGameProps) {
                     ? '[background:var(--tinta)] [color:var(--fundo)] ring-2 [--tw-ring-color:var(--ouro)]'
                     : '[background:transparent] [color:var(--tinta)] border [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                 } ${!podeFazerSubstituicao ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                Substituição
-              </button>
+              >{t("Substituição")}</button>
               {state.acaoEmCurso.tipo !== null && (
                 <button
                   onClick={handleCancelar}
                   className="px-3 py-2 [color:var(--perigo)] hover:opacity-80 text-sm underline"
-                >
-                  Cancelar
-                </button>
+                >{t("Cancelar")}</button>
               )}
             </div>
 
             {state.acaoEmCurso.tipo !== null && (
               <div className="text-center">
-                <p className="[color:var(--tinta-suave)] text-sm">{getInstrucaoAcao()}</p>
-                
+                <p className="[color:var(--tinta-suave)] text-sm">{t(getInstrucaoAcao())}</p>
+
                 {/* Seletor propria/neutra para colocação */}
                 {state.acaoEmCurso.tipo === 'colocacao' && (
                   <div className="flex justify-center gap-2 mt-2">
                     <button
                       onClick={() => setTipoSelecao('propria')}
                       className={`px-2 py-1 rounded text-xs ${
-                        tipoSelecao === 'propria' 
-                          ? 'bg-gray-800 text-white' 
+                        tipoSelecao === 'propria'
+                          ? 'bg-gray-800 text-white'
                           : '[background:transparent] [color:var(--tinta-suave)] border [border-color:var(--linha)]'
                       }`}
-                    >
-                      Própria
-                    </button>
+                    >{t("Própria")}</button>
                     <button
                       onClick={() => setTipoSelecao('neutra')}
                       className={`px-2 py-1 rounded text-xs ${
-                        tipoSelecao === 'neutra' 
-                          ? 'bg-gray-500 text-white' 
+                        tipoSelecao === 'neutra'
+                          ? 'bg-gray-500 text-white'
                           : '[background:transparent] [color:var(--tinta-suave)] border [border-color:var(--linha)]'
                       }`}
-                    >
-                      Neutra
-                    </button>
+                    >{t("Neutra")}</button>
                   </div>
                 )}
-                
+
                 {/* Seletor para substituição */}
                 {state.acaoEmCurso.tipo === 'substituicao' && (
                   <div className="flex justify-center gap-2 mt-2">
                     <button
                       onClick={() => setTipoSelecao('neutra')}
                       className={`px-2 py-1 rounded text-xs ${
-                        tipoSelecao === 'neutra' 
-                          ? 'bg-gray-500 text-white' 
+                        tipoSelecao === 'neutra'
+                          ? 'bg-gray-500 text-white'
                           : '[background:transparent] [color:var(--tinta-suave)] border [border-color:var(--linha)]'
                       }`}
-                    >
-                      Neutras→Próprias
-                    </button>
+                    >{t("Neutras→Próprias")}</button>
                     <button
                       onClick={() => setTipoSelecao('propria')}
                       className={`px-2 py-1 rounded text-xs ${
-                        tipoSelecao === 'propria' 
-                          ? 'bg-gray-800 text-white' 
+                        tipoSelecao === 'propria'
+                          ? 'bg-gray-800 text-white'
                           : '[background:transparent] [color:var(--tinta-suave)] border [border-color:var(--linha)]'
                       }`}
-                    >
-                      Própria→Neutra
-                    </button>
+                    >{t("Própria→Neutra")}</button>
                   </div>
                 )}
               </div>
@@ -875,17 +866,15 @@ export function NexGame({ onVoltar }: NexGameProps) {
               <button
                 onClick={resetPan}
                 className="absolute top-2 right-2 z-10 px-3 py-1 [background:var(--tinta)] [color:var(--fundo)] text-xs rounded-lg shadow-md hover:opacity-90 transition-opacity"
-                title="Reposicionar tabuleiro"
-              >
-                ↺ Reposicionar
-              </button>
+                title={t("Reposicionar tabuleiro")}
+              >{t("↺ Reposicionar")}</button>
             )}
-            
+
             {/* Container com overflow e pan */}
-            <div 
+            <div
               ref={boardContainerRef}
               className="overflow-auto w-full flex justify-center"
-              style={{ 
+              style={{
                 maxHeight: '70vh',
                 cursor: isDragging ? 'grabbing' : 'default',
                 WebkitOverflowScrolling: 'touch',
@@ -894,12 +883,12 @@ export function NexGame({ onVoltar }: NexGameProps) {
                 overscrollBehavior: 'contain'
               }}
             >
-              <div 
+              <div
                 ref={boardDraggableRef}
                 className="relative inline-block p-4 sm:p-8 md:p-12 w-full max-w-[650px] min-w-[320px]"
                 style={{
-                  transform: panOffset.x !== 0 || panOffset.y !== 0 
-                    ? `translate(${panOffset.x}px, ${panOffset.y}px)` 
+                  transform: panOffset.x !== 0 || panOffset.y !== 0
+                    ? `translate(${panOffset.x}px, ${panOffset.y}px)`
                     : 'none',
                   transition: isDragging ? 'none' : 'transform 0.1s ease-out',
                   cursor: isDragging ? 'grabbing' : 'grab',
@@ -916,31 +905,31 @@ export function NexGame({ onVoltar }: NexGameProps) {
                 {/* Brancas: superior-direito e inferior-esquerdo */}
                 <div className="absolute top-0 right-0 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
                 <div className="absolute bottom-0 left-0 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 rounded-full bg-white border-2 border-gray-800 z-10"></div>
-                
-                <svg 
+
+                <svg
                   viewBox={`${-HEX_SIZE * 2} ${-dimensoes.centerY} ${dimensoes.width} ${dimensoes.height}`}
                   className="block w-full h-auto"
                 >
-                
+
                 {/* Hexágonos do tabuleiro */}
                 {Array.from({ length: LADO_TABULEIRO }, (_, row) => (
                   Array.from({ length: LADO_TABULEIRO }, (_, col) => {
                     const pos = getHexPosition(row, col);
                     const cx = pos.x;
                     const cy = pos.y;
-                    
+
                     // Note: tabuleiro usa [col][row] (x, y)
                     const celula = state.tabuleiro[col][row];
                     const posicao = { x: col, y: row };
                     const selecionada = isPosicaoSelecionada(posicao);
-                    const recomendada = actionTouchesPos(tutorResponse?.bestMove, posicao);
+                    const recomendada = showTutorSolution && actionTouchesPos(tutorResponse?.bestMove, posicao);
                     const ameacada = actionTouchesPos(criticalThreat?.counterMove, posicao);
-                    
+
                     // Determinar cor de preenchimento
                     let fill = '#fef3c7'; // amber-100 - vazia
                     let stroke = '#92400e'; // amber-800
                     let strokeWidth = 1;
-                    
+
                     if (celula === 'preta') {
                       fill = '#1f2937'; // gray-800
                       stroke = '#111827';
@@ -959,7 +948,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
                       stroke = '#f43f5e';
                       strokeWidth = 3;
                     }
-                    
+
                     return (
                       <g key={`${col}-${row}`}>
                         {/* Hexágono principal */}
@@ -971,7 +960,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
                           className="cursor-pointer hover:opacity-80 transition-opacity"
                           onClick={() => handleCellClick(posicao)}
                         />
-                        
+
                         {/* Indicador de seleção */}
                         {selecionada && (
                           <polygon
@@ -985,7 +974,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
                     );
                   })
                 ))}
-                
+
                 </svg>
               </div>
             </div>
@@ -995,15 +984,15 @@ export function NexGame({ onVoltar }: NexGameProps) {
           <div className="mt-4 flex flex-wrap justify-center gap-4 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-gray-900"></div>
-              <span>Pretas</span>
+              <span>{t("Pretas")}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-white border-2 border-gray-300"></div>
-              <span>Brancas</span>
+              <span>{t("Brancas")}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-gray-400"></div>
-              <span>Neutra</span>
+              <span>{t("Neutra")}</span>
             </div>
           </div>
         </div>
@@ -1011,16 +1000,11 @@ export function NexGame({ onVoltar }: NexGameProps) {
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
           <section className="order-8 lg:order-none rounded-xl border [border-color:color-mix(in_srgb,var(--sucesso)_40%,var(--linha))] [background:color-mix(in_srgb,var(--sucesso)_10%,var(--painel))] px-4 py-3 text-sm [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))] px-2 py-0.5 text-xs font-medium [color:var(--tinta)]">
-                2-4 min
-              </span>
+              <p className="font-semibold">{t("Revisão rápida pós-jogo")}</p>
+              <span className="rounded-full [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))] px-2 py-0.5 text-xs font-medium [color:var(--tinta)]">{t("2-4 min")}</span>
             </div>
-            <p className="mt-1 [color:var(--tinta-suave)]">
-              Revê até 2 momentos e confirma onde podias encurtar a tua ligação ou bloquear melhor a do adversário.
-            </p>
-            <p className="mt-2 rounded-lg [background:color-mix(in_srgb,var(--sucesso)_16%,var(--painel))] px-3 py-2 font-medium">
-              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            <p className="mt-1 [color:var(--tinta-suave)]">{t("Revê até 2 momentos e confirma onde podias encurtar a tua ligação ou bloquear melhor a do adversário.")}</p>
+            <p className="mt-2 rounded-lg [background:color-mix(in_srgb,var(--sucesso)_16%,var(--painel))] px-3 py-2 font-medium">{t("Cartão descoberto: ")}{t(reviewPattern.title)} — {t(reviewPattern.description)}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
@@ -1028,8 +1012,8 @@ export function NexGame({ onVoltar }: NexGameProps) {
                   key={item.title}
                   className="rounded-lg border [border-color:var(--linha)] [background:var(--painel)] px-3 py-2"
                 >
-                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
-                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{t(item.title)}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{t(item.insight)}</p>
                 </div>
               ))}
             </div>
@@ -1046,7 +1030,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
               }}
               className="mt-3 rounded-lg [background:var(--sucesso)] px-3 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+              {t(reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)')}
             </button>
           </section>
         )}

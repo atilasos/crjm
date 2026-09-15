@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ============================================================================
-   Fontes self-hosted (subset latin, sem CDN — o site funciona offline)
+   Fontes self-hosted (latim e devanágari, sem CDN — o site funciona offline)
    ========================================================================== */
 @font-face {
   font-family: 'Bricolage Grotesque';
@@ -25,6 +25,15 @@
   font-weight: 700;
   font-display: swap;
   src: url('./fonts/atkinson-hyperlegible-700-latin.woff2') format('woff2');
+}
+
+/* Noto Sans Devanagari 2.007, SIL OFL 1.1; see fonts/noto-sans-devanagari-OFL.txt. */
+@font-face {
+  font-family: 'Noto Sans Devanagari';
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/noto-sans-devanagari-variable.ttf') format('truetype');
 }
 
 /* ============================================================================
@@ -380,3 +389,12 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Devanagari conjuncts need normal letter spacing and room above/below the line. */
+:root:lang(ne) {
+  --font-display: 'Noto Sans Devanagari', 'Atkinson Hyperlegible', sans-serif;
+  --font-corpo: 'Noto Sans Devanagari', 'Atkinson Hyperlegible', sans-serif;
+}
+:lang(ne) { letter-spacing: normal; }
+html:lang(ne) body { line-height: 1.7; }
+option:lang(ne) { font-family: 'Noto Sans Devanagari', sans-serif; }

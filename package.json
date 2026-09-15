@@ -24,7 +24,9 @@
     "tournament": "bun run build && bun run src/server/tournament-server.ts",
     "tournament:dev": "bun run build && bun --hot src/server/tournament-server.ts",
     "screenshots": "bun run scripts/capture-screenshots.ts",
-    "screenshots:local": "BASE_URL=http://localhost:3000 bun run scripts/capture-screenshots.ts"
+    "screenshots:local": "BASE_URL=http://localhost:3000 bun run scripts/capture-screenshots.ts",
+    "i18n:check": "bun run scripts/i18n-check.ts && bun test src/i18n",
+    "i18n:ui": "node scripts/i18n-ui-smoke.ts"
   },
   "dependencies": {
     "bun-plugin-tailwind": "^0.1.2",
@@ -36,6 +38,7 @@
     "@types/bun": "latest",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "playwright": "^1.57.0"
+    "playwright": "^1.57.0",
+    "typescript": "^5.9.3"
   }
 }

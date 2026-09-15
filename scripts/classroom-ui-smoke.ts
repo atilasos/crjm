@@ -10,6 +10,7 @@ const DB_PATH = `/tmp/crjm-classroom-ui-${process.pid}.sqlite`;
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 async function launchBrowser(): Promise<Browser> {
+  if (process.env.HUB_CDP_URL) return chromium.connectOverCDP(process.env.HUB_CDP_URL);
   const configuredChannel = process.env.PLAYWRIGHT_BROWSER_CHANNEL;
   if (configuredChannel) {
     return chromium.launch({ headless: true, channel: configuredChannel });
@@ -141,7 +142,7 @@ async function runGame(page: Page, title: string, play: (page: Page) => Promise<
 
 async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Resolver puzzles' }).click();
+  await page.getByRole('button', { name: 'Resolver exercícios' }).click();
   await page.getByRole('heading', { name: 'Laboratório de Estratégias', exact: true }).first().waitFor();
   await page.locator('[data-puzzle-option="centro"]').click();
   await page.getByRole('button', { name: 'Confirmar resposta' }).click();

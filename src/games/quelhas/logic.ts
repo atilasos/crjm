@@ -1,6 +1,6 @@
-import { QuelhasState, Celula, Posicao, Segmento, Orientacao } from './types';
-import { GameMode, GameStatus, Player } from '../../types';
-import { searchBestMove } from './ai/engine';
+import type { QuelhasState, Celula, Posicao, Segmento, Orientacao } from './types';
+import type { GameMode, GameStatus, Player } from '../../types';
+import { analyzeTurnCounts, searchBestMove } from './ai/engine';
 
 const TAMANHO_TABULEIRO = 10;
 const COMPRIMENTO_MINIMO = 2;
@@ -535,80 +535,15 @@ export function recusarTroca(state: QuelhasState): QuelhasState {
   };
 }
 
-/**
- * IA decide se deve fazer a troca usando avaliação estrutural.
- * 
- * A decisão baseia-se em:
- * 1. Comparar métricas (min/max, exclusivas) para cada orientação
- * 2. Simular uma pesquisa curta para ambas opções
- * 3. Escolher a opção que dá melhor posição
+/** Swapping consumes the turn. Horizontal plays next in either case, but
+ * becomes the human's orientation if the computer swaps to vertical.
  */
 export function decidirTrocaComputador(state: QuelhasState): boolean {
   if (!state.trocaDisponivel) return false;
-  
-  // Calcular métricas para o estado atual
-  const metricas = calcularMetricasCompletas(state.tabuleiro);
-  
-  // Se NÃO trocar: IA fica com horizontal, adversário fica com vertical
-  // Se TROCAR: IA fica com vertical, adversário fica com horizontal
-  // (A troca consome o turno, então após trocar é a vez do adversário jogar)
-  
-  // Avaliar posição se NÃO trocar (IA = horizontal)
-  const jogadasHorizontal = calcularJogadasValidas(state.tabuleiro, 'horizontal');
-  const jogadasVertical = calcularJogadasValidas(state.tabuleiro, 'vertical');
-  
-  const scoreNaoTrocar = avaliarPosicaoMisere(
-    state.tabuleiro,
-    'horizontal', // IA fica horizontal
-    'vertical',   // Adversário fica vertical
-    jogadasVertical.length,
-    jogadasHorizontal.length
-  );
-  
-  // Avaliar posição se TROCAR (IA = vertical)
-  // Nota: após a troca, a vez passa para o adversário (que agora é horizontal)
-  const scoreTrocar = avaliarPosicaoMisere(
-    state.tabuleiro,
-    'vertical',   // IA fica vertical
-    'horizontal', // Adversário fica horizontal
-    jogadasHorizontal.length,
-    jogadasVertical.length
-  );
-  
-  // Análise adicional baseada em métricas estruturais
-  let bonusTrocar = 0;
-  let bonusNaoTrocar = 0;
-  
-  // Se vertical tem vantagem em exclusivas, trocar é bom
-  if (metricas.vertical.maxExclusivo > metricas.horizontal.maxExclusivo) {
-    bonusTrocar += (metricas.vertical.maxExclusivo - metricas.horizontal.maxExclusivo) * 30;
-  } else {
-    bonusNaoTrocar += (metricas.horizontal.maxExclusivo - metricas.vertical.maxExclusivo) * 30;
-  }
-  
-  // Se horizontal tem mais flexibilidade (max - min maior), é bom ficar com horizontal
-  const flexV = metricas.vertical.max - metricas.vertical.min;
-  const flexH = metricas.horizontal.max - metricas.horizontal.min;
-  bonusNaoTrocar += (flexH - flexV) * 10;
-  bonusTrocar += (flexV - flexH) * 10;
-  
-  // Em misère, preferimos a orientação com menos jogadas "obrigatórias" (min baixo)
-  // mas mais capacidade de "guardar" (max alto, especialmente exclusivas)
-  const ratioV = metricas.vertical.min > 0 ? metricas.vertical.maxExclusivo / metricas.vertical.min : 0;
-  const ratioH = metricas.horizontal.min > 0 ? metricas.horizontal.maxExclusivo / metricas.horizontal.min : 0;
-  
-  if (ratioV > ratioH) {
-    bonusTrocar += 50;
-  } else if (ratioH > ratioV) {
-    bonusNaoTrocar += 50;
-  }
-  
-  // Decisão final: comparar scores totais
-  const scoreFinalTrocar = scoreTrocar + bonusTrocar;
-  const scoreFinalNaoTrocar = scoreNaoTrocar + bonusNaoTrocar;
-  
-  // Trocar só se claramente melhor (margem de 20 pontos para evitar trocas marginais)
-  return scoreFinalTrocar > scoreFinalNaoTrocar + 20;
+  const horizontal = searchBestMove(state.tabuleiro, 'horizontal', {
+    timeBudgetMs: 40, maxDepth: 2, topN: 0, scoreDelta: 0,
+  });
+  return horizontal.score < 0;
 }
 
 // ============================================================================
@@ -1353,80 +1288,20 @@ function aplicarSegmentoTabuleiro(tabuleiro: Celula[][], segmento: Segmento): Ce
   return novoTabuleiro;
 }
 
-// Calcular intervalos de jogadas futuras (min/max) para cada jogador
-// Usa lookahead de 1-2 níveis para estimar cenários
+/** Current turn capacities. Shared runs may change after either player's move. */
 export function calcularIntervalosJogadas(
   tabuleiro: Celula[][],
   orientacaoIA: Orientacao,
   orientacaoAdversario: Orientacao,
-  profundidade: number = 1
 ): IntervalosJogadas {
-  const jogadasIA = calcularJogadasValidas(tabuleiro, orientacaoIA);
-  const jogadasAdversario = calcularJogadasValidas(tabuleiro, orientacaoAdversario);
-
-  if (profundidade === 0 || jogadasIA.length === 0) {
-    // Caso base: retornar contagem atual
-    return {
-      minJogadasIA: jogadasIA.length,
-      maxJogadasIA: jogadasIA.length,
-      minJogadasAdversario: jogadasAdversario.length,
-      maxJogadasAdversario: jogadasAdversario.length,
-    };
-  }
-
-  // Calcular min/max olhando para as respostas possíveis do adversário
-  let minJogadasIAFuturas = Infinity;
-  let maxJogadasIAFuturas = 0;
-  let minJogadasAdvFuturas = Infinity;
-  let maxJogadasAdvFuturas = 0;
-
-  // Limitar número de jogadas a analisar para performance
-  const jogadasAmostra = jogadasIA.length > 20 
-    ? jogadasIA.filter((_, i) => i % Math.ceil(jogadasIA.length / 20) === 0)
-    : jogadasIA;
-
-  for (const jogadaIA of jogadasAmostra) {
-    const tabAposIA = aplicarSegmentoTabuleiro(tabuleiro, jogadaIA);
-    const jogadasAdvAposIA = calcularJogadasValidas(tabAposIA, orientacaoAdversario);
-
-    if (jogadasAdvAposIA.length === 0) {
-      // Adversário não tem jogadas - este é o pior caso para IA em misère
-      // (IA seria o último a jogar)
-      minJogadasAdvFuturas = Math.min(minJogadasAdvFuturas, 0);
-      maxJogadasAdvFuturas = Math.max(maxJogadasAdvFuturas, 0);
-      // IA não jogará mais porque o jogo acaba
-      minJogadasIAFuturas = Math.min(minJogadasIAFuturas, 0);
-      continue;
-    }
-
-    // Analisar respostas do adversário (amostra)
-    const jogadasAdvAmostra = jogadasAdvAposIA.length > 10
-      ? jogadasAdvAposIA.filter((_, i) => i % Math.ceil(jogadasAdvAposIA.length / 10) === 0)
-      : jogadasAdvAposIA;
-
-    for (const jogadaAdv of jogadasAdvAmostra) {
-      const tabAposAdv = aplicarSegmentoTabuleiro(tabAposIA, jogadaAdv);
-      const jogadasIAFuturas = calcularJogadasValidas(tabAposAdv, orientacaoIA);
-      const jogadasAdvFuturas = calcularJogadasValidas(tabAposAdv, orientacaoAdversario);
-
-      minJogadasIAFuturas = Math.min(minJogadasIAFuturas, jogadasIAFuturas.length);
-      maxJogadasIAFuturas = Math.max(maxJogadasIAFuturas, jogadasIAFuturas.length);
-      minJogadasAdvFuturas = Math.min(minJogadasAdvFuturas, jogadasAdvFuturas.length);
-      maxJogadasAdvFuturas = Math.max(maxJogadasAdvFuturas, jogadasAdvFuturas.length);
-    }
-  }
-
-  // Se não houve análise, usar valores atuais
-  if (minJogadasIAFuturas === Infinity) minJogadasIAFuturas = jogadasIA.length;
-  if (maxJogadasIAFuturas === 0) maxJogadasIAFuturas = jogadasIA.length;
-  if (minJogadasAdvFuturas === Infinity) minJogadasAdvFuturas = jogadasAdversario.length;
-  if (maxJogadasAdvFuturas === 0) maxJogadasAdvFuturas = jogadasAdversario.length;
-
+  const counts = analyzeTurnCounts(tabuleiro);
+  const my = counts[orientacaoIA];
+  const opponent = counts[orientacaoAdversario];
   return {
-    minJogadasIA: minJogadasIAFuturas,
-    maxJogadasIA: maxJogadasIAFuturas,
-    minJogadasAdversario: minJogadasAdvFuturas,
-    maxJogadasAdversario: maxJogadasAdvFuturas,
+    minJogadasIA: my.min,
+    maxJogadasIA: my.max,
+    minJogadasAdversario: opponent.min,
+    maxJogadasAdversario: opponent.max,
   };
 }
 

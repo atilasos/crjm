@@ -1,3 +1,4 @@
+import { selectReviewPattern } from '../../../ai-core/review-patterns';
 import type {
   AIRequestV1,
   AIResponseV1,
@@ -73,6 +74,7 @@ export class NexV1Adapter {
       explainText: buildExplainText(request.state, bestMove, topMoves),
       confidence: topMoves[0]?.confidence ?? 0.48,
       criticalThreats,
+      reviewPatternId: selectReviewPattern('nex', { criticalThreats }).id,
       pedagogy,
       stats: {
         elapsedMs: metrics.lastTimeMs,

@@ -1,3 +1,6 @@
+import { ThinkingTutor, useThinkingTutor } from '../../components/tutor/ThinkingTutor';
+import { thinkingTurnKey } from '../../ai-core/thinking-tutor';
+import { useTranslation } from '../../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GameLayout } from '../../components/GameLayout';
 import { useGamification } from '../../components/gamification/GamificationProvider';
@@ -32,7 +35,6 @@ import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
 import {
   buildQuickReviewItems,
-  computeAdaptiveHintLevel,
   type TutorHintLevel,
 } from './ai/pedagogy-mvp';
 
@@ -113,6 +115,7 @@ function isPartOfDomino(move: Domino | null | undefined, linha: number, coluna: 
 }
 
 export function DominorioGame({ onVoltar }: DominorioGameProps) {
+  const { t } = useTranslation();
   const {
     acceptDifficultyRecommendation,
     getDifficultyRecommendation,
@@ -134,7 +137,12 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   const [tutorResponse, setTutorResponse] =
     useState<AIResponseV1<Domino, DominorioState> | null>(null);
   const [tutorLoading, setTutorLoading] = useState(false);
-  const [hintLevel, setHintLevel] = useState<TutorHintLevel>('H2');
+  const tutorTurn = thinkingTurnKey(state, humanPlayer, difficultyLevel);
+  const thinking = useThinkingTutor(tutorTurn);
+  const hintLevel = 'H3' as const;
+  const [tutorPosition, setTutorPosition] = useState<string | null>(null);
+  const showTutorSolution = thinking.showSolution && tutorPosition === tutorTurn && !tutorLoading
+    && state.modo === 'vs-computador' && state.estado === 'a-jogar' && state.jogadorAtual === humanPlayer;
   const [tutorHistory, setTutorHistory] = useState<AIResponseV1<Domino, DominorioState>[]>([]);
 
   // AI client ref (persistent across renders)
@@ -211,12 +219,8 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
       .then((response) => {
         if (cancelled) return;
         setTutorResponse(response);
+        setTutorPosition(tutorTurn);
         setTutorHistory((prev) => [...prev.slice(-11), response]);
-        setHintLevel((currentLevel) => {
-          const next = computeAdaptiveHintLevel(response, currentLevel, hintSignalsRef.current);
-          hintSignalsRef.current.h3Streak = next === 'H3' ? hintSignalsRef.current.h3Streak + 1 : 0;
-          return next;
-        });
         lastSuggestedMoveRef.current = response.bestMove;
       })
       .catch(() => {
@@ -241,7 +245,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     state.dominosColocados.length,
     difficulty,
     isVezDaIA,
-    state,
+    tutorTurn,
   ]);
 
   useEffect(() => {
@@ -359,18 +363,18 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
       const preview = getDominoPreview(state, pos);
       if (preview) {
-        if (tutorResponse) {
+        if (tutorResponse && tutorPosition === tutorTurn && !tutorLoading && state.modo === 'vs-computador') {
           const successful = tutorResponse.topMoves.some(({ move }) => sameMove(move, preview));
           recordAdaptiveDecision('dominorio', {
             successful,
-            usedHint: hintLevel === 'H3',
+            usedHint: thinking.usedHint,
             repeatedError: !successful && hintSignalsRef.current.struggleStreak > 0,
           });
         }
         setState((prev) => colocarDomino(prev, preview));
       }
     },
-    [state, humanPlayer, tutorResponse, recordAdaptiveDecision, hintLevel],
+    [state, humanPlayer, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading],
   );
 
   const novoJogo = useCallback(() => {
@@ -382,7 +386,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
     setTutorHistory([]);
     previousMoveCountRef.current = 0;
     lastSuggestedMoveRef.current = null;
@@ -402,7 +406,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
     setTutorHistory([]);
     previousMoveCountRef.current = 0;
     lastSuggestedMoveRef.current = null;
@@ -419,7 +423,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     setAiMetrics(INITIAL_METRICS);
     setTutorResponse(null);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
     setTutorHistory([]);
     previousMoveCountRef.current = 0;
     lastSuggestedMoveRef.current = null;
@@ -446,7 +450,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
   const getCelulaClasses = (linha: number, coluna: number): string => {
     const celula = state.tabuleiro[linha]?.[coluna] ?? 'vazia';
     const preview = isPreview(linha, coluna);
-    const recommended = tutorResponse?.bestMove && isPartOfDomino(tutorResponse.bestMove, linha, coluna);
+    const recommended = showTutorSolution && tutorResponse?.bestMove && isPartOfDomino(tutorResponse.bestMove, linha, coluna);
     const threatMove = criticalThreat?.counterMove;
     const threatened = threatMove && isPartOfDomino(threatMove, linha, coluna);
 
@@ -477,7 +481,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
     return classes;
   };
 
-  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const criticalThreat = showTutorSolution ? tutorResponse?.criticalThreats?.[0] : undefined;
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
   const reviewPattern = selectReviewPattern('dominorio', tutorHistory.at(-1) ?? tutorResponse);
 
@@ -547,11 +551,11 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
           <div className="mt-4 flex justify-center gap-6 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-4 h-8 bg-pink-500 rounded"></div>
-              <span>Vertical (J1)</span>
+              <span>{t("Vertical (J1)")}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-8 h-4 bg-cyan-500 rounded"></div>
-              <span>Horizontal (J2)</span>
+              <span>{t("Horizontal (J2)")}</span>
             </div>
           </div>
 
@@ -560,15 +564,12 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
             {state.estado === 'a-jogar' &&
               (isVezDaIA ? (
                 <span className="flex items-center justify-center gap-2 font-medium [color:var(--jogo-dominorio)]">
-                  <span className="inline-block w-4 h-4 border-2 [border-color:var(--jogo-dominorio)] border-t-transparent rounded-full animate-spin"></span>
-                  IA a pensar…
-                </span>
+                  <span className="inline-block w-4 h-4 border-2 [border-color:var(--jogo-dominorio)] border-t-transparent rounded-full animate-spin"></span>{t("IA a pensar…")}</span>
               ) : (
                 <>
-                  {state.jogadorAtual === 'jogador1'
+                  {t(state.jogadorAtual === 'jogador1'
                     ? 'Clica para colocar um dominó VERTICAL'
-                    : 'Clica para colocar um dominó HORIZONTAL'}{' '}
-                  • Jogadas disponíveis: {state.jogadasValidas.length}
+                    : 'Clica para colocar um dominó HORIZONTAL')}{t(' ')}{t("• Jogadas disponíveis: ")}{t(state.jogadasValidas.length)}
                 </>
               ))}
           </div>
@@ -576,56 +577,54 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
 
         {state.estado === 'a-jogar' && !isVezDaIA && (
           <div className="space-y-3 order-4">
-            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
-            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
-            <TutorHintCard
-              insight={
-                tutorResponse?.explainText ||
-                'Mantém a posição equilibrada e evita reduzir demasiado as opções.'
-              }
-              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
-              hintLevel={hintLevel}
-              errorCode={tutorResponse?.pedagogy?.errorCode}
-              isLoading={tutorLoading}
-            />
+            <ThinkingTutor gameId="dominorio" tutor={thinking} solutionReady={showTutorSolution}>
+              {showTutorSolution && <>
+                <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
+                <TutorHintCard
+                  insight={
+                    tutorResponse?.explainText ||
+                    'Mantém a posição equilibrada e evita reduzir demasiado as opções.'
+                  }
+                  suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+                  hintLevel={hintLevel}
+                  errorCode={tutorResponse?.pedagogy?.errorCode}
+                  isLoading={tutorLoading}
+                />
 
-            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+                <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
 
-            {criticalThreat && (
-              <section
-                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
-              >
-                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
-                <p className="mt-1">{criticalThreat.description}</p>
-                {criticalThreat.counterMove && (
-                  <p className="mt-1 font-medium">
-                    Resposta mínima: {formatMove(criticalThreat.counterMove)}
-                  </p>
+                {criticalThreat && (
+                  <section
+                    className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+                  >
+                    <p className="font-semibold">{t("Ameaça crítica: ")}{t(criticalThreat.title)}</p>
+                    <p className="mt-1">{t(criticalThreat.description)}</p>
+                    {criticalThreat.counterMove && (
+                      <p className="mt-1 font-medium">{t("Resposta mínima: ")}{t(formatMove(criticalThreat.counterMove))}
+                      </p>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
+              </>}
+            </ThinkingTutor>
           </div>
         )}
 
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
           <section className="rounded-xl border px-4 py-3 text-sm order-5 [background:var(--painel)] [border-color:color-mix(in_srgb,var(--jogo-produto)_35%,var(--linha))] [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-produto)_18%,var(--painel))] [color:var(--tinta)]">
-                2-4 min
-              </span>
+              <p className="font-semibold">{t("Revisão rápida pós-jogo")}</p>
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-produto)_18%,var(--painel))] [color:var(--tinta)]">{t("2-4 min")}</span>
             </div>
-            <p className="mt-1 [color:var(--tinta-suave)]">
-              Revê até 2 momentos e tenta repetir a melhor alternativa.
-            </p>
-            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--jogo-produto)_12%,var(--painel))]">
-              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            <p className="mt-1 [color:var(--tinta-suave)]">{t("Revê até 2 momentos e tenta repetir a melhor alternativa.")}</p>
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--jogo-produto)_12%,var(--painel))]">{t("Cartão descoberto: ")}{t(reviewPattern.title)} — {t(reviewPattern.description)}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
                 <div key={item.title} className="rounded-lg border px-3 py-2 [border-color:var(--linha)] [background:var(--fundo)]">
-                  <p className="font-semibold [color:var(--tinta)]">{item.title}</p>
-                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
+                  <p className="font-semibold [color:var(--tinta)]">{t(item.title)}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{t(item.insight)}</p>
                 </div>
               ))}
             </div>
@@ -642,7 +641,7 @@ export function DominorioGame({ onVoltar }: DominorioGameProps) {
               }}
               className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-colors [background:var(--jogo-produto)] hover:[background:color-mix(in_srgb,var(--jogo-produto)_85%,black)] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+              {t(reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)')}
             </button>
           </section>
         )}

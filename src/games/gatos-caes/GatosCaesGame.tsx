@@ -1,3 +1,6 @@
+import { ThinkingTutor, useThinkingTutor } from '../../components/tutor/ThinkingTutor';
+import { thinkingTurnKey } from '../../ai-core/thinking-tutor';
+import { useTranslation } from '../../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
@@ -25,7 +28,6 @@ import {
   terminateAI,
   GatosCaesV1Adapter,
   buildQuickReviewItems,
-  resolveHintLevel,
 } from './ai';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
@@ -79,6 +81,7 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
 }
 
 export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
+  const { t } = useTranslation();
   const {
     acceptDifficultyRecommendation,
     getDifficultyRecommendation,
@@ -99,7 +102,12 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     useState<AIResponseV1<Posicao, GatosCaesState> | null>(null);
   const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<Posicao, GatosCaesState>>>([]);
   const [tutorLoading, setTutorLoading] = useState(false);
-  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const tutorTurn = thinkingTurnKey(state, humanPlayer, difficulty);
+  const thinking = useThinkingTutor(tutorTurn);
+  const hintLevel = 'H3' as const;
+  const [tutorPosition, setTutorPosition] = useState<string | null>(null);
+  const showTutorSolution = thinking.showSolution && tutorPosition === tutorTurn && !tutorLoading
+    && state.modo === 'vs-computador' && state.estado === 'a-jogar' && state.jogadorAtual === humanPlayer;
   const tutorAdapterRef = useRef<GatosCaesV1Adapter | null>(null);
   const awardedResultRef = useRef<string | null>(null);
   const [reviewRewarded, setReviewRewarded] = useState(false);
@@ -194,8 +202,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
       .then((response) => {
         if (cancelled) return;
         setTutorResponse(response);
+        setTutorPosition(tutorTurn);
         setTutorHistory((prev) => [...prev.slice(-5), response]);
-        setHintLevel((current) => resolveHintLevel(response, current));
       })
       .catch((error) => {
         if (!cancelled) {
@@ -243,18 +251,18 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
     if (isJogadaValida(state, pos)) {
-      if (tutorResponse) {
+      if (tutorResponse && tutorPosition === tutorTurn && !tutorLoading && state.modo === 'vs-computador') {
         const successful = tutorResponse.topMoves.some(({ move }) =>
           move.linha === pos.linha && move.coluna === pos.coluna
         );
         recordAdaptiveDecision('gatos-caes', {
           successful,
-          usedHint: hintLevel === 'H3',
+          usedHint: thinking.usedHint,
         });
       }
       setState(prev => colocarPeca(prev, pos));
     }
-  }, [state, humanPlayer, tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [state, humanPlayer, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const novoJogo = useCallback(() => {
     setState(criarEstadoInicial(state.modo));
@@ -262,7 +270,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
     resetAdaptiveSession('gatos-caes');
   }, [resetAdaptiveSession, state.modo]);
 
@@ -274,7 +282,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -284,7 +292,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     setTutorResponse(null);
     setTutorHistory([]);
     setTutorLoading(false);
-    setHintLevel('H2');
+    thinking.reset();
   }, []);
 
   // Verificar se é casa central
@@ -298,7 +306,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   };
 
   const isTutorRecommended = (linha: number, coluna: number): boolean =>
-    tutorResponse?.bestMove?.linha === linha && tutorResponse.bestMove.coluna === coluna;
+    showTutorSolution && tutorResponse?.bestMove?.linha === linha && tutorResponse.bestMove.coluna === coluna;
 
   const isTutorThreat = (linha: number, coluna: number): boolean =>
     criticalThreat?.counterMove?.linha === linha && criticalThreat.counterMove.coluna === coluna;
@@ -308,9 +316,9 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     const celula = state.tabuleiro[linha]?.[coluna] ?? 'vazia';
     const central = isCasaCentral(linha, coluna);
     const jogadaValida = isJogadaValidaPos(linha, coluna);
-    
+
     let classes = 'aspect-square rounded-md flex items-center justify-center transition-all duration-200 text-3xl md:text-4xl ';
-    
+
     // Fundo base
     if (central && celula === 'vazia') {
       classes += 'bg-amber-200 ';
@@ -319,7 +327,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     } else {
       classes += 'bg-gray-50 ';
     }
-    
+
     // Destacar jogadas válidas
     if (jogadaValida) {
       classes += 'ring-3 ring-green-400 bg-green-100 cursor-pointer hover:bg-green-200 ';
@@ -332,7 +340,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     } else if (isTutorThreat(linha, coluna)) {
       classes += 'ring-4 ring-rose-400 ring-offset-2 ring-offset-white ';
     }
-    
+
     return classes;
   };
 
@@ -340,7 +348,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
     state.modo === 'vs-computador' &&
     state.estado === 'a-jogar' &&
     (state.jogadorAtual !== humanPlayer || aiThinking);
-  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const criticalThreat = showTutorSolution ? tutorResponse?.criticalThreats?.[0] : undefined;
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
   const reviewPattern = selectReviewPattern('gatos-caes', tutorHistory.at(-1) ?? tutorResponse);
   const difficultyRecommendation = getDifficultyRecommendation('gatos-caes', difficulty);
@@ -412,16 +420,16 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
             <div className="flex justify-center gap-6">
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🐱</span>
-                <span>Gatos (J1): {state.totalGatos}</span>
+                <span>{t("Gatos (J1): ")}{t(state.totalGatos)}</span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-2xl">🐶</span>
-                <span>Cães (J2): {state.totalCaes}</span>
+                <span>{t("Cães (J2): ")}{t(state.totalCaes)}</span>
               </div>
             </div>
             <div className="flex items-center gap-2 text-xs">
               <div className="w-4 h-4 bg-amber-200 rounded border"></div>
-              <span>Casas centrais (1.º Gato)</span>
+              <span>{t("Casas centrais (1.º Gato)")}</span>
             </div>
           </div>
 
@@ -430,19 +438,17 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
             {state.estado === 'a-jogar' && (
               isVezDaIA ? (
                 <span className="flex items-center justify-center gap-2 [color:var(--tinta-no-papel)] font-medium">
-                  <span className="inline-block w-4 h-4 border-2 border-[color:var(--tinta-suave-no-papel)] border-t-transparent rounded-full animate-spin"></span>
-                  IA a pensar…
-                </span>
+                  <span className="inline-block w-4 h-4 border-2 border-[color:var(--tinta-suave-no-papel)] border-t-transparent rounded-full animate-spin"></span>{t("IA a pensar…")}</span>
               ) : (
                 <>
-                  {state.jogadorAtual === 'jogador1' 
-                    ? !state.primeiroGatoColocado 
-                      ? 'Coloca o primeiro Gato numa casa central (amarela)' 
+                  {t(state.jogadorAtual === 'jogador1'
+                    ? !state.primeiroGatoColocado
+                      ? 'Coloca o primeiro Gato numa casa central (amarela)'
                       : 'Coloca um Gato (não pode ser adjacente a Cães)'
                     : !state.primeiroCaoColocado
                       ? 'Coloca o primeiro Cão fora das casas centrais'
-                      : 'Coloca um Cão (não pode ser adjacente a Gatos)'}
-                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                      : 'Coloca um Cão (não pode ser adjacente a Gatos)')}
+                  {t(' ')}{t("• Jogadas disponíveis: ")}{t(state.jogadasValidas.length)}
                 </>
               )
             )}
@@ -451,50 +457,48 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && isVezDoHumano && (
           <div className="order-3 space-y-3">
-            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
-            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative={false} />
-            <TutorHintCard
-              insight={
-                tutorResponse?.explainText ||
-                'Procura uma casa que te deixe várias respostas simples para o turno seguinte.'
-              }
-              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
-              hintLevel={hintLevel}
-              errorCode={tutorResponse?.pedagogy?.errorCode}
-              isLoading={tutorLoading}
-            />
+            <ThinkingTutor gameId="gatos-caes" tutor={thinking} solutionReady={showTutorSolution}>
+              {showTutorSolution && <>
+                <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative={false} />
+                <TutorHintCard
+                  insight={
+                    tutorResponse?.explainText ||
+                    'Procura uma casa que te deixe várias respostas simples para o turno seguinte.'
+                  }
+                  suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+                  hintLevel={hintLevel}
+                  errorCode={tutorResponse?.pedagogy?.errorCode}
+                  isLoading={tutorLoading}
+                />
 
-            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+                <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
 
-            {criticalThreat && (
-              <section
-                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
-              >
-                <p className="font-semibold">Atenção: {criticalThreat.title}</p>
-                <p className="mt-1">{criticalThreat.description}</p>
-                {criticalThreat.counterMove && (
-                  <p className="mt-1 font-medium">
-                    Resposta mínima: {formatMove(criticalThreat.counterMove)}
-                  </p>
+                {criticalThreat && (
+                  <section
+                    className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+                  >
+                    <p className="font-semibold">{t("Atenção: ")}{t(criticalThreat.title)}</p>
+                    <p className="mt-1">{t(criticalThreat.description)}</p>
+                    {criticalThreat.counterMove && (
+                      <p className="mt-1 font-medium">{t("Resposta mínima: ")}{t(formatMove(criticalThreat.counterMove))}
+                      </p>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
+              </>}
+            </ThinkingTutor>
           </div>
         )}
 
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
           <section className="order-4 rounded-xl border [border-color:var(--linha)] [background:var(--painel)] px-4 py-3 text-sm [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full [background:color-mix(in_srgb,var(--ouro)_18%,transparent)] px-2 py-0.5 text-xs font-medium [color:var(--tinta)]">
-                2-3 min
-              </span>
+              <p className="font-semibold">{t("Revisão rápida pós-jogo")}</p>
+              <span className="rounded-full [background:color-mix(in_srgb,var(--ouro)_18%,transparent)] px-2 py-0.5 text-xs font-medium [color:var(--tinta)]">{t("2-3 min")}</span>
             </div>
-            <p className="mt-1 [color:var(--tinta-suave)]">
-              Revê os momentos em que perdeste mais espaço e experimenta a alternativa sugerida.
-            </p>
-            <p className="mt-2 rounded-lg border [border-color:color-mix(in_srgb,var(--ouro)_45%,var(--linha))] [background:color-mix(in_srgb,var(--ouro)_12%,var(--painel))] px-3 py-2 font-medium">
-              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            <p className="mt-1 [color:var(--tinta-suave)]">{t("Revê os momentos em que perdeste mais espaço e experimenta a alternativa sugerida.")}</p>
+            <p className="mt-2 rounded-lg border [border-color:color-mix(in_srgb,var(--ouro)_45%,var(--linha))] [background:color-mix(in_srgb,var(--ouro)_12%,var(--painel))] px-3 py-2 font-medium">{t("Cartão descoberto: ")}{t(reviewPattern.title)} — {t(reviewPattern.description)}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
@@ -502,8 +506,8 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
                   key={item.title}
                   className="rounded-lg border [border-color:var(--linha)] [background:color-mix(in_srgb,var(--tinta)_4%,var(--painel))] px-3 py-2"
                 >
-                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
-                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{t(item.title)}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{t(item.insight)}</p>
                 </div>
               ))}
             </div>
@@ -520,7 +524,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
               }}
               className="mt-3 rounded-lg [background:var(--tinta)] px-3 py-2 text-sm font-semibold [color:var(--fundo)] transition-opacity hover:opacity-85 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+              {t(reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)')}
             </button>
           </section>
         )}

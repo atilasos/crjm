@@ -1,0 +1,95 @@
+{
+  "reports": [
+    {
+      "level": 1,
+      "engine": "rust-wasm",
+      "depth": 1,
+      "elapsedMs": 108.90000009536743,
+      "move": {
+        "inicio": {
+          "linha": 2,
+          "coluna": 1
+        },
+        "comprimento": 4,
+        "orientacao": "vertical"
+      }
+    },
+    {
+      "level": 2,
+      "engine": "rust-wasm",
+      "depth": 1,
+      "elapsedMs": 257.1999999284744,
+      "move": {
+        "inicio": {
+          "linha": 0,
+          "coluna": 1
+        },
+        "comprimento": 3,
+        "orientacao": "vertical"
+      }
+    },
+    {
+      "level": 3,
+      "engine": "rust-wasm",
+      "depth": 2,
+      "elapsedMs": 500.89999997615814,
+      "move": {
+        "inicio": {
+          "linha": 0,
+          "coluna": 4
+        },
+        "comprimento": 10,
+        "orientacao": "vertical"
+      }
+    },
+    {
+      "level": 4,
+      "engine": "rust-wasm",
+      "depth": 2,
+      "elapsedMs": 1000.7000000476837,
+      "move": {
+        "inicio": {
+          "linha": 0,
+          "coluna": 4
+        },
+        "comprimento": 10,
+        "orientacao": "vertical"
+      }
+    },
+    {
+      "level": 5,
+      "engine": "rust-wasm",
+      "depth": 3,
+      "elapsedMs": 2001.0999999046326,
+      "move": {
+        "inicio": {
+          "linha": 0,
+          "coluna": 4
+        },
+        "comprimento": 10,
+        "orientacao": "vertical"
+      }
+    },
+    {
+      "level": 6,
+      "engine": "rust-wasm",
+      "depth": 3,
+      "elapsedMs": 2002.1000000238419,
+      "move": {
+        "inicio": {
+          "linha": 0,
+          "coluna": 4
+        },
+        "comprimento": 10,
+        "orientacao": "vertical"
+      }
+    }
+  ],
+  "serverSides": [
+    1,
+    2
+  ],
+  "failures": [],
+  "hints": "H0/H1/H2 hidden, H3 counts on request",
+  "mobile": "390px without overflow"
+}
