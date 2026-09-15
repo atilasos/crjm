@@ -64,6 +64,22 @@ O workflow `.github/workflows/deploy.yml` continua a publicar o site estático n
 
 ## Serviço N6 do Quelhas (az-quelhas)
 
+### Cache dos workers
+
+Os workers usam caminhos estáveis em `/ai/`. A Cloudflare pode guardar os
+ficheiros JavaScript durante quatro horas, mesmo quando a aplicação já foi
+atualizada. O cliente Quelhas pede `quelhas.worker.js?v=tempo-20260915` para
+identificar a correção do motor. Ao alterar este worker, atualizar também a
+revisão no seu `ai-client.ts` e verificar que o SHA-256 do URL efetivamente
+pedido pelo browser coincide com `dist/ai/quelhas/quelhas.worker.js`.
+
+A limpeza de cache por URL exige a permissão `Cache Purge` na API Cloudflare.
+O token local usado na publicação de 2026-09-15 não permitiu essa operação;
+a atualização usou o URL com revisão. Os restantes sites da zona mantêm as
+suas configurações. Documentação: [purga por URL](https://developers.cloudflare.com/api/resources/cache/methods/purge/).
+
+### Inferência
+
 Container `crjm-qz-serve` (porta 127.0.0.1:8101, `--restart no`),
 modelo `training/runs/qz-v1/best.pt`; proxy Bun em `/api/ai/quelhas/*` com as
 mesmas proteções do Atari Go (HMAC de sessão, rate-limit 30/min, corpo ≤8 KiB).

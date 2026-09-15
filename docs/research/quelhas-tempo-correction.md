@@ -91,4 +91,4 @@ O diretório `--baseline` tem de conter o motor TS original `engine.ts`, `quelha
 - `tsc --noEmit`: sem novas categorias de erro face ao estado anterior desta branch; 17 categorias antigas resolvidas. O repositório ainda tem erros anteriores, pelo que a verificação global de tipos não passa.
 - Artefactos: [browser.json](../../artifacts/quelhas-tempo/browser.json) e [captura móvel](../../artifacts/quelhas-tempo/tutor-mobile.png).
 
-Validação local na branch `learning/strategy-first`. A integração em `main` e publicação foram autorizadas pelo professor em 2026-09-15.
+Integrado em `main` e publicado em 2026-09-15, após autorização do professor. Ver [registo da publicação e verificação em produção](../deployment/2026-09-15-strategy-learning.md).

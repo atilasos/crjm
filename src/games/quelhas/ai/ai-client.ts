@@ -81,7 +81,8 @@ export class QuelhasAIClient {
       if (this.options.workerFactory) {
         this.worker = this.options.workerFactory();
       } else try {
-        this.worker = new Worker(new URL('./ai/quelhas/quelhas.worker.js', import.meta.url), { type: 'module' });
+        // Public workers have their own cache. Bump this revision when their code changes.
+        this.worker = new Worker(new URL('./ai/quelhas/quelhas.worker.js?v=tempo-20260915', import.meta.url), { type: 'module' });
       } catch {
         this.worker = new Worker(new URL('./quelhas.worker.ts', import.meta.url), { type: 'module' });
       }

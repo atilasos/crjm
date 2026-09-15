@@ -1,6 +1,6 @@
 # Treinar, prever e voltar a conseguir
 
-Estado: especificação do piloto implementado na branch `learning/strategy-first`.
+Estado: piloto integrado em `main` e publicado em 2026-09-15. Ver [registo da publicação](../docs/deployment/2026-09-15-strategy-learning.md).
 
 ## Objetivo e utilizadores
 

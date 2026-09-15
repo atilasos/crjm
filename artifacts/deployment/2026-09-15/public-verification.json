@@ -1,0 +1,89 @@
+{
+  "publicHealth": [
+    {
+      "url": "https://crjmai.infantinho.xyz/api/health",
+      "health": {
+        "ok": true,
+        "service": "learner-core-v1"
+      }
+    },
+    {
+      "url": "https://crjmai-torneio.infantinho.xyz/health",
+      "health": {
+        "status": "ok",
+        "tournaments": []
+      }
+    }
+  ],
+  "assets": [
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/atari-go/atari-go.worker.js",
+      "sha256": "25b4e4cb79722a9c9ab2bad2d7ff074f73630a27b0a67985a2f21f913e52228a"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/atari-go/wasm/pkg/atari_go_ai.js",
+      "sha256": "4f9ae9346116c3a7870e7fc074ebc9ab49fd8f7d08c7f2c6bc1b91e5cffb17ad"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/atari-go/wasm/pkg/atari_go_ai_bg.wasm",
+      "sha256": "642fb1073da444ed39320fd6f7c06f5a94e7af08a374ded5d6b1a57708a53f22"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/dominorio/dominorio.worker.js",
+      "sha256": "a7d3c9d11953d9685709368c5da51bfc98f47930687e710f6a4f28be3397be2b"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/dominorio/wasm/pkg/dominorio_ai.js",
+      "sha256": "0bd85e8d7c06c1e1d8bbd8fa586f9936a6420807e81d9709ce06bc360a2720f1"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/dominorio/wasm/pkg/dominorio_ai_bg.wasm",
+      "sha256": "8f81de119183d97ceb4c731029bbcdd45c280875d4b2bb0051eb7b4034fc0cb7"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/gatos-caes/gatos-caes.worker.js",
+      "sha256": "17a57c5f38c22ecfa4f17f6eeba4929018d8160a1bce651b3df6f826099eeeb7"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/nex/nex.worker.js",
+      "sha256": "fe9cbaa6c646e6df95404110f3571fd97f1b6bfadae100cdd9812daa6b4398c6"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/nex/wasm/pkg/nex_ai.js",
+      "sha256": "67a6b2be7662c478c662889c97e3957d7c928c2970e3fa41bdf1941d9e2d4b73"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/nex/wasm/pkg/nex_ai_bg.wasm",
+      "sha256": "a6f9b1567521eaa8211634311b65810f5b5a1d5332ad83dca96195ed08c2beb0"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/produto/produto.worker.js",
+      "sha256": "0653e34ee2c94476aaf59f405133742db140356862b9a714c254f0208972a689"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/produto/wasm/pkg/produto_ai.js",
+      "sha256": "d8cc37c2b6e1b9d0ccf9687569d7eaa7523ea6a4426180a3481c3f407186c74f"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/produto/wasm/pkg/produto_ai_bg.wasm",
+      "sha256": "7818f71ccbcab01b58f143d55b3835a9e730fae4bd250890ed171d7052df271f"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/quelhas/quelhas.worker.js?v=tempo-20260915",
+      "sha256": "286f2072be636d779a6977e0c887d07116e25ccf08af4612a20a618ef91a3b32"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/quelhas/wasm/pkg/quelhas_wasm.js",
+      "sha256": "38d97f82d085ed712625fa8e0830d4be3d18ae7567c9f91f8728f241f2b44caf"
+    },
+    {
+      "url": "https://crjmai.infantinho.xyz/ai/quelhas/wasm/pkg/quelhas_wasm_bg.wasm",
+      "sha256": "ca6d02b546dfbe6caef88b9eec00027ddfc2c41595add1fedb17100acfe41abc"
+    }
+  ],
+  "databaseIntegrity": "ok",
+  "migrationApplied": true,
+  "existingRecordsPreserved": true,
+  "classStorePreserved": true,
+  "cacheRevision": "tempo-20260915"
+}

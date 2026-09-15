@@ -1,0 +1,45 @@
+{
+  "url": "https://crjmai.infantinho.xyz",
+  "status": 200,
+  "workerUrl": "https://crjmai.infantinho.xyz/ai/quelhas/quelhas.worker.js?v=tempo-20260915",
+  "engine": "rust-wasm",
+  "depth": 3,
+  "elapsedMs": 2002.2000000476837,
+  "move": {
+    "inicio": {
+      "linha": 0,
+      "coluna": 4
+    },
+    "comprimento": 10,
+    "orientacao": "vertical"
+  },
+  "independentWorkers": 3,
+  "gradualHints": "H0/H1/H2 concealed; H3 requested",
+  "countsText": "Após esta jogada: tu, 19 a 38 turnos; adversário, 14 a 40.",
+  "mobile": {
+    "viewport": 390,
+    "content": 375
+  },
+  "progressApi": {
+    "status": 200,
+    "games": [
+      "gatos-caes",
+      "dominorio",
+      "quelhas",
+      "produto",
+      "atari-go",
+      "nex"
+    ]
+  },
+  "lab": {
+    "startStatus": 200,
+    "options": 5,
+    "answerDisabledWithoutChoiceAndPrediction": true,
+    "solutionConcealed": true,
+    "mobile": {
+      "viewport": 390,
+      "content": 375
+    }
+  },
+  "errors": []
+}

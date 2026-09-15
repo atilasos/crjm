@@ -31,6 +31,25 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
 
+      - name: Read wasm-bindgen version from Cargo locks
+        id: wasm-bindgen
+        shell: python
+        run: |
+          import os
+          import tomllib
+          from pathlib import Path
+
+          versions = {
+              package['version']
+              for lockfile in Path('wasm').glob('*/Cargo.lock')
+              for package in tomllib.loads(lockfile.read_text())['package']
+              if package['name'] == 'wasm-bindgen'
+          }
+          if len(versions) != 1:
+              raise SystemExit(f'Expected one shared wasm-bindgen version, got {versions}')
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write(f'version={versions.pop()}\n')
+
       - name: Cache Cargo
         uses: actions/cache@v4
         with:
@@ -40,12 +59,17 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             wasm/dominorio_ai/target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/dominorio_ai/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('wasm/**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
 
       - name: Install wasm-bindgen-cli
-        run: which wasm-bindgen || cargo install wasm-bindgen-cli
+        env:
+          WASM_BINDGEN_VERSION: ${{ steps.wasm-bindgen.outputs.version }}
+        run: |
+          if [ "$(wasm-bindgen --version 2>/dev/null || true)" != "wasm-bindgen $WASM_BINDGEN_VERSION" ]; then
+            cargo install wasm-bindgen-cli --version "$WASM_BINDGEN_VERSION" --locked --force
+          fi
 
       - name: Install dependencies
         run: bun install
@@ -55,6 +79,23 @@ jobs:
 
       - name: Build (with WASM)
         run: bun run build
+
+      - name: Verify all WASM engines are included
+        run: |
+          bun -e '
+            const engines = {
+              dominorio: "dominorio_ai",
+              quelhas: "quelhas_wasm",
+              produto: "produto_ai",
+              "atari-go": "atari_go_ai",
+              nex: "nex_ai",
+            };
+            for (const [game, module] of Object.entries(engines)) {
+              const file = `dist/ai/${game}/wasm/pkg/${module}_bg.wasm`;
+              await WebAssembly.compile(await Bun.file(file).arrayBuffer());
+              console.log(`Verified ${game}`);
+            }
+          '
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
