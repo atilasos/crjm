@@ -1,3 +1,6 @@
+import { ThinkingTutor, useThinkingTutor } from '../../components/tutor/ThinkingTutor';
+import { thinkingTurnKey } from '../../ai-core/thinking-tutor';
+import { useTranslation } from '../../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { buildTutorContextItems } from '../../ai-core/tutor-context';
 import { selectReviewPattern } from '../../ai-core/review-patterns';
@@ -75,14 +78,6 @@ function getSuggestedAction(
     : 'Se estiveres em dúvida, começa pela interseção destacada e verifica se ficas com mais liberdades do que antes.';
 }
 
-function resolveHintLevel(
-  response: AIResponseV1<Posicao, AtariGoState> | null,
-  fallback: 'H1' | 'H2' | 'H3' = 'H2',
-): 'H1' | 'H2' | 'H3' {
-  const suggested = response?.pedagogy?.hintLevelSuggested;
-  return suggested === 'H1' || suggested === 'H2' || suggested === 'H3' ? suggested : fallback;
-}
-
 function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
   if (severity === 'high') {
     return '[border-color:color-mix(in_srgb,var(--perigo)_45%,var(--linha))] [background:color-mix(in_srgb,var(--perigo)_12%,var(--painel))] [color:var(--tinta)]';
@@ -106,6 +101,7 @@ function getPostGameTurningPoint(
 }
 
 export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
+  const { t } = useTranslation();
   const {
     acceptDifficultyRecommendation,
     getDifficultyRecommendation,
@@ -128,7 +124,12 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     useState<AIResponseV1<Posicao, AtariGoState> | null>(null);
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<Posicao, AtariGoState>>>([]);
-  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const tutorTurn = thinkingTurnKey(state, humanPlayer, difficultyLevel);
+  const thinking = useThinkingTutor(tutorTurn);
+  const hintLevel = 'H3' as const;
+  const [tutorPosition, setTutorPosition] = useState<string | null>(null);
+  const showTutorSolution = thinking.showSolution && tutorPosition === tutorTurn && !tutorLoading
+    && state.modo === 'vs-computador' && state.estado === 'a-jogar' && state.jogadorAtual === humanPlayer;
   const aiRef = useRef<AtariGoAIClient | null>(null);
   const tutorAdapterRef = useRef<AtariGoV1Adapter | null>(null);
   const tutorRequestSeqRef = useRef(0);
@@ -188,8 +189,8 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
       .then((response) => {
         if (cancelled) return;
         setTutorResponse(response);
+        setTutorPosition(tutorTurn);
         setTutorHistory((prev) => [...prev.slice(-11), response]);
-        setHintLevel((current) => resolveHintLevel(response, current));
       })
       .catch(() => {
         if (cancelled) return;
@@ -309,17 +310,17 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
 
     if (isJogadaValida(state, pos)) {
-      if (tutorResponse) {
+      if (tutorResponse && tutorPosition === tutorTurn && !tutorLoading && state.modo === 'vs-computador') {
         recordAdaptiveDecision('atari-go', {
           successful: tutorResponse.topMoves.some(({ move }) =>
             move.linha === pos.linha && move.coluna === pos.coluna
           ),
-          usedHint: hintLevel === 'H3',
+          usedHint: thinking.usedHint,
         });
       }
       setState(prev => colocarPedra(prev, pos));
     }
-  }, [state, humanPlayer, tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [state, humanPlayer, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const novoJogo = useCallback(() => {
     aiRef.current?.cancel();
@@ -329,7 +330,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     setTutorResponse(null);
     setTutorLoading(false);
     setTutorHistory([]);
-    setHintLevel('H2');
+    thinking.reset();
     resetAdaptiveSession('atari-go');
   }, [resetAdaptiveSession, state.modo]);
 
@@ -343,7 +344,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     setTutorResponse(null);
     setTutorLoading(false);
     setTutorHistory([]);
-    setHintLevel('H2');
+    thinking.reset();
   }, [state.modo]);
 
   const handleChangeHumanPlayer = useCallback((player: Player) => {
@@ -355,7 +356,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     setTutorResponse(null);
     setTutorLoading(false);
     setTutorHistory([]);
-    setHintLevel('H2');
+    thinking.reset();
   }, []);
 
   // Verificar se é última jogada
@@ -377,7 +378,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     const jogadaValida = isJogadaValidaPos(linha, coluna);
     const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;
     const recommended =
-      tutorResponse?.bestMove?.linha === linha && tutorResponse.bestMove.coluna === coluna;
+      showTutorSolution && tutorResponse?.bestMove?.linha === linha && tutorResponse.bestMove.coluna === coluna;
     const threatened =
       criticalThreat?.counterMove?.linha === linha && criticalThreat.counterMove.coluna === coluna;
 
@@ -476,7 +477,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
     );
   };
 
-  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const criticalThreat = showTutorSolution ? tutorResponse?.criticalThreats?.[0] : undefined;
   const postGameTurningPoint = getPostGameTurningPoint(tutorHistory);
   const reviewPattern = selectReviewPattern('atari-go', tutorHistory.at(-1) ?? tutorResponse);
   const difficultyRecommendation = getDifficultyRecommendation('atari-go', adaptiveDifficultyLevel);
@@ -507,9 +508,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         {/* Aviso de vitória na primeira captura — faixa compacta acima do tabuleiro */}
         <div className="order-1 md:order-none border-2 rounded-xl p-2 md:p-3 text-center [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,var(--painel))]">
-          <p className="font-semibold text-sm [color:var(--tinta)]">
-            ⚔️ OBJETIVO: A primeira captura VENCE o jogo!
-          </p>
+          <p className="font-semibold text-sm [color:var(--tinta)]">{t("⚔️ OBJETIVO: A primeira captura VENCE o jogo!")}</p>
         </div>
 
         {/* Configuração da IA — em mobile passa para depois do tabuleiro */}
@@ -528,16 +527,15 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
               }}
             />
             <div className="rounded-xl border p-2 text-center text-xs [border-color:var(--linha)] [background:var(--painel)] [color:var(--tinta-suave)]">
-                {aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta'}
-                {' • '}
-                {aiMetrics.lastEngine === 'server-nn'
+                {t(aiMetrics.isThinking ? 'IA a pensar…' : 'IA pronta')}
+                {t(' • ')}
+                {t(aiMetrics.lastEngine === 'server-nn'
                   ? 'Rede neural · GPU'
                   : aiMetrics.usedWasm
                     ? 'WASM'
-                    : 'TS fallback'}
-                {' • '}
-                {aiMetrics.lastTimeMs.toFixed(0)}ms
-            </div>
+                    : 'TS fallback')}
+                {t(' • ')}
+                {t(aiMetrics.lastTimeMs.toFixed(0))}{t("ms")}</div>
           </div>
         )}
 
@@ -551,11 +549,11 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
               }}
             >
               <div className="grid grid-cols-9 gap-0 h-full w-full">
-                {Array.from({ length: TAMANHO_TABULEIRO }, (_, linha) =>
+                {t(Array.from({ length: TAMANHO_TABULEIRO }, (_, linha) =>
                   Array.from({ length: TAMANHO_TABULEIRO }, (_, coluna) =>
                     renderIntersecao(linha, coluna)
                   )
-                )}
+                ))}
               </div>
             </div>
           </div>
@@ -565,16 +563,16 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
             <div className="flex justify-center gap-6">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-700 to-black border border-gray-600"></div>
-                <span>Pretas (J1)</span>
+                <span>{t("Pretas (J1)")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-white to-gray-200 border border-gray-300"></div>
-                <span>Brancas (J2)</span>
+                <span>{t("Brancas (J2)")}</span>
               </div>
             </div>
             <div className="flex justify-center gap-4 text-xs">
-              <span>Capturadas pelas Pretas: {state.pedrasCapturadas.brancas}</span>
-              <span>Capturadas pelas Brancas: {state.pedrasCapturadas.pretas}</span>
+              <span>{t("Capturadas pelas Pretas: ")}{t(state.pedrasCapturadas.brancas)}</span>
+              <span>{t("Capturadas pelas Brancas: ")}{t(state.pedrasCapturadas.pretas)}</span>
             </div>
           </div>
 
@@ -583,15 +581,13 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
             {state.estado === 'a-jogar' && (
               isVezDaIA ? (
                 <span className="flex items-center justify-center gap-2 font-medium [color:var(--tinta-no-papel)]">
-                  <span className="inline-block w-4 h-4 border-2 [border-color:var(--tinta-suave-no-papel)] [border-top-color:transparent] rounded-full animate-spin"></span>
-                  IA a pensar…
-                </span>
+                  <span className="inline-block w-4 h-4 border-2 [border-color:var(--tinta-suave-no-papel)] [border-top-color:transparent] rounded-full animate-spin"></span>{t("IA a pensar…")}</span>
               ) : (
                 <>
-                  {state.jogadorAtual === 'jogador1'
+                  {t(state.jogadorAtual === 'jogador1'
                     ? 'Pretas: clica numa interseção para colocar uma pedra'
-                    : 'Brancas: clica numa interseção para colocar uma pedra'}
-                  {' '}• Jogadas disponíveis: {state.jogadasValidas.length}
+                    : 'Brancas: clica numa interseção para colocar uma pedra')}
+                  {t(' ')}{t("• Jogadas disponíveis: ")}{t(state.jogadasValidas.length)}
                 </>
               )
             )}
@@ -600,45 +596,46 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
         {state.estado === 'a-jogar' && !isVezDaIA && (
           <div className="order-6 md:order-none space-y-3">
-            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
-            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
-            <TutorHintCard
-              insight={
-                tutorResponse?.explainText ||
-                'Mantém a leitura local de liberdades antes de atacar.'
-              }
-              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
-              hintLevel={hintLevel}
-              isLoading={tutorLoading}
-            />
+            <ThinkingTutor gameId="atari-go" tutor={thinking} solutionReady={showTutorSolution}>
+              {showTutorSolution && <>
+                <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
+                <TutorHintCard
+                  insight={
+                    tutorResponse?.explainText ||
+                    'Mantém a leitura local de liberdades antes de atacar.'
+                  }
+                  suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+                  hintLevel={hintLevel}
+                  isLoading={tutorLoading}
+                />
 
-            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+                <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
 
-            {criticalThreat && (
-              <section
-                className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
-              >
-                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
-                <p className="mt-1">{criticalThreat.description}</p>
-                {criticalThreat.counterMove && (
-                  <p className="mt-1 font-medium">
-                    Resposta mínima: {formatMove(criticalThreat.counterMove)}
-                  </p>
+                {criticalThreat && (
+                  <section
+                    className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}
+                  >
+                    <p className="font-semibold">{t("Ameaça crítica: ")}{t(criticalThreat.title)}</p>
+                    <p className="mt-1">{t(criticalThreat.description)}</p>
+                    {criticalThreat.counterMove && (
+                      <p className="mt-1 font-medium">{t("Resposta mínima: ")}{t(formatMove(criticalThreat.counterMove))}
+                      </p>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
+              </>}
+            </ThinkingTutor>
           </div>
         )}
 
         {state.estado !== 'a-jogar' && postGameTurningPoint && (
           <section className="order-7 md:order-none rounded-xl border px-4 py-3 text-sm [border-color:color-mix(in_srgb,var(--sucesso)_45%,var(--linha))] [background:color-mix(in_srgb,var(--sucesso)_10%,var(--painel))] [color:var(--tinta)]">
-            <p className="font-semibold">Turning point pós-jogo</p>
-            <p className="mt-1 [color:var(--tinta-suave)]">{postGameTurningPoint.explanation}</p>
-            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))]">
-              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            <p className="font-semibold">{t("Turning point pós-jogo")}</p>
+            <p className="mt-1 [color:var(--tinta-suave)]">{t(postGameTurningPoint.explanation)}</p>
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))]">{t("Cartão descoberto: ")}{t(reviewPattern.title)} — {t(reviewPattern.description)}
             </p>
-            <p className="mt-1 font-medium">
-              Jogada recomendada: {formatMove(postGameTurningPoint.bestMove ?? postGameTurningPoint.playedMove)}
+            <p className="mt-1 font-medium">{t("Jogada recomendada: ")}{t(formatMove(postGameTurningPoint.bestMove ?? postGameTurningPoint.playedMove))}
             </p>
             <button
               type="button"
@@ -653,7 +650,7 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
               }}
               className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-[filter,opacity] [background:var(--sucesso)] hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+              {t(reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)')}
             </button>
           </section>
         )}

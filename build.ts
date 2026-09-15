@@ -34,6 +34,10 @@ Example:
   process.exit(0);
 }
 
+// Gate every build entry point, including direct `bun run build.ts` and CI.
+const i18nCheck = Bun.spawn([process.execPath, 'run', 'i18n:check'], { stdout: 'inherit', stderr: 'inherit' });
+if (await i18nCheck.exited !== 0) process.exit(1);
+
 const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
 
 const parseValue = (value: string): any => {

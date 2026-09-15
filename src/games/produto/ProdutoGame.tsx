@@ -1,3 +1,6 @@
+import { ThinkingTutor, useThinkingTutor } from '../../components/tutor/ThinkingTutor';
+import { thinkingTurnKey } from '../../ai-core/thinking-tutor';
+import { useTranslation } from '../../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
 import { getDifficultyProfile } from '../../ai-core/difficulty';
@@ -25,7 +28,7 @@ import type { AIDifficulty } from './ai/types';
 import { INITIAL_METRICS } from './ai/types';
 import { withTimeout } from '../../utils/withTimeout';
 import { ProdutoV1Adapter, mapLevelToProdutoDifficulty } from './ai/v1-adapter';
-import { buildQuickReviewItems, resolveHintLevel } from './ai/pedagogy-mvp';
+import { buildQuickReviewItems } from './ai/pedagogy-mvp';
 import { TutorHintCard } from './components/TutorHintCard';
 import { TopMovesRail } from './components/TopMovesRail';
 
@@ -96,6 +99,7 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
 }
 
 export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
+  const { t, msg } = useTranslation();
   const {
     acceptDifficultyRecommendation,
     getDifficultyRecommendation,
@@ -118,7 +122,12 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     useState<AIResponseV1<JogadaDupla, ProdutoState> | null>(null);
   const [tutorLoading, setTutorLoading] = useState(false);
   const [tutorHistory, setTutorHistory] = useState<Array<AIResponseV1<JogadaDupla, ProdutoState>>>([]);
-  const [hintLevel, setHintLevel] = useState<'H1' | 'H2' | 'H3'>('H2');
+  const tutorTurn = thinkingTurnKey(state, humanPlayer, difficultyLevel);
+  const thinking = useThinkingTutor(tutorTurn);
+  const hintLevel = 'H3' as const;
+  const [tutorPosition, setTutorPosition] = useState<string | null>(null);
+  const showTutorSolution = thinking.showSolution && tutorPosition === tutorTurn && !tutorLoading
+    && state.modo === 'vs-computador' && state.estado === 'a-jogar' && state.jogadorAtual === humanPlayer;
   const [reviewRewarded, setReviewRewarded] = useState(false);
   const aiClientRef = useMemo(() => new ProdutoAIClient({ onMetricsUpdate: setAiMetrics }), []);
   const tutorAdapterRef = useMemo(() => new ProdutoV1Adapter(), []);
@@ -220,7 +229,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     if (state.tabuleiro[posToKey(pos)] !== 'vazia') return;
 
     const finishesTurn = state.primeiraJogada || state.jogadaEmCurso.pos1 !== null;
-    if (finishesTurn && tutorResponse) {
+    if (finishesTurn && tutorResponse && tutorPosition === tutorTurn && !tutorLoading) {
       const played: JogadaDupla = state.primeiraJogada
         ? { pos1: pos, cor1: corSelecionada, pos2: null, cor2: null }
         : {
@@ -231,12 +240,12 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           };
       recordAdaptiveDecision('produto', {
         successful: tutorResponse.topMoves.some(({ move }) => sameProdutoMove(move, played)),
-        usedHint: hintLevel === 'H3',
+        usedHint: thinking.usedHint,
       });
     }
 
     setState(prev => colocarPeca(prev, pos, corSelecionada));
-  }, [state, humanPlayer, corSelecionada, tutorResponse, recordAdaptiveDecision, hintLevel]);
+  }, [state, humanPlayer, corSelecionada, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
   const handleCancelar = useCallback(() => {
     setState(prev => cancelarJogadaEmCurso(prev));
@@ -248,7 +257,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setTutorResponse(null);
     setTutorLoading(false);
     setTutorHistory([]);
-    setHintLevel('H2');
+    thinking.reset();
     setReviewRewarded(false);
     resetAdaptiveSession('produto');
   }, [resetAdaptiveSession, state.modo]);
@@ -261,7 +270,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setTutorResponse(null);
     setTutorLoading(false);
     setTutorHistory([]);
-    setHintLevel('H2');
+    thinking.reset();
     setReviewRewarded(false);
   }, [state.modo]);
 
@@ -272,7 +281,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     setTutorResponse(null);
     setTutorLoading(false);
     setTutorHistory([]);
-    setHintLevel('H2');
+    thinking.reset();
     setReviewRewarded(false);
   }, []);
 
@@ -308,8 +317,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       .then((response) => {
         if (!cancelled) {
           setTutorResponse(response);
+          setTutorPosition(tutorTurn);
           setTutorHistory((prev) => [...prev, response]);
-          setHintLevel((current) => resolveHintLevel(response, current));
         }
       })
       .catch((error) => {
@@ -327,7 +336,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
       cancelled = true;
       tutorAdapterRef.cancel();
     };
-  }, [difficultyLevel, humanPlayer, state, tutorAdapterRef]);
+  }, [difficultyLevel, humanPlayer, tutorTurn, tutorAdapterRef]);
 
   // Converter coordenadas axiais para posição no ecrã (pointy-top orientation)
   const hexToPixel = (q: number, r: number, size: number) => {
@@ -372,7 +381,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     const isVazia = celula === 'vazia';
     const podeCelula = isVazia && state.estado === 'a-jogar' && isVezDoHumano;
     const isRecommended =
-      tutorResponse?.bestMove &&
+      showTutorSolution && tutorResponse?.bestMove &&
       (posToKey(tutorResponse.bestMove.pos1) === key ||
         (tutorResponse.bestMove.pos2 && posToKey(tutorResponse.bestMove.pos2) === key));
     const threatMove = criticalThreat?.counterMove;
@@ -412,7 +421,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
     state.modo === 'vs-computador' &&
     state.estado === 'a-jogar' &&
     state.jogadorAtual !== humanPlayer;
-  const criticalThreat = tutorResponse?.criticalThreats?.[0];
+  const criticalThreat = showTutorSolution ? tutorResponse?.criticalThreats?.[0] : undefined;
   const quickReviewItems = buildQuickReviewItems(tutorHistory);
   const reviewPattern = selectReviewPattern('produto', tutorHistory.at(-1) ?? tutorResponse);
   const difficultyRecommendation = getDifficultyRecommendation('produto', difficultyLevel);
@@ -456,60 +465,62 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
               }}
             />
             <div className="text-xs [color:var(--tinta-suave)] flex items-center justify-between">
-              <span>{aiMetrics.isThinking ? 'A pensar…' : 'Pronto'}</span>
-              <span>{aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback'}</span>
+              <span>{t(aiMetrics.isThinking ? 'A pensar…' : 'Pronto')}</span>
+              <span>{t(aiMetrics.usedWasm ? `WASM (${aiMetrics.lastTimeMs.toFixed(0)}ms)` : 'Fallback')}</span>
             </div>
           </div>
         )}
 
         {state.estado === 'a-jogar' && state.modo === 'vs-computador' && state.jogadorAtual === humanPlayer && (
           <div className="space-y-3 order-4 lg:order-4">
-            <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
-            <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
-            <TutorHintCard
-              insight={
-                tutorResponse?.explainText ??
-                'Procura duas peças que criem grupos teus e, se possível, prejudiquem o produto adversário.'
-              }
-              suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
-              hintLevel={hintLevel}
-              errorCode={tutorResponse?.pedagogy?.errorCode}
-              isLoading={tutorLoading}
-            />
-            <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
-            {criticalThreat && (
-              <section className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}>
-                <p className="font-semibold">Ameaça crítica: {criticalThreat.title}</p>
-                <p className="mt-1">{criticalThreat.description}</p>
-                {criticalThreat.counterMove && (
-                  <p className="mt-1 font-medium">Resposta mínima: {formatMove(criticalThreat.counterMove)}</p>
+            <ThinkingTutor gameId="produto" tutor={thinking} solutionReady={showTutorSolution}>
+              {showTutorSolution && <>
+                <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
+                <TutorHintCard
+                  insight={
+                    tutorResponse?.explainText ??
+                    'Procura duas peças que criem grupos teus e, se possível, prejudiquem o produto adversário.'
+                  }
+                  suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
+                  hintLevel={hintLevel}
+                  errorCode={tutorResponse?.pedagogy?.errorCode}
+                  isLoading={tutorLoading}
+                />
+                <TopMovesRail moves={tutorResponse?.topMoves ?? []} isLoading={tutorLoading} />
+                {criticalThreat && (
+                  <section className={`rounded-xl border px-4 py-3 text-sm ${getThreatClasses(criticalThreat.severity)}`}>
+                    <p className="font-semibold">{t("Ameaça crítica: ")}{t(criticalThreat.title)}</p>
+                    <p className="mt-1">{t(criticalThreat.description)}</p>
+                    {criticalThreat.counterMove && (
+                      <p className="mt-1 font-medium">{t("Resposta mínima: ")}{t(formatMove(criticalThreat.counterMove))}</p>
+                    )}
+                  </section>
                 )}
-              </section>
-            )}
+              </>}
+            </ThinkingTutor>
           </div>
         )}
 
         {/* Painel de pontuação */}
         <div className="grid grid-cols-2 gap-4 order-3 lg:order-5">
           <div className="bg-gray-900 text-white rounded-xl p-3 text-center">
-            <div className="text-xs opacity-75 mb-1">Pretas</div>
-            <div className="text-2xl font-bold">{state.pontuacaoPretas.produto}</div>
+            <div className="text-xs opacity-75 mb-1">{t("Pretas")}</div>
+            <div className="text-2xl font-bold">{t(state.pontuacaoPretas.produto)}</div>
             <div className="text-xs opacity-75">
-              {state.pontuacaoPretas.maiorGrupo} × {state.pontuacaoPretas.segundoMaiorGrupo}
+              {t(state.pontuacaoPretas.maiorGrupo)} × {t(state.pontuacaoPretas.segundoMaiorGrupo)}
             </div>
             <div className="text-xs opacity-50 mt-1">
-              {state.pontuacaoPretas.totalPecas} peças
-            </div>
+              {t(state.pontuacaoPretas.totalPecas)}{t(" peças")}</div>
           </div>
           <div className="rounded-xl p-3 text-center border-2 [background:var(--painel)] [color:var(--tinta)] [border-color:var(--linha)]">
-            <div className="text-xs opacity-75 mb-1">Brancas</div>
-            <div className="text-2xl font-bold">{state.pontuacaoBrancas.produto}</div>
+            <div className="text-xs opacity-75 mb-1">{t("Brancas")}</div>
+            <div className="text-2xl font-bold">{t(state.pontuacaoBrancas.produto)}</div>
             <div className="text-xs opacity-75">
-              {state.pontuacaoBrancas.maiorGrupo} × {state.pontuacaoBrancas.segundoMaiorGrupo}
+              {t(state.pontuacaoBrancas.maiorGrupo)} × {t(state.pontuacaoBrancas.segundoMaiorGrupo)}
             </div>
             <div className="text-xs opacity-50 mt-1">
-              {state.pontuacaoBrancas.totalPecas} peças
-            </div>
+              {t(state.pontuacaoBrancas.totalPecas)}{t(" peças")}</div>
           </div>
         </div>
 
@@ -517,8 +528,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
         {!state.primeiraJogada && state.estado === 'a-jogar' &&
           (state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer) && (
             <div className="rounded-xl p-3 border-2 order-2 lg:order-6 [background:var(--painel)] [border-color:var(--ouro)]">
-              <p className="text-sm mb-2 text-center font-medium [color:var(--tinta)]">
-                Cor da peça a colocar ({pecasFaltam} peça{pecasFaltam > 1 ? 's' : ''} restante{pecasFaltam > 1 ? 's' : ''}):
+              <p className="text-sm mb-2 text-center font-medium [color:var(--tinta)]">{msg("Cor a colocar — peças restantes: {0}", [pecasFaltam])}
               </p>
               <div className="flex justify-center gap-3">
                 <button
@@ -528,9 +538,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                       : 'border [background:transparent] [color:var(--tinta)] [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                     }`}
                 >
-                  <div className="w-4 h-4 rounded-full bg-gray-900 border border-gray-600"></div>
-                  Preta
-                </button>
+                  <div className="w-4 h-4 rounded-full bg-gray-900 border border-gray-600"></div>{t("Preta")}</button>
                 <button
                   onClick={() => setCorSelecionada('branca')}
                   className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all ${corSelecionada === 'branca'
@@ -538,18 +546,14 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                       : 'border [background:transparent] [color:var(--tinta)] [border-color:var(--linha)] hover:[border-color:var(--tinta-suave)]'
                     }`}
                 >
-                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-200 border-2 border-indigo-400"></div>
-                  Branca
-                </button>
+                  <div className="w-4 h-4 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-200 border-2 border-indigo-400"></div>{t("Branca")}</button>
               </div>
               {state.jogadaEmCurso.pos1 !== null && (
                 <div className="mt-2 flex justify-center">
                   <button
                     onClick={handleCancelar}
                     className="text-sm underline [color:var(--perigo)] hover:opacity-80"
-                  >
-                    Cancelar primeira peça
-                  </button>
+                  >{t("Cancelar primeira peça")}</button>
                 </div>
               )}
             </div>
@@ -576,7 +580,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                   <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="#6366f1" floodOpacity="0.4" />
                 </filter>
               </defs>
-              {posicoes.map(pos => renderHex(pos))}
+              {t(posicoes.map(pos => renderHex(pos)))}
             </svg>
           </div>
 
@@ -584,11 +588,11 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
           <div className="mt-4 flex justify-center gap-6 text-sm [color:var(--tinta-suave-no-papel)]">
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 border border-gray-600"></div>
-              <span>Pretas (J1)</span>
+              <span>{t("Pretas (J1)")}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-50 to-indigo-200 border-2 border-indigo-400 shadow-sm shadow-indigo-300"></div>
-              <span>Brancas (J2)</span>
+              <span>{t("Brancas (J2)")}</span>
             </div>
           </div>
 
@@ -600,16 +604,14 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                   <span
                     className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
                     style={{ borderColor: 'var(--jogo-produto)', borderTopColor: 'transparent' }}
-                  ></span>
-                  IA a pensar…
-                </span>
+                  ></span>{t("IA a pensar…")}</span>
               ) : (
                 <>
                   {state.primeiraJogada
-                    ? 'Pretas: coloca a primeira peça (apenas 1 nesta jogada)'
-                    : `${state.jogadorAtual === 'jogador1' ? 'Pretas' : 'Brancas'}: coloca ${pecasFaltam} peça${pecasFaltam > 1 ? 's' : ''}`
+                    ? t('Pretas: coloca a primeira peça (apenas 1 nesta jogada)')
+                    : msg('{0} — peças por colocar: {1}', [t(state.jogadorAtual === 'jogador1' ? 'Pretas' : 'Brancas'), pecasFaltam])
                   }
-                  {' '}• Casas livres: {state.casasVazias.length}
+                  {t(' ')}{t("• Casas livres: ")}{t(state.casasVazias.length)}
                 </>
               )
             )}
@@ -617,22 +619,16 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
 
           {/* Dica de estratégia */}
           <div className="mt-3 rounded-lg p-2 text-xs text-center border [background:color-mix(in_srgb,var(--ouro)_12%,var(--papel))] [border-color:color-mix(in_srgb,var(--ouro)_45%,var(--linha-no-papel))] [color:var(--tinta-no-papel)]">
-            <strong>Dica:</strong> Podes colocar peças do adversário para unir os grupos dele e reduzir a pontuação a 0!
-          </div>
+            <strong>{t("Dica:")}</strong>{t(" Podes colocar peças do adversário para unir os grupos dele e reduzir a pontuação a 0!")}</div>
         </div>
         {state.estado !== 'a-jogar' && quickReviewItems.length > 0 && (
           <section className="rounded-xl border px-4 py-3 text-sm order-8 lg:order-8 [border-color:color-mix(in_srgb,var(--sucesso)_45%,var(--linha))] [background:color-mix(in_srgb,var(--sucesso)_8%,var(--painel))] [color:var(--tinta)]">
             <div className="flex items-center justify-between gap-3">
-              <p className="font-semibold">Revisão rápida pós-jogo</p>
-              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))] [color:var(--tinta)]">
-                2-4 min
-              </span>
+              <p className="font-semibold">{t("Revisão rápida pós-jogo")}</p>
+              <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))] [color:var(--tinta)]">{t("2-4 min")}</span>
             </div>
-            <p className="mt-1 [color:var(--tinta-suave)]">
-              Revê até 2 momentos e confirma onde podias melhorar o teu produto sem ajudar o adversário.
-            </p>
-            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))]">
-              Cartão descoberto: {reviewPattern.title} — {reviewPattern.description}
+            <p className="mt-1 [color:var(--tinta-suave)]">{t("Revê até 2 momentos e confirma onde podias melhorar o teu produto sem ajudar o adversário.")}</p>
+            <p className="mt-2 rounded-lg px-3 py-2 font-medium [background:color-mix(in_srgb,var(--sucesso)_18%,var(--painel))]">{t("Cartão descoberto: ")}{t(reviewPattern.title)} — {t(reviewPattern.description)}
             </p>
             <div className="mt-2 space-y-2">
               {quickReviewItems.map((item) => (
@@ -640,8 +636,8 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
                   key={item.title}
                   className="rounded-lg border px-3 py-2 [border-color:var(--linha)] [background:var(--painel)]"
                 >
-                  <p className="font-medium [color:var(--tinta)]">{item.title}</p>
-                  <p className="mt-1 [color:var(--tinta-suave)]">{item.insight}</p>
+                  <p className="font-medium [color:var(--tinta)]">{t(item.title)}</p>
+                  <p className="mt-1 [color:var(--tinta-suave)]">{t(item.insight)}</p>
                 </div>
               ))}
             </div>
@@ -658,7 +654,7 @@ export function ProdutoGame({ onVoltar }: ProdutoGameProps) {
               }}
               className="mt-3 rounded-lg px-3 py-2 text-sm font-semibold text-white transition-colors [background:var(--sucesso)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-100 disabled:[background:var(--linha)] disabled:[color:var(--tinta-suave)]"
             >
-              {reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)'}
+              {t(reviewRewarded ? 'Revisão registada' : 'Marcar revisão concluída (+10 XP)')}
             </button>
           </section>
         )}

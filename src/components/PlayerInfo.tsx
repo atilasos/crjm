@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import type { Player, GameMode, GameStatus } from '../types';
 import type { DifficultyLevel } from '../ai-core/types';
 import type { ExtendedDifficultyLevel } from '../ai-core/difficulty';
@@ -59,9 +60,10 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
   aiMetrics,
   aiReady = true,
 }: PlayerInfoProps<L>) {
+  const { t } = useTranslation();
   const jogoTerminado = estado !== 'a-jogar';
   const hasAISupport = difficulty !== undefined && onChangeDifficulty !== undefined;
-  
+
   // Em modo vs-computador, determinar nomes e ícones com base em quem é humano
   const getNomeJogador = (jogador: Player) => {
     if (modo === 'vs-computador') {
@@ -92,19 +94,19 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
     <div className="rounded-[var(--raio-painel)] border p-4 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
       {/* Modo de jogo */}
       <div className="flex items-center justify-between mb-4 pb-4 border-b [border-color:var(--linha)]">
-        <span className="text-sm font-medium [color:var(--tinta-suave)]">Modo de jogo:</span>
+        <span className="text-sm font-medium [color:var(--tinta-suave)]">{t("Modo de jogo:")}</span>
         <button
           onClick={onTrocarModo}
           className="text-sm font-semibold transition-colors [color:var(--tinta)] hover:[color:var(--tinta-suave)]"
         >
-          {modo === 'vs-computador' ? '🤖 vs Computador' : '👥 2 Jogadores'}
+          {t(modo === 'vs-computador' ? '🤖 vs Computador' : '👥 2 Jogadores')}
         </button>
       </div>
 
       {/* Selector de lado (apenas em modo vs-computador) */}
       {modo === 'vs-computador' && onChangeHumanPlayer && (
         <div className="mb-4 pb-4 border-b [border-color:var(--linha)]">
-          <span className="text-sm font-medium block mb-2 [color:var(--tinta-suave)]">Jogar como:</span>
+          <span className="text-sm font-medium block mb-2 [color:var(--tinta-suave)]">{t("Jogar como:")}</span>
           <div className="flex gap-2">
             <button
               onClick={() => onChangeHumanPlayer('jogador1')}
@@ -114,8 +116,7 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
                   : 'border [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[border-color:var(--tinta-suave)]'
               }`}
             >
-              {nomeJogador1} (1.º)
-            </button>
+              {t(nomeJogador1)}{t(" (1.º)")}</button>
             <button
               onClick={() => onChangeHumanPlayer('jogador2')}
               className={`flex-1 py-2 px-3 rounded-[var(--raio-controlo)] text-sm font-medium transition-all ${
@@ -124,8 +125,7 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
                   : 'border [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[border-color:var(--tinta-suave)]'
               }`}
             >
-              {nomeJogador2} (2.º)
-            </button>
+              {t(nomeJogador2)}{t(" (2.º)")}</button>
           </div>
         </div>
       )}
@@ -145,25 +145,25 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
       )}
 
       {/* Indicadores de jogador */}
-      <div className="flex justify-around items-center gap-4 mb-4">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 mb-4">
         <div
-          className={`player-indicator ${corJogador1} text-white ${
+          className={`player-indicator min-w-0 justify-center px-2 text-sm sm:px-4 sm:text-base ${corJogador1} text-white ${
             jogadorAtual === 'jogador1' && !jogoTerminado ? 'active' : ''
           }`}
         >
-          <span className="text-lg">{getIconeJogador('jogador1')}</span>
-          <span>{getNomeJogador('jogador1')}</span>
+          <span className="text-lg">{t(getIconeJogador('jogador1'))}</span>
+          <span>{t(getNomeJogador('jogador1'))}</span>
         </div>
-        
-        <span className="text-2xl font-bold [color:var(--tinta-suave)]">VS</span>
-        
+
+        <span className="text-2xl font-bold [color:var(--tinta-suave)]">{t("VS")}</span>
+
         <div
-          className={`player-indicator ${corJogador2} text-white ${
+          className={`player-indicator min-w-0 justify-center px-2 text-sm sm:px-4 sm:text-base ${corJogador2} text-white ${
             jogadorAtual === 'jogador2' && !jogoTerminado ? 'active' : ''
           }`}
         >
-          <span className="text-lg">{getIconeJogador('jogador2')}</span>
-          <span>{getNomeJogador('jogador2')}</span>
+          <span className="text-lg">{t(getIconeJogador('jogador2'))}</span>
+          <span>{t(getNomeJogador('jogador2'))}</span>
         </div>
       </div>
 
@@ -176,11 +176,9 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
                 <span
                   className="inline-block w-4 h-4 border-2 rounded-full animate-spin"
                   style={{ borderColor: 'var(--tinta-suave)', borderTopColor: 'transparent' }}
-                ></span>
-                A pensar...
-              </span>
+                ></span>{t("A pensar...")}</span>
             ) : (
-              <>Vez de: <span className="font-bold">{getNomeJogador(jogadorAtual)}</span></>
+              <>{t("Vez de: ")}<span className="font-bold">{t(getNomeJogador(jogadorAtual))}</span></>
             )}
           </p>
         </div>
@@ -191,15 +189,14 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
         <div className="mt-3 p-2 rounded-[var(--raio-controlo)] border [border-color:var(--linha)]">
           <div className="text-xs flex flex-wrap gap-x-3 gap-y-1 justify-center [color:var(--tinta-suave)]">
             {aiMetrics.fromBook ? (
-              <span className="font-medium [color:var(--tinta)]">📖 Livro de aberturas</span>
+              <span className="font-medium [color:var(--tinta)]">{t("📖 Livro de aberturas")}</span>
             ) : (
               <>
-                <span title="Profundidade de pesquisa">🔍 {aiMetrics.lastDepth}</span>
-                <span title="Nós pesquisados">🌳 {formatNumber(aiMetrics.lastNodes)}</span>
-                <span title="Tempo de cálculo">{aiMetrics.lastTimeMs.toFixed(0)}ms</span>
+                <span title={t("Profundidade de pesquisa")}>🔍 {t(aiMetrics.lastDepth)}</span>
+                <span title={t("Nós pesquisados")}>🌳 {t(formatNumber(aiMetrics.lastNodes))}</span>
+                <span title={t("Tempo de cálculo")}>{t(aiMetrics.lastTimeMs.toFixed(0))}{t("ms")}</span>
                 {aiMetrics.lastTTHitRate > 0 && (
-                  <span title="Taxa de acerto da tabela de transposições">
-                    TT: {(aiMetrics.lastTTHitRate * 100).toFixed(0)}%
+                  <span title={t("Taxa de acerto da tabela de transposições")}>{t("TT: ")}{t((aiMetrics.lastTTHitRate * 100).toFixed(0))}%
                   </span>
                 )}
               </>
@@ -210,16 +207,12 @@ export function PlayerInfo<L extends ExtendedDifficultyLevel = DifficultyLevel>(
 
       {/* AI status indicator */}
       {modo === 'vs-computador' && hasAISupport && !aiReady && (
-        <div className="mt-2 text-center text-xs [color:var(--ouro)]">
-          ⏳ A carregar motor de IA...
-        </div>
+        <div className="mt-2 text-center text-xs [color:var(--ouro)]">{t("⏳ A carregar motor de IA...")}</div>
       )}
 
       {/* Botões de ação */}
       <div className="mt-4 flex gap-2">
-        <button onClick={onNovoJogo} className="btn btn-primary flex-1 text-sm">
-          🔄 Novo Jogo
-        </button>
+        <button onClick={onNovoJogo} className="btn btn-primary flex-1 text-sm">{t("🔄 Novo Jogo")}</button>
       </div>
     </div>
   );

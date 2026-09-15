@@ -95,7 +95,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         title: 'Táticas',
         checkpoints: [
           'Comparar o valor de casas pelas respostas que preservam.',
-          'Reconhecer casas garantidas (só a tua espécie pode lá jogar).',
+          'Distinguir casas exclusivas de reservas que o adversário não consegue bloquear.',
         ],
         puzzleIds: ['gc-mobilidade-1', 'gc-bloqueio-1'],
         desafio: 'Vence o N2 duas vezes seguidas.',
@@ -104,7 +104,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
       {
         title: 'Estratégia',
         checkpoints: [
-          'Ocupar casas em disputa antes das exclusivas.',
+          'Comparar casas em disputa com reservas seguras para decidir a ordem.',
           'Contar reservas de ambos os lados para ler o final.',
         ],
         puzzleIds: ['gc-tempo-1', 'gc-parede-1', 'gc-contagem-1'],
@@ -170,8 +170,8 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
     ],
   },
   quelhas: {
-    focusNow: 'Manter segmentos curtos disponíveis para não seres empurrado para a última jogada.',
-    commonMistake: 'Fechar faixas grandes cedo e deixar uma única saída para o fim.',
+    focusNow: 'Contar o mínimo e o máximo de turnos dos dois lados e prever quem fica sem jogar primeiro.',
+    commonMistake: 'Jogar sempre duas casas sem comparar um segmento curto com um comprido.',
     steps: [
       {
         title: 'Descobrir',
@@ -186,7 +186,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
       {
         title: 'Táticas',
         checkpoints: [
-          'Usar simetria com cuidado, confirmando legalidade e paridade.',
+          'Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.',
           'Avaliar componentes fraturadas pelos seus intervalos de jogadas.',
         ],
         puzzleIds: ['qu-simetria-1', 'qu-fratura-1'],
@@ -196,7 +196,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
       {
         title: 'Estratégia',
         checkpoints: [
-          'Criar e guardar bolsas de uma jogada para ajustar a paridade.',
+          'Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.',
           'Contar sequências forçadas e quebrar espelhos pelo eixo.',
         ],
         puzzleIds: ['qu-isolamento-1', 'qu-paridade-1', 'qu-tempo-1'],
@@ -207,7 +207,7 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
         title: 'Campeonato',
         checkpoints: [
           'Entrar em finais com plano misère definido.',
-          'Rever duas derrotas e localizar onde a paridade fugiu.',
+          'Rever duas derrotas e localizar onde a contagem de turnos mudou.',
         ],
         puzzleIds: ['qu-final-1'],
         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',

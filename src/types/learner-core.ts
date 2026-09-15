@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locale';
 import type { GameId } from '../ai-core/types';
 import type {
   AchievementUnlock,
@@ -10,7 +11,7 @@ import type {
 export interface LearnerProfileRecord {
   userId: string;
   displayName: string;
-  locale: 'pt-PT';
+  locale: Locale;
   cycleOrGrade: string | null;
   totalXp: number;
   currentStreakDays: number;

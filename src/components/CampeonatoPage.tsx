@@ -1,3 +1,5 @@
+import { formatDateTime } from '../i18n/format';
+import { useTranslation } from '../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Header } from './Header';
 import { loadStudentSession } from '../utils/student-session';
@@ -398,12 +400,12 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'info':
         addLog(message.message, 'info');
         break;
-        
+
       case 'active_games_list':
         // Atualiza lista de jogos activos para modo espectador
         setActiveGames((message as any).games || []);
         break;
-        
+
       case 'spectator_game_state': {
         // Atualiza estado de jogo para espectadores
         const specMsg = message as any;
@@ -555,7 +557,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     if (currentGameId === 'produto' && move) {
       // No ProdutoBoard do CampeonatoPage, o move pode ser pos1 ou pos2
       // Mas o toNetworkProdutoMove espera a jogada completa (JogadaDupla).
-      // Se move tiver q e r ou pos {q, r} (formato local do ProdutoBoard), 
+      // Se move tiver q e r ou pos {q, r} (formato local do ProdutoBoard),
       // mandamos no formato de rede esperado pelo servidor.
 
       const anyMove = move as any;
@@ -733,6 +735,7 @@ function ConnectForm({
   reconnectionCodeInput, setReconnectionCodeInput,
   onRejoin,
 }: ConnectFormProps) {
+  const { t, locale } = useTranslation();
   // Jogos suportados no modo campeonato (servidor real + mock)
   const games: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
   const isConnecting = connectionStatus === 'connecting';
@@ -740,43 +743,35 @@ function ConnectForm({
   return (
     <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
       <h2 className="text-2xl font-bold [color:var(--tinta)] mb-6 flex items-center gap-3">
-        <span>🏆</span>
-        Entrar no Campeonato
-      </h2>
+        <span>🏆</span>{t("Entrar no Campeonato")}</h2>
 
       <div className="space-y-4">
         <div>
-          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">
-            O teu nome *
-          </label>
+          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">{t("O teu nome *")}</label>
           <input
             type="text"
             value={playerName}
             onChange={e => setPlayerName(e.target.value)}
-            placeholder="Ex: João Silva"
+            placeholder={t("Ex: João Silva")}
             className="w-full px-4 py-3 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
             disabled={isConnecting}
           />
         </div>
 
         <div>
-          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">
-            Turma (opcional)
-          </label>
+          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">{t("Turma (opcional)")}</label>
           <input
             type="text"
             value={classId}
             onChange={e => setClassId(e.target.value)}
-            placeholder="Ex: 5ºA"
+            placeholder={t("Ex: 5ºA")}
             className="w-full px-4 py-3 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
             disabled={isConnecting}
           />
         </div>
 
         <div>
-          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">
-            Jogo do campeonato *
-          </label>
+          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">{t("Jogo do campeonato *")}</label>
           <select
             value={selectedGame}
             onChange={e => setSelectedGame(e.target.value as GameId)}
@@ -785,21 +780,17 @@ function ConnectForm({
           >
             {games.map(g => (
               <option key={g} value={g} className="[background:var(--painel)] [color:var(--tinta)]">
-                {GAME_NAMES[g]}
+                {t(GAME_NAMES[g])}
               </option>
             ))}
           </select>
-          <p className="[color:var(--tinta-suave)] text-xs mt-1">
-            Mais jogos em breve!
-          </p>
+          <p className="[color:var(--tinta-suave)] text-xs mt-1">{t("Mais jogos em breve!")}</p>
         </div>
 
         {/* Toggle modo de teste vs servidor real */}
         <div className="rounded-lg p-4 border [background:var(--fundo)] [border-color:var(--linha)]">
           <div className="flex items-center justify-between mb-3">
-            <label className="[color:var(--tinta)] text-sm font-medium">
-              Modo de ligação
-            </label>
+            <label className="[color:var(--tinta)] text-sm font-medium">{t("Modo de ligação")}</label>
             <button
               type="button"
               onClick={() => setUseMockServer(!useMockServer)}
@@ -817,22 +808,16 @@ function ConnectForm({
           {useMockServer ? (
             <div className="rounded-lg p-3 border [border-color:var(--jogo-dominorio)] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,transparent)]">
               <p className="[color:var(--tinta)] text-sm">
-                <strong>Modo de teste</strong> - Jogas contra um bot simulado localmente.
-                Ideal para treinar e testar a interface.
-              </p>
+                <strong>{t("Modo de teste")}</strong>{t(" - Jogas contra um bot simulado localmente. Ideal para treinar e testar a interface.")}</p>
             </div>
           ) : (
             <div className="space-y-3">
               <div className="rounded-lg p-3 border [border-color:var(--sucesso)] [background:color-mix(in_srgb,var(--sucesso)_10%,transparent)]">
                 <p className="[color:var(--sucesso)] text-sm">
-                  <strong>Modo campeonato</strong> - Liga-te ao servidor do professor
-                  para competir contra colegas em tempo real!
-                </p>
+                  <strong>{t("Modo campeonato")}</strong>{t(" - Liga-te ao servidor do professor para competir contra colegas em tempo real!")}</p>
               </div>
               <div>
-                <label className="block [color:var(--tinta-suave)] text-xs font-medium mb-1">
-                  Servidor do torneio
-                </label>
+                <label className="block [color:var(--tinta-suave)] text-xs font-medium mb-1">{t("Servidor do torneio")}</label>
                 <select
                   value={PRESET_TOURNAMENT_SERVERS.find(s => s.url === serverUrl)?.url || 'custom'}
                   onChange={e => {
@@ -848,7 +833,7 @@ function ConnectForm({
                 >
                   {PRESET_TOURNAMENT_SERVERS.map(server => (
                     <option key={server.url} value={server.url} className="[background:var(--painel)] [color:var(--tinta)]">
-                      {server.label}
+                      {t(server.label)}
                     </option>
                   ))}
                 </select>
@@ -858,14 +843,12 @@ function ConnectForm({
                     type="text"
                     value={serverUrl}
                     onChange={e => setServerUrl(e.target.value)}
-                    placeholder="wss://torneio.exemplo.com ou ws://192.168.1.100:4000"
+                    placeholder={t("wss://torneio.exemplo.com ou ws://192.168.1.100:4000")}
                     className="w-full px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-sm"
                     disabled={isConnecting}
                   />
                 )}
-                <p className="[color:var(--tinta-suave)] text-xs mt-1">
-                  Introduz o endereço da escola ou usa o servidor configurado no ambiente, se existir.
-                </p>
+                <p className="[color:var(--tinta-suave)] text-xs mt-1">{t("Introduz o endereço da escola ou usa o servidor configurado no ambiente, se existir.")}</p>
               </div>
             </div>
           )}
@@ -873,7 +856,7 @@ function ConnectForm({
 
         {connectionError && (
           <div className="rounded-lg p-3 border [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,transparent)]">
-            <p className="[color:var(--perigo)] text-sm">{connectionError}</p>
+            <p className="[color:var(--perigo)] text-sm">{t(connectionError)}</p>
           </div>
         )}
 
@@ -884,13 +867,11 @@ function ConnectForm({
         >
           {isConnecting ? (
             <>
-              <span className="animate-spin">⏳</span>
-              A ligar...
-            </>
+              <span className="animate-spin">⏳</span>{t("A ligar...")}</>
           ) : (
             <>
               <span>🎮</span>
-              {useMockServer ? 'Iniciar Treino' : 'Entrar no Campeonato'}
+              {t(useMockServer ? 'Iniciar Treino' : 'Entrar no Campeonato')}
             </>
           )}
         </button>
@@ -899,18 +880,14 @@ function ConnectForm({
         {!useMockServer && (
           <div className="mt-6 pt-6 border-t [border-color:var(--linha)]">
             <h3 className="[color:var(--tinta)] text-sm font-medium mb-3 flex items-center gap-2">
-              <span>🔄</span>
-              Voltar a entrar no torneio
-            </h3>
-            <p className="[color:var(--tinta-suave)] text-xs mb-3">
-              Se foste desconectado, insere o teu código de reconexão:
-            </p>
+              <span>🔄</span>{t("Voltar a entrar no torneio")}</h3>
+            <p className="[color:var(--tinta-suave)] text-xs mb-3">{t("Se foste desconectado, insere o teu código de reconexão:")}</p>
             <div className="flex gap-2">
               <input
                 type="text"
                 value={reconnectionCodeInput}
                 onChange={e => setReconnectionCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
-                placeholder="ABC234"
+                placeholder={t("ABC234")}
                 maxLength={6}
                 className="flex-1 px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-lg tracking-widest text-center uppercase"
                 disabled={isConnecting}
@@ -919,9 +896,7 @@ function ConnectForm({
                 onClick={onRejoin}
                 disabled={isConnecting || reconnectionCodeInput.length !== 6 || (!serverUrl.trim() || serverUrl === 'custom')}
                 className="px-4 py-2 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] font-medium hover:[border-color:var(--tinta-suave)] hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Reconectar
-              </button>
+              >{t("Reconectar")}</button>
             </div>
           </div>
         )}
@@ -941,9 +916,9 @@ interface TournamentLobbyProps {
   currentGameId: GameId | null;
 }
 
-function TournamentLobby({ 
-  tournamentState, 
-  playerId, 
+function TournamentLobby({
+  tournamentState,
+  playerId,
   reconnectionCode,
   activeGames,
   spectatorMatchStates,
@@ -951,6 +926,7 @@ function TournamentLobby({
   onSelectSpectateMatch,
   currentGameId,
 }: TournamentLobbyProps) {
+  const { t, locale } = useTranslation();
   const copyCode = () => {
     if (reconnectionCode) {
       navigator.clipboard.writeText(reconnectionCode).then(() => {
@@ -960,8 +936,8 @@ function TournamentLobby({
   };
 
   const isWaitingForMatch = tournamentState.phase === 'running';
-  const selectedSpectateState = selectedSpectateMatchId 
-    ? spectatorMatchStates.get(selectedSpectateMatchId) 
+  const selectedSpectateState = selectedSpectateMatchId
+    ? spectatorMatchStates.get(selectedSpectateMatchId)
     : null;
 
   // Converte estado de rede para local para o tabuleiro espectador
@@ -992,37 +968,33 @@ function TournamentLobby({
                     </div>
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold [color:var(--tinta)]">
-                      A aguardar o teu match
-                    </h2>
-                    <p className="[color:var(--tinta-suave)] text-sm">
-                      Enquanto esperas, podes observar outros jogos!
-                    </p>
+                    <h2 className="text-xl font-bold [color:var(--tinta)]">{t("A aguardar o teu match")}</h2>
+                    <p className="[color:var(--tinta-suave)] text-sm">{t("Enquanto esperas, podes observar outros jogos!")}</p>
                   </div>
                 </div>
-                
+
                 {/* Info do torneio compacta */}
                 <div className="flex items-center gap-4">
                   <div className="rounded-lg px-3 py-2 border [background:var(--fundo)] [border-color:var(--linha)]">
-                    <p className="[color:var(--tinta-suave)] text-xs">Jogo</p>
-                    <p className="[color:var(--tinta)] font-medium text-sm">{GAME_NAMES[tournamentState.gameId]}</p>
+                    <p className="[color:var(--tinta-suave)] text-xs">{t("Jogo")}</p>
+                    <p className="[color:var(--tinta)] font-medium text-sm">{t(GAME_NAMES[tournamentState.gameId])}</p>
                   </div>
                   <div className="rounded-lg px-3 py-2 border [background:var(--fundo)] [border-color:var(--linha)]">
-                    <p className="[color:var(--tinta-suave)] text-xs">Jogadores</p>
+                    <p className="[color:var(--tinta-suave)] text-xs">{t("Jogadores")}</p>
                     <p className="[color:var(--tinta)] font-medium text-sm">
-                      {tournamentState.players.filter(p => p.isOnline !== false).length}/{tournamentState.players.length}
+                      {t(tournamentState.players.filter(p => p.isOnline !== false).length)}/{t(tournamentState.players.length)}
                     </p>
                   </div>
                   {reconnectionCode && (
                     <div className="rounded-lg px-3 py-2 border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_12%,transparent)] flex items-center gap-2">
                       <div>
-                        <p className="[color:var(--tinta-suave)] text-xs">Código</p>
-                        <p className="font-mono font-bold [color:var(--tinta)] text-sm tracking-wider">{reconnectionCode}</p>
+                        <p className="[color:var(--tinta-suave)] text-xs">{t("Código")}</p>
+                        <p className="font-mono font-bold [color:var(--tinta)] text-sm tracking-wider">{t(reconnectionCode)}</p>
                       </div>
                       <button
                         onClick={copyCode}
                         className="p-1 rounded border [border-color:var(--linha)] [color:var(--tinta-suave)] text-xs hover:[background:color-mix(in_srgb,var(--tinta)_8%,transparent)]"
-                        title="Copiar"
+                        title={t("Copiar")}
                       >
                         📋
                       </button>
@@ -1037,15 +1009,14 @@ function TournamentLobby({
               {/* Lista de jogos em curso */}
               <div className="rounded-xl p-4 border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
                 <h3 className="[color:var(--tinta)] font-semibold mb-3 flex items-center gap-2">
-                  <span>🎮</span>
-                  Jogos em Curso ({activeGames.length})
+                  <span>🎮</span>{t("Jogos em Curso (")}{t(activeGames.length)})
                 </h3>
-                
+
                 {activeGames.length === 0 ? (
                   <div className="[color:var(--tinta-suave)] text-sm text-center py-8">
                     <p className="text-3xl mb-2">🔍</p>
-                    <p>Nenhum jogo a decorrer neste momento.</p>
-                    <p className="text-xs mt-1">Os jogos aparecerão aqui quando começarem.</p>
+                    <p>{t("Nenhum jogo a decorrer neste momento.")}</p>
+                    <p className="text-xs mt-1">{t("Os jogos aparecerão aqui quando começarem.")}</p>
                   </div>
                 ) : (
                   <div className="space-y-2 max-h-[400px] overflow-y-auto">
@@ -1063,30 +1034,29 @@ function TournamentLobby({
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="text-[10px] uppercase tracking-wider [color:var(--tinta-suave)]">
-                            {game.bracket === 'grandFinal' ? '🏆 Final' : 
+                            {t(game.bracket === 'grandFinal' ? '🏆 Final' :
                              game.bracket === 'grandFinalReset' ? '🏆 Reset' :
-                             game.bracket === 'winners' ? '🟢 Winners' : '🟠 Losers'}
-                            {' • Ronda ' + game.round}
+                             game.bracket === 'winners' ? '🟢 Winners' : '🟠 Losers')}
+                            {t(' • Ronda ' + game.round)}
                           </span>
-                          <span className="text-xs [color:var(--tinta-suave)]">Jogo {game.gameNumber}</span>
+                          <span className="text-xs [color:var(--tinta-suave)]">{t("Jogo ")}{t(game.gameNumber)}</span>
                         </div>
                         <div className="flex items-center justify-between">
                           <div className="flex-1">
-                            <p className="[color:var(--tinta)] font-medium text-sm truncate">{game.player1Name}</p>
-                            <p className="[color:var(--tinta-suave)] text-sm truncate">vs {game.player2Name}</p>
+                            <p className="[color:var(--tinta)] font-medium text-sm truncate">{t(game.player1Name)}</p>
+                            <p className="[color:var(--tinta-suave)] text-sm truncate">{t("vs ")}{t(game.player2Name)}</p>
                           </div>
                           <div className="text-right">
                             <p className="text-xl font-bold">
-                              <span className="[color:var(--sucesso)]">{game.score.player1Wins}</span>
+                              <span className="[color:var(--sucesso)]">{t(game.score.player1Wins)}</span>
                               <span className="[color:var(--tinta-suave)] mx-1">-</span>
-                              <span className="[color:var(--perigo)]">{game.score.player2Wins}</span>
+                              <span className="[color:var(--perigo)]">{t(game.score.player2Wins)}</span>
                             </p>
                           </div>
                         </div>
                         {selectedSpectateMatchId === game.matchId && (
                           <div className="mt-2 text-[10px] [color:var(--ouro)] flex items-center gap-1">
-                            <span className="animate-pulse">👁️</span> A observar
-                          </div>
+                            <span className="animate-pulse">👁️</span>{t(" A observar")}</div>
                         )}
                       </button>
                     ))}
@@ -1100,8 +1070,8 @@ function TournamentLobby({
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center [color:var(--tinta-suave)]">
                       <p className="text-5xl mb-4">👈</p>
-                      <p className="font-medium">Seleciona um jogo para observar</p>
-                      <p className="text-sm mt-1">Clica num jogo da lista à esquerda</p>
+                      <p className="font-medium">{t("Seleciona um jogo para observar")}</p>
+                      <p className="text-sm mt-1">{t("Clica num jogo da lista à esquerda")}</p>
                     </div>
                   </div>
                 ) : selectedSpectateState && spectatorGameState ? (
@@ -1111,29 +1081,28 @@ function TournamentLobby({
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="[color:var(--tinta-suave)] text-xs uppercase tracking-wider">
-                            {selectedSpectateState.bracket === 'grandFinal' ? '🏆 Grand Final' :
+                            {t(selectedSpectateState.bracket === 'grandFinal' ? '🏆 Grand Final' :
                              selectedSpectateState.bracket === 'grandFinalReset' ? '🏆 Grand Final Reset' :
-                             selectedSpectateState.bracket === 'winners' ? '🟢 Winners Bracket' : '🟠 Losers Bracket'}
-                            {' • Ronda ' + selectedSpectateState.round}
+                             selectedSpectateState.bracket === 'winners' ? '🟢 Winners Bracket' : '🟠 Losers Bracket')}
+                            {t(' • Ronda ' + selectedSpectateState.round)}
                           </p>
                           <p className="[color:var(--tinta)] font-semibold">
-                            {selectedSpectateState.player1Name} vs {selectedSpectateState.player2Name}
+                            {t(selectedSpectateState.player1Name)}{t(" vs ")}{t(selectedSpectateState.player2Name)}
                           </p>
                         </div>
                         <div className="text-right">
                           <p className="text-2xl font-bold">
-                            <span className="[color:var(--sucesso)]">{selectedSpectateState.score.player1Wins}</span>
+                            <span className="[color:var(--sucesso)]">{t(selectedSpectateState.score.player1Wins)}</span>
                             <span className="[color:var(--tinta-suave)] mx-2">-</span>
-                            <span className="[color:var(--perigo)]">{selectedSpectateState.score.player2Wins}</span>
+                            <span className="[color:var(--perigo)]">{t(selectedSpectateState.score.player2Wins)}</span>
                           </p>
-                          <p className="[color:var(--tinta-suave)] text-xs">Jogo {selectedSpectateState.gameNumber}</p>
+                          <p className="[color:var(--tinta-suave)] text-xs">{t("Jogo ")}{t(selectedSpectateState.gameNumber)}</p>
                         </div>
                       </div>
                       {selectedSpectateState.whoseTurn && (
-                        <p className="text-sm mt-2 [color:var(--ouro)]">
-                          Vez de: {selectedSpectateState.whoseTurn === 'player1' 
-                            ? selectedSpectateState.player1Name 
-                            : selectedSpectateState.player2Name}
+                        <p className="text-sm mt-2 [color:var(--ouro)]">{t("Vez de: ")}{t(selectedSpectateState.whoseTurn === 'player1'
+                            ? selectedSpectateState.player1Name
+                            : selectedSpectateState.player2Name)}
                         </p>
                       )}
                     </div>
@@ -1194,16 +1163,14 @@ function TournamentLobby({
 
                     {/* Aviso de modo espectador */}
                     <div className="mt-4 rounded-lg p-2 text-center border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_8%,transparent)]">
-                      <p className="[color:var(--tinta)] text-xs">
-                        👁️ Modo espectador - Estás apenas a observar este jogo
-                      </p>
+                      <p className="[color:var(--tinta)] text-xs">{t("👁️ Modo espectador - Estás apenas a observar este jogo")}</p>
                     </div>
                   </>
                 ) : (
                   <div className="flex-1 flex items-center justify-center">
                     <div className="text-center [color:var(--tinta-suave)]">
                       <div className="animate-spin text-4xl mb-4">⏳</div>
-                      <p>A carregar estado do jogo...</p>
+                      <p>{t("A carregar estado do jogo...")}</p>
                     </div>
                   </div>
                 )}
@@ -1211,9 +1178,7 @@ function TournamentLobby({
             </div>
 
             {/* Nota de rodapé */}
-            <p className="[color:rgb(232_237_245_/_0.55)] text-xs text-center">
-              💡 Serás automaticamente redirecionado quando o teu match começar
-            </p>
+            <p className="[color:rgb(232_237_245_/_0.55)] text-xs text-center">{t("💡 Serás automaticamente redirecionado quando o teu match começar")}</p>
           </div>
         </div>
       )}
@@ -1222,13 +1187,13 @@ function TournamentLobby({
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold [color:var(--tinta)] flex items-center gap-3">
             <span>🏟️</span>
-            {GAME_NAMES[tournamentState.gameId]}
+            {t(GAME_NAMES[tournamentState.gameId])}
           </h2>
           <span className={`px-3 py-1 rounded-full text-sm font-medium ${tournamentState.phase === 'registration'
             ? 'border [border-color:var(--linha)] [color:var(--tinta-suave)]'
             : '[background:color-mix(in_srgb,var(--sucesso)_15%,transparent)] [color:var(--sucesso)]'
             }`}>
-            {tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer'}
+            {t(tournamentState.phase === 'registration' ? 'Inscrições abertas' : 'A decorrer')}
           </span>
         </div>
 
@@ -1237,21 +1202,17 @@ function TournamentLobby({
           <div className="mb-6 rounded-lg p-4 border [border-color:var(--ouro)] [background:color-mix(in_srgb,var(--ouro)_10%,transparent)]">
             <div className="flex items-center justify-between">
               <div>
-                <p className="[color:var(--tinta-suave)] text-sm font-medium mb-1">
-                  🔑 O teu código de reconexão
-                </p>
-                <p className="[color:var(--tinta-suave)] text-xs">
-                  Guarda este código! Dá-o ao professor se fores desconectado.
-                </p>
+                <p className="[color:var(--tinta-suave)] text-sm font-medium mb-1">{t("🔑 O teu código de reconexão")}</p>
+                <p className="[color:var(--tinta-suave)] text-xs">{t("Guarda este código! Dá-o ao professor se fores desconectado.")}</p>
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-mono text-2xl font-bold [color:var(--tinta)] tracking-widest px-4 py-2 rounded-lg border [background:var(--fundo)] [border-color:var(--linha)]">
-                  {reconnectionCode}
+                  {t(reconnectionCode)}
                 </span>
                 <button
                   onClick={copyCode}
                   className="px-3 py-2 rounded-lg border [border-color:var(--linha)] [color:var(--tinta)] text-sm hover:[background:color-mix(in_srgb,var(--tinta)_6%,transparent)] transition-colors"
-                  title="Copiar código"
+                  title={t("Copiar código")}
                 >
                   📋
                 </button>
@@ -1261,8 +1222,7 @@ function TournamentLobby({
         )}
 
         <div>
-          <h3 className="[color:var(--tinta)] text-sm font-medium mb-3">
-            Jogadores ({tournamentState.players.length})
+          <h3 className="[color:var(--tinta)] text-sm font-medium mb-3">{t("Jogadores (")}{t(tournamentState.players.length)})
           </h3>
           <div className="grid grid-cols-2 gap-2">
             {tournamentState.players.map(player => (
@@ -1275,7 +1235,7 @@ function TournamentLobby({
               >
                 <span className="font-medium">{player.name}</span>
                 {player.classId && (
-                  <span className="[color:var(--tinta-suave)] ml-1">({player.classId})</span>
+                  <span className="[color:var(--tinta-suave)] ml-1">({t(player.classId)})</span>
                 )}
                 {player.id === playerId && (
                   <span className="ml-1">👈</span>
@@ -1287,9 +1247,7 @@ function TournamentLobby({
 
         {tournamentState.phase === 'registration' && (
           <div className="mt-6 rounded-lg p-4 border [border-color:var(--linha)] [background:var(--fundo)]">
-            <p className="[color:var(--tinta)] text-sm">
-              ⏳ A aguardar início do campeonato...
-            </p>
+            <p className="[color:var(--tinta)] text-sm">{t("⏳ A aguardar início do campeonato...")}</p>
           </div>
         )}
       </div>
@@ -1315,6 +1273,7 @@ interface MatchAreaProps {
 }
 
 function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, onMove, onNextGame }: MatchAreaProps) {
+  const { t, locale } = useTranslation();
   // IMPORTANTE: myRole é o SEAT fixo no match (player1 ou player2), definido em match_assigned
   // O seat NUNCA muda durante o match. O que muda é apenas quem joga como Gatos/Cães.
   const mySeatInMatch = myRole;
@@ -1364,18 +1323,16 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
       {/* Header do match */}
       <div className="text-center mb-6">
         <div className="inline-block px-3 py-1 rounded-full border [border-color:var(--ouro)] [color:var(--tinta-suave)] text-sm mb-3">
-          {match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket'} • Ronda {match.round}
+          {t(match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket')}{t(" • Ronda ")}{t(match.round)}
         </div>
-        <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">
-          Tu vs {opponent?.name}
+        <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">{t("Tu vs ")}{opponent?.name}
         </h2>
         <div className="text-4xl font-bold">
-          <span className="[color:var(--sucesso)]">{myScore}</span>
+          <span className="[color:var(--sucesso)]">{t(myScore)}</span>
           <span className="[color:var(--tinta-suave)] mx-2">-</span>
-          <span className="[color:var(--perigo)]">{opponentScore}</span>
+          <span className="[color:var(--perigo)]">{t(opponentScore)}</span>
         </div>
-        <p className="[color:var(--tinta-suave)] text-sm mt-1">
-          Melhor de 3 • Jogo {currentGameNumber}
+        <p className="[color:var(--tinta-suave)] text-sm mt-1">{t("Melhor de 3 • Jogo ")}{t(currentGameNumber)}
         </p>
       </div>
 
@@ -1389,55 +1346,51 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               : 'border [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_12%,transparent)]'
             }`}>
             <div className="text-6xl mb-3">
-              {iWonLastGame ? '🎉' : isDraw ? '🤝' : '😔'}
+              {t(iWonLastGame ? '🎉' : isDraw ? '🤝' : '😔')}
             </div>
             <h3 className="text-2xl font-bold [color:var(--tinta)] mb-2">
-              {iWonLastGame
+              {t(iWonLastGame
                 ? 'Ganhaste esta partida!'
                 : isDraw
                   ? 'Empate!'
-                  : 'Perdeste esta partida...'}
+                  : 'Perdeste esta partida...')}
             </h3>
-            <p className="[color:var(--tinta-suave)] mb-4">
-              Resultado do match: <span className="font-bold [color:var(--sucesso)]">{myScore}</span> - <span className="font-bold [color:var(--perigo)]">{opponentScore}</span>
+            <p className="[color:var(--tinta-suave)] mb-4">{t("Resultado do match: ")}<span className="font-bold [color:var(--sucesso)]">{t(myScore)}</span> - <span className="font-bold [color:var(--perigo)]">{t(opponentScore)}</span>
             </p>
             <div className="rounded-lg p-3 mb-4 border [background:var(--fundo)] [border-color:var(--linha)]">
-              <p className="[color:var(--tinta-suave)] text-sm">
-                Próxima partida: Jogo {nextGameNumber}
+              <p className="[color:var(--tinta-suave)] text-sm">{t("Próxima partida: Jogo ")}{t(nextGameNumber)}
               </p>
               <p className="[color:var(--tinta)] text-sm font-medium mb-1">
-                {nextRolesSwapped
+                {t(nextRolesSwapped
                   ? '🔄 Papéis trocados! '
-                  : ''}
+                  : '')}
                 {gameId === 'gatos-caes' && (
-                  <>Serás {iPlayGatosNext ? '🐱 Gatos' : '🐶 Cães'}</>
+                  <>{t("Serás ")}{t(iPlayGatosNext ? '🐱 Gatos' : '🐶 Cães')}</>
                 )}
                 {gameId === 'dominorio' && (
-                  <>Serás {iStartNext ? '▯ Vertical' : '▬ Horizontal'}</>
+                  <>{t("Serás ")}{t(iStartNext ? '▯ Vertical' : '▬ Horizontal')}</>
                 )}
                 {gameId === 'quelhas' && (
-                  <>Serás {iStartNext ? '▯ Vertical' : '▬ Horizontal'}</>
+                  <>{t("Serás ")}{t(iStartNext ? '▯ Vertical' : '▬ Horizontal')}</>
                 )}
                 {gameId === 'produto' && (
-                  <>Serás {iStartNext ? '🔴 Vermelho' : '🔵 Azul'}</>
+                  <>{t("Serás ")}{t(iStartNext ? '🔴 Vermelho' : '🔵 Azul')}</>
                 )}
                 {gameId === 'atari-go' && (
-                  <>Serás {iStartNext ? '⚫ Pretas' : '⚪ Brancas'}</>
+                  <>{t("Serás ")}{t(iStartNext ? '⚫ Pretas' : '⚪ Brancas')}</>
                 )}
                 {gameId === 'nex' && (
-                  <>Serás {iStartNext ? '⚫ Pretas' : '⚪ Brancas'}</>
+                  <>{t("Serás ")}{t(iStartNext ? '⚫ Pretas' : '⚪ Brancas')}</>
                 )}
               </p>
               <p className="[color:var(--tinta-suave)] text-sm">
-                {iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.'}
+                {t(iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.')}
               </p>
             </div>
             <button
               onClick={onNextGame}
               className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-            >
-              ▶️ Próxima Partida
-            </button>
+            >{t("▶️ Próxima Partida")}</button>
           </div>
         </div>
       )}
@@ -1445,13 +1398,11 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
       {/* Área de jogo - fase waiting (antes de começar) */}
       {match.phase === 'waiting' && !gameJustEnded && (
         <div className="text-center py-8">
-          <p className="[color:var(--tinta)] mb-4">Estás pronto para começar?</p>
+          <p className="[color:var(--tinta)] mb-4">{t("Estás pronto para começar?")}</p>
           <button
             onClick={onReady}
             className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-          >
-            ✅ Estou pronto!
-          </button>
+          >{t("✅ Estou pronto!")}</button>
         </div>
       )}
 
@@ -1463,7 +1414,7 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               ? '[background:color-mix(in_srgb,var(--sucesso)_15%,transparent)] [color:var(--sucesso)] animate-pulse'
               : 'border [border-color:var(--linha)] [background:var(--fundo)] [color:var(--tinta-suave)]'
               }`}>
-              {isMyTurn ? '👆 É a tua vez!' : '⏳ A aguardar adversário...'}
+              {t(isMyTurn ? '👆 É a tua vez!' : '⏳ A aguardar adversário...')}
             </span>
           </div>
 
@@ -1535,34 +1486,31 @@ interface TournamentFinishedProps {
 }
 
 function TournamentFinished({ tournamentState, playerId, onNewTournament }: TournamentFinishedProps) {
+  const { t, locale } = useTranslation();
   const isChampion = tournamentState.championId === playerId;
   const champion = tournamentState.players.find(p => p.id === tournamentState.championId);
 
   return (
     <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
       <div className="text-8xl mb-4">
-        {isChampion ? '🏆' : '🎮'}
+        {t(isChampion ? '🏆' : '🎮')}
       </div>
       <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">
-        {isChampion ? 'CAMPEÃO!' : 'Campeonato Terminado'}
+        {t(isChampion ? 'CAMPEÃO!' : 'Campeonato Terminado')}
       </h2>
       {!isChampion && champion && (
-        <p className="[color:var(--tinta)] text-lg mb-4">
-          Campeão: <span className="[color:var(--ouro)] font-bold">{champion.name}</span>
+        <p className="[color:var(--tinta)] text-lg mb-4">{t("Campeão: ")}<span className="[color:var(--ouro)] font-bold">{champion.name}</span>
         </p>
       )}
       {isChampion && (
-        <p className="[color:var(--ouro)] text-lg mb-4">
-          Parabéns! Representas a escola em {GAME_NAMES[tournamentState.gameId]}!
+        <p className="[color:var(--ouro)] text-lg mb-4">{t("Parabéns! Representas a escola em ")}{t(GAME_NAMES[tournamentState.gameId])}!
         </p>
       )}
 
       <button
         onClick={onNewTournament}
         className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-      >
-        🔄 Novo Campeonato
-      </button>
+      >{t("🔄 Novo Campeonato")}</button>
     </div>
   );
 }
@@ -1575,6 +1523,7 @@ interface EventLogProps {
 }
 
 function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLogProps) {
+  const { t, locale } = useTranslation();
   const statusColors: Record<ConnectionStatus, string> = {
     disconnected: '[background:var(--tinta-suave)]',
     connecting: '[background:var(--ouro)] animate-pulse',
@@ -1600,28 +1549,24 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLog
     <div className="rounded-xl border p-4 md:p-6 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] h-full flex flex-col">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold [color:var(--tinta)] flex items-center gap-2">
-          <span>📋</span>
-          Eventos
-        </h3>
+          <span>📋</span>{t("Eventos")}</h3>
         <div className="flex items-center gap-2">
           <span className={`w-3 h-3 rounded-full ${statusColors[connectionStatus]}`} />
-          <span className="[color:var(--tinta-suave)] text-sm">{statusLabels[connectionStatus]}</span>
+          <span className="[color:var(--tinta-suave)] text-sm">{t(statusLabels[connectionStatus])}</span>
         </div>
       </div>
 
       <div className="flex-1 min-h-[300px] max-h-[400px] overflow-y-auto space-y-1 text-sm font-mono">
         {logs.length === 0 ? (
-          <p className="[color:var(--tinta-suave)] text-center py-4">
-            Nenhum evento ainda...
-          </p>
+          <p className="[color:var(--tinta-suave)] text-center py-4">{t("Nenhum evento ainda...")}</p>
         ) : (
           logs.map(log => (
             <div key={log.id} className={`${typeColors[log.type]} py-1`}>
               <span className="[color:var(--tinta-suave)] opacity-80">
-                {log.timestamp.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {t(formatDateTime(log.timestamp, locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }))}
               </span>
-              {' '}
-              {log.message}
+              {t(' ')}
+              {t(log.message)}
             </div>
           ))
         )}
@@ -1632,9 +1577,7 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLog
         <button
           onClick={onDisconnect}
           className="mt-4 w-full py-2 px-4 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-sm hover:[background:color-mix(in_srgb,var(--perigo)_10%,transparent)] transition-colors"
-        >
-          ❌ Sair do Campeonato
-        </button>
+        >{t("❌ Sair do Campeonato")}</button>
       )}
     </div>
   );

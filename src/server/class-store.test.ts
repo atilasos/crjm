@@ -148,4 +148,21 @@ describe('ClassStore', () => {
     expect(store.removeStudent('inexistente', created.students[0].id)).toBe(false);
     expect(store.removeStudent(created.id, 'inexistente')).toBe(false);
   });
+  test('language follows a pupil code after reloading and does not change classmates', () => {
+    const store = new ClassStore(filePath);
+    const schoolClass = store.createClass('4.º A', ['Ana', 'Mestre']);
+    const first = schoolClass.students[0]!;
+    const second = schoolClass.students[1]!;
+    expect(store.setStudentLocale(first.code, 'en')).toBe(true);
+    expect(store.setStudentLocale('NOT-A-CODE', 'en')).toBe(false);
+    const reloaded = new ClassStore(filePath);
+    expect(reloaded.findByCode(first.code)?.student.locale).toBe('en');
+    expect(reloaded.findByCode(second.code)?.student.locale).toBeUndefined();
+    expect(reloaded.findByCode(second.code)?.student.name).toBe('Mestre');
+    expect(reloaded.setStudentLocale(first.code, 'ne')).toBe(true);
+    expect(new ClassStore(filePath).findByCode(first.code)?.student.locale).toBe('ne');
+    expect(reloaded.setStudentLocale(first.code, 'pt-PT')).toBe(true);
+    expect(new ClassStore(filePath).findByCode(first.code)?.student.locale).toBe('pt-PT');
+  });
+
 });

@@ -1,3 +1,4 @@
+import { DEFAULT_LOCALE, localeOrDefault } from '../../i18n/locale';
 import { Database } from 'bun:sqlite';
 import type { GameId } from '../../ai-core/types';
 import { STARTER_MISSIONS } from '../../ai-core/gamification';
@@ -154,7 +155,7 @@ export class LearnerCoreService {
       ).run(userId, 'dev-session', userId, 'learner', nowIso, nowIso);
       this.db.query(
         'INSERT INTO learner_profiles (user_id, display_name, locale, cycle_or_grade, total_xp, current_streak_days, last_active_on, created_at, updated_at) VALUES (?, ?, ?, ?, 0, 0, NULL, ?, ?)',
-      ).run(userId, displayName, 'pt-PT', null, nowIso, nowIso);
+      ).run(userId, displayName, DEFAULT_LOCALE, null, nowIso, nowIso);
       this.db.query('INSERT INTO auth_sessions (id, user_id, created_at, last_seen_at) VALUES (?, ?, ?, ?)').run(
         nextSessionId,
         userId,
@@ -441,7 +442,7 @@ export class LearnerCoreService {
     const payloadProfile: LearnerProfileRecord = {
       userId,
       displayName: record.display_name,
-      locale: 'pt-PT',
+      locale: localeOrDefault(record.locale),
       cycleOrGrade: record.cycle_or_grade,
       totalXp: profile.totalXp,
       currentStreakDays: profile.streakDays,

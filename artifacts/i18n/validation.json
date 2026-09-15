@@ -1,0 +1,159 @@
+{
+  "date": "2026-09-15",
+  "locales": [
+    "pt-PT",
+    "en",
+    "ne"
+  ],
+  "messagesPerLocale": 1438,
+  "editorialReview": "AI-assisted PT-PT, British English and Nepali; not certified by a native Nepali reviewer",
+  "i18nCheck": "pass: keys, nonempty values, placeholders, duplicates, JSX, accessible copy and pedagogical content",
+  "unitTests": {
+    "passed": 506,
+    "failed": 0,
+    "files": 62
+  },
+  "followupLocaleServiceTests": "pass after expanding coverage to every registered locale",
+  "build": "pass, including five WASM engines and a build-time internationalization gate",
+  "classroomApiSmoke": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:4490",
+    "checks": {
+      "health": true,
+      "homepage": true,
+      "anonymousLearnerSession": true,
+      "runtimeConfig": true,
+      "workerAssets": 6
+    }
+  },
+  "classroomUiSmoke": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:5063",
+    "checks": [
+      {
+        "viewport": "desktop",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Produto"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Nex"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Produto"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Nex"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Produto"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Nex"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório de Estratégias"
+      }
+    ]
+  },
+  "learnerCoreE2e": "Learner-core V1 e2e flow passed",
+  "i18nUi": {
+    "pass": true,
+    "checks": [
+      "1440px gatos-caes: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1440px dominorio: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1440px quelhas: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1440px produto: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1440px atari-go: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1440px nex: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1440px puzzles: answer, hint and feedback preserved",
+      "1024px gatos-caes: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1024px dominorio: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1024px quelhas: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1024px produto: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1024px atari-go: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1024px nex: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "1024px puzzles: answer, hint and feedback preserved",
+      "390px gatos-caes: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "390px dominorio: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "390px quelhas: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "390px produto: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "390px atari-go: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "390px nex: state preserved in PT/EN/NE; English and Nepali rules visible",
+      "390px puzzles: answer, hint and feedback preserved",
+      "Offline profile save leaves the selected language usable; explicit retry succeeds",
+      "Live championship WebSocket and reconnection code preserved; existing messages retranslated",
+      "Pupil language recovered on a second device; name unchanged; sign-out restores guest default"
+    ]
+  },
+  "globalTypecheck": {
+    "passed": false,
+    "diagnostics": 722,
+    "note": "Repository-wide existing errors remain; no errors in i18n files. Differences from the earlier 729-error baseline are in generated WASM interfaces/paths and unchanged files."
+  },
+  "screenshots": [
+    "lab-ne-mobile.png",
+    "produto-ne-mobile.png",
+    "lab-en-mobile.png"
+  ]
+}

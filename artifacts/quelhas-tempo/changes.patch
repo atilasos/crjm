@@ -1,0 +1,2643 @@
+--- a/src/games/quelhas/ai/engine.ts
++++ b/src/games/quelhas/ai/engine.ts
+@@ -246,11 +246,13 @@
+   return generateCandidateMoves(occ, orient);
+ }
+ 
+-type Metrics = {
++export type TurnCounts = {
+   min: number;
+   max: number;
+   minExcl: number;
+   maxExcl: number;
++  /** Runs containing an adjacent pair that the opponent can never occupy. */
++  protectedMin: number;
+ };
+ 
+ function addRunCells(mask: Occ, run: Run): Occ {
+@@ -270,160 +272,73 @@
+   return false;
+ }
+ 
+-function computeMetricsForOrient(occ: Occ, myOrient: 0 | 1, oppPlayableMask: Occ): Metrics {
+-  const runs = extractRuns(occ, myOrient);
+-  let min = 0;
+-  let max = 0;
+-  let minExcl = 0;
+-  let maxExcl = 0;
+-
++function countTurns(runs: Run[], oppPlayableMask: Occ): TurnCounts {
++  const counts: TurnCounts = { min: 0, max: 0, minExcl: 0, maxExcl: 0, protectedMin: 0 };
+   for (const run of runs) {
+-    min += 1;
+-    max += Math.floor(run.len / 2);
+-    const exclusive = !runOverlaps(oppPlayableMask, run);
+-    if (exclusive) {
+-      minExcl += 1;
+-      maxExcl += Math.floor(run.len / 2);
+-    }
+-  }
+-
+-  return { min, max, minExcl, maxExcl };
+-}
+-
+-function evaluateMisere(occ: Occ, sideToMove: 0 | 1): number {
+-  const myOrient = sideToMove;
+-  const oppOrient = (1 - sideToMove) as 0 | 1;
+-
+-  const runsV = extractRuns(occ, 0);
+-  const runsH = extractRuns(occ, 1);
+-
++    counts.min++;
++    counts.max += Math.floor(run.len / 2);
++    if (!runOverlaps(oppPlayableMask, run)) {
++      counts.minExcl++;
++      counts.maxExcl += Math.floor(run.len / 2);
++    }
++    const step = run.orient === 0 ? BOARD_SIZE : 1;
++    for (let i = 1; i < run.len; i++) {
++      if (!hasBit(oppPlayableMask, run.start + (i - 1) * step) &&
++          !hasBit(oppPlayableMask, run.start + i * step)) {
++        counts.protectedMin++;
++        break;
++      }
++    }
++  }
++  return counts;
++}
++
++function analyzeOccupancy(occ: Occ): { vertical: TurnCounts; horizontal: TurnCounts } {
++  const vertical = extractRuns(occ, 0);
++  const horizontal = extractRuns(occ, 1);
+   let maskV: Occ = { low: 0n, high: 0n };
+   let maskH: Occ = { low: 0n, high: 0n };
+-  for (const r of runsV) maskV = addRunCells(maskV, r);
+-  for (const r of runsH) maskH = addRunCells(maskH, r);
+-
+-  const mV = computeMetricsForOrient(occ, 0, maskH);
+-  const mH = computeMetricsForOrient(occ, 1, maskV);
+-
+-  const my = myOrient === 0 ? mV : mH;
+-  const opp = myOrient === 0 ? mH : mV;
+-
+-  // Casos terminais misère:
+-  // - Se eu não tenho jogadas, eu ganho (não posso jogar).
+-  // - Se o adversário não tem jogadas e eu tenho, sou forçado a jogar = perco.
+-  if (my.min === 0) return 100000;
+-  if (opp.min === 0) return -100000;
+-
+-  // ========== ANÁLISE DE PARIDADE MISÈRE ==========
+-  //
+-  // Em misère com jogadas alternadas:
+-  // - Quem faz a última jogada PERDE
+-  // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
+-  // - O objetivo é forçar o adversário a fazer a última jogada
+-  //
+-  // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
+-  // do total de jogadas para forçar o adversário a ser o último.
+-
+-  const myFlex = my.max - my.min;   // Quantas jogadas extra posso escolher fazer
+-  const oppFlex = opp.max - opp.min; // Quantas jogadas extra o adversário pode fazer
+-
+-  // Análise de controlo baseada em zonas exclusivas:
+-  // - Blocos exclusivos são "reservas de tempo" - só eu posso jogar lá
+-  // - Se maxExcl >= opp.max: posso sempre "responder" a qualquer jogada do adversário
+-  //   usando minhas exclusivas, forçando-o a esgotar primeiro
+-
+-  let score = 0;
+-
+-  // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
+-  if (my.maxExcl >= opp.max && my.maxExcl > 0) {
+-    // Posição dominante: posso acompanhar todas as jogadas do adversário
+-    // O adversário não tem como evitar ser o último
+-    const controlo = my.maxExcl - opp.max;
+-    score += 8000 + controlo * 500;
+-  }
+-  // Se o adversário tem este controlo sobre mim
+-  else if (opp.maxExcl >= my.max && opp.maxExcl > 0) {
+-    const controloAdv = opp.maxExcl - my.max;
+-    score -= 8000 + controloAdv * 500;
+-  }
+-
+-  // 2. ANÁLISE DE PARIDADE PARA ENDGAME
+-  // Quando restam poucas jogadas, calcular paridade exata
+-  const totalMax = my.max + opp.max;
+-  const totalMin = my.min + opp.min;
+-
+-  if (totalMax <= 20) {
+-    // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
+-    // se o total for PAR, o adversário faz a última = EU GANHO
+-    // se o total for ÍMPAR, eu faço a última = EU PERCO
+-
+-    // Com flexibilidade, posso escolher o total dentro de [totalMin, totalMax]
+-    // Se tenho mais flexibilidade, posso escolher a paridade a meu favor
+-
+-    // Verificar se posso forçar paridade favorável
+-    const canForceEven = myFlex > 0 && (totalMin % 2 === 0 || my.max - 1 >= my.min);
+-    const canForceOdd = myFlex > 0 && (totalMin % 2 === 1 || my.max - 1 >= my.min);
+-
+-    // Se posso escolher qualquer paridade e adversário não pode compensar
+-    if (myFlex > oppFlex) {
+-      // Eu controlo a paridade - posição vantajosa
+-      score += 3000 + (myFlex - oppFlex) * 200;
+-    } else if (oppFlex > myFlex) {
+-      // Adversário controla a paridade
+-      score -= 3000 + (oppFlex - myFlex) * 200;
+-    } else {
+-      // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
+-      // Se totalMin é ímpar e nenhum tem flexibilidade extra, eu perco
+-      if (myFlex === 0 && oppFlex === 0) {
+-        if (totalMin % 2 === 1) {
+-          score -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
+-        } else {
+-          score += 2000; // Total par = adversário faz última = ganho
+-        }
+-      }
+-    }
+-
+-    // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
+-    // Se adversário tem mais jogadas mínimas, ele será forçado a jogar mais
+-    if (opp.min > my.min) {
+-      score += (opp.min - my.min) * 400;
+-    } else if (my.min > opp.min) {
+-      score -= (my.min - opp.min) * 400;
+-    }
+-
+-    // 4. ZONAS EXCLUSIVAS COMO RESERVA
+-    // Ter exclusivas quando adversário não tem é enorme vantagem
+-    if (my.minExcl > 0 && opp.minExcl === 0) {
+-      score += 2500;
+-    } else if (opp.minExcl > 0 && my.minExcl === 0) {
+-      score -= 2500;
+-    }
+-  }
+-
+-  // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
+-  // Reserva exclusiva como "banco de tempo"
+-  score += (my.maxExcl - opp.maxExcl) * 80;
+-
+-  // Flexibilidade é valiosa em misère
+-  score += (myFlex - oppFlex) * 60;
+-
+-  // Eficiência dos blocos (blocos maiores = mais opções)
+-  const effOpp = opp.min > 0 ? opp.max / opp.min : 0;
+-  const effMy = my.min > 0 ? my.max / my.min : 0;
+-  score += Math.floor((effMy - effOpp) * 30);
+-
+-  // Penalizar ter muitas jogadas forçadas sem controlo
+-  if (my.maxExcl < opp.max) {
+-    score -= my.min * 20;
+-  }
+-
+-  return score;
+-}
+-
+-// As métricas acima estimam sobretudo a carga/reserva de jogadas. Em misère,
+-// mais carga própria é uma desvantagem: a folha do negamax usa o sinal oposto.
++  for (const run of vertical) maskV = addRunCells(maskV, run);
++  for (const run of horizontal) maskH = addRunCells(maskH, run);
++  return { vertical: countTurns(vertical, maskH), horizontal: countTurns(horizontal, maskV) };
++}
++
++/** Min/max turns to exhaust today's runs without interference, not legal placements.
++ * Shared runs can be split or removed by the opponent. Only protectedMin is an
++ * unavoidable lower bound on one's own work while the game continues.
++ */
++export function analyzeTurnCounts(tabuleiro: Celula[][]) {
++  return analyzeOccupancy(boardToOcc(tabuleiro));
++}
++
++function tempoOutcome(my: TurnCounts, opp: TurnCounts): boolean | null {
++  if (my.max === 0) return true;
++  if (opp.max === 0) return false;
++  // With no intersections, both players can empty one whole run per turn.
++  // The first player wins ties: the other player must still take their turn.
++  if (my.min === my.minExcl && opp.min === opp.minExcl) return my.min <= opp.min;
++  if (my.max <= opp.protectedMin) return true;
++  if (opp.max < my.protectedMin) return false;
++  return null;
++}
++
++function evaluateMisere(occ: Occ, sideToMove: 0 | 1): number {
++  const counts = analyzeOccupancy(occ);
++  const my = sideToMove === 0 ? counts.vertical : counts.horizontal;
++  const opp = sideToMove === 0 ? counts.horizontal : counts.vertical;
++  const outcome = tempoOutcome(my, opp);
++  if (outcome !== null) return outcome ? 90_000 : -90_000;
++  // Positive means favourable for the player to move. Exhausting one's own
++  // work sooner is useful; forcing the opponent to keep playing is useful.
++  // These are estimates in contested space, never a proof from total parity.
++  return (opp.min - my.min) * 200
++    + (opp.max - my.max) * 40
++    + (opp.protectedMin - my.protectedMin) * 160
++    + ((my.max - my.min) - (opp.max - opp.min)) * 20;
++}
++
+ function evaluateSearchLeaf(occ: Occ, sideToMove: 0 | 1): number {
+-  return -evaluateMisere(occ, sideToMove);
++  return evaluateMisere(occ, sideToMove);
+ }
+ 
+ function hashStringToU32(str: string): number {
+@@ -536,6 +451,7 @@
+   ttProbes: number;
+   ttHits: number;
+   deadline: number;
++  aborted: boolean;
+ };
+ 
+ const killerMoves: Array<[EncMove | -1, EncMove | -1]> = [];
+@@ -560,12 +476,8 @@
+ 
+     p += history.get(m) || 0;
+ 
+-    // barato: encorajar lances curtos e "seguros"
+-    const { len } = decMove(m);
+-    p -= len * 10;
+-
+-    // no topo, gastar um pouco mais
+-    if (depth >= 6) {
++    // Search lengths by their consequences, not by an automatic short-move bonus.
++    if (depth >= 2 || ttBest === undefined) {
+       p += cheapMoveScore(occ, m, side) * 0.1;
+     }
+ 
+@@ -586,6 +498,7 @@
+ ): { score: number; bestMove: EncMove | -1 } {
+   stats.nodes++;
+   if ((stats.nodes & 2047) === 0 && Date.now() >= stats.deadline) {
++    stats.aborted = true;
+     return { score: 0, bestMove: -1 };
+   }
+ 
+@@ -624,7 +537,10 @@
+       }
+     }
+ 
+-    if (Date.now() >= stats.deadline) break;
++    if (stats.aborted || Date.now() >= stats.deadline) {
++      stats.aborted = true;
++      return { score: 0, bestMove: -1 };
++    }
+ 
+     if (score > bestScore) {
+       bestScore = score;
+@@ -706,7 +622,8 @@
+ // paridade substitui a prova. Orçamento de nós limitado: se estourar,
+ // devolve null e a busca normal decide.
+ 
+-const ENDGAME_MAX_MOVES = 16;
++const ENDGAME_MAX_TURNS = 18;
++class EndgameBudgetExceeded extends Error {}
+ const ENDGAME_NODE_BUDGET = 400_000;
+ 
+ function occKey(occ: Occ, side: 0 | 1): string {
+@@ -718,12 +635,16 @@
+   occ: Occ,
+   side: 0 | 1,
+   memo: Map<string, boolean>,
+-  budget: { nodes: number },
++  budget: { nodes: number; deadline: number },
+ ): boolean {
+   const key = occKey(occ, side);
+   const cached = memo.get(key);
+   if (cached !== undefined) return cached;
+-  if ((budget.nodes += 1) > ENDGAME_NODE_BUDGET) throw new Error('endgame-budget');
++  if ((budget.nodes += 1) > ENDGAME_NODE_BUDGET ||
++      ((budget.nodes & 63) === 0 && Date.now() >= budget.deadline)) throw new EndgameBudgetExceeded();
++  const counts = analyzeOccupancy(occ);
++  const proven = side === 0 ? tempoOutcome(counts.vertical, counts.horizontal) : tempoOutcome(counts.horizontal, counts.vertical);
++  if (proven !== null) { memo.set(key, proven); return proven; }
+ 
+   const myMoves = generateAllMoves(occ, side);
+   // Misère: sem jogadas legais no meu turno, eu ganho (o adversário jogou por último).
+@@ -752,20 +673,24 @@
+ export function trySolveEndgameMove(
+   tabuleiro: Celula[][],
+   orientacaoIA: Orientacao,
++  timeBudgetMs = 50,
+ ): Segmento | null {
++  const deadline = Date.now() + Math.max(1, timeBudgetMs);
+   const occ = boardToOcc(tabuleiro);
+   const side = orientToBit(orientacaoIA);
+   const myMoves = generateAllMoves(occ, side);
+-  if (myMoves.length === 0 || myMoves.length > ENDGAME_MAX_MOVES) return null;
+-  const oppMoves = generateAllMoves(occ, (1 - side) as 0 | 1);
+-  if (myMoves.length + oppMoves.length > ENDGAME_MAX_MOVES * 2) return null;
++  if (myMoves.length === 0) return null;
++  const counts = analyzeOccupancy(occ);
++  const independent = counts.vertical.min === counts.vertical.minExcl && counts.horizontal.min === counts.horizontal.minExcl;
++  if (!independent && counts.vertical.max + counts.horizontal.max > ENDGAME_MAX_TURNS) return null;
+ 
+   const memo = new Map<string, boolean>();
+-  const budget = { nodes: 0 };
++  const budget = { nodes: 0, deadline };
+   try {
+     let bestLosing: EncMove | -1 = -1;
+     let bestLosingReplies = -1;
+     for (const move of myMoves) {
++      if (Date.now() >= deadline) throw new EndgameBudgetExceeded();
+       const next = applyMove(occ, move);
+       if (!solveExact(next, (1 - side) as 0 | 1, memo, budget)) {
+         return moveToSegmento(move);
+@@ -777,8 +702,9 @@
+       }
+     }
+     return bestLosing === -1 ? null : moveToSegmento(bestLosing);
+-  } catch {
+-    return null;
++  } catch (error) {
++    if (error instanceof EndgameBudgetExceeded) return null;
++    throw error;
+   }
+ }
+ 
+@@ -793,13 +719,21 @@
+   const occ0 = boardToOcc(tabuleiro);
+   const side: 0 | 1 = orientToBit(orientacaoIA);
+ 
++  if (params.maxDepth >= 8 && (params.selectionQuantile ?? 0) === 0) {
++    const solved = trySolveEndgameMove(tabuleiro, orientacaoIA, Math.min(50, params.timeBudgetMs * 0.1));
++    if (solved) return {
++      bestMove: solved, depthReached: 0, nodesSearched: 0, elapsedMs: performance.now() - start,
++      ttHitRate: 0, score: cheapMoveScore(occ0, segmentoToMove(solved), side), fromBook: false,
++    };
++  }
++
+   ttAge = (ttAge + 1) & 0xff;
+   killerMoves.length = 0;
+   history.clear();
+ 
+   monteCarloSeedHistoryRoot(occ0, side, params.timeBudgetMs, deadline);
+ 
+-  const stats: SearchStats = { nodes: 0, ttHits: 0, ttProbes: 0, deadline };
++  const stats: SearchStats = { nodes: 0, ttHits: 0, ttProbes: 0, deadline, aborted: false };
+ 
+   const INF = 1_000_000;
+   let bestMove: EncMove | -1 = -1;
+@@ -816,7 +750,7 @@
+       nodesSearched: 0,
+       elapsedMs: performance.now() - start,
+       ttHitRate: 0,
+-      score: -INF,
++      score: 100000,
+       fromBook: false,
+     };
+   }
+@@ -875,6 +809,7 @@
+     if (depth > 1 && (iterationBestScore <= alphaOrig || iterationBestScore >= beta)) {
+       window = Math.min(1200, window * 2);
+       const full = negamax(occ0, side, depth, -INF, INF, stats);
++      if (stats.aborted || Date.now() >= deadline) break;
+       iterationBestScore = full.score;
+       iterationBestMove = full.bestMove;
+     } else if (depth > 1) {
+@@ -975,6 +910,8 @@
+   decMove,
+   generateMovesDynamic,
+   evaluateMisere,
++  analyzeOccupancy,
++  tempoOutcome,
+   rolloutWinForRoot,
+   selectMoveBySkill,
+ };
+--- a/src/games/quelhas/ai/engine.misere.test.ts
++++ b/src/games/quelhas/ai/engine.misere.test.ts
+@@ -19,11 +19,12 @@
+ }
+ 
+ describe('Quelhas AI (misère)', () => {
+-  test('os cinco níveis reduzem progressivamente os erros controlados', () => {
+-    expect(DIFFICULTY_PRESETS.beginner.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.easy.selectionQuantile);
+-    expect(DIFFICULTY_PRESETS.easy.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.medium.selectionQuantile);
+-    expect(DIFFICULTY_PRESETS.medium.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.hard.selectionQuantile);
+-    expect(DIFFICULTY_PRESETS.hard.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.master.selectionQuantile);
++  test('N3–N5 conservam o resultado da pesquisa, com orçamentos crescentes', () => {
++    expect(DIFFICULTY_PRESETS.medium.selectionQuantile).toBe(0);
++    expect(DIFFICULTY_PRESETS.hard.selectionQuantile).toBe(0);
++    expect(DIFFICULTY_PRESETS.master.selectionQuantile).toBe(0);
++    expect(DIFFICULTY_PRESETS.medium.maxDepth).toBeLessThan(DIFFICULTY_PRESETS.hard.maxDepth);
++    expect(DIFFICULTY_PRESETS.hard.maxDepth).toBeLessThan(DIFFICULTY_PRESETS.master.maxDepth);
+   });
+ 
+   test('N1 não preserva a melhor variante numa posição com alternativas', () => {
+--- /dev/null
++++ b/src/games/quelhas/ai/engine.tempo.test.ts
+@@ -0,0 +1,107 @@
++import { describe, expect, test } from 'bun:test';
++import { calcularIntervalosJogadas, calcularJogadasValidas, parseTabuleiroASCII } from '../logic';
++import { __internal, analyzeTurnCounts, searchBestMove, trySolveEndgameMove } from './engine';
++
++// Two independent strips. Vertical can finish in one move (or stretch to five),
++// horizontal in one (or four). Vertical wins by exhausting its strip now.
++const independentStrips = () => parseTabuleiroASCII([
++  '.#########',
++  '.#########',
++  '.#########',
++  '.#########',
++  '.#........',
++  '.#########',
++  '.#########',
++  '.#########',
++  '.#########',
++  '.#########',
++].join('\n'));
++
++describe('Quelhas: count future turns, then control the last move', () => {
++  test('counts turns rather than overlapping legal placements', () => {
++    expect(calcularIntervalosJogadas(independentStrips(), 'vertical', 'horizontal')).toEqual({
++      minJogadasIA: 1,
++      maxJogadasIA: 5,
++      minJogadasAdversario: 1,
++      maxJogadasAdversario: 4,
++    });
++  });
++
++  test('even a one-ply search takes the immediate forced win with a long segment', () => {
++    const board = independentStrips();
++    const result = searchBestMove(board, 'vertical', {
++      timeBudgetMs: 100,
++      maxDepth: 1,
++      topN: 0,
++      scoreDelta: 0,
++    });
++    expect(result.bestMove).not.toBeNull();
++    const move = result.bestMove!;
++    for (let offset = 0; offset < move.comprimento; offset++) {
++      board[move.inicio.linha + offset]![move.inicio.coluna] = 'ocupada';
++    }
++    expect(calcularJogadasValidas(board, 'horizontal').length).toBeGreaterThan(0);
++    expect(calcularJogadasValidas(board, 'vertical')).toHaveLength(0);
++  });
++});
++
++// A separate rules oracle: straight segments on a 3x3 corner, represented by
++// their cells. It neither calls the search move generator nor its evaluator.
++function legalMasks(empty: number, side: 0 | 1): number[] {
++  const moves: number[] = [];
++  for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) {
++    let mask = 0;
++    for (let offset = 0; offset < 3; offset++) {
++      const rr = side === 0 ? r + offset : r;
++      const cc = side === 1 ? c + offset : c;
++      if (rr >= 3 || cc >= 3) break;
++      const cell = 1 << (rr * 3 + cc);
++      if (!(empty & cell)) break;
++      mask |= cell;
++      if (offset >= 1) moves.push(mask);
++    }
++  }
++  return moves;
++}
++
++test('TS search and tempo proofs preserve every winning 3x3 endgame', () => {
++  const memo = new Map<number, boolean>();
++  function win(empty: number, side: 0 | 1): boolean {
++    const key = empty * 2 + side;
++    const cached = memo.get(key);
++    if (cached !== undefined) return cached;
++    const moves = legalMasks(empty, side);
++    const result = moves.length === 0 || moves.some(move => !win(empty & ~move, side === 0 ? 1 : 0));
++    memo.set(key, result);
++    return result;
++  }
++  for (let empty = 0; empty < 512; empty++) {
++    const board = parseTabuleiroASCII(Array.from({ length: 10 }, (_, r) =>
++      Array.from({ length: 10 }, (_, c) => r < 3 && c < 3 && (empty & (1 << (r * 3 + c))) ? '.' : '#').join('')).join('\n'));
++    const counts = analyzeTurnCounts(board);
++    for (const side of [0, 1] as const) {
++      const expected = win(empty, side);
++      const proven = side === 0 ? __internal.tempoOutcome(counts.vertical, counts.horizontal) : __internal.tempoOutcome(counts.horizontal, counts.vertical);
++      if (proven !== null) expect(proven).toBe(expected);
++      if (legalMasks(empty, side).length === 0) continue;
++      const result = searchBestMove(board, side === 0 ? 'vertical' : 'horizontal', {
++        timeBudgetMs: 50, maxDepth: 6, topN: 0, scoreDelta: 0,
++      });
++      expect(result.bestMove).not.toBeNull();
++      const move = result.bestMove!;
++      let mask = 0;
++      for (let k = 0; k < move.comprimento; k++) {
++        const r = move.inicio.linha + (side === 0 ? k : 0);
++        const c = move.inicio.coluna + (side === 1 ? k : 0);
++        mask |= 1 << (r * 3 + c);
++      }
++      expect(legalMasks(empty, side)).toContain(mask);
++      if (expected) expect(win(empty & ~mask, side === 0 ? 1 : 0)).toBe(false);
++    }
++  }
++});
++
++test('the exact solver counts turns even when a long strip offers 45 overlapping placements', () => {
++  const result = trySolveEndgameMove(independentStrips(), 'vertical');
++  expect(result?.comprimento).toBeGreaterThanOrEqual(8);
++});
+--- a/src/games/quelhas/ai/ai-client.ts
++++ b/src/games/quelhas/ai/ai-client.ts
+@@ -9,7 +9,7 @@
+ import type { AIRequest, AIResponse, AIDifficulty, AIMetrics } from './types';
+ import { DIFFICULTY_PRESETS, INITIAL_METRICS } from './types';
+ import { calcularJogadasValidas, getOrientacaoJogador } from '../logic';
+-import { searchBestMove } from './engine';
++import { searchBestMove, trySolveEndgameMove } from './engine';
+ 
+ export const QUELHAS_SERVER_AI_BASE_URL = '/api/ai/quelhas';
+ export const QUELHAS_SERVER_AI_TOTAL_TIMEOUT_MS = 2500;
+@@ -36,12 +36,20 @@
+   );
+ }
+ 
++export interface QuelhasWorkerPort {
++  onmessage: ((event: MessageEvent<AIResponse>) => void) | null;
++  onerror: ((event: ErrorEvent) => void) | null;
++  postMessage(request: AIRequest): void;
++  terminate(): void;
++}
++
+ export interface AIClientOptions {
++  workerFactory?: () => QuelhasWorkerPort;
+   onReady?: () => void;
+   onMetricsUpdate?: (m: AIMetrics) => void;
+   serverBaseUrl?: string;
+   serverTimeoutMs?: number;
+-  serverFetch?: typeof fetch;
++  serverFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+ }
+ 
+ export interface AIRequestOverrides {
+@@ -49,7 +57,7 @@
+ }
+ 
+ export class QuelhasAIClient {
+-  private worker: Worker | null = null;
++  private worker: QuelhasWorkerPort | null = null;
+   private isReady = false;
+   private nextId = 1;
+   private pending = new Map<
+@@ -70,7 +78,9 @@
+ 
+   private initWorker(): void {
+     try {
+-      try {
++      if (this.options.workerFactory) {
++        this.worker = this.options.workerFactory();
++      } else try {
+         this.worker = new Worker(new URL('./ai/quelhas/quelhas.worker.js', import.meta.url), { type: 'module' });
+       } catch {
+         this.worker = new Worker(new URL('./quelhas.worker.ts', import.meta.url), { type: 'module' });
+@@ -240,6 +250,7 @@
+   }
+ 
+   private serverGeneration = 0;
++  private serverController: AbortController | null = null;
+ 
+   /**
+    * Nível 6 «Mestre»: tenta a rede az-quelhas no servidor (health rápido +
+@@ -248,7 +259,16 @@
+    */
+   async getBestMoveN6(state: QuelhasState, overrides: AIRequestOverrides = {}): Promise<Segmento | null> {
+     const generation = ++this.serverGeneration;
++    this.serverController?.abort();
++    const started = performance.now();
++    const solved = trySolveEndgameMove(state.tabuleiro, getOrientacaoJogador(state, state.jogadorAtual), 50);
++    if (solved) {
++      this.currentMetrics = { ...INITIAL_METRICS, lastEngine: 'exact-endgame', lastTimeMs: performance.now() - started };
++      this.options.onMetricsUpdate?.(this.currentMetrics);
++      return solved;
++    }
+     const controller = new AbortController();
++    this.serverController = controller;
+     const serverMove = await this.tryServerMove(state, overrides, controller.signal, generation);
+     if (generation !== this.serverGeneration) return null;
+     if (serverMove) {
+@@ -302,7 +322,7 @@
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           board,
+-          toPlay: state.jogadorAtual === 'jogador1' ? 1 : 2,
++          toPlay: getOrientacaoJogador(state, state.jogadorAtual) === 'vertical' ? 1 : 2,
+           timeBudgetMs: budgetMs,
+         }),
+         signal: AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]),
+@@ -326,18 +346,26 @@
+ 
+   cancel(): void {
+     this.serverGeneration += 1;
++    this.serverController?.abort();
++    this.serverController = null;
++    const restartWorker = this.pending.size > 0 && this.worker !== null;
++    if (restartWorker) {
++      this.worker?.terminate();
++      this.worker = null;
++    }
+     for (const [id, p] of this.pending) {
+       this.pending.delete(id);
+       p.reject(new Error('cancelled'));
+     }
+     this.currentMetrics = { ...INITIAL_METRICS };
+     this.options.onMetricsUpdate?.(this.currentMetrics);
++    if (restartWorker) this.initWorker();
+   }
+ 
+   terminate(): void {
+-    this.cancel();
+     this.worker?.terminate();
+     this.worker = null;
++    this.cancel();
+     this.isReady = false;
+   }
+ 
+--- /dev/null
++++ b/src/games/quelhas/ai/ai-client.test.ts
+@@ -0,0 +1,77 @@
++import { describe, expect, test } from 'bun:test';
++import { QuelhasAIClient, type QuelhasWorkerPort } from './ai-client';
++import { criarEstadoInicial, parseTabuleiroASCII } from '../logic';
++import type { AIRequest, AIResponse } from './types';
++
++class WorkerDouble implements QuelhasWorkerPort {
++  onmessage: QuelhasWorkerPort['onmessage'] = null;
++  onerror: QuelhasWorkerPort['onerror'] = null;
++  requests: AIRequest[] = [];
++  terminated = false;
++  postMessage(request: AIRequest) { this.requests.push(request); }
++  terminate() { this.terminated = true; }
++  reply(message: AIResponse) { this.onmessage?.(new MessageEvent('message', { data: message })); }
++}
++
++describe('Quelhas request lifecycle', () => {
++  test('cancelling actually interrupts the worker before the next turn', async () => {
++    const workers: WorkerDouble[] = [];
++    const client = new QuelhasAIClient({ workerFactory: () => {
++      const worker = new WorkerDouble(); workers.push(worker); return worker;
++    } });
++    const state = criarEstadoInicial('vs-computador');
++    const first = client.getBestMove(state, 'master');
++    const rejection = first.catch((error: unknown) => error instanceof Error ? error.message : 'unknown');
++    client.cancel();
++    expect(await rejection).toBe('cancelled');
++    expect(workers[0]!.terminated).toBe(true);
++    const second = client.getBestMove(state, 'hard');
++    expect(workers).toHaveLength(2);
++    const request = workers[1]!.requests[0]!;
++    const move = state.jogadasValidas[0]!;
++    workers[1]!.reply({ type: 'result', id: request.id, bestMove: move,
++      depthReached: 4, nodesSearched: 100, elapsedMs: 10, ttHitRate: 0, score: 0,
++      fromBook: false, engine: 'rust-wasm', usedWasm: true });
++    expect(await second).toEqual(move);
++    client.terminate();
++    expect(workers).toHaveLength(2);
++    expect(workers[1]!.terminated).toBe(true);
++  });
++
++  test('N6 sends the orientation after swap and aborts a cancelled server request', async () => {
++    let sentSide: number | undefined;
++    let requestSignal: AbortSignal | undefined;
++    let posted!: () => void;
++    const requestStarted = new Promise<void>(resolve => { posted = resolve; });
++    const client = new QuelhasAIClient({ workerFactory: () => new WorkerDouble(), serverFetch: async (url, init) => {
++      if (String(url).endsWith('/health')) return new Response('{}');
++      if (typeof init?.body !== 'string') throw new Error('missing body');
++      sentSide = JSON.parse(init.body).toPlay;
++      requestSignal = init.signal ?? undefined;
++      posted();
++      return new Promise<Response>((_, reject) => {
++        requestSignal?.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
++      });
++    } });
++    const state = { ...criarEstadoInicial('vs-computador'), orientacaoJogador1: 'horizontal' as const, orientacaoJogador2: 'vertical' as const };
++    const pending = client.getBestMoveN6(state);
++    await requestStarted;
++    expect(sentSide).toBe(2);
++    client.cancel();
++    expect(requestSignal?.aborted).toBe(true);
++    expect(await pending).toBeNull();
++    client.terminate();
++  });
++
++  test('N6 resolves an independent long-strip final before asking the network', async () => {
++    let calls = 0;
++    const client = new QuelhasAIClient({ workerFactory: () => new WorkerDouble(), serverFetch: async () => { calls++; return new Response('{}'); } });
++    const state = { ...criarEstadoInicial('vs-computador'), tabuleiro: parseTabuleiroASCII(
++      Array.from({length: 10}, (_, r) => r === 4 ? '.#........' : '.#########').join('\n')) };
++    const move = await client.getBestMoveN6(state);
++    expect(move?.comprimento).toBeGreaterThanOrEqual(8);
++    expect(calls).toBe(0);
++    expect(client.metrics.lastEngine).toBe('exact-endgame');
++    client.terminate();
++  });
++});
+--- a/src/games/quelhas/ai/types.ts
++++ b/src/games/quelhas/ai/types.ts
+@@ -14,8 +14,8 @@
+ export const DIFFICULTY_PRESETS: Record<AIDifficulty, DifficultyParams> = {
+   beginner: { timeBudgetMs: 100, maxDepth: 2, topN: 0, scoreDelta: 0, selectionQuantile: 0.99 },
+   easy: { timeBudgetMs: 250, maxDepth: 4, topN: 0, scoreDelta: 0, selectionQuantile: 0.8 },
+-  medium: { timeBudgetMs: 500, maxDepth: 8, topN: 0, scoreDelta: 0, selectionQuantile: 0.3 },
+-  hard: { timeBudgetMs: 1000, maxDepth: 13, topN: 0, scoreDelta: 0, selectionQuantile: 0.08 },
++  medium: { timeBudgetMs: 500, maxDepth: 8, topN: 0, scoreDelta: 0, selectionQuantile: 0 },
++  hard: { timeBudgetMs: 1000, maxDepth: 13, topN: 0, scoreDelta: 0, selectionQuantile: 0 },
+   master: { timeBudgetMs: 2000, maxDepth: 18, topN: 0, scoreDelta: 0, selectionQuantile: 0 },
+ };
+ 
+@@ -63,7 +63,7 @@
+       ttHitRate: number;
+       score: number;
+       fromBook: boolean;
+-      engine: 'rust-wasm' | 'ts-fallback';
++      engine: 'rust-wasm' | 'ts-fallback' | 'exact-endgame';
+       usedWasm: boolean;
+     }
+   | {
+--- a/src/games/quelhas/ai/quelhas.worker.ts
++++ b/src/games/quelhas/ai/quelhas.worker.ts
+@@ -1,3 +1,5 @@
++import type { QuelhasEngine } from './wasm/pkg/quelhas_wasm.js';
++import type { Segmento } from '../types';
+ import type { AIRequest, AIResponse } from './types';
+ import { DIFFICULTY_PRESETS } from './types';
+ import { applyDifficultySelection, searchBestMove, trySolveEndgameMove } from './engine';
+@@ -6,31 +8,7 @@
+   self.postMessage(msg);
+ }
+ 
+-interface WasmEngine {
+-  new(tt_size_bits: number): WasmEngine;
+-  search(
+-    low_lo: number,
+-    low_hi: number,
+-    high_lo: number,
+-    high_hi: number,
+-    side: number,
+-    time_budget_ms: number,
+-    max_depth: number,
+-    top_n: number,
+-    score_delta: number
+-  ): {
+-    best_move: number;
+-    depth_reached: number;
+-    nodes_searched: bigint;
+-    elapsed_ms: number;
+-    tt_hits: bigint;
+-    tt_probes: bigint;
+-    score: number;
+-  };
+-  clear_tt(): void;
+-}
+-
+-let wasmEngine: WasmEngine | null = null;
++let wasmEngine: QuelhasEngine | null = null;
+ let useWasm = false;
+ 
+ function boardToU64Parts(tabuleiro: ('vazia' | 'ocupada')[][]): {
+@@ -58,7 +36,7 @@
+   };
+ }
+ 
+-function decodeMoveToSegmento(move: number, orientacaoIA: 'vertical' | 'horizontal') {
++function decodeMoveToSegmento(move: number): Segmento {
+   // Move encoding: start | (len<<7) | (orient<<11)
+   const start = move & 0x7f;
+   const comprimento = (move >> 7) & 0x0f;
+@@ -120,19 +98,20 @@
+   try {
+     const preset = DIFFICULTY_PRESETS[req.difficulty];
+     const timeBudgetMs = req.timeBudgetMs ?? preset.timeBudgetMs;
++    const requestStarted = performance.now();
+ 
+     // Níveis fortes: nos finais pequenos, resolver por busca completa e
+     // jogar de forma comprovadamente ótima (gestão exata da paridade).
+     if (req.difficulty === 'hard' || req.difficulty === 'master') {
+-      const solved = trySolveEndgameMove(req.tabuleiro, req.orientacaoIA);
++      const solved = trySolveEndgameMove(req.tabuleiro, req.orientacaoIA, Math.min(50, timeBudgetMs * 0.1));
+       if (solved) {
+         post({
+           type: 'result',
+           id: req.id,
+           bestMove: solved,
+-          depthReached: 99,
++          depthReached: 0,
+           nodesSearched: 0,
+-          elapsedMs: 0,
++          elapsedMs: performance.now() - requestStarted,
+           ttHitRate: 0,
+           score: 0,
+           fromBook: false,
+@@ -143,17 +122,8 @@
+       }
+     }
+ 
+-    let result:
+-      | ReturnType<typeof searchBestMove>
+-      | {
+-          bestMove: any;
+-          depthReached: number;
+-          nodesSearched: number;
+-          elapsedMs: number;
+-          ttHitRate: number;
+-          score: number;
+-          fromBook: boolean;
+-        };
++    let result: ReturnType<typeof searchBestMove>;
++    const remainingMs = Math.max(1, timeBudgetMs - (performance.now() - requestStarted));
+ 
+     if (useWasm && wasmEngine) {
+       const { lowLo, lowHi, highLo, highHi } = boardToU64Parts(req.tabuleiro);
+@@ -165,7 +135,7 @@
+         highLo,
+         highHi,
+         side,
+-        timeBudgetMs,
++        remainingMs,
+         preset.maxDepth,
+         preset.topN,
+         preset.scoreDelta
+@@ -176,7 +146,7 @@
+         bestMove: applyDifficultySelection(
+           req.tabuleiro,
+           req.orientacaoIA,
+-          r.best_move >= 0 ? decodeMoveToSegmento(r.best_move, req.orientacaoIA) : null,
++          r.best_move >= 0 ? decodeMoveToSegmento(r.best_move) : null,
+           preset.selectionQuantile,
+         ),
+         depthReached: r.depth_reached,
+@@ -188,7 +158,7 @@
+       };
+     } else {
+       result = searchBestMove(req.tabuleiro, req.orientacaoIA, {
+-        timeBudgetMs,
++        timeBudgetMs: remainingMs,
+         maxDepth: preset.maxDepth,
+         topN: preset.topN,
+         scoreDelta: preset.scoreDelta,
+@@ -202,7 +172,7 @@
+       bestMove: result.bestMove,
+       depthReached: result.depthReached,
+       nodesSearched: result.nodesSearched,
+-      elapsedMs: result.elapsedMs,
++      elapsedMs: performance.now() - requestStarted,
+       ttHitRate: result.ttHitRate,
+       score: result.score,
+       fromBook: result.fromBook,
+--- a/src/games/quelhas/ai/v1-adapter.ts
++++ b/src/games/quelhas/ai/v1-adapter.ts
+@@ -4,28 +4,32 @@
+   AIResponseV1,
+   AIMoveCandidate,
+   AICriticalThreat,
+-  DifficultyLevel,
+   AIPedagogyV1,
+ } from '../../../ai-core';
+-import { getDifficultyProfile } from '../../../ai-core/difficulty';
++import { getDifficultyProfile, type ExtendedDifficultyLevel } from '../../../ai-core/difficulty';
+ import type { QuelhasState, Segmento } from '../types';
+ import { QuelhasAIClient } from './ai-client';
+-import { DIFFICULTY_PRESETS, type AIDifficulty } from './types';
++import type { AIDifficulty } from './types';
++import { analyzeTurnCounts } from './engine';
++import { colocarSegmento, getOrientacaoJogador } from '../logic';
++
++type AnalysisClient = Pick<QuelhasAIClient, 'getBestMove' | 'metrics' | 'cancel' | 'terminate'>;
+ 
+ export interface QuelhasV1AdapterOptions {
+-  client?: QuelhasAIClient;
++  client?: AnalysisClient;
+ }
+ 
+-const LEVEL_MAP: Record<DifficultyLevel, AIDifficulty> = {
++const LEVEL_MAP: Record<ExtendedDifficultyLevel, AIDifficulty> = {
+   1: 'beginner',
+   2: 'easy',
+   3: 'medium',
+   4: 'hard',
+   5: 'master',
++  6: 'master',
+ };
+ 
+ export class QuelhasV1Adapter {
+-  private readonly client: QuelhasAIClient;
++  private readonly client: AnalysisClient;
+   private readonly ownsClient: boolean;
+ 
+   constructor(options: QuelhasV1AdapterOptions = {}) {
+@@ -42,7 +46,7 @@
+   async compute(
+     request: AIRequestV1<QuelhasState, Segmento>,
+   ): Promise<AIResponseV1<Segmento, QuelhasState>> {
+-    const difficulty = mapLevelToQuelhasDifficulty(request.level);
++    const difficulty = request.mode === 'tutor' ? 'master' : mapLevelToQuelhasDifficulty(request.level);
+     const timeBudgetMs =
+       typeof request.timeBudgetMs === 'number' && Number.isFinite(request.timeBudgetMs)
+         ? Math.max(1, Math.trunc(request.timeBudgetMs))
+@@ -51,10 +55,17 @@
+     const bestMove = await this.client.getBestMove(request.state, difficulty, {
+       timeBudgetMs,
+     });
+-    const topMoves = buildTopMoves(request.state, bestMove);
++    const metrics = this.client.metrics;
++    const explanation = bestMove ? describeMove(request.state, bestMove) : null;
++    // Only the searched action is ranked. Geometric alternatives were never
++    // searched and must not appear as the second/third best moves.
++    const topMoves: AIMoveCandidate<Segmento>[] = bestMove && explanation ? [{
++      move: bestMove, rank: 1, score: metrics.lastScore,
++      confidence: metrics.lastEngine === 'exact-endgame' ? 1 : 0.6,
++      reasonShort: explanation.counts,
++    }] : [];
+     const criticalThreats = buildCriticalThreats(request.state, topMoves);
+     const pedagogy = buildPedagogy(request.state, topMoves);
+-    const metrics = this.client.metrics;
+ 
+     return {
+       version: '1.0',
+@@ -63,7 +74,7 @@
+       mode: request.mode,
+       bestMove,
+       topMoves,
+-      explainText: buildExplainText(request.state, bestMove, topMoves),
++      explainText: explanation?.explanation ?? 'Sem jogadas válidas: nesta posição ganhas, porque o adversário foi o último a jogar.',
+       confidence: topMoves[0]?.confidence ?? 0.48,
+       criticalThreats,
+       reviewPatternId: selectReviewPattern('quelhas', { criticalThreats }).id,
+@@ -93,75 +104,33 @@
+   }
+ }
+ 
+-export function mapLevelToQuelhasDifficulty(level: DifficultyLevel): AIDifficulty {
++export function mapLevelToQuelhasDifficulty(level: ExtendedDifficultyLevel): AIDifficulty {
+   return LEVEL_MAP[level];
+ }
+ 
+-function segmentKey(move: Segmento): string {
+-  return `${move.inicio.linha}:${move.inicio.coluna}:${move.comprimento}:${move.orientacao}`;
+-}
+-
+-function sameSegment(a: Segmento, b: Segmento): boolean {
+-  return segmentKey(a) === segmentKey(b);
+-}
+-
+-function formatSegment(move: Segmento): string {
+-  return `L${move.inicio.linha + 1} C${move.inicio.coluna + 1}, ${move.orientacao}, ${move.comprimento} casas`;
+-}
+-
+-function estimateMovePriority(move: Segmento, state: QuelhasState): number {
+-  const center = 4.5;
+-  const startDistance =
+-    Math.abs(move.inicio.linha - center) + Math.abs(move.inicio.coluna - center);
+-  const legalMoves = state.jogadasValidas.length;
+-  const shortSegmentBonus = move.comprimento <= 2 ? 14 : move.comprimento === 3 ? 8 : 2;
+-  return shortSegmentBonus + legalMoves * 0.5 - startDistance;
+-}
+-
+-function buildReasonShort(move: Segmento): string {
+-  if (move.comprimento <= 2) {
+-    return 'Fecha poucas casas e mantém mais respostas para o fim.';
++function describeMove(state: QuelhasState, move: Segmento) {
++  const next = colocarSegmento(state, move);
++  const turns = analyzeTurnCounts(next.tabuleiro);
++  const my = turns[getOrientacaoJogador(state, state.jogadorAtual)];
++  const opponent = turns[getOrientacaoJogador(state, state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1')];
++  const counts = `Após esta jogada: tu, ${my.min} a ${my.max} turnos; adversário, ${opponent.min} a ${opponent.max}.`;
++  let explanation: string;
++  if (opponent.max === 0) {
++    explanation = 'Esta jogada deixa o adversário sem jogadas e dá-lhe a vitória.';
++  } else if (my.max === 0) {
++    explanation = 'Esgotas as tuas faixas. O adversário ainda tem de jogar; depois ganhas por não teres jogada.';
++  } else {
++    explanation = 'Compara o mínimo e o máximo de turnos de cada lado. Se o adversário cortar uma faixa, a contagem muda. Quem pode ficar primeiro sem jogar?';
+   }
+-  if (move.comprimento >= 4) {
+-    return 'Avança já nesta faixa, mas sem gastar todo o espaço útil.';
+-  }
+-  return 'Equilibra avanço e opções para a próxima sequência.';
+-}
+-
+-function buildTopMoves(
+-  state: QuelhasState,
+-  bestMove: Segmento | null,
+-): AIMoveCandidate<Segmento>[] {
+-  const ranked = [...state.jogadasValidas]
+-    .sort((a, b) => estimateMovePriority(b, state) - estimateMovePriority(a, state))
+-    .slice(0, 6);
+-  const unique: Segmento[] = [];
+-
+-  if (bestMove) {
+-    unique.push(bestMove);
+-  }
+-
+-  for (const move of ranked) {
+-    if (!unique.some((candidate) => sameSegment(candidate, move))) {
+-      unique.push(move);
+-    }
+-    if (unique.length >= 3) break;
+-  }
+-
+-  return unique.slice(0, 3).map((move, index) => ({
+-    move,
+-    rank: (index + 1) as 1 | 2 | 3,
+-    score: Math.round(estimateMovePriority(move, state) * 10),
+-    confidence: Math.max(0.35, 0.82 - index * 0.12),
+-    reasonShort: buildReasonShort(move),
+-  }));
++  return { counts, explanation };
+ }
+ 
+ function buildCriticalThreats(
+   state: QuelhasState,
+   topMoves: AIMoveCandidate<Segmento>[],
+ ): AICriticalThreat<Segmento>[] {
+-  if (state.jogadasValidas.length === 0 || topMoves.length === 0) {
++  const best = topMoves[0];
++  if (state.jogadasValidas.length === 0 || !best) {
+     return [];
+   }
+ 
+@@ -172,7 +141,7 @@
+         severity: 'high',
+         title: 'Tens uma única saída',
+         description: 'Se fechares esta opção sem plano, podes ficar preso à última jogada.',
+-        counterMove: topMoves[0].move,
++        counterMove: best.move,
+       },
+     ];
+   }
+@@ -183,8 +152,8 @@
+         id: 'low-mobility',
+         severity: 'medium',
+         title: 'Poucas alternativas',
+-        description: 'Escolhe um segmento curto para não fechar demasiado o tabuleiro já.',
+-        counterMove: topMoves[0].move,
++        description: 'Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.',
++        counterMove: best.move,
+       },
+     ];
+   }
+@@ -221,28 +190,3 @@
+     aeCompetency: ['planeamento', 'observação de padrões'],
+   };
+ }
+-
+-function buildExplainText(
+-  state: QuelhasState,
+-  bestMove: Segmento | null,
+-  topMoves: AIMoveCandidate<Segmento>[],
+-): string {
+-  if (state.jogadasValidas.length === 0) {
+-    return 'Sem jogadas válidas: nesta posição ganhas, porque o adversário foi o último a jogar.';
+-  }
+-
+-  const move = bestMove ?? topMoves[0]?.move;
+-  if (!move) {
+-    return 'Procura um segmento curto que não feche demasiado o tabuleiro já.';
+-  }
+-
+-  if (state.jogadasValidas.length <= 2) {
+-    return 'Entra no fim com um segmento que te mantenha vivo e não feche a última faixa útil cedo demais.';
+-  }
+-
+-  if (move.comprimento <= 2) {
+-    return 'Dá prioridade a um segmento curto numa faixa ainda aberta; assim guardas mais opções para o final.';
+-  }
+-
+-  return 'Avança numa faixa que prolongue o teu plano sem consumir logo demasiadas casas úteis.';
+-}
+--- a/src/games/quelhas/ai/v1-adapter.test.ts
++++ b/src/games/quelhas/ai/v1-adapter.test.ts
+@@ -1,6 +1,7 @@
+ import { describe, expect, test } from 'bun:test';
+ import type { AIRequestV1 } from '../../../ai-core';
+-import { criarEstadoInicial, colocarSegmento } from '../logic';
++import { criarEstadoInicial, colocarSegmento, parseTabuleiroASCII } from '../logic';
++import { INITIAL_METRICS, type AIMetrics } from './types';
+ import type { QuelhasState, Segmento } from '../types';
+ import { QuelhasV1Adapter, mapLevelToQuelhasDifficulty } from './v1-adapter';
+ 
+@@ -22,16 +23,17 @@
+   };
+ }
+ 
+-function makeClient(bestMove: Segmento | null, metrics?: Partial<any>) {
++function makeClient(bestMove: Segmento | null, metrics?: Partial<AIMetrics>) {
+   return {
+     metrics: {
++      ...INITIAL_METRICS,
+       lastTimeMs: 12,
+       lastDepth: 4,
+       lastNodes: 321,
+       lastTTHitRate: 0.2,
+       lastScore: 42,
+       fromBook: false,
+-      lastEngine: 'ts-fallback',
++      lastEngine: 'ts-fallback' as const,
+       lastUsedWasm: false,
+       ...metrics,
+     },
+@@ -47,14 +49,15 @@
+   test('maps state into AIResponseV1-style payload with mandatory fields', async () => {
+     const state = criarEstadoInicial('vs-computador');
+     const bestMove = state.jogadasValidas[0]!;
+-    const adapter = new QuelhasV1Adapter({ client: makeClient(bestMove) as any });
++    const adapter = new QuelhasV1Adapter({ client: makeClient(bestMove) });
+ 
+     const response = await adapter.compute(makeRequest(state));
+ 
+     expect(response.gameId).toBe('quelhas');
+     expect(response.bestMove).toEqual(bestMove);
+     expect(response.topMoves.length).toBeGreaterThan(0);
+-    expect(response.topMoves.length).toBeLessThanOrEqual(3);
++    expect(response.topMoves).toHaveLength(1);
++    expect(response.topMoves[0]!.reasonShort).toContain('turnos');
+     expect(response.explainText.length).toBeGreaterThan(0);
+     expect(response.pedagogy?.hintLevelSuggested).toBeDefined();
+     expect(response.stats.engine).toBe('ts-fallback');
+@@ -71,7 +74,7 @@
+       tabuleiro: filled,
+       jogadasValidas: [],
+     };
+-    const adapter = new QuelhasV1Adapter({ client: makeClient(null) as any });
++    const adapter = new QuelhasV1Adapter({ client: makeClient(null) });
+ 
+     const response = await adapter.compute(makeRequest(state));
+ 
+@@ -81,27 +84,40 @@
+     expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
+   });
+ 
++  test('explains a long winning move with both turn intervals', async () => {
++    const state = { ...criarEstadoInicial('vs-computador'), tabuleiro: parseTabuleiroASCII(
++      Array.from({ length: 10 }, (_, r) => r === 4 ? '.#........' : '.#########').join('\n')) };
++    const move: Segmento = { inicio: { linha: 1, coluna: 0 }, comprimento: 8, orientacao: 'vertical' };
++    const response = await new QuelhasV1Adapter({ client: makeClient(move) }).compute(makeRequest(state));
++    expect(response.explainText).toContain('ganhas por não teres jogada');
++    expect(response.topMoves[0]?.reasonShort).toBe('Após esta jogada: tu, 0 a 0 turnos; adversário, 1 a 4.');
++  });
++
+   test('maps each core level to a distinct search preset', () => {
+     expect(mapLevelToQuelhasDifficulty(1)).toBe('beginner');
+     expect(mapLevelToQuelhasDifficulty(2)).toBe('easy');
+     expect(mapLevelToQuelhasDifficulty(3)).toBe('medium');
+     expect(mapLevelToQuelhasDifficulty(4)).toBe('hard');
+     expect(mapLevelToQuelhasDifficulty(5)).toBe('master');
++    expect(mapLevelToQuelhasDifficulty(6)).toBe('master');
+   });
+ 
+   test('forwards the common N1-N5 classroom budget', async () => {
+     let receivedBudget = 0;
++    let receivedDifficulty: unknown;
+     const state = criarEstadoInicial('vs-computador');
+     const client = {
+       ...makeClient(state.jogadasValidas[0]!),
+       async getBestMove(_state: QuelhasState, _difficulty: unknown, options?: { timeBudgetMs?: number }) {
+         receivedBudget = options?.timeBudgetMs ?? 0;
++        receivedDifficulty = _difficulty;
+         return state.jogadasValidas[0]!;
+       },
+     };
+ 
+-    await new QuelhasV1Adapter({ client: client as any }).compute(makeRequest(state, { level: 1 }));
++    await new QuelhasV1Adapter({ client: client }).compute(makeRequest(state, { level: 1 }));
+     expect(receivedBudget).toBe(100);
++    expect(receivedDifficulty).toBe('master');
+   });
+ 
+   test('emits high-severity threat when only one legal move remains', async () => {
+@@ -109,7 +125,7 @@
+     state = colocarSegmento(state, state.jogadasValidas[0]!);
+     const forcedMove = state.jogadasValidas[0]!;
+     const forcedState: QuelhasState = { ...state, jogadasValidas: [forcedMove] };
+-    const adapter = new QuelhasV1Adapter({ client: makeClient(forcedMove, { lastEngine: 'rust-wasm', lastUsedWasm: true }) as any });
++    const adapter = new QuelhasV1Adapter({ client: makeClient(forcedMove, { lastEngine: 'rust-wasm', lastUsedWasm: true }) });
+ 
+     const response = await adapter.compute(makeRequest(forcedState, { level: 4 }));
+ 
+--- a/src/games/quelhas/QuelhasGame.tsx
++++ b/src/games/quelhas/QuelhasGame.tsx
+@@ -15,7 +15,7 @@
+ import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
+ import { EvalChart } from '../../components/EvalChart';
+ import { normalizeEngineScore } from '../../ai-core/eval-trace';
+-import { QuelhasState, Posicao } from './types';
++import type { QuelhasState, Posicao } from './types';
+ import {
+   criarEstadoInicial,
+   colocarSegmento,
+@@ -28,7 +28,7 @@
+   recusarTroca,
+   decidirTrocaComputador,
+ } from './logic';
+-import { GameMode, Player } from '../../types';
++import type { GameMode, Player } from '../../types';
+ import {
+   QuelhasAIClient,
+   QUELHAS_SERVER_AI_WITH_FALLBACK_TIMEOUT_MS,
+@@ -41,10 +41,17 @@
+ } from './ai';
+ import { TutorHintCard } from './components/TutorHintCard';
+ import { TopMovesRail } from './components/TopMovesRail';
++import { searchBestMove } from './ai/engine';
+ import { withTimeout } from '../../utils/withTimeout';
+ 
+ interface QuelhasGameProps {
+   onVoltar: () => void;
++}
++
++function emergencyMove(state: QuelhasState) {
++  return searchBestMove(state.tabuleiro, getOrientacaoJogador(state, state.jogadorAtual), {
++    timeBudgetMs: 40, maxDepth: 2, topN: 0, scoreDelta: 0,
++  }).bestMove;
+ }
+ 
+ const REGRAS = [
+@@ -73,27 +80,8 @@
+   return '[border-color:color-mix(in_srgb,var(--jogo-dominorio)_55%,var(--linha))] [background:color-mix(in_srgb,var(--jogo-dominorio)_10%,var(--painel))] [color:var(--tinta)]';
+ }
+ 
+-function getSuggestedAction(
+-  response: AIResponseV1<QuelhasState['jogadasValidas'][number], QuelhasState> | null,
+-  hintLevel: 'H1' | 'H2' | 'H3',
+-): string {
+-  if (hintLevel === 'H1') {
+-    return 'Compara segmentos curtos em zonas abertas e evita fechar cedo a faixa central.';
+-  }
+-
+-  if (hintLevel === 'H2') {
+-    return response?.criticalThreats?.[0]
+-      ? 'Defende primeiro a faixa onde podes ficar preso e só depois alarga o teu plano.'
+-      : 'Procura um segmento que te deixe outra faixa útil disponível para a jogada seguinte.';
+-  }
+-
+-  return response?.bestMove
+-    ? 'Se estiveres preso, testa primeiro o segmento destacado e confirma que ainda sobram outras faixas úteis.'
+-    : 'Escolhe um segmento curto e evita fechar demasiado o tabuleiro agora.';
+-}
+-
+ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
+-  const { t } = useTranslation();
++  const { t, msg } = useTranslation();
+   const {
+     acceptDifficultyRecommendation,
+     getDifficultyRecommendation,
+@@ -147,9 +135,12 @@
+       onReady: () => setAiReady(true),
+     });
+     aiClientRef.current = client;
+-    tutorAdapterRef.current = new QuelhasV1Adapter({ client });
++    // The tutor owns its worker: its cancelled search cannot queue ahead of the opponent.
++    const tutor = new QuelhasV1Adapter();
++    tutorAdapterRef.current = tutor;
+     return () => {
+       tutorAdapterRef.current = null;
++      tutor.terminate();
+       client.terminate();
+     };
+   }, []);
+@@ -210,7 +201,7 @@
+           if (cancelled) return;
+           finished = true;
+           setState(prev => {
+-            const mv = bestMove ?? prev.jogadasValidas[0] ?? null;
++            const mv = bestMove ?? emergencyMove(prev);
+             return mv ? colocarSegmento(prev, mv) : prev;
+           });
+         } catch (e) {
+@@ -219,7 +210,7 @@
+           if (cancelled) return;
+           finished = true;
+           setState(prev => {
+-            const mv = prev.jogadasValidas[0] ?? null;
++            const mv = emergencyMove(prev);
+             return mv ? colocarSegmento(prev, mv) : prev;
+           });
+         }
+@@ -621,7 +612,7 @@
+                     <span>{t("Clica na casa inicial do segmento ")}{t(orientacaoAtual === 'vertical' ? 'VERTICAL' : 'HORIZONTAL')}
+                     </span>
+                   )}
+-                  {t(' ')}{t("• Jogadas disponíveis: ")}{t(state.jogadasValidas.length)}
++                  {t(' ')}{msg("• Segmentos possíveis agora: {0}", [state.jogadasValidas.length])}
+                 </>
+               ) : (
+                 <span className="flex items-center justify-center gap-2 font-medium [color:var(--jogo-quelhas)]">
+@@ -639,13 +630,13 @@
+             <ThinkingTutor gameId="quelhas" tutor={thinking} solutionReady={showTutorSolution}>
+               {showTutorSolution && <>
+                 <TutorContextBar items={buildTutorContextItems(tutorResponse)} />
+-                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative />
++                <HintLegend showThreat={Boolean(criticalThreat)} showAlternative={false} />
+                 <TutorHintCard
+                   insight={
+                     tutorResponse?.explainText ||
+-                    'Escolhe um segmento curto que não feche demasiado o tabuleiro já.'
++                    'Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.'
+                   }
+-                  suggestedAction={getSuggestedAction(tutorResponse, hintLevel)}
++                  suggestedAction="Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro."
+                   hintLevel={hintLevel}
+                   errorCode={tutorResponse?.pedagogy?.errorCode}
+                   isLoading={tutorLoading}
+--- a/src/games/quelhas/logic.ts
++++ b/src/games/quelhas/logic.ts
+@@ -1,6 +1,6 @@
+-import { QuelhasState, Celula, Posicao, Segmento, Orientacao } from './types';
+-import { GameMode, GameStatus, Player } from '../../types';
+-import { searchBestMove } from './ai/engine';
++import type { QuelhasState, Celula, Posicao, Segmento, Orientacao } from './types';
++import type { GameMode, GameStatus, Player } from '../../types';
++import { analyzeTurnCounts, searchBestMove } from './ai/engine';
+ 
+ const TAMANHO_TABULEIRO = 10;
+ const COMPRIMENTO_MINIMO = 2;
+@@ -535,80 +535,15 @@
+   };
+ }
+ 
+-/**
+- * IA decide se deve fazer a troca usando avaliação estrutural.
+- * 
+- * A decisão baseia-se em:
+- * 1. Comparar métricas (min/max, exclusivas) para cada orientação
+- * 2. Simular uma pesquisa curta para ambas opções
+- * 3. Escolher a opção que dá melhor posição
++/** Swapping consumes the turn. Horizontal plays next in either case, but
++ * becomes the human's orientation if the computer swaps to vertical.
+  */
+ export function decidirTrocaComputador(state: QuelhasState): boolean {
+   if (!state.trocaDisponivel) return false;
+-  
+-  // Calcular métricas para o estado atual
+-  const metricas = calcularMetricasCompletas(state.tabuleiro);
+-  
+-  // Se NÃO trocar: IA fica com horizontal, adversário fica com vertical
+-  // Se TROCAR: IA fica com vertical, adversário fica com horizontal
+-  // (A troca consome o turno, então após trocar é a vez do adversário jogar)
+-  
+-  // Avaliar posição se NÃO trocar (IA = horizontal)
+-  const jogadasHorizontal = calcularJogadasValidas(state.tabuleiro, 'horizontal');
+-  const jogadasVertical = calcularJogadasValidas(state.tabuleiro, 'vertical');
+-  
+-  const scoreNaoTrocar = avaliarPosicaoMisere(
+-    state.tabuleiro,
+-    'horizontal', // IA fica horizontal
+-    'vertical',   // Adversário fica vertical
+-    jogadasVertical.length,
+-    jogadasHorizontal.length
+-  );
+-  
+-  // Avaliar posição se TROCAR (IA = vertical)
+-  // Nota: após a troca, a vez passa para o adversário (que agora é horizontal)
+-  const scoreTrocar = avaliarPosicaoMisere(
+-    state.tabuleiro,
+-    'vertical',   // IA fica vertical
+-    'horizontal', // Adversário fica horizontal
+-    jogadasHorizontal.length,
+-    jogadasVertical.length
+-  );
+-  
+-  // Análise adicional baseada em métricas estruturais
+-  let bonusTrocar = 0;
+-  let bonusNaoTrocar = 0;
+-  
+-  // Se vertical tem vantagem em exclusivas, trocar é bom
+-  if (metricas.vertical.maxExclusivo > metricas.horizontal.maxExclusivo) {
+-    bonusTrocar += (metricas.vertical.maxExclusivo - metricas.horizontal.maxExclusivo) * 30;
+-  } else {
+-    bonusNaoTrocar += (metricas.horizontal.maxExclusivo - metricas.vertical.maxExclusivo) * 30;
+-  }
+-  
+-  // Se horizontal tem mais flexibilidade (max - min maior), é bom ficar com horizontal
+-  const flexV = metricas.vertical.max - metricas.vertical.min;
+-  const flexH = metricas.horizontal.max - metricas.horizontal.min;
+-  bonusNaoTrocar += (flexH - flexV) * 10;
+-  bonusTrocar += (flexV - flexH) * 10;
+-  
+-  // Em misère, preferimos a orientação com menos jogadas "obrigatórias" (min baixo)
+-  // mas mais capacidade de "guardar" (max alto, especialmente exclusivas)
+-  const ratioV = metricas.vertical.min > 0 ? metricas.vertical.maxExclusivo / metricas.vertical.min : 0;
+-  const ratioH = metricas.horizontal.min > 0 ? metricas.horizontal.maxExclusivo / metricas.horizontal.min : 0;
+-  
+-  if (ratioV > ratioH) {
+-    bonusTrocar += 50;
+-  } else if (ratioH > ratioV) {
+-    bonusNaoTrocar += 50;
+-  }
+-  
+-  // Decisão final: comparar scores totais
+-  const scoreFinalTrocar = scoreTrocar + bonusTrocar;
+-  const scoreFinalNaoTrocar = scoreNaoTrocar + bonusNaoTrocar;
+-  
+-  // Trocar só se claramente melhor (margem de 20 pontos para evitar trocas marginais)
+-  return scoreFinalTrocar > scoreFinalNaoTrocar + 20;
++  const horizontal = searchBestMove(state.tabuleiro, 'horizontal', {
++    timeBudgetMs: 40, maxDepth: 2, topN: 0, scoreDelta: 0,
++  });
++  return horizontal.score < 0;
+ }
+ 
+ // ============================================================================
+@@ -1353,80 +1288,20 @@
+   return novoTabuleiro;
+ }
+ 
+-// Calcular intervalos de jogadas futuras (min/max) para cada jogador
+-// Usa lookahead de 1-2 níveis para estimar cenários
++/** Current turn capacities. Shared runs may change after either player's move. */
+ export function calcularIntervalosJogadas(
+   tabuleiro: Celula[][],
+   orientacaoIA: Orientacao,
+   orientacaoAdversario: Orientacao,
+-  profundidade: number = 1
+ ): IntervalosJogadas {
+-  const jogadasIA = calcularJogadasValidas(tabuleiro, orientacaoIA);
+-  const jogadasAdversario = calcularJogadasValidas(tabuleiro, orientacaoAdversario);
+-
+-  if (profundidade === 0 || jogadasIA.length === 0) {
+-    // Caso base: retornar contagem atual
+-    return {
+-      minJogadasIA: jogadasIA.length,
+-      maxJogadasIA: jogadasIA.length,
+-      minJogadasAdversario: jogadasAdversario.length,
+-      maxJogadasAdversario: jogadasAdversario.length,
+-    };
+-  }
+-
+-  // Calcular min/max olhando para as respostas possíveis do adversário
+-  let minJogadasIAFuturas = Infinity;
+-  let maxJogadasIAFuturas = 0;
+-  let minJogadasAdvFuturas = Infinity;
+-  let maxJogadasAdvFuturas = 0;
+-
+-  // Limitar número de jogadas a analisar para performance
+-  const jogadasAmostra = jogadasIA.length > 20 
+-    ? jogadasIA.filter((_, i) => i % Math.ceil(jogadasIA.length / 20) === 0)
+-    : jogadasIA;
+-
+-  for (const jogadaIA of jogadasAmostra) {
+-    const tabAposIA = aplicarSegmentoTabuleiro(tabuleiro, jogadaIA);
+-    const jogadasAdvAposIA = calcularJogadasValidas(tabAposIA, orientacaoAdversario);
+-
+-    if (jogadasAdvAposIA.length === 0) {
+-      // Adversário não tem jogadas - este é o pior caso para IA em misère
+-      // (IA seria o último a jogar)
+-      minJogadasAdvFuturas = Math.min(minJogadasAdvFuturas, 0);
+-      maxJogadasAdvFuturas = Math.max(maxJogadasAdvFuturas, 0);
+-      // IA não jogará mais porque o jogo acaba
+-      minJogadasIAFuturas = Math.min(minJogadasIAFuturas, 0);
+-      continue;
+-    }
+-
+-    // Analisar respostas do adversário (amostra)
+-    const jogadasAdvAmostra = jogadasAdvAposIA.length > 10
+-      ? jogadasAdvAposIA.filter((_, i) => i % Math.ceil(jogadasAdvAposIA.length / 10) === 0)
+-      : jogadasAdvAposIA;
+-
+-    for (const jogadaAdv of jogadasAdvAmostra) {
+-      const tabAposAdv = aplicarSegmentoTabuleiro(tabAposIA, jogadaAdv);
+-      const jogadasIAFuturas = calcularJogadasValidas(tabAposAdv, orientacaoIA);
+-      const jogadasAdvFuturas = calcularJogadasValidas(tabAposAdv, orientacaoAdversario);
+-
+-      minJogadasIAFuturas = Math.min(minJogadasIAFuturas, jogadasIAFuturas.length);
+-      maxJogadasIAFuturas = Math.max(maxJogadasIAFuturas, jogadasIAFuturas.length);
+-      minJogadasAdvFuturas = Math.min(minJogadasAdvFuturas, jogadasAdvFuturas.length);
+-      maxJogadasAdvFuturas = Math.max(maxJogadasAdvFuturas, jogadasAdvFuturas.length);
+-    }
+-  }
+-
+-  // Se não houve análise, usar valores atuais
+-  if (minJogadasIAFuturas === Infinity) minJogadasIAFuturas = jogadasIA.length;
+-  if (maxJogadasIAFuturas === 0) maxJogadasIAFuturas = jogadasIA.length;
+-  if (minJogadasAdvFuturas === Infinity) minJogadasAdvFuturas = jogadasAdversario.length;
+-  if (maxJogadasAdvFuturas === 0) maxJogadasAdvFuturas = jogadasAdversario.length;
+-
++  const counts = analyzeTurnCounts(tabuleiro);
++  const my = counts[orientacaoIA];
++  const opponent = counts[orientacaoAdversario];
+   return {
+-    minJogadasIA: minJogadasIAFuturas,
+-    maxJogadasIA: maxJogadasIAFuturas,
+-    minJogadasAdversario: minJogadasAdvFuturas,
+-    maxJogadasAdversario: maxJogadasAdvFuturas,
++    minJogadasIA: my.min,
++    maxJogadasIA: my.max,
++    minJogadasAdversario: opponent.min,
++    maxJogadasAdversario: opponent.max,
+   };
+ }
+ 
+--- a/src/games/quelhas/logic.test.ts
++++ b/src/games/quelhas/logic.test.ts
+@@ -375,7 +375,7 @@
+ describe("Quelhas - Intervalos de Jogadas (Heurística Min/Max)", () => {
+   test("calcularIntervalosJogadas deve retornar estrutura válida", () => {
+     const tabuleiro = criarTabuleiroInicial();
+-    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal', 1);
++    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal');
+     
+     expect(typeof intervalos.minJogadasIA).toBe('number');
+     expect(typeof intervalos.maxJogadasIA).toBe('number');
+@@ -385,23 +385,20 @@
+ 
+   test("intervalos devem ter min <= max", () => {
+     const tabuleiro = criarTabuleiroInicial();
+-    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal', 1);
++    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal');
+     
+     expect(intervalos.minJogadasIA).toBeLessThanOrEqual(intervalos.maxJogadasIA);
+     expect(intervalos.minJogadasAdversario).toBeLessThanOrEqual(intervalos.maxJogadasAdversario);
+   });
+ 
+-  test("calcularIntervalosJogadas com profundidade 0 deve retornar contagem direta", () => {
+-    const tabuleiro = criarTabuleiroInicial();
+-    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal', 0);
+-    
+-    const jogadasVertical = calcularJogadasValidas(tabuleiro, 'vertical');
+-    const jogadasHorizontal = calcularJogadasValidas(tabuleiro, 'horizontal');
+-    
+-    expect(intervalos.minJogadasIA).toBe(jogadasVertical.length);
+-    expect(intervalos.maxJogadasIA).toBe(jogadasVertical.length);
+-    expect(intervalos.minJogadasAdversario).toBe(jogadasHorizontal.length);
+-    expect(intervalos.maxJogadasAdversario).toBe(jogadasHorizontal.length);
++  test("tabuleiro vazio permite 10 a 50 turnos por orientação", () => {
++    const tabuleiro = criarTabuleiroInicial();
++    const intervalos = calcularIntervalosJogadas(tabuleiro, 'vertical', 'horizontal');
++    
++    expect(intervalos.minJogadasIA).toBe(10);
++    expect(intervalos.maxJogadasIA).toBe(50);
++    expect(intervalos.minJogadasAdversario).toBe(10);
++    expect(intervalos.maxJogadasAdversario).toBe(50);
+   });
+ 
+   test("tabuleiro parcialmente preenchido deve ter menos jogadas", () => {
+--- a/wasm/quelhas/quelhas-ai/src/eval.rs
++++ b/wasm/quelhas/quelhas-ai/src/eval.rs
+@@ -1,194 +1,99 @@
+ use quelhas_core::{apply_move, extract_runs, Occupancy, Run, BOARD_SIZE};
+ 
++/// Turn capacities of today's runs without interference. Shared runs can be
++/// split or removed. protected_min alone is an unavoidable lower bound on work.
+ #[derive(Clone, Copy, Debug, Default)]
+ pub struct Metrics {
+     pub min: i32,
+     pub max: i32,
+     pub min_excl: i32,
+     pub max_excl: i32,
++    pub protected_min: i32,
+ }
+ 
+-#[inline]
+-fn add_run_cells(mut mask: Occupancy, run: Run) -> Occupancy {
+-    let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
+-    let mut idx = run.start as usize;
+-    for _ in 0..(run.len as usize) {
+-        mask.set(idx);
+-        idx += delta;
++fn playable_mask(runs: &[Run]) -> Occupancy {
++    let mut mask = Occupancy::default();
++    for run in runs {
++        let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
++        for offset in 0..run.len as usize {
++            mask.set(run.start as usize + offset * delta);
++        }
+     }
+     mask
+ }
+ 
+-#[inline]
+-fn run_overlaps(mask: Occupancy, run: Run) -> bool {
+-    let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
+-    let mut idx = run.start as usize;
+-    for _ in 0..(run.len as usize) {
+-        if mask.is_set(idx) {
+-            return true;
++fn count_turns(runs: &[Run], opponent_mask: Occupancy) -> Metrics {
++    let mut counts = Metrics::default();
++    for run in runs {
++        counts.min += 1;
++        counts.max += run.len as i32 / 2;
++        let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
++        let protected = |offset: usize| !opponent_mask.is_set(run.start as usize + offset * delta);
++        if (0..run.len as usize).all(protected) {
++            counts.min_excl += 1;
++            counts.max_excl += run.len as i32 / 2;
+         }
+-        idx += delta;
++        if (1..run.len as usize).any(|offset| protected(offset - 1) && protected(offset)) {
++            counts.protected_min += 1;
++        }
+     }
+-    false
++    counts
+ }
+ 
+-fn compute_metrics(occ: Occupancy, orient: u8, opp_playable_mask: Occupancy) -> Metrics {
+-    let runs = extract_runs(occ, orient);
+-    let mut m = Metrics::default();
+-    for r in runs {
+-        m.min += 1;
+-        m.max += (r.len as i32) / 2;
+-        let exclusive = !run_overlaps(opp_playable_mask, r);
+-        if exclusive {
+-            m.min_excl += 1;
+-            m.max_excl += (r.len as i32) / 2;
+-        }
++pub fn analyze_turn_counts(occ: Occupancy) -> [Metrics; 2] {
++    let vertical = extract_runs(occ, 0);
++    let horizontal = extract_runs(occ, 1);
++    [
++        count_turns(&vertical, playable_mask(&horizontal)),
++        count_turns(&horizontal, playable_mask(&vertical)),
++    ]
++}
++
++pub fn tempo_outcome(my: Metrics, opp: Metrics) -> Option<bool> {
++    if my.max == 0 {
++        return Some(true);
+     }
+-    m
++    if opp.max == 0 {
++        return Some(false);
++    }
++    // Independent runs: both players can empty one whole run per turn.
++    // The first player wins ties because the opponent must take their turn.
++    if my.min == my.min_excl && opp.min == opp.min_excl {
++        return Some(my.min <= opp.min);
++    }
++    if my.max <= opp.protected_min {
++        return Some(true);
++    }
++    if opp.max < my.protected_min {
++        return Some(false);
++    }
++    None
+ }
+ 
+ pub fn evaluate_misere(occ: Occupancy, side_to_move: u8) -> i32 {
+-    let runs_v = extract_runs(occ, 0);
+-    let runs_h = extract_runs(occ, 1);
+-
+-    let mut mask_v = Occupancy::default();
+-    let mut mask_h = Occupancy::default();
+-    for r in runs_v {
+-        mask_v = add_run_cells(mask_v, r);
++    let counts = analyze_turn_counts(occ);
++    let my = counts[side_to_move as usize];
++    let opp = counts[(1 - side_to_move) as usize];
++    if let Some(win) = tempo_outcome(my, opp) {
++        return if win { 90_000 } else { -90_000 };
+     }
+-    for r in runs_h {
+-        mask_h = add_run_cells(mask_h, r);
+-    }
+-
+-    let m_v = compute_metrics(occ, 0, mask_h);
+-    let m_h = compute_metrics(occ, 1, mask_v);
+-
+-    let (my, opp) = if side_to_move == 0 { (m_v, m_h) } else { (m_h, m_v) };
+-
+-    // Casos terminais misère:
+-    // - Se eu não tenho jogadas, eu ganho (não posso jogar).
+-    // - Se o adversário não tem jogadas e eu tenho, sou forçado a jogar = perco.
+-    if my.min == 0 {
+-        return 100_000;
+-    }
+-    if opp.min == 0 {
+-        return -100_000;
+-    }
+-
+-    // ========== ANÁLISE DE PARIDADE MISÈRE ==========
+-    //
+-    // Em misère com jogadas alternadas:
+-    // - Quem faz a última jogada PERDE
+-    // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
+-    // - O objetivo é forçar o adversário a fazer a última jogada
+-    //
+-    // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
+-    // do total de jogadas para forçar o adversário a ser o último.
+-
+-    let my_flex = my.max - my.min;   // Quantas jogadas extra posso escolher fazer
+-    let opp_flex = opp.max - opp.min; // Quantas jogadas extra o adversário pode fazer
+-
+-    let mut score = 0i32;
+-
+-    // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
+-    if my.max_excl >= opp.max && my.max_excl > 0 {
+-        // Posição dominante: posso acompanhar todas as jogadas do adversário
+-        let controlo = my.max_excl - opp.max;
+-        score += 8000 + controlo * 500;
+-    }
+-    // Se o adversário tem este controlo sobre mim
+-    else if opp.max_excl >= my.max && opp.max_excl > 0 {
+-        let controlo_adv = opp.max_excl - my.max;
+-        score -= 8000 + controlo_adv * 500;
+-    }
+-
+-    // 2. ANÁLISE DE PARIDADE PARA ENDGAME
+-    let total_max = my.max + opp.max;
+-    let total_min = my.min + opp.min;
+-
+-    if total_max <= 20 {
+-        // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
+-        // se o total for PAR, o adversário faz a última = EU GANHO
+-        // se o total for ÍMPAR, eu faço a última = EU PERCO
+-
+-        // Se posso escolher qualquer paridade e adversário não pode compensar
+-        if my_flex > opp_flex {
+-            // Eu controlo a paridade - posição vantajosa
+-            score += 3000 + (my_flex - opp_flex) * 200;
+-        } else if opp_flex > my_flex {
+-            // Adversário controla a paridade
+-            score -= 3000 + (opp_flex - my_flex) * 200;
+-        } else {
+-            // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
+-            if my_flex == 0 && opp_flex == 0 {
+-                if total_min % 2 == 1 {
+-                    score -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
+-                } else {
+-                    score += 2000; // Total par = adversário faz última = ganho
+-                }
+-            }
+-        }
+-
+-        // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
+-        if opp.min > my.min {
+-            score += (opp.min - my.min) * 400;
+-        } else if my.min > opp.min {
+-            score -= (my.min - opp.min) * 400;
+-        }
+-
+-        // 4. ZONAS EXCLUSIVAS COMO RESERVA
+-        if my.min_excl > 0 && opp.min_excl == 0 {
+-            score += 2500;
+-        } else if opp.min_excl > 0 && my.min_excl == 0 {
+-            score -= 2500;
+-        }
+-    }
+-
+-    // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
+-    // Reserva exclusiva como "banco de tempo"
+-    score += (my.max_excl - opp.max_excl) * 80;
+-
+-    // Flexibilidade é valiosa em misère
+-    score += (my_flex - opp_flex) * 60;
+-
+-    // Eficiência dos blocos (blocos maiores = mais opções)
+-    let eff_opp = if opp.min > 0 { (opp.max as f64) / (opp.min as f64) } else { 0.0 };
+-    let eff_my = if my.min > 0 { (my.max as f64) / (my.min as f64) } else { 0.0 };
+-    score += ((eff_my - eff_opp) * 30.0) as i32;
+-
+-    // Penalizar ter muitas jogadas forçadas sem controlo
+-    if my.max_excl < opp.max {
+-        score -= my.min * 20;
+-    }
+-
+-    score
++    // Positive is favourable for the player to move: exhaust one's own work
++    // sooner, leave work to the opponent. No proof from total-move parity.
++    (opp.min - my.min) * 200
++        + (opp.max - my.max) * 40
++        + (opp.protected_min - my.protected_min) * 160
++        + ((my.max - my.min) - (opp.max - opp.min)) * 20
+ }
+ 
+-/// Converte a estimativa de carga/reserva numa utilidade para o negamax.
+-/// Em misère, uma carga própria maior é uma desvantagem.
+ pub fn evaluate_search_leaf(occ: Occupancy, side_to_move: u8) -> i32 {
+-    -evaluate_misere(occ, side_to_move)
++    evaluate_misere(occ, side_to_move)
+ }
+ 
+ pub fn cheap_move_score(occ: Occupancy, mv: u16, side_to_move: u8) -> i32 {
+     let child = apply_move(occ, mv);
+-    // se o adversário ficar sem jogadas, é derrota imediata (misère)
+-    let opp = 1u8 - side_to_move;
+-    let opp_moves = quelhas_core::generate_moves_dynamic(child, opp);
+-    if opp_moves.is_empty() {
++    let opp = 1 - side_to_move;
++    if extract_runs(child, opp).is_empty() {
+         return -1_000_000;
+     }
+-    // score aproximado: avaliação do nó filho do ponto de vista de quem joga agora (adversário)
+     -evaluate_search_leaf(child, opp)
+ }
+-
+-#[cfg(test)]
+-mod tests {
+-    use super::*;
+-
+-    #[test]
+-    fn search_leaf_inverts_the_misere_burden_estimate() {
+-        let occ = Occupancy::default();
+-        assert_eq!(evaluate_search_leaf(occ, 0), -evaluate_misere(occ, 0));
+-    }
+-}
+--- a/wasm/quelhas/quelhas-ai/src/engine.rs
++++ b/wasm/quelhas/quelhas-ai/src/engine.rs
+@@ -1,7 +1,7 @@
+ use crate::eval;
+ use crate::tt::{TTEntry, TranspositionTable};
+ use crate::zobrist::ZobristKeys;
+-use quelhas_core::{apply_move, decode_move, generate_moves_dynamic, EncMove, Occupancy};
++use quelhas_core::{apply_move, generate_moves_dynamic, EncMove, Occupancy};
+ 
+ pub struct SearchStats {
+     pub nodes: u64,
+@@ -27,6 +27,7 @@
+     pub stats: SearchStats,
+     killers: Vec<[u16; 2]>,
+     history: Vec<i32>,
++    aborted: bool,
+ }
+ 
+ const INF: i32 = 1_000_000;
+@@ -53,6 +54,7 @@
+             },
+             killers: Vec::new(),
+             history: vec![0; 4096],
++            aborted: false,
+         }
+     }
+ 
+@@ -61,7 +63,14 @@
+         now_ms >= deadline_ms
+     }
+ 
+-    fn order_moves(&mut self, occ: Occupancy, side: u8, depth: usize, moves: &mut [EncMove], tt_best: Option<EncMove>) {
++    fn order_moves(
++        &mut self,
++        occ: Occupancy,
++        side: u8,
++        depth: usize,
++        moves: &mut [EncMove],
++        tt_best: Option<EncMove>,
++    ) {
+         let tt_best_u16 = tt_best.unwrap_or(0);
+         if self.killers.len() <= depth {
+             self.killers.resize(depth + 1, [0, 0]);
+@@ -76,7 +85,15 @@
+     }
+ 
+     #[inline]
+-    fn move_priority(&self, occ: Occupancy, side: u8, depth: usize, mv: EncMove, tt_best: u16, killers: [u16; 2]) -> i32 {
++    fn move_priority(
++        &self,
++        occ: Occupancy,
++        side: u8,
++        depth: usize,
++        mv: EncMove,
++        tt_best: u16,
++        killers: [u16; 2],
++    ) -> i32 {
+         let mut p = 0i32;
+         if mv == tt_best {
+             p += 1_000_000;
+@@ -88,17 +105,21 @@
+         }
+         p += self.history[mv as usize & 4095];
+ 
+-        let (_start, len, _o) = decode_move(mv);
+-        p -= (len as i32) * 10;
+-
+-        if depth >= 6 {
++        // Rank lengths by their consequences, not an automatic short-move bonus.
++        if depth >= 2 || tt_best == 0 {
+             p += (eval::cheap_move_score(occ, mv, side) / 10).clamp(-50_000, 50_000);
+         }
+         p
+     }
+ 
+-    pub fn iterative_deepening(&mut self, occ: Occupancy, side: u8, top_n: u32, score_delta: i32, now: impl Fn() -> f64) -> SearchResult {
+-        let mut best_move: Option<EncMove> = None;
++    pub fn iterative_deepening(
++        &mut self,
++        occ: Occupancy,
++        side: u8,
++        top_n: u32,
++        score_delta: i32,
++        now: impl Fn() -> f64,
++    ) -> SearchResult {
+         let mut best_score = -INF;
+         let mut depth_reached = 0u32;
+ 
+@@ -112,12 +133,17 @@
+                 nodes_searched: 0,
+                 tt_hits: self.stats.tt_hits,
+                 tt_probes: self.stats.tt_probes,
+-                score: -MATE,
++                score: MATE,
+             };
+         }
+ 
+         // ordenar raiz inicialmente por heurística barata (history já começa 0)
+         self.order_moves(occ, side, 1, &mut root_moves, None);
++        // A legal, evaluated action remains available even before depth one.
++        let mut best_move = root_moves.first().copied();
++        if let Some(mv) = best_move {
++            best_score = eval::cheap_move_score(occ, mv, side);
++        }
+ 
+         for depth in 1..=self.max_depth {
+             if Self::time_up(now(), self.deadline_ms) {
+@@ -132,7 +158,7 @@
+ 
+             let alpha_orig = alpha;
+             let mut alpha_i = alpha;
+-            let mut beta_i = beta;
++            let beta_i = beta;
+ 
+             let mut iter_best_move = root_moves[0];
+             let mut iter_best_score = -INF;
+@@ -145,11 +171,19 @@
+                 let child = apply_move(occ, mv);
+                 let opp = 1u8 - side;
+ 
+-                let mut score = if first {
++                let score = if first {
+                     first = false;
+                     -self.negamax(child, opp, depth as i32 - 1, -beta_i, -alpha_i, 1, &now)
+                 } else {
+-                    let narrow = -self.negamax(child, opp, depth as i32 - 1, -alpha_i - 1, -alpha_i, 1, &now);
++                    let narrow = -self.negamax(
++                        child,
++                        opp,
++                        depth as i32 - 1,
++                        -alpha_i - 1,
++                        -alpha_i,
++                        1,
++                        &now,
++                    );
+                     if narrow > alpha_i && narrow < beta_i {
+                         -self.negamax(child, opp, depth as i32 - 1, -beta_i, -alpha_i, 1, &now)
+                     } else {
+@@ -182,7 +216,15 @@
+                 window = (window * 2).min(1200);
+                 let full = self.negamax(occ, side, depth as i32, -INF, INF, 0, &now);
+                 iter_best_score = full;
+-                // best move do TT (se existir) passa para frente
++                if self.aborted || Self::time_up(now(), self.deadline_ms) {
++                    break;
++                }
++                let entry = self.tt.probe(self.zobrist.hash(occ, side));
++                if entry.key == self.zobrist.hash(occ, side)
++                    && root_moves.contains(&entry.best_move)
++                {
++                    iter_best_move = entry.best_move;
++                }
+             } else if depth > 1 {
+                 window = (window as f64 * 0.75).max(60.0) as i32;
+             }
+@@ -247,6 +289,7 @@
+     ) -> i32 {
+         self.stats.nodes += 1;
+         if (self.stats.nodes & 2047) == 0 && Self::time_up(now(), self.deadline_ms) {
++            self.aborted = true;
+             return 0;
+         }
+ 
+@@ -295,7 +338,8 @@
+         let mut first = true;
+         for mv in moves {
+             if Self::time_up(now(), self.deadline_ms) {
+-                break;
++                self.aborted = true;
++                return 0;
+             }
+             let child = apply_move(occ, mv);
+             let opp = 1u8 - side;
+@@ -311,6 +355,9 @@
+                 }
+             };
+ 
++            if self.aborted {
++                return 0;
++            }
+             if score > best_score {
+                 best_score = score;
+                 best_move = mv;
+@@ -336,6 +383,10 @@
+             }
+         }
+ 
++        if self.aborted || Self::time_up(now(), self.deadline_ms) {
++            self.aborted = true;
++            return 0;
++        }
+         let flag = if best_score <= alpha_orig {
+             2u8
+         } else if best_score >= beta {
+--- /dev/null
++++ b/wasm/quelhas/quelhas-ai/tests/tempo.rs
+@@ -0,0 +1,123 @@
++use quelhas_ai::{engine::Searcher, eval, tt::TranspositionTable, zobrist::ZobristKeys};
++use quelhas_core::{apply_move, extract_runs, Occupancy};
++
++fn board(cells: impl Fn(usize, usize) -> bool) -> Occupancy {
++    let mut occ = Occupancy::default();
++    for r in 0..10 {
++        for c in 0..10 {
++            if !cells(r, c) {
++                occ.set(r * 10 + c);
++            }
++        }
++    }
++    occ
++}
++
++// Independent rules oracle on a 3x3 corner: all straight segments, any length >=2.
++fn oracle_moves(empty: u16, side: u8) -> Vec<u16> {
++    let mut moves = Vec::new();
++    for r in 0..3 {
++        for c in 0..3 {
++            let mut mask = 0;
++            for offset in 0..3 {
++                let (rr, cc) = if side == 0 {
++                    (r + offset, c)
++                } else {
++                    (r, c + offset)
++                };
++                if rr >= 3 || cc >= 3 {
++                    break;
++                }
++                let cell = 1 << (rr * 3 + cc);
++                if empty & cell == 0 {
++                    break;
++                }
++                mask |= cell;
++                if offset >= 1 {
++                    moves.push(mask);
++                }
++            }
++        }
++    }
++    moves
++}
++
++fn win(empty: u16, side: u8, memo: &mut [Option<bool>; 1024]) -> bool {
++    let key = empty as usize * 2 + side as usize;
++    if let Some(result) = memo[key] {
++        return result;
++    }
++    let moves = oracle_moves(empty, side);
++    let result = moves.is_empty() || moves.iter().any(|m| !win(empty & !m, 1 - side, memo));
++    memo[key] = Some(result);
++    result
++}
++
++#[test]
++fn shallow_search_exhausts_the_long_strip() {
++    let occ = board(|r, c| c == 0 || (r == 4 && c >= 2));
++    let counts = eval::analyze_turn_counts(occ);
++    assert_eq!((counts[0].min, counts[0].max), (1, 5));
++    assert_eq!((counts[1].min, counts[1].max), (1, 4));
++    let mut tt = TranspositionTable::new(4096);
++    let zobrist = ZobristKeys::new();
++    let mut search = Searcher::new(&mut tt, &zobrist, 1, 100.0, 1);
++    let result = search.iterative_deepening(occ, 0, 0, 0, || 0.0);
++    let next = apply_move(occ, result.best_move.expect("legal move"));
++    assert!(extract_runs(next, 0).is_empty());
++    assert!(!extract_runs(next, 1).is_empty());
++}
++
++#[test]
++fn tempo_proofs_and_search_agree_with_every_3x3_endgame() {
++    let mut memo = [None; 1024];
++    let mut tt = TranspositionTable::new(4096);
++    let zobrist = ZobristKeys::new();
++    for empty in 0..512u16 {
++        let occ = board(|r, c| r < 3 && c < 3 && empty & (1 << (r * 3 + c)) != 0);
++        let counts = eval::analyze_turn_counts(occ);
++        for side in 0..=1 {
++            let expected = win(empty, side, &mut memo);
++            if let Some(proven) =
++                eval::tempo_outcome(counts[side as usize], counts[1 - side as usize])
++            {
++                assert_eq!(
++                    proven, expected,
++                    "unsound tempo proof: {empty:09b} side {side}"
++                );
++            }
++            if oracle_moves(empty, side).is_empty() {
++                continue;
++            }
++            tt.clear();
++            let mut search = Searcher::new(&mut tt, &zobrist, 1, 100.0, 10);
++            let result = search.iterative_deepening(occ, side, 0, 0, || 0.0);
++            let next = apply_move(occ, result.best_move.expect("legal move"));
++            let mut remaining = 0;
++            for r in 0..3 {
++                for c in 0..3 {
++                    if !next.is_set(r * 10 + c) {
++                        remaining |= 1 << (r * 3 + c);
++                    }
++                }
++            }
++            if expected {
++                assert!(
++                    !win(remaining, 1 - side, &mut memo),
++                    "winning position lost: {empty:09b} side {side}"
++                );
++            }
++        }
++    }
++}
++
++#[test]
++fn expired_budget_still_returns_a_legal_action() {
++    let mut tt = TranspositionTable::new(4096);
++    let zobrist = ZobristKeys::new();
++    let mut search = Searcher::new(&mut tt, &zobrist, 1, 0.0, 18);
++    assert!(search
++        .iterative_deepening(Occupancy::default(), 0, 0, 0, || 1.0)
++        .best_move
++        .is_some());
++}
+--- a/src/ai-core/types.ts
++++ b/src/ai-core/types.ts
+@@ -56,7 +56,7 @@
+   nodes?: number;
+   simulations?: number;
+   usedWasm: boolean;
+-  engine: 'rust-wasm' | 'ts-fallback' | 'server-nn';
++  engine: 'rust-wasm' | 'ts-fallback' | 'server-nn' | 'exact-endgame';
+ }
+ 
+ export interface AIPedagogyV1 {
+--- a/src/ai-core/tutor-context.ts
++++ b/src/ai-core/tutor-context.ts
+@@ -15,6 +15,8 @@
+ 
+   if (fromBook) {
+     items.push({ label: 'Livro de abertura', tone: 'info' });
++  } else if (response.stats.engine === 'exact-endgame') {
++    items.push({ label: 'Final resolvido', tone: 'success' });
+   } else if (response.stats.engine === 'rust-wasm') {
+     items.push({ label: 'Análise WASM', tone: 'success' });
+   } else {
+@@ -35,9 +37,8 @@
+     items.push({ label: 'Plano frágil', tone: 'warning' });
+   }
+ 
+-  if ((response.topMoves?.length ?? 0) <= 1) {
+-    items.push({ label: 'Linha forçada', tone: 'danger' });
+-  } else if ((response.topMoves?.length ?? 0) >= 3) {
++  // A single reported candidate does not mean it is the only legal move.
++  if ((response.topMoves?.length ?? 0) >= 3) {
+     items.push({ label: '3 opções úteis', tone: 'info' });
+   }
+ 
+--- a/src/ai-core/tutor-context.test.ts
++++ b/src/ai-core/tutor-context.test.ts
+@@ -32,7 +32,7 @@
+     expect(items.map((item) => item.label)).toContain('Análise WASM');
+     expect(items.map((item) => item.label)).toContain('Ameaça crítica');
+     expect(items.map((item) => item.label)).toContain('Plano forte');
+-    expect(items.map((item) => item.label)).toContain('Linha forçada');
++    expect(items.map((item) => item.label)).not.toContain('Linha forçada');
+   });
+ 
+   test('prefers opening-book label over fallback chip', () => {
+@@ -58,3 +58,16 @@
+     expect(items.map((item) => item.label)).not.toContain('Fallback TS');
+   });
+ });
++
++test('reporting only the searched move does not imply a forced line', () => {
++  const response: AIResponseV1<string> = {
++    version: '1.0', requestId: 'tempo', gameId: 'quelhas', mode: 'tutor',
++    bestMove: 'L2 C1 length 8', topMoves: [{ move: 'L2 C1 length 8', rank: 1 }],
++    explainText: 'The other legal moves need not have been reported.',
++    stats: { elapsedMs: 1, usedWasm: false, engine: 'exact-endgame' },
++  };
++  const labels = buildTutorContextItems(response).map(item => item.label);
++  expect(labels).toContain('Final resolvido');
++  expect(labels).not.toContain('Fallback TS');
++  expect(labels).not.toContain('Linha forçada');
++});
+--- a/src/ai-core/training-paths.ts
++++ b/src/ai-core/training-paths.ts
+@@ -170,8 +170,8 @@
+     ],
+   },
+   quelhas: {
+-    focusNow: 'Manter segmentos curtos disponíveis para não seres empurrado para a última jogada.',
+-    commonMistake: 'Fechar faixas grandes cedo e deixar uma única saída para o fim.',
++    focusNow: 'Contar o mínimo e o máximo de turnos dos dois lados e prever quem fica sem jogar primeiro.',
++    commonMistake: 'Jogar sempre duas casas sem comparar um segmento curto com um comprido.',
+     steps: [
+       {
+         title: 'Descobrir',
+@@ -186,7 +186,7 @@
+       {
+         title: 'Táticas',
+         checkpoints: [
+-          'Usar simetria com cuidado, confirmando legalidade e paridade.',
++          'Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.',
+           'Avaliar componentes fraturadas pelos seus intervalos de jogadas.',
+         ],
+         puzzleIds: ['qu-simetria-1', 'qu-fratura-1'],
+@@ -196,7 +196,7 @@
+       {
+         title: 'Estratégia',
+         checkpoints: [
+-          'Criar e guardar bolsas de uma jogada para ajustar a paridade.',
++          'Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.',
+           'Contar sequências forçadas e quebrar espelhos pelo eixo.',
+         ],
+         puzzleIds: ['qu-isolamento-1', 'qu-paridade-1', 'qu-tempo-1'],
+@@ -207,7 +207,7 @@
+         title: 'Campeonato',
+         checkpoints: [
+           'Entrar em finais com plano misère definido.',
+-          'Rever duas derrotas e localizar onde a paridade fugiu.',
++          'Rever duas derrotas e localizar onde a contagem de turnos mudou.',
+         ],
+         puzzleIds: ['qu-final-1'],
+         desafio: 'Ganha pelo menos metade dos jogos contra o N4.',
+--- a/src/components/PlayerInfo.tsx
++++ b/src/components/PlayerInfo.tsx
+@@ -145,9 +145,9 @@
+       )}
+ 
+       {/* Indicadores de jogador */}
+-      <div className="flex justify-around items-center gap-4 mb-4">
++      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 mb-4">
+         <div
+-          className={`player-indicator ${corJogador1} text-white ${
++          className={`player-indicator min-w-0 justify-center px-2 text-sm sm:px-4 sm:text-base ${corJogador1} text-white ${
+             jogadorAtual === 'jogador1' && !jogoTerminado ? 'active' : ''
+           }`}
+         >
+@@ -158,7 +158,7 @@
+         <span className="text-2xl font-bold [color:var(--tinta-suave)]">{t("VS")}</span>
+ 
+         <div
+-          className={`player-indicator ${corJogador2} text-white ${
++          className={`player-indicator min-w-0 justify-center px-2 text-sm sm:px-4 sm:text-base ${corJogador2} text-white ${
+             jogadorAtual === 'jogador2' && !jogoTerminado ? 'active' : ''
+           }`}
+         >
+--- a/src/i18n/en.json
++++ b/src/i18n/en.json
+@@ -1553,5 +1553,16 @@
+   "Descobriste uma casa tua que continuará legal depois de qualquer jogada adversária. O que representa essa casa?": "You found one of your squares that stays legal after any opponent move. What does it represent?",
+   "Certo: esta casa é uma reserva segura porque o adversário não a consegue bloquear.": "Correct: this square is a safe reserve because your opponent cannot block it.",
+   "Distinguir casas exclusivas de reservas que o adversário não consegue bloquear.": "Distinguish exclusive squares from reserves your opponent cannot block.",
+-  "Comparar casas em disputa com reservas seguras para decidir a ordem.": "Compare contested squares with safe reserves to decide the order."
++  "Comparar casas em disputa com reservas seguras para decidir a ordem.": "Compare contested squares with safe reserves to decide the order.",
++  "Após esta jogada: tu, {0} a {1} turnos; adversário, {2} a {3}.": "After this move: you, {0} to {1} turns; opponent, {2} to {3}.",
++  "Esta jogada deixa o adversário sem jogadas e dá-lhe a vitória.": "This move leaves your opponent with no moves and gives them the win.",
++  "Esgotas as tuas faixas. O adversário ainda tem de jogar; depois ganhas por não teres jogada.": "You exhaust your strips. Your opponent still has to play; then you win because you have no move.",
++  "Compara o mínimo e o máximo de turnos de cada lado. Se o adversário cortar uma faixa, a contagem muda. Quem pode ficar primeiro sem jogar?": "Compare the minimum and maximum turns for each side. If your opponent cuts a strip, the count changes. Who can run out of moves first?",
++  "Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.": "Compare segments of different lengths and predict who will run out of moves first.",
++  "Contar o mínimo e o máximo de turnos dos dois lados e prever quem fica sem jogar primeiro.": "Count the minimum and maximum turns for both sides and predict who runs out of moves first.",
++  "Jogar sempre duas casas sem comparar um segmento curto com um comprido.": "Always playing two squares without comparing a short segment with a long one.",
++  "Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.": "Before copying a move, check that it is legal and predict the next reply.",
++  "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.": "Distinguish strips only you can use up from strips your opponent can cut.",
++  "Rever duas derrotas e localizar onde a contagem de turnos mudou.": "Review two losses and find where the turn count changed.",
++  "• Segmentos possíveis agora: {0}": "• Available segments now: {0}"
+ }
+--- a/src/i18n/ne.json
++++ b/src/i18n/ne.json
+@@ -1553,5 +1553,16 @@
+   "Descobriste uma casa tua que continuará legal depois de qualquer jogada adversária. O que representa essa casa?": "विपक्षीको जुनसुकै चालपछि पनि वैध रहने आफ्नो घर भेट्यौ। त्यसले के जनाउँछ?",
+   "Certo: esta casa é uma reserva segura porque o adversário não a consegue bloquear.": "सही: विपक्षीले बन्द गर्न नसक्ने भएकाले यो घर सुरक्षित बाँकी चाल हो।",
+   "Distinguir casas exclusivas de reservas que o adversário não consegue bloquear.": "आफ्ना मात्र घर र विपक्षीले बन्द गर्न नसक्ने सुरक्षित घर छुट्याऊ।",
+-  "Comparar casas em disputa com reservas seguras para decidir a ordem.": "क्रम छान्न दुवैले खेल्न मिल्ने घर र सुरक्षित बाँकी घर तुलना गर।"
++  "Comparar casas em disputa com reservas seguras para decidir a ordem.": "क्रम छान्न दुवैले खेल्न मिल्ने घर र सुरक्षित बाँकी घर तुलना गर।",
++  "Após esta jogada: tu, {0} a {1} turnos; adversário, {2} a {3}.": "यो चालपछि: तिम्रा {0} देखि {1} पालो; विपक्षीका {2} देखि {3} पालो।",
++  "Esta jogada deixa o adversário sem jogadas e dá-lhe a vitória.": "यो चालले विपक्षीसँग कुनै चाल बाँकी राख्दैन र उसलाई जिताउँछ।",
++  "Esgotas as tuas faixas. O adversário ainda tem de jogar; depois ganhas por não teres jogada.": "तिम्रा पट्टीहरू सकिन्छन्। विपक्षीले अझै चाल चाल्नुपर्छ; त्यसपछि तिमीसँग चाल नहुने भएकाले तिमी जित्छौ।",
++  "Compara o mínimo e o máximo de turnos de cada lado. Se o adversário cortar uma faixa, a contagem muda. Quem pode ficar primeiro sem jogar?": "दुवै पक्षका न्यूनतम र अधिकतम पालो तुलना गर। विपक्षीले पट्टी काटेमा गन्ती बदलिन्छ। पहिले कसका चाल सकिन सक्छन्?",
++  "Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.": "फरक लम्बाइका खण्डहरू तुलना गर र पहिले कसका चाल सकिन्छन् भनेर अनुमान गर।",
++  "Contar o mínimo e o máximo de turnos dos dois lados e prever quem fica sem jogar primeiro.": "दुवै पक्षका न्यूनतम र अधिकतम पालो गन र पहिले कसका चाल सकिन्छन् भनेर अनुमान गर।",
++  "Jogar sempre duas casas sem comparar um segmento curto com um comprido.": "छोटो र लामो खण्ड तुलना नगरी सधैँ दुई कोठामा खेल्नु।",
++  "Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.": "कुनै चालको नक्कल गर्नुअघि त्यो वैध छ कि छैन जाँच र अर्को जवाफी चाल अनुमान गर।",
++  "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.": "तिमीले मात्र सकाउन सक्ने पट्टी र विपक्षीले काट्न सक्ने पट्टी छुट्याऊ।",
++  "Rever duas derrotas e localizar onde a contagem de turnos mudou.": "दुई हारको समीक्षा गर र पालोको गन्ती कहाँ बदलियो पत्ता लगाऊ।",
++  "• Segmentos possíveis agora: {0}": "• अहिले सम्भव खण्डहरू: {0}"
+ }
+--- a/src/i18n/pt-PT.json
++++ b/src/i18n/pt-PT.json
+@@ -1553,5 +1553,16 @@
+   "Descobriste uma casa tua que continuará legal depois de qualquer jogada adversária. O que representa essa casa?": "Descobriste uma casa tua que continuará legal depois de qualquer jogada adversária. O que representa essa casa?",
+   "Certo: esta casa é uma reserva segura porque o adversário não a consegue bloquear.": "Certo: esta casa é uma reserva segura porque o adversário não a consegue bloquear.",
+   "Distinguir casas exclusivas de reservas que o adversário não consegue bloquear.": "Distinguir casas exclusivas de reservas que o adversário não consegue bloquear.",
+-  "Comparar casas em disputa com reservas seguras para decidir a ordem.": "Comparar casas em disputa com reservas seguras para decidir a ordem."
++  "Comparar casas em disputa com reservas seguras para decidir a ordem.": "Comparar casas em disputa com reservas seguras para decidir a ordem.",
++  "Após esta jogada: tu, {0} a {1} turnos; adversário, {2} a {3}.": "Após esta jogada: tu, {0} a {1} turnos; adversário, {2} a {3}.",
++  "Esta jogada deixa o adversário sem jogadas e dá-lhe a vitória.": "Esta jogada deixa o adversário sem jogadas e dá-lhe a vitória.",
++  "Esgotas as tuas faixas. O adversário ainda tem de jogar; depois ganhas por não teres jogada.": "Esgotas as tuas faixas. O adversário ainda tem de jogar; depois ganhas por não teres jogada.",
++  "Compara o mínimo e o máximo de turnos de cada lado. Se o adversário cortar uma faixa, a contagem muda. Quem pode ficar primeiro sem jogar?": "Compara o mínimo e o máximo de turnos de cada lado. Se o adversário cortar uma faixa, a contagem muda. Quem pode ficar primeiro sem jogar?",
++  "Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.": "Compara segmentos de comprimentos diferentes e prevê quem ficará sem jogadas primeiro.",
++  "Contar o mínimo e o máximo de turnos dos dois lados e prever quem fica sem jogar primeiro.": "Contar o mínimo e o máximo de turnos dos dois lados e prever quem fica sem jogar primeiro.",
++  "Jogar sempre duas casas sem comparar um segmento curto com um comprido.": "Jogar sempre duas casas sem comparar um segmento curto com um comprido.",
++  "Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.": "Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.",
++  "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.": "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.",
++  "Rever duas derrotas e localizar onde a contagem de turnos mudou.": "Rever duas derrotas e localizar onde a contagem de turnos mudou.",
++  "• Segmentos possíveis agora: {0}": "• Segmentos possíveis agora: {0}"
+ }
+--- /dev/null
++++ b/scripts/quelhas-browser-smoke.mjs
+@@ -0,0 +1,89 @@
++// Real application and workers, in a browser owned by Agent Browser Hub.
++// HUB_CDP_URL=http://127.0.0.1:9330 node scripts/quelhas-browser-smoke.mjs
++import { chromium } from 'playwright';
++import { mkdir, writeFile } from 'node:fs/promises';
++import assert from 'node:assert/strict';
++const base = process.env.QUELHAS_TEST_URL ?? 'http://127.0.0.1:3410';
++if (!process.env.HUB_CDP_URL) throw new Error('Start Agent Browser Hub and set HUB_CDP_URL.');
++if (!['localhost', '127.0.0.1'].includes(new URL(base).hostname)) throw new Error('Use an isolated local app.');
++const browser = await chromium.connectOverCDP(process.env.HUB_CDP_URL);
++const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
++const failures = [], reports = [], serverSides = [];
++const levels = process.env.QUELHAS_LEVELS?.split(',').map(Number) ?? [1, 2, 3, 4, 5, 6];
++if (!levels.every(level => Number.isInteger(level) && level >= 1 && level <= 6)) throw new Error('Invalid levels');
++await context.addInitScript(() => {
++  const NativeWorker = window.Worker;
++  window.__quelhasWorkers = [];
++  window.Worker = class extends NativeWorker {
++    constructor(url, options) {
++      super(url, options);
++      this.record = { url: String(url), requests: [], replies: [], terminated: false };
++      if (String(url).includes('quelhas.worker')) window.__quelhasWorkers.push(this.record);
++      this.addEventListener('message', event => {
++        if (event.data.type === 'result') this.record.replies.push(event.data);
++      });
++    }
++    postMessage(request, options) { this.record.requests.push(request); super.postMessage(request, options); }
++    terminate() { this.record.terminated = true; super.terminate(); }
++  };
++});
++await context.route('**/api/ai/quelhas/**', async route => {
++  if (route.request().url().endsWith('/move')) serverSides.push(route.request().postDataJSON().toPlay);
++  await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ move: -1 }) });
++});
++const page = await context.newPage();
++page.on('pageerror', e => failures.push(e.message));
++page.on('console', msg => { if (msg.type() === 'error' && /\[QuelhasGame\]/.test(msg.text())) failures.push(msg.text()); });
++async function noLeak() {
++  assert.equal(await page.locator('[data-tutor-solution]').count(), 0);
++  assert.equal(await page.locator('.game-container [class*="ring-amber-400"], .game-container [class*="ring-rose-400"]').count(), 0);
++}
++try {
++  for (const level of levels) {
++    await page.goto(`${base}/?quelhas-smoke=${level}#/quelhas`, { waitUntil: 'networkidle' });
++    await page.getByRole('button', { name: new RegExp(`^N${level},`) }).click();
++    await page.getByRole('button', { name: /Horizontal.*2.º/ }).click();
++    await page.getByRole('button', { name: 'Manter como está', exact: true }).waitFor({ timeout: 12000 });
++    const trace = await page.evaluate(() => window.__quelhasWorkers);
++    assert(trace.length >= 2, 'Opponent and tutor must have their own workers');
++    const opponent = trace[0];
++    assert(opponent.replies.length > 0, `N${level}: no real opponent result`);
++    const result = opponent.replies.at(-1);
++    assert(['rust-wasm', 'ts-fallback', 'exact-endgame'].includes(result.engine));
++    assert(result.bestMove && result.bestMove.orientacao === 'vertical');
++    assert(result.elapsedMs <= [100, 250, 500, 1000, 2000, 2000][level - 1] + 100, `N${level}: budget`);
++    reports.push({ level, engine: result.engine, depth: result.depthReached, elapsedMs: result.elapsedMs, move: result.bestMove });
++    if (level === 6) {
++      await page.getByRole('button', { name: 'Trocar papéis', exact: true }).click();
++      await page.waitForFunction(previous => window.__quelhasWorkers[0].replies.length > previous, opponent.replies.length, { timeout: 12000 });
++      const swapped = await page.evaluate(() => window.__quelhasWorkers[0].replies.at(-1));
++      assert.equal(swapped.bestMove.orientacao, 'horizontal');
++      assert.deepEqual(serverSides.slice(-2), [1, 2], 'Server must receive orientations after swap');
++    } else {
++      await page.getByRole('button', { name: 'Manter como está', exact: true }).click();
++    }
++    if (level === 5) {
++      const panel = page.locator('[data-thinking-tutor]');
++      await panel.waitFor();
++      await noLeak();
++      await panel.getByRole('button', { name: 'Pedir uma pista', exact: true }).click();
++      await noLeak();
++      await panel.getByRole('button', { name: 'Ajudar a comparar', exact: true }).click();
++      await noLeak();
++      await panel.getByRole('button', { name: 'Ver um exemplo de jogada', exact: true }).click();
++      await panel.getByText(/^Após esta jogada: tu,/).waitFor({ timeout: 12000 });
++      assert.equal(await panel.getByText('Alternativa/apoio', { exact: true }).count(), 0);
++      await page.setViewportSize({ width: 390, height: 844 });
++      const dims = await page.evaluate(() => ({ width: innerWidth, content: document.documentElement.scrollWidth }));
++      if (dims.content > dims.width + 1) console.log(JSON.stringify(await page.evaluate(() => Array.from(document.querySelectorAll('body *')).filter(e => e.getBoundingClientRect().right > innerWidth + 1).map(e => ({ tag: e.tagName, cls: e.className, text: e.textContent?.slice(0,100), right:e.getBoundingClientRect().right })).slice(-15)), null, 2));
++      await mkdir('artifacts/quelhas-tempo', { recursive: true });
++      await page.screenshot({ path: 'artifacts/quelhas-tempo/tutor-mobile.png', fullPage: true });
++      assert(dims.content <= dims.width + 1, 'Mobile overflow');
++      await page.setViewportSize({ width: 1440, height: 1000 });
++    }
++    console.log(`N${level}: ${result.engine}, ${result.elapsedMs.toFixed(0)} ms, length ${result.bestMove.comprimento}`);
++  }
++  assert.deepEqual(failures, []);
++  await writeFile(process.env.QUELHAS_BROWSER_OUT ?? 'artifacts/quelhas-tempo/browser.json', JSON.stringify({ reports, serverSides, failures, hints: levels.includes(5) ? 'H0/H1/H2 hidden, H3 counts on request' : 'not run', mobile: levels.includes(5) ? '390px without overflow' : 'not run' }, null, 2) + '\n');
++  console.log(`PASS: levels ${levels.join(', ')}; details in artifacts/quelhas-tempo/browser.json`);
++} finally { await context.close(); await browser.close(); }
+--- /dev/null
++++ b/scripts/quelhas-tempo-arena.ts
+@@ -0,0 +1,117 @@
++/** Reproducible N5 before/after gate. Run alone: timed engines share the CPU.
++ * Baseline directory: engine.ts plus quelhas_wasm.js and quelhas_wasm_bg.wasm
++ * saved before the change. Each opening is played twice with roles exchanged.
++ * bun scripts/quelhas-tempo-arena.ts --baseline /tmp/crjm-quelhas-before --games 60 --budget 200 --seed 20260915
++ */
++import { readFile, mkdir, writeFile } from 'node:fs/promises';
++import { resolve, join } from 'node:path';
++import { pathToFileURL } from 'node:url';
++import { createHash } from 'node:crypto';
++import { calcularJogadasValidas, criarEstadoInicial, colocarSegmento, getOrientacaoJogador } from '../src/games/quelhas/logic';
++import type { QuelhasState, Segmento } from '../src/games/quelhas/types';
++import { trySolveEndgameMove, analyzeTurnCounts } from '../src/games/quelhas/ai/engine';
++import * as candidateWasm from '../src/games/quelhas/ai/wasm/pkg/quelhas_wasm.js';
++
++function flag(name: string, fallback: string) {
++  const i = process.argv.indexOf(`--${name}`);
++  return i < 0 ? fallback : process.argv[i + 1] ?? fallback;
++}
++function integer(name: string, fallback: number) {
++  const value = Number(flag(name, String(fallback)));
++  if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`Invalid --${name}`);
++  return value;
++}
++const games = integer('games', 60);
++const budgetMs = integer('budget', 200);
++const seed = integer('seed', 20260915);
++const baselineDir = resolve(flag('baseline', '/tmp/crjm-quelhas-before'));
++const output = resolve(flag('out', 'artifacts/quelhas-tempo/arena.json'));
++if (games < 50 || games % 2 !== 0) throw new Error('At least 50 games, an even number, required for a strength gate.');
++const baselineWasm: typeof candidateWasm = await import(pathToFileURL(join(baselineDir, 'quelhas_wasm.js')).href);
++const baselineEngine: { trySolveEndgameMove: typeof trySolveEndgameMove } = await import(pathToFileURL(join(baselineDir, 'engine.ts')).href);
++const oldBytes = await readFile(join(baselineDir, 'quelhas_wasm_bg.wasm'));
++const newBytes = await readFile('src/games/quelhas/ai/wasm/pkg/quelhas_wasm_bg.wasm');
++baselineWasm.initSync({ module: oldBytes });
++candidateWasm.initSync({ module: newBytes });
++const engines = { before: new baselineWasm.QuelhasEngine(18), after: new candidateWasm.QuelhasEngine(18) };
++type Contender = keyof typeof engines;
++function randomSource(seed: number) {
++  let value = seed >>> 0;
++  return () => {
++    value += 0x6d2b79f5;
++    let z = Math.imul(value ^ value >>> 15, 1 | value);
++    z ^= z + Math.imul(z ^ z >>> 7, 61 | z);
++    return ((z ^ z >>> 14) >>> 0) / 4294967296;
++  };
++}
++function opening(pair: number) {
++  const random = randomSource(seed + pair * 997);
++  let state = criarEstadoInicial('vs-computador');
++  for (let ply = 0; ply < 4; ply++) {
++    const next = colocarSegmento(state, state.jogadasValidas[Math.floor(random() * state.jogadasValidas.length)]!);
++    if (next.estado !== 'a-jogar') break;
++    state = next;
++  }
++  return state;
++}
++function decode(encoded: number): Segmento | null {
++  if (encoded < 0) return null;
++  const start = encoded & 127;
++  return { inicio: { linha: Math.floor(start / 10), coluna: start % 10 }, comprimento: encoded >> 7 & 15, orientacao: encoded >> 11 & 1 ? 'horizontal' : 'vertical' };
++}
++function key(move: Segmento) { return `${move.inicio.linha}:${move.inicio.coluna}:${move.comprimento}:${move.orientacao}`; }
++function choose(state: QuelhasState, contender: Contender) {
++  const start = performance.now();
++  const orientation = getOrientacaoJogador(state, state.jogadorAtual);
++  const solved = contender === 'before'
++    ? baselineEngine.trySolveEndgameMove(state.tabuleiro, orientation)
++    : trySolveEndgameMove(state.tabuleiro, orientation, Math.min(50, budgetMs * 0.1));
++  if (solved) return { move: solved, elapsedMs: performance.now() - start, source: 'exact-endgame', depth: 0 };
++  let occupied = 0n;
++  state.tabuleiro.flat().forEach((cell, index) => { if (cell === 'ocupada') occupied |= 1n << BigInt(index); });
++  const u32 = (shift: bigint) => Number(occupied >> shift & 0xffffffffn);
++  // Same N5 parameters. The exact-solver allowance belongs to the move budget.
++  const result = engines[contender].search(u32(0n), u32(32n), u32(64n), u32(96n), orientation === 'vertical' ? 0 : 1,
++    Math.max(1, budgetMs - (performance.now() - start)), 18, 0, 0);
++  return { move: decode(result.best_move), elapsedMs: performance.now() - start, source: 'rust-wasm', depth: result.depth_reached };
++}
++const stats = () => ({ wins: 0, illegal: 0, lengths: {} as Record<number, number>, latencies: [] as number[], overBudget: 0 });
++const totals = { before: stats(), after: stats() };
++const records = [];
++for (let game = 0; game < games; game++) {
++  engines.before.clear_tt(); engines.after.clear_tt();
++  let state = opening(Math.floor(game / 2));
++  const initialBoard = state.tabuleiro.map(r => r.map(c => c === 'vazia' ? '.' : '#').join('')).join('\n');
++  const afterAs = game % 2 === 0 ? 'jogador1' : 'jogador2';
++  const moves = [];
++  let illegalBy: Contender | null = null;
++  while (state.estado === 'a-jogar' && moves.length < 100) {
++    const contender = state.jogadorAtual === afterAs ? 'after' : 'before';
++    const result = choose(state, contender);
++    const tally = totals[contender];
++    tally.latencies.push(result.elapsedMs);
++    if (result.elapsedMs > budgetMs + 100) tally.overBudget++;
++    const legal = calcularJogadasValidas(state.tabuleiro, getOrientacaoJogador(state, state.jogadorAtual));
++    if (!result.move || !legal.some(m => key(m) === key(result.move!))) { tally.illegal++; illegalBy = contender; break; }
++    tally.lengths[result.move.comprimento] = (tally.lengths[result.move.comprimento] ?? 0) + 1;
++    moves.push({ contender, ...result, counts: analyzeTurnCounts(state.tabuleiro) });
++    state = colocarSegmento(state, result.move);
++  }
++  if (!illegalBy && state.estado === 'a-jogar') throw new Error('Unfinished game');
++  const winner: Contender = illegalBy ? (illegalBy === 'after' ? 'before' : 'after')
++    : (state.estado === 'vitoria-jogador1' ? 'jogador1' : 'jogador2') === afterAs ? 'after' : 'before';
++  totals[winner].wins++;
++  records.push({ game, pair: Math.floor(game / 2), afterAs, initialBoard, winner, illegalBy, moves });
++  console.log(JSON.stringify({ game: game + 1, games, winner, plies: moves.length, wins: { before: totals.before.wins, after: totals.after.wins } }));
++}
++function summary(contender: Contender) {
++  const t = totals[contender]; const ordered = [...t.latencies].sort((a,b) => a-b);
++  return { wins: t.wins, illegal: t.illegal, lengths: t.lengths, overBudget: t.overBudget,
++    latencyMs: { p50: ordered[Math.floor(ordered.length * .5)], p95: ordered[Math.floor(ordered.length * .95)], max: ordered.at(-1) } };
++}
++const report = { generatedAt: new Date().toISOString(), games, budgetMs, seed, openingPlies: 4, baselineDir,
++  wasmSha256: { before: createHash('sha256').update(oldBytes).digest('hex'), after: createHash('sha256').update(newBytes).digest('hex') },
++  summary: { before: summary('before'), after: summary('after') }, records };
++await mkdir(resolve(output, '..'), { recursive: true });
++await writeFile(output, `${JSON.stringify(report, null, 2)}\n`);
++console.log(JSON.stringify({ summary: report.summary, output }, null, 2));
+--- /dev/null
++++ b/docs/research/quelhas-tempo-correction.md
+@@ -0,0 +1,94 @@
++# Quelhas: contar turnos e controlar quem joga por último
++
++## Problema reproduzido
++
++Relato do professor: a IA escolhia quase sempre segmentos de duas casas, e os alunos conseguiam deixá-la com a última jogada, mesmo nos níveis altos.
++
++A posição de regressão tem uma faixa vertical de dez casas e uma horizontal independente de oito. Vertical joga primeiro. A vertical tem capacidade para **1–5 turnos** e a horizontal para **1–4**. A vertical ganha ao esgotar a sua faixa: horizontal ainda tem de jogar e a seguir vertical ganha por não ter jogada.
++
++Antes da correção:
++
++- `calcularIntervalosJogadas` devolvia 45 e 28: contava colocações sobrepostas, não turnos. Esta função pública tinha testes que aceitavam esse erro; a avaliação interna já contava faixas, mas interpretava-as mal.
++- Os motores TS e WASM, a profundidade 1, escolhiam um segmento de seis casas e desperdiçavam a vitória. A utilidade da avaliação estava invertida, incluindo as posições ganhas.
++- A profundidade 2 encontrava a vitória com oito casas. O ajuste de dificuldade do N4 substituía-a por sete casas, perdendo.
++- O solver de finais recusava esta posição: havia 45 colocações verticais, acima do seu limite de 16, apesar de haver poucos turnos efetivos.
++- Cancelar o tutor rejeitava a promessa sem interromper o worker partilhado. Dois pedidos de 1000 ms demoravam aproximadamente 1002 e 2002 ms a responder. O segundo podia ultrapassar o prazo da interface, que então jogava o primeiro segmento legal.
++- No WASM, uma repetição da pesquisa com uma janela de avaliação maior atualizava a pontuação mas conservava a jogada da pesquisa anterior. Uma pesquisa interrompida também podia guardar informação incompleta na cache.
++
++## O significado das contagens
++
++As contagens são recalculadas para os dois jogadores em cada posição avaliada.
++
++| Medida | Cálculo e significado |
++| --- | --- |
++| Mínimo atual | Uma jogada por faixa contínua de pelo menos duas casas, consumindo-a de uma vez. |
++| Máximo atual | Soma de `floor(comprimento / 2)` por faixa, usando segmentos de duas casas. |
++| Faixas exclusivas | Nenhuma casa pode ser ocupada por uma jogada do adversário. |
++| Mínimo protegido | Número de faixas com pelo menos um par adjacente de casas que o adversário nunca pode ocupar. Cada uma exige pelo menos uma jogada própria para desaparecer. |
++
++Mínimo/máximo atuais descrevem a capacidade das faixas **sem intervenção do adversário**. Um corte pode dividir uma faixa ou eliminar opções; por isso o mínimo atual não é apresentado como um número garantido de turnos da partida. O máximo continua a limitar o número de jogadas próprias possíveis. O mínimo protegido é um limite inferior sobre o trabalho que só o próprio jogador pode fazer, enquanto a partida continuar.
++
++### Resultados que as contagens permitem provar
++
++Para A a jogar e B a seguir:
++
++- Sem jogadas de A: A ganha. Se só B ficou sem jogadas, A perde ao jogar.
++- Sem qualquer interseção entre faixas: A ganha quando `minA <= minB`. Ambos podem consumir uma faixa por turno. A igualdade favorece quem começa.
++- Mesmo com interseções: `maxA <= protegidoB` garante a vitória de A; `maxB < protegidoA` garante a vitória de B.
++- Nos restantes casos, as diferenças de contagem orientam a pesquisa. Não são uma prova baseada na paridade do total.
++
++Estas condições resultam das regras e foram verificadas contra um solucionador independente em todas as 512 configurações de um canto 3×3, para ambos os jogadores. O teste não demonstra jogo perfeito no tabuleiro 10×10.
++
++## Alterações
++
++- Avaliação coerente com misère em TS e Rust/WASM; desaparece o prémio automático por segmentos curtos.
++- N3–N5 conservam a jogada calculada. N1/N2 mantêm seleção simplificada e todos continuam com os seus orçamentos de pesquisa.
++- Finais selecionados pela capacidade em turnos; contagens protegidas e faixas independentes permitem encurtar a prova. O solver tem prazo além do limite de nós. Uma tentativa de prova incompleta devolve o controlo à pesquisa normal.
++- Pesquisa completa após falha da janela devolve a jogada correspondente à pontuação. Resultados interrompidos não ficam guardados como pesquisa completa. Existe uma jogada legal avaliada mesmo antes de terminar a primeira profundidade.
++- Tutor e adversário têm workers distintos; cancelar interrompe o worker ocupado. A recuperação da interface usa uma pesquisa curta em vez do primeiro segmento da lista.
++- A decisão de trocar papéis usa a avaliação corrigida e respeita o turno consumido pela troca.
++- N6 resolve estes finais antes de consultar a rede e envia a orientação efetiva após uma troca; cancelar também interrompe o pedido HTTP.
++- O tutor usa a pesquisa sem erros artificiais do nível fácil, explica os intervalos após a jogada e só classifica a jogada efetivamente pesquisada. As antigas alternativas por preferência geométrica foram retiradas. As pistas continuam graduais.
++
++## Comparação antes/depois
++
++Artefacto: [arena.json](../../artifacts/quelhas-tempo/arena.json).
++
++- 60 partidas, 30 aberturas emparelhadas de quatro lances, seed **20260915**.
++- N5 WASM e solver de finais de cada versão; **200 ms por jogada para ambos**; execução serializada, sem treino GPU.
++- Resultado: **55–5 a favor da correção** (91,7%). Zero jogadas ilegais.
++- Segmentos de duas casas: 790/889 (88,9%) antes; 610/864 (70,6%) depois. Os comprimentos são escolhidos pelas consequências; não há quota de segmentos longos.
++- Maior tempo por jogada: 201,2 ms antes e 203,9 ms depois. Nenhuma ultrapassagem de orçamento +100 ms.
++
++Uma segunda execução, com a compilação final, **50 partidas**, seed **20260916** e **100 ms por jogada**, terminou **43–7** (86%) a favor da correção. Zero jogadas ilegais ou ultrapassagens de orçamento +100 ms; máximo de 105,8 ms para o novo motor. [arena-final.json](../../artifacts/quelhas-tempo/arena-final.json) identifica o WASM final por SHA-256.
++
++Estes ensaios medem melhoria perante o motor anterior com orçamento igual. Não medem aprendizagem dos alunos, força absoluta ou equilíbrio entre todos os níveis, nem substituem um ensaio de aula com o orçamento habitual de 2 s do N5.
++
++### Reprodução
++
++Base de código inicial: `65b494945cc054e1ca9d74082553f4c7b4168e2c`. Os motores não tinham alterações locais antes deste trabalho. A cópia original está guardada em [baseline.tar.gz](../../artifacts/quelhas-tempo/baseline.tar.gz), incluindo o WASM utilizado; os hashes dos dois WASM estão no JSON.
++
++```bash
++mkdir -p /tmp/crjm-quelhas-before
++tar -xzf artifacts/quelhas-tempo/baseline.tar.gz -C /tmp/crjm-quelhas-before
++bun test src/games/quelhas/ai
++cargo test --manifest-path wasm/quelhas/Cargo.toml -p quelhas-ai
++bun run build
++bun scripts/quelhas-tempo-arena.ts --baseline /tmp/crjm-quelhas-before --games 60 --budget 200 --seed 20260915
++```
++
++O diretório `--baseline` tem de conter o motor TS original `engine.ts`, `quelhas_wasm.js` e `quelhas_wasm_bg.wasm`. Para repetir noutra máquina, compilar o commit inicial numa cópia isolada e guardar esses três ficheiros antes de compilar a versão corrigida.
++
++## Validação da aplicação
++
++- Suite completa final: **525 testes, 15 398 asserções, sem falhas**.
++- Build completo com os cinco WASM e verificação i18n: passou.
++- Classroom smoke: API, seis workers e 21 verificações visuais (seis jogos e Laboratório em desktop, tablet e telemóvel). Learner-core e2e: passou.
++- Rust: três testes, incluindo prova/decisão em todas as 1024 combinações de posição e jogador no canto 3×3 e fallback legal com prazo esgotado.
++- Browser real pelo Agent Browser Hub: N1–N5 executaram WASM nos orçamentos de 100/250/500/1000/2000 ms; N6 recuperou de uma resposta neural inválida. A troca enviou orientação 1 e depois 2 ao servidor simulado, e o worker jogou na orientação horizontal após a troca.
++- Dois workers, H0/H1/H2 sem solução visível e H3 com contagens apenas a pedido. As contagens não geram automaticamente a etiqueta «Linha forçada».
++- Ecrã de 390 px sem transbordo, incluindo o indicador do jogador horizontal ativo. O percurso do Quelhas também deixou de recomendar segmentos curtos por princípio.
++- `tsc --noEmit`: sem novas categorias de erro face ao estado anterior desta branch; 17 categorias antigas resolvidas. O repositório ainda tem erros anteriores, pelo que a verificação global de tipos não passa.
++- Artefactos: [browser.json](../../artifacts/quelhas-tempo/browser.json) e [captura móvel](../../artifacts/quelhas-tempo/tutor-mobile.png).
++
++Validação local na branch `learning/strategy-first`. A publicação não foi executada.

@@ -309,9 +309,9 @@ pelo GitHub Pages:
 - `crjmai-torneio.infantinho.xyz` → servidor WebSocket/admin de torneios, porta 4000;
 - `127.0.0.1:8100` → serviço FastAPI/PyTorch da IA N6 do Atari Go, acessível apenas através do proxy da app.
 
-Os processos Bun são unidades `systemd --user`; o serviço de inferência é um
-container Docker com `--restart unless-stopped`; o túnel Cloudflare é gerido
-pelo serviço systemd existente desta máquina.
+Os processos Bun são unidades `systemd --user`; os serviços de inferência são
+contentores Docker com arranque manual (`--restart no`); o túnel Cloudflare é
+gerido pelo serviço systemd existente desta máquina.
 
 ## 🧠 IA e treino na RTX 5070 Ti
 

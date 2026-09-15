@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { AIRequestV1 } from '../../../ai-core';
-import { criarEstadoInicial, colocarSegmento } from '../logic';
+import { criarEstadoInicial, colocarSegmento, parseTabuleiroASCII } from '../logic';
+import { INITIAL_METRICS, type AIMetrics } from './types';
 import type { QuelhasState, Segmento } from '../types';
 import { QuelhasV1Adapter, mapLevelToQuelhasDifficulty } from './v1-adapter';
 
@@ -22,16 +23,17 @@ function makeRequest(
   };
 }
 
-function makeClient(bestMove: Segmento | null, metrics?: Partial<any>) {
+function makeClient(bestMove: Segmento | null, metrics?: Partial<AIMetrics>) {
   return {
     metrics: {
+      ...INITIAL_METRICS,
       lastTimeMs: 12,
       lastDepth: 4,
       lastNodes: 321,
       lastTTHitRate: 0.2,
       lastScore: 42,
       fromBook: false,
-      lastEngine: 'ts-fallback',
+      lastEngine: 'ts-fallback' as const,
       lastUsedWasm: false,
       ...metrics,
     },
@@ -47,14 +49,15 @@ describe('QuelhasV1Adapter', () => {
   test('maps state into AIResponseV1-style payload with mandatory fields', async () => {
     const state = criarEstadoInicial('vs-computador');
     const bestMove = state.jogadasValidas[0]!;
-    const adapter = new QuelhasV1Adapter({ client: makeClient(bestMove) as any });
+    const adapter = new QuelhasV1Adapter({ client: makeClient(bestMove) });
 
     const response = await adapter.compute(makeRequest(state));
 
     expect(response.gameId).toBe('quelhas');
     expect(response.bestMove).toEqual(bestMove);
     expect(response.topMoves.length).toBeGreaterThan(0);
-    expect(response.topMoves.length).toBeLessThanOrEqual(3);
+    expect(response.topMoves).toHaveLength(1);
+    expect(response.topMoves[0]!.reasonShort).toContain('turnos');
     expect(response.explainText.length).toBeGreaterThan(0);
     expect(response.pedagogy?.hintLevelSuggested).toBeDefined();
     expect(response.stats.engine).toBe('ts-fallback');
@@ -71,7 +74,7 @@ describe('QuelhasV1Adapter', () => {
       tabuleiro: filled,
       jogadasValidas: [],
     };
-    const adapter = new QuelhasV1Adapter({ client: makeClient(null) as any });
+    const adapter = new QuelhasV1Adapter({ client: makeClient(null) });
 
     const response = await adapter.compute(makeRequest(state));
 
@@ -81,27 +84,40 @@ describe('QuelhasV1Adapter', () => {
     expect(response.pedagogy?.hintLevelSuggested).toBe('H3');
   });
 
+  test('explains a long winning move with both turn intervals', async () => {
+    const state = { ...criarEstadoInicial('vs-computador'), tabuleiro: parseTabuleiroASCII(
+      Array.from({ length: 10 }, (_, r) => r === 4 ? '.#........' : '.#########').join('\n')) };
+    const move: Segmento = { inicio: { linha: 1, coluna: 0 }, comprimento: 8, orientacao: 'vertical' };
+    const response = await new QuelhasV1Adapter({ client: makeClient(move) }).compute(makeRequest(state));
+    expect(response.explainText).toContain('ganhas por não teres jogada');
+    expect(response.topMoves[0]?.reasonShort).toBe('Após esta jogada: tu, 0 a 0 turnos; adversário, 1 a 4.');
+  });
+
   test('maps each core level to a distinct search preset', () => {
     expect(mapLevelToQuelhasDifficulty(1)).toBe('beginner');
     expect(mapLevelToQuelhasDifficulty(2)).toBe('easy');
     expect(mapLevelToQuelhasDifficulty(3)).toBe('medium');
     expect(mapLevelToQuelhasDifficulty(4)).toBe('hard');
     expect(mapLevelToQuelhasDifficulty(5)).toBe('master');
+    expect(mapLevelToQuelhasDifficulty(6)).toBe('master');
   });
 
   test('forwards the common N1-N5 classroom budget', async () => {
     let receivedBudget = 0;
+    let receivedDifficulty: unknown;
     const state = criarEstadoInicial('vs-computador');
     const client = {
       ...makeClient(state.jogadasValidas[0]!),
       async getBestMove(_state: QuelhasState, _difficulty: unknown, options?: { timeBudgetMs?: number }) {
         receivedBudget = options?.timeBudgetMs ?? 0;
+        receivedDifficulty = _difficulty;
         return state.jogadasValidas[0]!;
       },
     };
 
-    await new QuelhasV1Adapter({ client: client as any }).compute(makeRequest(state, { level: 1 }));
+    await new QuelhasV1Adapter({ client: client }).compute(makeRequest(state, { level: 1 }));
     expect(receivedBudget).toBe(100);
+    expect(receivedDifficulty).toBe('master');
   });
 
   test('emits high-severity threat when only one legal move remains', async () => {
@@ -109,7 +125,7 @@ describe('QuelhasV1Adapter', () => {
     state = colocarSegmento(state, state.jogadasValidas[0]!);
     const forcedMove = state.jogadasValidas[0]!;
     const forcedState: QuelhasState = { ...state, jogadasValidas: [forcedMove] };
-    const adapter = new QuelhasV1Adapter({ client: makeClient(forcedMove, { lastEngine: 'rust-wasm', lastUsedWasm: true }) as any });
+    const adapter = new QuelhasV1Adapter({ client: makeClient(forcedMove, { lastEngine: 'rust-wasm', lastUsedWasm: true }) });
 
     const response = await adapter.compute(makeRequest(forcedState, { level: 4 }));
 

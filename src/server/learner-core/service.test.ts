@@ -1,3 +1,4 @@
+import { SUPPORTED_LOCALES } from '../../i18n/locale';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rmSync } from 'node:fs';
 import type { LearnerCoreConfig } from './config';
@@ -47,6 +48,17 @@ describe('learner core service', () => {
     expect(dashboard.profile.totalXp).toBe(0);
     expect(dashboard.profile.currentStreakDays).toBe(0);
     expect(dashboard.profile.lastActiveOn).toBeNull();
+  });
+
+  test('returns the stored supported locale and safely defaults older unknown values', () => {
+    const { db, service } = createService();
+    const session = service.ensureSession(null);
+    for (const locale of SUPPORTED_LOCALES) {
+      db.query('UPDATE learner_profiles SET locale = ? WHERE user_id = ?').run(locale, session.userId);
+      expect(service.getDashboard(session.userId).profile.locale).toBe(locale);
+    }
+    db.query('UPDATE learner_profiles SET locale = ? WHERE user_id = ?').run('unknown', session.userId);
+    expect(service.getDashboard(session.userId).profile.locale).toBe('pt-PT');
   });
 
   test('persiste o progresso por nível de dificuldade com streaks', () => {

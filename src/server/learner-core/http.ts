@@ -6,6 +6,7 @@ import type { LearnerCommandResponse, LearnerDashboardPayload } from '../../type
 import { getLearnerCoreConfig } from './config';
 import { getLearnerCoreDb } from './db';
 import { LearnerCoreService } from './service';
+import { StrategyPracticeService } from './strategy-service';
 
 function json(data: LearnerDashboardPayload | LearnerCommandResponse | Record<string, unknown>, init?: ResponseInit): Response {
   return Response.json(data, init);
@@ -30,6 +31,7 @@ function getRuntime() {
   return {
     config,
     service: new LearnerCoreService(getLearnerCoreDb(config)),
+    strategy: new StrategyPracticeService(getLearnerCoreDb(config)),
   };
 }
 
@@ -80,7 +82,7 @@ function withSession(req: Request): { userId: string; headers: Headers } {
 }
 
 export async function handleAppRequest(req: Request, _server: Server<unknown>): Promise<Response> {
-  const { service } = getRuntime();
+  const { service, strategy } = getRuntime();
   const url = new URL(req.url);
   if (url.pathname === '/api/health') {
     return json({ ok: true, service: 'learner-core-v1' });
@@ -94,6 +96,24 @@ export async function handleAppRequest(req: Request, _server: Server<unknown>): 
   if (url.pathname === '/api/learner/dashboard' && req.method === 'GET') {
     const { userId, headers } = withSession(req);
     return json(service.getDashboard(userId), { headers });
+  }
+
+  if (url.pathname === '/api/learner/strategy-practice/progress' && req.method === 'GET') {
+    const { userId, headers } = withSession(req);
+    return json({ progress: strategy.progress(userId) }, { headers });
+  }
+
+  if (url.pathname.startsWith('/api/learner/strategy-practice/') && req.method === 'POST') {
+    try {
+      const { userId, headers } = withSession(req);
+      const body = await readJson<{ gameId: GameId; attemptId: string; answer: string; prediction: string }>(req);
+      const action = url.pathname.slice('/api/learner/strategy-practice/'.length);
+      if (action === 'start') return json({ practice: strategy.start(userId, body.gameId) }, { headers });
+      if (action === 'hint') return json({ practice: strategy.hint(userId, body.attemptId) }, { headers });
+      if (action === 'answer') return json({ practice: strategy.answer(userId, body.attemptId, body.answer, body.prediction) }, { headers });
+    } catch (error) {
+      return errorResponse(error);
+    }
   }
 
   if (url.pathname === '/api/learner/import-local-profile' && req.method === 'POST') {

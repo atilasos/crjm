@@ -114,7 +114,7 @@ limita cada budget a 2,2 s, evitando filas de trabalhos GPU abandonados.
 
 ```bash
 docker rm -f crjm-az-serve 2>/dev/null || true
-docker run -d --name crjm-az-serve --restart unless-stopped \
+docker run -d --name crjm-az-serve --restart no \
   --runtime=nvidia --gpus all \
   -e HOST=0.0.0.0 \
   -p 127.0.0.1:8100:8100 \
@@ -194,7 +194,7 @@ rica (31% das jogadas com comprimento ≥3, incluindo linhas quase completas)
 Serviço de inferência (porta 8101, com solver exato de finais no serviço):
 
 ```bash
-docker run -d --name crjm-qz-serve --restart unless-stopped \
+docker run -d --name crjm-qz-serve --restart no \
   --runtime=nvidia --gpus all -e HOST=0.0.0.0 -e PORT=8101 \
   -p 127.0.0.1:8101:8101 -v /home/proteu/crjm/training:/workspace/training \
   -w /workspace/training pytorch/pytorch:2.7.1-cuda12.8-cudnn9-runtime \

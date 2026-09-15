@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import type { ReactNode } from 'react';
 
 interface GameCardProps {
@@ -13,6 +14,7 @@ interface GameCardProps {
 }
 
 export function GameCard({ titulo, descricao, vignette, acento = 'var(--tinta)', ciclos = [], onClick }: GameCardProps) {
+  const { t } = useTranslation();
   return (
     <button
       type="button"
@@ -21,32 +23,32 @@ export function GameCard({ titulo, descricao, vignette, acento = 'var(--tinta)',
     >
       {/* Vignette: o tabuleiro é a identidade */}
       <div className="mx-auto mb-4 h-36 w-36" aria-hidden="true">
-        {vignette}
+        {t(vignette)}
       </div>
 
       <h2
         className="mb-2 text-xl font-bold [color:var(--tinta)]"
         style={{ fontFamily: 'var(--font-display)' }}
       >
-        {titulo}
+        {t(titulo)}
       </h2>
-      <p className="text-sm [color:var(--tinta-suave)]">{descricao}</p>
+      <p className="text-sm [color:var(--tinta-suave)]">{t(descricao)}</p>
 
       {ciclos.length > 0 && (
-        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Ciclos de ensino">
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label={t("Ciclos de ensino")}>
           {ciclos.map(ciclo => (
             <li
               key={ciclo}
               className="rounded-full border px-2 py-0.5 text-xs font-bold [border-color:var(--linha)] [color:var(--tinta-suave)]"
             >
-              {ciclo}
+              {t(ciclo)}
             </li>
           ))}
         </ul>
       )}
 
       <div className="mt-4 flex items-center text-sm font-bold" style={{ color: acento }}>
-        <span>Jogar agora</span>
+        <span>{t("Jogar agora")}</span>
         <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
         </svg>

@@ -1,0 +1,158 @@
+[
+  {
+    "path": "src/games/quelhas/ai/engine.ts",
+    "new": false,
+    "added": 106,
+    "removed": 169
+  },
+  {
+    "path": "src/games/quelhas/ai/engine.misere.test.ts",
+    "new": false,
+    "added": 6,
+    "removed": 5
+  },
+  {
+    "path": "src/games/quelhas/ai/engine.tempo.test.ts",
+    "new": true,
+    "added": 107,
+    "removed": 0
+  },
+  {
+    "path": "src/games/quelhas/ai/ai-client.ts",
+    "new": false,
+    "added": 34,
+    "removed": 6
+  },
+  {
+    "path": "src/games/quelhas/ai/ai-client.test.ts",
+    "new": true,
+    "added": 77,
+    "removed": 0
+  },
+  {
+    "path": "src/games/quelhas/ai/types.ts",
+    "new": false,
+    "added": 3,
+    "removed": 3
+  },
+  {
+    "path": "src/games/quelhas/ai/quelhas.worker.ts",
+    "new": false,
+    "added": 14,
+    "removed": 44
+  },
+  {
+    "path": "src/games/quelhas/ai/v1-adapter.ts",
+    "new": false,
+    "added": 41,
+    "removed": 97
+  },
+  {
+    "path": "src/games/quelhas/ai/v1-adapter.test.ts",
+    "new": false,
+    "added": 24,
+    "removed": 8
+  },
+  {
+    "path": "src/games/quelhas/QuelhasGame.tsx",
+    "new": false,
+    "added": 20,
+    "removed": 29
+  },
+  {
+    "path": "src/games/quelhas/logic.ts",
+    "new": false,
+    "added": 17,
+    "removed": 142
+  },
+  {
+    "path": "src/games/quelhas/logic.test.ts",
+    "new": false,
+    "added": 10,
+    "removed": 13
+  },
+  {
+    "path": "wasm/quelhas/quelhas-ai/src/eval.rs",
+    "new": false,
+    "added": 65,
+    "removed": 160
+  },
+  {
+    "path": "wasm/quelhas/quelhas-ai/src/engine.rs",
+    "new": false,
+    "added": 66,
+    "removed": 15
+  },
+  {
+    "path": "wasm/quelhas/quelhas-ai/tests/tempo.rs",
+    "new": true,
+    "added": 123,
+    "removed": 0
+  },
+  {
+    "path": "src/ai-core/types.ts",
+    "new": false,
+    "added": 1,
+    "removed": 1
+  },
+  {
+    "path": "src/ai-core/tutor-context.ts",
+    "new": false,
+    "added": 4,
+    "removed": 3
+  },
+  {
+    "path": "src/ai-core/tutor-context.test.ts",
+    "new": false,
+    "added": 14,
+    "removed": 1
+  },
+  {
+    "path": "src/ai-core/training-paths.ts",
+    "new": false,
+    "added": 5,
+    "removed": 5
+  },
+  {
+    "path": "src/components/PlayerInfo.tsx",
+    "new": false,
+    "added": 3,
+    "removed": 3
+  },
+  {
+    "path": "src/i18n/en.json",
+    "new": false,
+    "added": 12,
+    "removed": 1
+  },
+  {
+    "path": "src/i18n/ne.json",
+    "new": false,
+    "added": 12,
+    "removed": 1
+  },
+  {
+    "path": "src/i18n/pt-PT.json",
+    "new": false,
+    "added": 12,
+    "removed": 1
+  },
+  {
+    "path": "scripts/quelhas-browser-smoke.mjs",
+    "new": true,
+    "added": 89,
+    "removed": 0
+  },
+  {
+    "path": "scripts/quelhas-tempo-arena.ts",
+    "new": true,
+    "added": 117,
+    "removed": 0
+  },
+  {
+    "path": "docs/research/quelhas-tempo-correction.md",
+    "new": true,
+    "added": 94,
+    "removed": 0
+  }
+]

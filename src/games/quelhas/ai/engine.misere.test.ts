@@ -19,11 +19,12 @@ function makeBoard(emptyIdxs: number[]): Celula[][] {
 }
 
 describe('Quelhas AI (misère)', () => {
-  test('os cinco níveis reduzem progressivamente os erros controlados', () => {
-    expect(DIFFICULTY_PRESETS.beginner.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.easy.selectionQuantile);
-    expect(DIFFICULTY_PRESETS.easy.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.medium.selectionQuantile);
-    expect(DIFFICULTY_PRESETS.medium.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.hard.selectionQuantile);
-    expect(DIFFICULTY_PRESETS.hard.selectionQuantile).toBeGreaterThan(DIFFICULTY_PRESETS.master.selectionQuantile);
+  test('N3–N5 conservam o resultado da pesquisa, com orçamentos crescentes', () => {
+    expect(DIFFICULTY_PRESETS.medium.selectionQuantile).toBe(0);
+    expect(DIFFICULTY_PRESETS.hard.selectionQuantile).toBe(0);
+    expect(DIFFICULTY_PRESETS.master.selectionQuantile).toBe(0);
+    expect(DIFFICULTY_PRESETS.medium.maxDepth).toBeLessThan(DIFFICULTY_PRESETS.hard.maxDepth);
+    expect(DIFFICULTY_PRESETS.hard.maxDepth).toBeLessThan(DIFFICULTY_PRESETS.master.maxDepth);
   });
 
   test('N1 não preserva a melhor variante numa posição com alternativas', () => {

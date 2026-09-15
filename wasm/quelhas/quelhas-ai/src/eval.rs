@@ -1,194 +1,99 @@
 use quelhas_core::{apply_move, extract_runs, Occupancy, Run, BOARD_SIZE};
 
+/// Turn capacities of today's runs without interference. Shared runs can be
+/// split or removed. protected_min alone is an unavoidable lower bound on work.
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Metrics {
     pub min: i32,
     pub max: i32,
     pub min_excl: i32,
     pub max_excl: i32,
+    pub protected_min: i32,
 }
 
-#[inline]
-fn add_run_cells(mut mask: Occupancy, run: Run) -> Occupancy {
-    let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
-    let mut idx = run.start as usize;
-    for _ in 0..(run.len as usize) {
-        mask.set(idx);
-        idx += delta;
+fn playable_mask(runs: &[Run]) -> Occupancy {
+    let mut mask = Occupancy::default();
+    for run in runs {
+        let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
+        for offset in 0..run.len as usize {
+            mask.set(run.start as usize + offset * delta);
+        }
     }
     mask
 }
 
-#[inline]
-fn run_overlaps(mask: Occupancy, run: Run) -> bool {
-    let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
-    let mut idx = run.start as usize;
-    for _ in 0..(run.len as usize) {
-        if mask.is_set(idx) {
-            return true;
+fn count_turns(runs: &[Run], opponent_mask: Occupancy) -> Metrics {
+    let mut counts = Metrics::default();
+    for run in runs {
+        counts.min += 1;
+        counts.max += run.len as i32 / 2;
+        let delta = if run.orient == 0 { BOARD_SIZE } else { 1 };
+        let protected = |offset: usize| !opponent_mask.is_set(run.start as usize + offset * delta);
+        if (0..run.len as usize).all(protected) {
+            counts.min_excl += 1;
+            counts.max_excl += run.len as i32 / 2;
         }
-        idx += delta;
+        if (1..run.len as usize).any(|offset| protected(offset - 1) && protected(offset)) {
+            counts.protected_min += 1;
+        }
     }
-    false
+    counts
 }
 
-fn compute_metrics(occ: Occupancy, orient: u8, opp_playable_mask: Occupancy) -> Metrics {
-    let runs = extract_runs(occ, orient);
-    let mut m = Metrics::default();
-    for r in runs {
-        m.min += 1;
-        m.max += (r.len as i32) / 2;
-        let exclusive = !run_overlaps(opp_playable_mask, r);
-        if exclusive {
-            m.min_excl += 1;
-            m.max_excl += (r.len as i32) / 2;
-        }
+pub fn analyze_turn_counts(occ: Occupancy) -> [Metrics; 2] {
+    let vertical = extract_runs(occ, 0);
+    let horizontal = extract_runs(occ, 1);
+    [
+        count_turns(&vertical, playable_mask(&horizontal)),
+        count_turns(&horizontal, playable_mask(&vertical)),
+    ]
+}
+
+pub fn tempo_outcome(my: Metrics, opp: Metrics) -> Option<bool> {
+    if my.max == 0 {
+        return Some(true);
     }
-    m
+    if opp.max == 0 {
+        return Some(false);
+    }
+    // Independent runs: both players can empty one whole run per turn.
+    // The first player wins ties because the opponent must take their turn.
+    if my.min == my.min_excl && opp.min == opp.min_excl {
+        return Some(my.min <= opp.min);
+    }
+    if my.max <= opp.protected_min {
+        return Some(true);
+    }
+    if opp.max < my.protected_min {
+        return Some(false);
+    }
+    None
 }
 
 pub fn evaluate_misere(occ: Occupancy, side_to_move: u8) -> i32 {
-    let runs_v = extract_runs(occ, 0);
-    let runs_h = extract_runs(occ, 1);
-
-    let mut mask_v = Occupancy::default();
-    let mut mask_h = Occupancy::default();
-    for r in runs_v {
-        mask_v = add_run_cells(mask_v, r);
+    let counts = analyze_turn_counts(occ);
+    let my = counts[side_to_move as usize];
+    let opp = counts[(1 - side_to_move) as usize];
+    if let Some(win) = tempo_outcome(my, opp) {
+        return if win { 90_000 } else { -90_000 };
     }
-    for r in runs_h {
-        mask_h = add_run_cells(mask_h, r);
-    }
-
-    let m_v = compute_metrics(occ, 0, mask_h);
-    let m_h = compute_metrics(occ, 1, mask_v);
-
-    let (my, opp) = if side_to_move == 0 { (m_v, m_h) } else { (m_h, m_v) };
-
-    // Casos terminais misère:
-    // - Se eu não tenho jogadas, eu ganho (não posso jogar).
-    // - Se o adversário não tem jogadas e eu tenho, sou forçado a jogar = perco.
-    if my.min == 0 {
-        return 100_000;
-    }
-    if opp.min == 0 {
-        return -100_000;
-    }
-
-    // ========== ANÁLISE DE PARIDADE MISÈRE ==========
-    //
-    // Em misère com jogadas alternadas:
-    // - Quem faz a última jogada PERDE
-    // - Cada jogador pode escolher entre min e max jogadas (flexibilidade)
-    // - O objetivo é forçar o adversário a fazer a última jogada
-    //
-    // Chave: Se eu tenho flexibilidade (max > min), posso CONTROLAR a paridade
-    // do total de jogadas para forçar o adversário a ser o último.
-
-    let my_flex = my.max - my.min;   // Quantas jogadas extra posso escolher fazer
-    let opp_flex = opp.max - opp.min; // Quantas jogadas extra o adversário pode fazer
-
-    let mut score = 0i32;
-
-    // 1. CONTROLO ABSOLUTO: Se minhas exclusivas cobrem todas as jogadas possíveis do adversário
-    if my.max_excl >= opp.max && my.max_excl > 0 {
-        // Posição dominante: posso acompanhar todas as jogadas do adversário
-        let controlo = my.max_excl - opp.max;
-        score += 8000 + controlo * 500;
-    }
-    // Se o adversário tem este controlo sobre mim
-    else if opp.max_excl >= my.max && opp.max_excl > 0 {
-        let controlo_adv = opp.max_excl - my.max;
-        score -= 8000 + controlo_adv * 500;
-    }
-
-    // 2. ANÁLISE DE PARIDADE PARA ENDGAME
-    let total_max = my.max + opp.max;
-    let total_min = my.min + opp.min;
-
-    if total_max <= 20 {
-        // Cálculo de paridade: Em jogadas alternadas (eu primeiro),
-        // se o total for PAR, o adversário faz a última = EU GANHO
-        // se o total for ÍMPAR, eu faço a última = EU PERCO
-
-        // Se posso escolher qualquer paridade e adversário não pode compensar
-        if my_flex > opp_flex {
-            // Eu controlo a paridade - posição vantajosa
-            score += 3000 + (my_flex - opp_flex) * 200;
-        } else if opp_flex > my_flex {
-            // Adversário controla a paridade
-            score -= 3000 + (opp_flex - my_flex) * 200;
-        } else {
-            // Mesma flexibilidade - quem joga primeiro pode ter desvantagem
-            if my_flex == 0 && opp_flex == 0 {
-                if total_min % 2 == 1 {
-                    score -= 2000; // Total ímpar, eu jogo primeiro = eu faço última = perco
-                } else {
-                    score += 2000; // Total par = adversário faz última = ganho
-                }
-            }
-        }
-
-        // 3. PRESSÃO DE TEMPO: Comparar jogadas mínimas obrigatórias
-        if opp.min > my.min {
-            score += (opp.min - my.min) * 400;
-        } else if my.min > opp.min {
-            score -= (my.min - opp.min) * 400;
-        }
-
-        // 4. ZONAS EXCLUSIVAS COMO RESERVA
-        if my.min_excl > 0 && opp.min_excl == 0 {
-            score += 2500;
-        } else if opp.min_excl > 0 && my.min_excl == 0 {
-            score -= 2500;
-        }
-    }
-
-    // 5. HEURÍSTICAS GERAIS (para posições mais abertas)
-    // Reserva exclusiva como "banco de tempo"
-    score += (my.max_excl - opp.max_excl) * 80;
-
-    // Flexibilidade é valiosa em misère
-    score += (my_flex - opp_flex) * 60;
-
-    // Eficiência dos blocos (blocos maiores = mais opções)
-    let eff_opp = if opp.min > 0 { (opp.max as f64) / (opp.min as f64) } else { 0.0 };
-    let eff_my = if my.min > 0 { (my.max as f64) / (my.min as f64) } else { 0.0 };
-    score += ((eff_my - eff_opp) * 30.0) as i32;
-
-    // Penalizar ter muitas jogadas forçadas sem controlo
-    if my.max_excl < opp.max {
-        score -= my.min * 20;
-    }
-
-    score
+    // Positive is favourable for the player to move: exhaust one's own work
+    // sooner, leave work to the opponent. No proof from total-move parity.
+    (opp.min - my.min) * 200
+        + (opp.max - my.max) * 40
+        + (opp.protected_min - my.protected_min) * 160
+        + ((my.max - my.min) - (opp.max - opp.min)) * 20
 }
 
-/// Converte a estimativa de carga/reserva numa utilidade para o negamax.
-/// Em misère, uma carga própria maior é uma desvantagem.
 pub fn evaluate_search_leaf(occ: Occupancy, side_to_move: u8) -> i32 {
-    -evaluate_misere(occ, side_to_move)
+    evaluate_misere(occ, side_to_move)
 }
 
 pub fn cheap_move_score(occ: Occupancy, mv: u16, side_to_move: u8) -> i32 {
     let child = apply_move(occ, mv);
-    // se o adversário ficar sem jogadas, é derrota imediata (misère)
-    let opp = 1u8 - side_to_move;
-    let opp_moves = quelhas_core::generate_moves_dynamic(child, opp);
-    if opp_moves.is_empty() {
+    let opp = 1 - side_to_move;
+    if extract_runs(child, opp).is_empty() {
         return -1_000_000;
     }
-    // score aproximado: avaliação do nó filho do ponto de vista de quem joga agora (adversário)
     -evaluate_search_leaf(child, opp)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn search_leaf_inverts_the_misere_burden_estimate() {
-        let occ = Occupancy::default();
-        assert_eq!(evaluate_search_leaf(occ, 0), -evaluate_misere(occ, 0));
-    }
 }

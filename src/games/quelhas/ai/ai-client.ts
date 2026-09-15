@@ -9,7 +9,7 @@ import type { QuelhasState, Segmento } from '../types';
 import type { AIRequest, AIResponse, AIDifficulty, AIMetrics } from './types';
 import { DIFFICULTY_PRESETS, INITIAL_METRICS } from './types';
 import { calcularJogadasValidas, getOrientacaoJogador } from '../logic';
-import { searchBestMove } from './engine';
+import { searchBestMove, trySolveEndgameMove } from './engine';
 
 export const QUELHAS_SERVER_AI_BASE_URL = '/api/ai/quelhas';
 export const QUELHAS_SERVER_AI_TOTAL_TIMEOUT_MS = 2500;
@@ -36,12 +36,20 @@ function sameSegmento(a: Segmento, b: Segmento): boolean {
   );
 }
 
+export interface QuelhasWorkerPort {
+  onmessage: ((event: MessageEvent<AIResponse>) => void) | null;
+  onerror: ((event: ErrorEvent) => void) | null;
+  postMessage(request: AIRequest): void;
+  terminate(): void;
+}
+
 export interface AIClientOptions {
+  workerFactory?: () => QuelhasWorkerPort;
   onReady?: () => void;
   onMetricsUpdate?: (m: AIMetrics) => void;
   serverBaseUrl?: string;
   serverTimeoutMs?: number;
-  serverFetch?: typeof fetch;
+  serverFetch?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
 }
 
 export interface AIRequestOverrides {
@@ -49,7 +57,7 @@ export interface AIRequestOverrides {
 }
 
 export class QuelhasAIClient {
-  private worker: Worker | null = null;
+  private worker: QuelhasWorkerPort | null = null;
   private isReady = false;
   private nextId = 1;
   private pending = new Map<
@@ -70,7 +78,9 @@ export class QuelhasAIClient {
 
   private initWorker(): void {
     try {
-      try {
+      if (this.options.workerFactory) {
+        this.worker = this.options.workerFactory();
+      } else try {
         this.worker = new Worker(new URL('./ai/quelhas/quelhas.worker.js', import.meta.url), { type: 'module' });
       } catch {
         this.worker = new Worker(new URL('./quelhas.worker.ts', import.meta.url), { type: 'module' });
@@ -240,6 +250,7 @@ export class QuelhasAIClient {
   }
 
   private serverGeneration = 0;
+  private serverController: AbortController | null = null;
 
   /**
    * Nível 6 «Mestre»: tenta a rede az-quelhas no servidor (health rápido +
@@ -248,7 +259,16 @@ export class QuelhasAIClient {
    */
   async getBestMoveN6(state: QuelhasState, overrides: AIRequestOverrides = {}): Promise<Segmento | null> {
     const generation = ++this.serverGeneration;
+    this.serverController?.abort();
+    const started = performance.now();
+    const solved = trySolveEndgameMove(state.tabuleiro, getOrientacaoJogador(state, state.jogadorAtual), 50);
+    if (solved) {
+      this.currentMetrics = { ...INITIAL_METRICS, lastEngine: 'exact-endgame', lastTimeMs: performance.now() - started };
+      this.options.onMetricsUpdate?.(this.currentMetrics);
+      return solved;
+    }
     const controller = new AbortController();
+    this.serverController = controller;
     const serverMove = await this.tryServerMove(state, overrides, controller.signal, generation);
     if (generation !== this.serverGeneration) return null;
     if (serverMove) {
@@ -302,7 +322,7 @@ export class QuelhasAIClient {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           board,
-          toPlay: state.jogadorAtual === 'jogador1' ? 1 : 2,
+          toPlay: getOrientacaoJogador(state, state.jogadorAtual) === 'vertical' ? 1 : 2,
           timeBudgetMs: budgetMs,
         }),
         signal: AbortSignal.any([signal, AbortSignal.timeout(remainingMs)]),
@@ -326,18 +346,26 @@ export class QuelhasAIClient {
 
   cancel(): void {
     this.serverGeneration += 1;
+    this.serverController?.abort();
+    this.serverController = null;
+    const restartWorker = this.pending.size > 0 && this.worker !== null;
+    if (restartWorker) {
+      this.worker?.terminate();
+      this.worker = null;
+    }
     for (const [id, p] of this.pending) {
       this.pending.delete(id);
       p.reject(new Error('cancelled'));
     }
     this.currentMetrics = { ...INITIAL_METRICS };
     this.options.onMetricsUpdate?.(this.currentMetrics);
+    if (restartWorker) this.initWorker();
   }
 
   terminate(): void {
-    this.cancel();
     this.worker?.terminate();
     this.worker = null;
+    this.cancel();
     this.isReady = false;
   }
 

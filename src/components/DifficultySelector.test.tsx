@@ -12,7 +12,7 @@ describe('DifficultySelector', () => {
       expect(html).toContain(`N${level}`);
     }
     expect(html).toContain('Desafiar');
-    expect(html).toContain('500 ms');
+    expect(html).toContain('500 milissegundos');
     expect(html).toContain('aria-pressed="true"');
   });
 

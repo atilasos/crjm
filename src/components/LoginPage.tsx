@@ -1,3 +1,4 @@
+import { useTranslation } from '../i18n/LanguageProvider';
 import { useState } from 'react';
 import { Header } from './Header';
 import { DEFAULT_TOURNAMENT_SERVER_URL } from '../tournament/server-config';
@@ -13,6 +14,7 @@ interface LoginPageProps {
 }
 
 export function LoginPage({ onVoltar }: LoginPageProps) {
+  const { t } = useTranslation();
   const [session, setSession] = useState<StudentSession | null>(() => loadStudentSession());
   const [serverUrl, setServerUrl] = useState(DEFAULT_TOURNAMENT_SERVER_URL);
   const [code, setCode] = useState('');
@@ -58,39 +60,29 @@ export function LoginPage({ onVoltar }: LoginPageProps) {
         {session ? (
           <section className="rounded-xl border p-6 md:p-8 text-center space-y-4 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
             <div className="text-6xl">👋</div>
-            <h2 className="text-2xl font-bold">
-              Estás ligado como {session.name}
+            <h2 className="text-2xl font-bold">{t("Estás ligado como ")}{session.name}
               {session.className ? ` (${session.className})` : ''}
             </h2>
-            <p className="[color:var(--tinta-suave)]">
-              As tuas partidas de campeonato vão usar automaticamente o teu nome e a tua turma.
-            </p>
+            <p className="[color:var(--tinta-suave)]">{t("As tuas partidas de campeonato vão usar automaticamente o teu nome e a tua turma.")}</p>
             <div className="flex flex-wrap justify-center gap-3">
               <button
                 type="button"
                 onClick={sair}
                 className="rounded-lg border px-5 py-3 font-semibold transition [background:var(--painel)] [border-color:var(--perigo)] [color:var(--perigo)] hover:opacity-80"
-              >
-                Sair
-              </button>
+              >{t("Sair")}</button>
               <button
                 type="button"
                 onClick={onVoltar}
                 className="rounded-lg border px-5 py-3 font-semibold transition [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)] hover:[background:var(--fundo)]"
-              >
-                Voltar ao início
-              </button>
+              >{t("Voltar ao início")}</button>
             </div>
           </section>
         ) : (
           <section className="rounded-xl border p-6 md:p-8 space-y-5 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">
             <div className="text-center">
               <div className="text-6xl mb-3">🔑</div>
-              <h2 className="text-2xl font-bold mb-2">Entrar com o teu código</h2>
-              <p className="[color:var(--tinta-suave)]">
-                Pede o teu código ao professor e escreve-o aqui. Assim, o teu nome e a tua turma ficam
-                preenchidos automaticamente no campeonato.
-              </p>
+              <h2 className="text-2xl font-bold mb-2">{t("Entrar com o teu código")}</h2>
+              <p className="[color:var(--tinta-suave)]">{t("Pede o teu código ao professor e escreve-o aqui. Assim, o teu nome e a tua turma ficam preenchidos automaticamente no campeonato.")}</p>
             </div>
 
             <form
@@ -101,23 +93,23 @@ export function LoginPage({ onVoltar }: LoginPageProps) {
               }}
             >
               <label className="block">
-                <span className="mb-1 block text-sm [color:var(--tinta-suave)]">Servidor de torneios</span>
+                <span className="mb-1 block text-sm [color:var(--tinta-suave)]">{t("Servidor de torneios")}</span>
                 <input
                   type="text"
                   value={serverUrl}
                   onChange={(event) => setServerUrl(event.target.value)}
-                  placeholder="wss://exemplo.escola.pt"
+                  placeholder={t("wss://exemplo.escola.pt")}
                   className="w-full px-3 py-2 rounded-lg border font-mono text-sm [background:var(--fundo)] [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] placeholder:opacity-60 focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
                 />
               </label>
 
               <label className="block">
-                <span className="mb-1 block text-sm [color:var(--tinta-suave)]">O teu código</span>
+                <span className="mb-1 block text-sm [color:var(--tinta-suave)]">{t("O teu código")}</span>
                 <input
                   type="text"
                   value={code}
                   onChange={(event) => setCode(event.target.value.toUpperCase())}
-                  placeholder="EX.: ABC123"
+                  placeholder={t("EX.: ABC123")}
                   autoComplete="off"
                   autoCapitalize="characters"
                   spellCheck={false}
@@ -127,7 +119,7 @@ export function LoginPage({ onVoltar }: LoginPageProps) {
 
               {erro && (
                 <p className="rounded-lg border px-3 py-2 text-sm font-semibold [background:var(--fundo)] [border-color:var(--perigo)] [color:var(--perigo)]">
-                  {erro}
+                  {t(erro)}
                 </p>
               )}
 
@@ -136,13 +128,11 @@ export function LoginPage({ onVoltar }: LoginPageProps) {
                 disabled={aEntrar}
                 className="w-full rounded-lg px-5 py-3 font-semibold transition [background:var(--tinta)] [color:var(--fundo)] hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {aEntrar ? 'A entrar...' : 'Entrar'}
+                {t(aEntrar ? 'A entrar...' : 'Entrar')}
               </button>
             </form>
 
-            <p className="text-center text-sm [color:var(--tinta-suave)]">
-              Não tens código? Não faz mal — podes continuar a jogar e a treinar sem entrar.
-            </p>
+            <p className="text-center text-sm [color:var(--tinta-suave)]">{t("Não tens código? Não faz mal — podes continuar a jogar e a treinar sem entrar.")}</p>
           </section>
         )}
       </main>

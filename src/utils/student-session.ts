@@ -1,3 +1,4 @@
+import { localeOrDefault, type Locale } from '../i18n/locale';
 import { toTournamentHttpBaseUrl } from '../tournament/server-config';
 
 export interface StudentSession {
@@ -8,18 +9,18 @@ export interface StudentSession {
   code: string;
   serverUrl: string;
   loggedInAt: string;
+  locale?: Locale;
 }
 
 export const STUDENT_SESSION_STORAGE_KEY = 'crjm-student-session';
 export const STUDENT_SESSION_CHANGED_EVENT = 'crjm-session-changed';
 
 function obterStorage(): Storage | null {
-  if (typeof window !== 'undefined' && window.localStorage) {
-    return window.localStorage;
-  }
-  // Alguns ambientes (ex.: testes) expõem localStorage sem window
-  if (typeof localStorage !== 'undefined') {
-    return localStorage;
+  try {
+    if (typeof window !== 'undefined') return window.localStorage;
+    if (typeof localStorage !== 'undefined') return localStorage;
+  } catch {
+    // Browser privacy settings can deny access to storage altogether.
   }
   return null;
 }
@@ -34,10 +35,9 @@ function eTextoNaoVazio(valor: unknown): valor is string {
 }
 
 export function loadStudentSession(): StudentSession | null {
-  const storage = obterStorage();
-  if (!storage) return null;
-
   try {
+    const storage = obterStorage();
+    if (!storage) return null;
     const raw = storage.getItem(STUDENT_SESSION_STORAGE_KEY);
     if (!raw) return null;
 
@@ -53,6 +53,7 @@ export function loadStudentSession(): StudentSession | null {
       className: dados.className,
       code: typeof dados.code === 'string' ? dados.code : '',
       serverUrl: typeof dados.serverUrl === 'string' ? dados.serverUrl : '',
+      ...(dados.locale === undefined ? {} : { locale: localeOrDefault(dados.locale) }),
       loggedInAt: typeof dados.loggedInAt === 'string' ? dados.loggedInAt : '',
     };
   } catch {
@@ -85,7 +86,7 @@ export function clearStudentSession(): void {
 }
 
 interface LoginResponsePayload {
-  student?: { id?: unknown; name?: unknown };
+  student?: { id?: unknown; name?: unknown; locale?: unknown };
   class?: { id?: unknown; name?: unknown };
 }
 
@@ -133,6 +134,7 @@ export async function loginStudent(serverUrl: string, code: string): Promise<Stu
     code: codigo,
     serverUrl,
     loggedInAt: new Date().toISOString(),
+    locale: localeOrDefault(dados.student?.locale),
   };
 
   saveStudentSession(session);

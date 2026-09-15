@@ -1,3 +1,4 @@
+import { useTranslation } from '../../i18n/LanguageProvider';
 import type { TutorContextItem } from '../../ai-core/tutor-context';
 
 interface TutorContextBarProps {
@@ -18,6 +19,7 @@ function getToneClasses(tone: TutorContextItem['tone']): string {
 }
 
 export function TutorContextBar({ items }: TutorContextBarProps) {
+  const { t } = useTranslation();
   if (items.length === 0) return null;
 
   return (
@@ -27,7 +29,7 @@ export function TutorContextBar({ items }: TutorContextBarProps) {
           key={`${item.tone}-${item.label}`}
           className={`rounded-full border px-2.5 py-1 text-[11px] font-medium ${getToneClasses(item.tone)}`}
         >
-          {item.label}
+          {t(item.label)}
         </span>
       ))}
     </div>

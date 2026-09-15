@@ -1,3 +1,4 @@
+import type { Locale } from '../i18n/locale';
 export type GameId =
   | 'gatos-caes'
   | 'dominorio'
@@ -20,7 +21,7 @@ export interface AIRequestV1<State, Move = unknown> {
   legalMoves?: Move[];
   timeBudgetMs?: number;
   seed?: number;
-  locale?: 'pt-PT';
+  locale?: Locale;
 }
 
 export interface AIMoveCandidate<Move> {
@@ -55,7 +56,7 @@ export interface AIStatsV1 {
   nodes?: number;
   simulations?: number;
   usedWasm: boolean;
-  engine: 'rust-wasm' | 'ts-fallback' | 'server-nn';
+  engine: 'rust-wasm' | 'ts-fallback' | 'server-nn' | 'exact-endgame';
 }
 
 export interface AIPedagogyV1 {
@@ -74,6 +75,7 @@ export interface AIResponseV1<Move, State = unknown> {
   topMoves: AIMoveCandidate<Move>[];
   principalVariation?: Move[];
   explainText: string;
+  reviewPatternId?: string;
   explainTags?: string[];
   criticalThreats?: AICriticalThreat<Move>[];
   confidence?: number;

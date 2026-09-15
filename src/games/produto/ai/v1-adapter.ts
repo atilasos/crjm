@@ -1,3 +1,4 @@
+import { selectReviewPattern } from '../../../ai-core/review-patterns';
 import type {
   AIRequestV1,
   AIResponseV1,
@@ -80,6 +81,7 @@ export class ProdutoV1Adapter {
       explainText: buildExplainText(request.state, bestMove, topMoves, metrics.lastExplain),
       confidence: topMoves[0]?.confidence ?? 0.48,
       criticalThreats,
+      reviewPatternId: selectReviewPattern('produto', { criticalThreats }).id,
       pedagogy,
       stats: {
         elapsedMs: metrics.lastTimeMs,

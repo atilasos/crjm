@@ -1,3 +1,4 @@
+import { useTranslation } from '../../../i18n/LanguageProvider';
 interface TutorHintCardProps {
   insight: string;
   suggestedAction: string;
@@ -13,34 +14,31 @@ export function TutorHintCard({
   errorCode,
   isLoading = false,
 }: TutorHintCardProps) {
+  const { t } = useTranslation();
   return (
     <section
       aria-live="polite"
       className="rounded-xl border px-4 py-3 text-sm [background:var(--painel)] [border-color:color-mix(in_srgb,var(--jogo-quelhas)_35%,var(--linha))] [color:var(--tinta)]"
     >
       <div className="flex items-center gap-2 font-semibold">
-        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white [background:var(--jogo-quelhas)]">
-          IA
-        </span>
-        Dica do turno
-        <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-quelhas)_15%,var(--painel))] [color:var(--jogo-quelhas)]">
-          {hintLevel}
+        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white [background:var(--jogo-quelhas)]">{t("IA")}</span>{t("Dica do turno")}<span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-quelhas)_15%,var(--painel))] [color:var(--jogo-quelhas)]">
+          {t(hintLevel)}
         </span>
         {errorCode && (
           <span className="rounded-full px-2 py-0.5 text-xs font-medium [background:color-mix(in_srgb,var(--jogo-quelhas)_15%,var(--painel))] [color:var(--jogo-quelhas)]">
-            {errorCode}
+            {t(errorCode)}
           </span>
         )}
       </div>
       {isLoading ? (
-        <p className="mt-2 [color:var(--tinta-suave)]">A analisar a posição...</p>
+        <p className="mt-2 [color:var(--tinta-suave)]">{t("A analisar a posição...")}</p>
       ) : (
         <div className="mt-2 space-y-2">
           <p>
-            <strong>Insight:</strong> {insight}
+            <strong>{t("Insight:")}</strong> {t(insight)}
           </p>
           <p>
-            <strong>Ação sugerida:</strong> {suggestedAction}
+            <strong>{t("Ação sugerida:")}</strong> {t(suggestedAction)}
           </p>
         </div>
       )}
