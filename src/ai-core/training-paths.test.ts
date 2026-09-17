@@ -3,7 +3,7 @@ import type { GameId } from './types';
 import { getTrainingPath, evaluateDesafioGoals } from './training-paths';
 import { getPuzzlesForGame } from './puzzles';
 
-const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
+const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca'];
 
 describe('percursos de treino para o campeonato', () => {
   test('cada jogo tem quatro etapas com o desenho Descobrir→Campeonato', () => {
@@ -68,6 +68,15 @@ describe('avaliação dos desafios por nível', () => {
     expect(half?.done).toBe(true);
     expect(half?.progress).toEqual(['N4+: 2 vitórias em 4 jogos (meta: ≥50% em ≥4)']);
     expect(evaluateDesafioGoals([{ level: 4, half: true }], { 4: snapshot(1, 3, 1) })?.done).toBe(false);
+  });
+
+  test('Faísca uses only the two verified local difficulties', () => {
+    const path = getTrainingPath('faisca')!;
+    expect(path).toBeDefined();
+    expect(path.steps.flatMap(step => step.desafioGoals ?? []).map(goal => goal.level)).toEqual([1, 1, 2, 2]);
+    const lower = { 1: snapshot(10, 10, 10) };
+    expect(evaluateDesafioGoals(path.steps[2]!.desafioGoals, lower)?.done).toBe(false);
+    expect(evaluateDesafioGoals(path.steps[3]!.desafioGoals, { 2: snapshot(2, 4, 1) })?.done).toBe(true);
   });
 
   test('objetivos múltiplos exigem todos cumpridos', () => {

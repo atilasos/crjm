@@ -77,6 +77,36 @@ export interface TrainingPath {
 }
 
 export const TRAINING_PATHS = {
+  faisca: {
+    focusNow: 'Antecipar a próxima casa, os destinos vazios e as peças que ainda restam.',
+    commonMistake: 'Escolher uma seta sem verificar as reservas e a resposta do adversário.',
+    steps: [
+      {
+        title: 'Descobrir',
+        checkpoints: ['Respeitar o destino da abertura e a casa obrigatória.'],
+        puzzleIds: ['fa-abertura-1', 'fa-obrigatoria-1'],
+        desafio: 'Vence o N1 uma vez.', desafioGoals: [{ level: 1, wins: 1 }],
+      },
+      {
+        title: 'Táticas',
+        checkpoints: ['Distinguir saltos permitidos de destinos ocupados.'],
+        puzzleIds: ['fa-salto-1', 'fa-destino-1'],
+        desafio: 'Vence o N1 duas vezes seguidas.', desafioGoals: [{ level: 1, streak: 2 }],
+      },
+      {
+        title: 'Estratégia',
+        checkpoints: ['Relacionar a distância exata com as reservas de cada jogador.'],
+        puzzleIds: ['fa-reservas-1'],
+        desafio: 'Vence o N2 uma vez.', desafioGoals: [{ level: 2, wins: 1 }],
+      },
+      {
+        title: 'Campeonato',
+        checkpoints: ['Prever quando a próxima casa deixa o adversário sem resposta.'],
+        puzzleIds: ['fa-final-1'],
+        desafio: 'Ganha pelo menos metade das partidas contra o N2.', desafioGoals: [{ level: 2, half: true }],
+      },
+    ],
+  },
   'gatos-caes': {
     focusNow: 'Preservar mobilidade: joga para continuares com mais casas legais do que o adversário.',
     commonMistake: 'Fechar cedo as casas centrais ou encostar peças que bloqueiam demasiadas respostas.',

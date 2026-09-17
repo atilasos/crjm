@@ -1,3 +1,4 @@
+import { FAISCA_PUZZLES } from '../games/faisca/puzzles';
 import type { GameId } from './types';
 
 export interface PuzzleOption {
@@ -569,6 +570,7 @@ export const PUZZLES: PuzzleDefinition[] = [
       hexOffset: true,
     },
   },
+  ...FAISCA_PUZZLES,
 ];
 
 export function getPuzzlesForGame(gameId: GameId): PuzzleDefinition[] {

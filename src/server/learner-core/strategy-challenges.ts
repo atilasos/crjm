@@ -1,3 +1,4 @@
+import { getFaiscaChallenge } from './faisca-challenges';
 import { GAME_CATALOG } from '../../games/catalog';
 import type { GameId } from '../../ai-core/types';
 import type { StrategyChallenge, StrategyOption } from '../../types/strategy-practice';
@@ -28,6 +29,7 @@ export function getStrategyChallenge(gameId: GameId, variant: number): StrategyS
   if (!STRATEGY_GAMES.includes(gameId) || !Number.isInteger(variant) || variant < 0 || variant >= CHALLENGES_PER_GAME) {
     throw new Error('invalid strategy challenge');
   }
+  if (gameId === 'faisca') return getFaiscaChallenge(variant);
   const id = `strategy-v1:${gameId}:${variant}`;
   if (gameId === 'gatos-caes' || gameId === 'dominorio' || gameId === 'quelhas') {
     const mine = 1 + variant % 4;

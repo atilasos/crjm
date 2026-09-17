@@ -20,6 +20,16 @@ function setup() {
 }
 
 describe('strategy practice: evidence survives real learner operations', () => {
+  test('Faísca offers a choice with a verifiable opening consequence', () => {
+    const { service, user } = setup();
+    const view = service.start(user, 'faisca');
+    expect(view.hint).toBeNull();
+    expect(view.feedback).toBeNull();
+    const result = service.answer(user, view.attemptId, '1', '0');
+    expect(result.feedback).toMatchObject({ correct: true, independent: true });
+    expect(result.progress.independent).toBe(1);
+  });
+
   test('does not send hints, answers or explanations before an attempt', () => {
     const { service, user } = setup();
     const view = service.start(user, 'gatos-caes');
@@ -30,13 +40,13 @@ describe('strategy practice: evidence survives real learner operations', () => {
     expect(service.start(user, 'gatos-caes').attemptId).toBe(view.attemptId);
   });
 
-  test('a saved hint survives a reload and cannot count as solo evidence', () => {
+  test.each(['atari-go', 'faisca'] as const)('%s: a saved hint survives a reload and cannot count as solo evidence', gameId => {
     const { service, user, db } = setup();
-    const view = service.start(user, 'atari-go');
+    const view = service.start(user, gameId);
     service.hint(user, view.attemptId);
     const reloaded = new StrategyPracticeService(db);
-    expect(reloaded.start(user, 'atari-go').hint).toBeTruthy();
-    const solution = getStrategyChallenge('atari-go', 0);
+    expect(reloaded.start(user, gameId).hint).toBeTruthy();
+    const solution = getStrategyChallenge(gameId, 0);
     const result = reloaded.answer(user, view.attemptId, solution.answer, solution.prediction);
     expect(result.feedback).toMatchObject({ correct: true, independent: false });
     expect(result.progress.independent).toBe(0);
@@ -74,7 +84,7 @@ describe('strategy practice: evidence survives real learner operations', () => {
     expect(service.start(user, 'nex').feedback).toBeNull();
   });
 
-  test('all six games can progress, and retention requires a later day', () => {
+  test('all available games can progress, and retention requires a later day', () => {
     for (const gameId of STRATEGY_GAMES) {
       const { service, user, advance } = setup();
       for (let variant = 0; variant < 24; variant++) {
@@ -90,24 +100,45 @@ describe('strategy practice: evidence survives real learner operations', () => {
     }
   });
 
-  test('an assisted catalogue can be learned later, without an immediate retry shortcut', () => {
+  test.each(['nex', 'faisca'] as const)('%s: an assisted catalogue can be learned later, without an immediate retry shortcut', gameId => {
     const { service, user, advance } = setup();
     for (let v = 0; v < 24; v++) {
-      const view = service.start(user, 'nex');
+      const view = service.start(user, gameId);
       service.hint(user, view.attemptId);
-      const solution = getStrategyChallenge('nex', v);
+      const solution = getStrategyChallenge(gameId, v);
       service.answer(user, view.attemptId, solution.answer, solution.prediction);
     }
-    const retry = service.start(user, 'nex');
-    const first = getStrategyChallenge('nex', 0);
+    const retry = service.start(user, gameId);
+    const first = getStrategyChallenge(gameId, 0);
     expect(service.answer(user, retry.attemptId, first.answer, first.prediction).progress.independent).toBe(0);
     advance(RETENTION_DELAY_MS + 1);
     for (let v = 1; v <= 3; v++) {
-      const view = service.start(user, 'nex');
-      const solution = getStrategyChallenge('nex', v);
+      const view = service.start(user, gameId);
+      const solution = getStrategyChallenge(gameId, v);
       service.answer(user, view.attemptId, solution.answer, solution.prediction);
     }
-    expect(service.progress(user).nex.stage).toBe('independent');
+    expect(service.progress(user)[gameId].stage).toBe('independent');
+  });
+
+  test('Faísca preserves errors across reloads and mirrors do not add families', () => {
+    const { service, user, db } = setup();
+    const first = service.start(user, 'faisca');
+    const wrong = service.answer(user, first.attemptId, '0', '0');
+    const reloaded = new StrategyPracticeService(db);
+    expect(reloaded.answer(user, first.attemptId, '1', '0')).toEqual(wrong);
+    // Worked example: required c3 → c1, jump a2 → a5, free b2,
+    // remaining distance 2 to d3, then a3 → a1 wins for Red.
+    for (const answer of ['2', '0', '2', '1', '1']) {
+      const view = reloaded.start(user, 'faisca');
+      expect(reloaded.answer(user, view.attemptId, answer, '0').feedback?.correct).toBe(true);
+    }
+    expect(reloaded.progress(user).faisca.independent).toBe(5);
+    for (let variant = 6; variant < 24; variant++) {
+      const view = reloaded.start(user, 'faisca');
+      const solution = getStrategyChallenge('faisca', variant);
+      reloaded.answer(user, view.attemptId, solution.answer, solution.prediction);
+    }
+    expect(reloaded.progress(user).faisca.independent).toBe(6);
   });
 
   test('cosmetic variants and repeated copies cannot fill the three-family goal', () => {

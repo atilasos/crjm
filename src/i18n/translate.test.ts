@@ -1,3 +1,4 @@
+import { getStrategyChallenge } from '../server/learner-core/strategy-challenges';
 import { describe, expect, test } from 'bun:test';
 import { messages, formatMessage, translate } from './translate';
 import { SUPPORTED_LOCALES, localeOrDefault } from './locale';
@@ -46,6 +47,18 @@ describe('Presentation in every supported language', () => {
   });
   test('every puzzle, path, achievement and mission has content in all languages', () => {
     checkContent([PUZZLES, TRAINING_PATHS, PATTERN_CARDS, STARTER_ACHIEVEMENTS, STARTER_MISSIONS]);
+  });
+  test('Faísca choices, predictions and feedback are translated for every situation', () => {
+    for (let variant = 0; variant < 24; variant++) {
+      const { challenge, hint, explanation } = getStrategyChallenge('faisca', variant);
+      const copy = [challenge.skill, challenge.prompt, ...challenge.facts, challenge.question, challenge.prediction,
+        ...challenge.options.map(option => option.label), ...challenge.predictions.map(option => option.label),
+        challenge.diagram!.caption, hint, explanation];
+      for (const value of copy) for (const locale of ['en', 'ne'] as const) {
+        expect(translate(value, locale), `Missing ${locale}: ${value}`).not.toBe(value);
+        expect(translate(value, locale)).not.toMatch(/\{\d+\}/);
+      }
+    }
   });
   test('all languages have exactly the same keys and interpolation slots', () => {
     expect(validateCatalogs()).toEqual([]);
