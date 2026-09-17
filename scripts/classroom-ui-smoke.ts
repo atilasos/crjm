@@ -140,34 +140,36 @@ async function assertViewport(page: Page, game: string, selector = '.game-contai
 }
 
 async function checkGameSelection(page: Page): Promise<void> {
-  const titles = ['Gatos & Cães', 'Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Nex'];
+  const titles = ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca', 'Y'];
   const assertTitles = async (locator: Locator, label: string, expectedTitles = titles) => {
     await locator.first().waitFor({ state: 'attached' });
     const actual = (await locator.allTextContents()).map(text => text.trim());
     if (JSON.stringify(actual) !== JSON.stringify(expectedTitles)) throw new Error(`${label}: ${JSON.stringify(actual)}`);
   };
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
-  await assertTitles(page.locator('button.game-card h2'), 'Seleção pública');
+  await assertTitles(page.locator('button.game-card h2'), '11.º CRJM: seleção pública');
   const cycles = await page.locator('button.game-card ul').allTextContents();
-  const expected = ['1.º Ciclo', '1.º Ciclo2.º Ciclo', '1.º Ciclo2.º Ciclo3.º Ciclo', '2.º Ciclo3.º CicloSecundário', '3.º CicloSecundário', 'Secundário'];
-  if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('Ciclos da seleção pública alterados.');
+  const expected = ['1.º Ciclo', '1.º Ciclo2.º Ciclo3.º Ciclo', '2.º Ciclo3.º CicloSecundário', '3.º CicloSecundário', '1.º Ciclo2.º Ciclo', 'Secundário'];
+  if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('11.º CRJM: ciclos incorretos.');
+  await page.getByText('11.º CRJM — 2026/27', { exact: true }).waitFor();
   await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
-  await page.getByRole('status').filter({ hasText: 'Pré-visualização de integração' }).waitFor();
-  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização', ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca', 'Y']);
+  await assertTitles(page.locator('button.game-card h2'), 'Ligação antiga de pré-visualização');
   await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
-  await assertTitles(page.locator('main select').first().locator('option'), 'Jogos do campeonato');
+  await assertTitles(page.locator('#tournament-game option'), 'Jogos do campeonato');
   await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+  const tabs = page.locator('[data-puzzle-lab] nav button');
+  if (await tabs.count() !== 6) throw new Error('Laboratório: esperados seis jogos atuais.');
   for (const title of titles) {
-    await page.locator('[data-puzzle-lab] nav button').filter({ hasText: title }).click();
+    await tabs.filter({ hasText: title }).last().click();
     await page.locator('[data-percurso]').filter({ hasText: title }).waitFor();
     await page.locator('[data-puzzle-option]').first().waitFor();
   }
   await page.goto(`${BASE_URL}/#/perfil`, { waitUntil: 'networkidle' });
-  for (const title of titles) await page.getByText(title, { exact: true }).first().waitFor();
+  for (const title of [...titles, 'Gatos & Cães', 'Nex']) await page.getByText(title, { exact: true }).first().waitFor();
 }
 
 async function checkFaiscaCancellation(page: Page): Promise<void> {
-  await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
   // Delay the real worker's response at the transport boundary, so controls
   // must remain usable while a search belongs to an obsolete match.
   const workerUrl = '**/ai/faisca/faisca.worker.js';
@@ -203,14 +205,14 @@ async function checkFaiscaCancellation(page: Page): Promise<void> {
 
 async function checkFaisca(page: Page): Promise<void> {
   await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
-  if (await page.locator('.faisca').count()) throw new Error('Faísca foi publicada fora da integração.');
+  await page.locator('.game-container.faisca').waitFor();
   for (const locale of ['pt-PT', 'en', 'ne'] as const) {
     const catalog = { 'pt-PT': pt, en, ne }[locale];
     const t = (text: keyof typeof pt) => catalog[text];
     const formatMessage = (text: keyof typeof pt, _locale: string, values: (string | number)[]) =>
       t(text).replace(/\{(\d+)\}/g, (_, index) => String(values[Number(index)]));
     for (const theme of ['claro', 'escuro']) {
-      await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
+      await page.goto(BASE_URL, { waitUntil: 'networkidle' });
       await page.locator('[data-language-selector]').selectOption(locale);
       await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
       await page.reload({ waitUntil: 'networkidle' });
@@ -265,7 +267,7 @@ async function checkFaisca(page: Page): Promise<void> {
 }
 
 async function checkYCancellation(page: Page): Promise<void> {
-  await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
   const workerUrl = '**/ai/y/y.worker.js';
   await page.route(workerUrl, async route => {
     const response = await route.fetch();
@@ -300,16 +302,16 @@ async function checkYCancellation(page: Page): Promise<void> {
 }
 
 async function checkY(page: Page): Promise<void> {
-  await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
   await checkYHintCancellation(page);
   await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
-  if (await page.locator('.y-game').count()) throw new Error('Y foi publicado fora da integração.');
+  await page.locator('.y-game').waitFor();
   for (const locale of ['pt-PT', 'en', 'ne'] as const) {
     const catalog = { 'pt-PT': pt, en, ne }[locale];
     const t = (text: keyof typeof pt) => catalog[text];
     const msg = (text: keyof typeof pt, values: string[]) => t(text).replace(/\{(\d+)\}/g, (_, i) => values[Number(i)]!);
     for (const theme of ['claro', 'escuro']) {
-      await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
+      await page.goto(BASE_URL, { waitUntil: 'networkidle' });
       await page.locator('[data-language-selector]').selectOption(locale);
       await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
       await page.reload({ waitUntil: 'networkidle' });
@@ -357,7 +359,7 @@ async function checkY(page: Page): Promise<void> {
   let wins = 6;
   for (const participant of ['jogador1', 'jogador2']) {
     for (const swap of [false, true]) {
-      await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
       await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).click();
       await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
       await page.getByLabel('O meu perfil corresponde a:').selectOption(participant);
@@ -437,11 +439,11 @@ async function checkArchive(page: Page): Promise<void> {
     if (await options.count() !== 2) throw new Error('Torneios: seleção do Arquivo incorreta.');
     await page.locator('#tournament-game').selectOption('nex');
     await page.getByRole('button', { name: current, exact: true }).click();
-    if (await options.count() !== 6) throw new Error('Seleção pública foi ativada prematuramente.');
+    if (await options.count() !== 6) throw new Error('Torneios: esperados seis jogos atuais.');
     await assertViewport(page, `Torneios Arquivo ${locale}`, 'main');
   }
   await page.locator('[data-language-selector]').selectOption('pt-PT');
-  await page.goto(`${BASE_URL}/?integracao=1#/campeonato`, { waitUntil: 'networkidle' });
+  await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
   await page.locator('#tournament-game').selectOption('nex');
   await page.getByPlaceholder('Ex: João Silva').fill('Aluno Arquivo');
@@ -466,9 +468,11 @@ async function checkArchiveAdministration(browser: Browser): Promise<void> {
   });
   try {
     for (const gameId of ['gatos-caes', 'nex']) {
-      await page.goto(`${TOURNAMENT_URL}/admin?integracao=1`);
+      await page.goto(`${TOURNAMENT_URL}/admin`);
       await page.getByRole('button', { name: '➕ Criar', exact: true }).click();
       const modal = page.locator('#createTournamentModal');
+      const currentGames = await modal.locator('#gameSelect option').evaluateAll(elements => elements.map(element => (element as HTMLOptionElement).value));
+      if (JSON.stringify(currentGames) !== JSON.stringify(['dominorio', 'quelhas', 'produto', 'atari-go', 'faisca', 'y'])) throw new Error('Administração: seleção atual incorreta.');
       await modal.getByRole('button', { name: 'Arquivo', exact: true }).click();
       const options = await modal.locator('#gameSelect option').evaluateAll(elements => elements.map(element => (element as HTMLOptionElement).value));
       if (JSON.stringify(options) !== JSON.stringify(['gatos-caes', 'nex'])) throw new Error('Administração: Arquivo incorreto.');
@@ -511,7 +515,7 @@ async function checkArchiveAdministration(browser: Browser): Promise<void> {
       }
     }
     for (const [locale, archive] of [['en', 'Archive'], ['ne', 'अभिलेख']]) {
-      await page.goto(`${TOURNAMENT_URL}/admin?integracao=1&lang=${locale}`);
+      await page.goto(`${TOURNAMENT_URL}/admin?lang=${locale}`);
       await page.getByRole('button', { name: archive, exact: true }).first().click();
       await page.locator('#tournaments .tournament-name').filter({ hasText: 'Nex' }).waitFor();
     }
@@ -523,6 +527,7 @@ async function checkArchiveAdministration(browser: Browser): Promise<void> {
 
 async function runGame(page: Page, title: string, play: (page: Page) => Promise<void>): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  if (['Gatos & Cães', 'Nex'].includes(title)) await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
   await page.locator('button.game-card').filter({ hasText: title }).click();
   await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
   await chooseN1(page);
@@ -537,7 +542,7 @@ async function checkFaiscaLaboratoryPresentation(page: Page): Promise<void> {
     const catalog = { 'pt-PT': pt, en, ne }[locale];
     const t = (text: keyof typeof pt) => catalog[text];
     for (const theme of ['claro', 'escuro']) {
-      await page.goto(`${BASE_URL}/?integracao=1#/puzzles`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
       await page.locator('[data-language-selector]').selectOption(locale);
       await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
       await page.reload({ waitUntil: 'networkidle' });
@@ -563,7 +568,7 @@ async function checkYLaboratoryPresentation(page: Page): Promise<void> {
     const catalog = { 'pt-PT': pt, en, ne }[locale];
     const t = (text: keyof typeof pt) => catalog[text];
     for (const theme of ['claro', 'escuro']) {
-      await page.goto(`${BASE_URL}/?integracao=1#/puzzles`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
       await page.locator('[data-language-selector]').selectOption(locale);
       await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
       await page.reload({ waitUntil: 'networkidle' });
@@ -588,6 +593,7 @@ async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Resolver exercícios' }).click();
   await page.getByRole('heading', { name: 'Laboratório de Estratégias', exact: true }).first().waitFor();
+  await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
   await page.locator('[data-puzzle-option="centro"]').click();
   await page.getByRole('button', { name: 'Confirmar resposta' }).click();
   await page.getByText(/Boa leitura|Já dominaste esta ideia/, { exact: false }).waitFor();
@@ -595,7 +601,7 @@ async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.locator('[data-percurso]').waitFor({ state: 'visible' });
   await page.getByText('Percurso para o campeonato', { exact: false }).first().waitFor();
   await assertViewport(page, 'Laboratório de Estratégias', '[data-puzzle-lab]');
-  await page.getByRole('button', { name: 'Voltar à página inicial' }).click();
+  await page.getByRole('button', { name: 'Voltar ao Arquivo' }).click();
   await page.getByRole('heading', { name: 'Treino para o CRJM' }).waitFor();
 }
 
@@ -629,6 +635,13 @@ async function main(): Promise<void> {
     const checks: Array<{ viewport: string; game: string }> = [];
 
     try {
+      const selectionContext = await browser.newContext({ locale: 'pt-PT' });
+      try {
+        await checkGameSelection(await selectionContext.newPage());
+      } finally {
+        await selectionContext.close();
+      }
+      if (process.env.CLASSROOM_SELECTION_ONLY) return;
       await checkYTournament(browser, BASE_URL, TOURNAMENT_URL, ADMIN_KEY);
       checks.push({ viewport: 'desktop/tablet/mobile', game: 'Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro' });
       if (process.env.Y_TOURNAMENT_ONLY) return;
@@ -654,7 +667,7 @@ async function main(): Promise<void> {
         await checkArchive(page);
         checks.push({ viewport: viewport.name, game: 'Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro' });
         await checkGameSelection(page);
-        checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
+        checks.push({ viewport: viewport.name, game: '11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos' });
         await checkFaisca(page);
         await checkFaiscaLaboratoryPresentation(page);
         await checkYLaboratoryPresentation(page);

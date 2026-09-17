@@ -1,5 +1,5 @@
 /** Identity and public selection are independent of implemented features.
- * Keep the existing selection until the edition's activation ticket is complete.
+ * The public selection is the 11th CRJM (2026/27); archived IDs retain progress.
  * Register new games with selection: 'integration' and only real capabilities.
  */
 export type GameCapability = 'local' | 'ai' | 'tutor' | 'review' | 'puzzles' | 'training' | 'strategy' | 'tournament' | 'progress';
@@ -36,7 +36,7 @@ export const GAME_CATALOG = [
     name: 'Dominório',
     description: 'Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça!',
     accent: 'var(--jogo-dominorio)',
-    cycles: ['1.º Ciclo', '2.º Ciclo'],
+    cycles: ['1.º Ciclo'],
     mark: '🁓',
     selection: 'current',
     capabilities: EXISTING_CAPABILITIES,
@@ -88,7 +88,7 @@ export const GAME_CATALOG = [
     accent: 'var(--tinta)',
     cycles: ['1.º Ciclo', '2.º Ciclo'],
     mark: '➤',
-    selection: 'integration',
+    selection: 'current',
     capabilities: ['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress', 'tournament'],
   },
   {
@@ -98,7 +98,7 @@ export const GAME_CATALOG = [
     accent: 'var(--tinta)',
     cycles: ['Secundário'],
     mark: 'Y',
-    selection: 'integration',
+    selection: 'current',
     capabilities: ['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress', 'tournament'],
   },
 ] as const satisfies readonly GameDefinition[];
@@ -118,11 +118,7 @@ export function getGame(id: string): (GameDefinition & { id: GameId }) | undefin
 export function isGameAvailable(game: GameDefinition, capability: GameCapability, includeIntegration = false, selection: BrowsableSelection = 'current'): boolean {
   if (!game.capabilities.includes(capability)) return false;
   if (selection === 'archive') return game.selection === 'archive';
-  // Until #38 activates the complete edition, the public default keeps all six
-  // existing games. Explicit integration preview already separates the archive.
-  return game.selection === 'current' || (includeIntegration
-    ? game.selection === 'integration'
-    : game.selection === 'archive');
+  return game.selection === 'current' || (includeIntegration && game.selection === 'integration');
 }
 
 export function getGamesFor(capability: GameCapability, includeIntegration = false, selection: BrowsableSelection = 'current'): Array<GameDefinition & { id: GameId }> {

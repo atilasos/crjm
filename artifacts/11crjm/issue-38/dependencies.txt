@@ -1,0 +1,82 @@
+bun test v1.3.14 (0d9b296a)
+
+src/server/tournament-gameplay.test.ts:
+(pass) faisca real: autoridade, reconexão, espectador, administração e dupla eliminação [4258.28ms]
+(pass) y real: autoridade, reconexão, espectador, administração e dupla eliminação [8027.45ms]
+
+src/server/game-adapter.test.ts:
+(pass) Faísca no torneio > aplica a abertura pelas mesmas regras locais e recusa a repetição [0.73ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should validate and apply a move in network format (placements) [3.63ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should validate second placement in network format [1.81ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should NOT allow placing opponent color in the first move [0.14ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should stay in the same player turn after placing only 1 of 2 pieces [0.64ms]
+(pass) Game Adapters - Network Move Handling > Atari Go Adapter > should validate and apply a move in network format (row, col) [2.44ms]
+(pass) Game Adapters - Network Move Handling > Nex Adapter > should validate and apply a "place" move in network format [0.60ms]
+(pass) Game Adapters - Network Move Handling > Nex Adapter > should validate and apply a "swap" move in network format [0.06ms]
+(pass) Faísca: sequência oficial local/online, reservas, quatro direções, saltos e resultado [2.02ms]
+(pass) Y no torneio > aplica a abertura e a troca mantendo a identidade e a peça inicial [0.24ms]
+(pass) Y: sequência local/online, serialização e vencedor com troca=%s [4.98ms]
+(pass) Y: sequência local/online, serialização e vencedor com troca=%s [3.75ms]
+(pass) Y: rejeita entradas inválidas sem alterar o estado [0.18ms]
+
+src/server/learner-core/service.test.ts:
+(pass) learner core service > bootstraps learner profile with required ADR-003 fields [9.85ms]
+(pass) learner core service > returns the stored supported locale and safely defaults older unknown values [11.64ms]
+(pass) learner core service > persiste o progresso por nível de dificuldade com streaks [26.22ms]
+(pass) learner core service > records game and review events with derivation parity [22.87ms]
+(pass) learner core service > persists puzzles, pattern evidence, and idempotent mission claims [30.07ms]
+(pass) learner core service > rolls back learner events when snapshot sync fails [14.38ms]
+(pass) learner core service > conserva o perfil persistido dos seis jogos e continua o Arquivo após reabrir a sessão [37.58ms]
+(pass) learner core service > guarda uma partida local de Faísca sem alterar os seis jogos e recupera-a noutra sessão [29.08ms]
+(pass) learner core service > Faísca conserva resultados por dificuldade e por aluno após reabrir a sessão [26.37ms]
+(pass) learner core service > Y guarda a vitória do participante após troca=%s e recupera o perfil sem alterar outros jogos [39.61ms]
+(pass) learner core service > Y guarda a vitória do participante após troca=%s e recupera o perfil sem alterar outros jogos [27.81ms]
+(pass) learner core service > imports a legacy profile idempotently while keeping the V1 core strict [19.99ms]
+
+src/server/learner-core/strategy-service.test.ts:
+(pass) strategy practice: evidence survives real learner operations > Y teaches the drawn adjacency and preserves the first error after reload [5.14ms]
+(pass) strategy practice: evidence survives real learner operations > Y solutions follow the official drawing, and immediate repetitions add no autonomy [39.50ms]
+(pass) strategy practice: evidence survives real learner operations > Faísca offers a choice with a verifiable opening consequence [1.53ms]
+(pass) strategy practice: evidence survives real learner operations > does not send hints, answers or explanations before an attempt [0.94ms]
+(pass) strategy practice: evidence survives real learner operations > atari-go: a saved hint survives a reload and cannot count as solo evidence [3.19ms]
+(pass) strategy practice: evidence survives real learner operations > faisca: a saved hint survives a reload and cannot count as solo evidence [1.06ms]
+(pass) strategy practice: evidence survives real learner operations > y: a saved hint survives a reload and cannot count as solo evidence [0.97ms]
+(pass) strategy practice: evidence survives real learner operations > first wrong answer remains practice after resubmission, no duplicated attempt [1.01ms]
+(pass) strategy practice: evidence survives real learner operations > a copied decision with an incorrect consequence does not advance [1.62ms]
+(pass) strategy practice: evidence survives real learner operations > does not accept another learner’s attempts or forged answer fields [1.13ms]
+(pass) strategy practice: evidence survives real learner operations > all available games can progress, and retention requires a later day [218.28ms]
+(pass) strategy practice: evidence survives real learner operations > nex: an assisted catalogue can be learned later, without an immediate retry shortcut [34.52ms]
+(pass) strategy practice: evidence survives real learner operations > faisca: an assisted catalogue can be learned later, without an immediate retry shortcut [30.07ms]
+(pass) strategy practice: evidence survives real learner operations > y: an assisted catalogue can be learned later, without an immediate retry shortcut [10.46ms]
+(pass) strategy practice: evidence survives real learner operations > Faísca preserves errors across reloads and mirrors do not add families [16.89ms]
+(pass) strategy practice: evidence survives real learner operations > cosmetic variants and repeated copies cannot fill the three-family goal [0.16ms]
+
+src/games/faisca/logic.test.ts:
+(pass) partida local de Faísca > Azul abre numa casa livre, consome uma peça e indica a casa de Vermelho [0.11ms]
+(pass) partida local de Faísca > recusa abertura fora do tabuleiro, casa errada e destino ocupado sem alterar turno ou reservas [0.08ms]
+(pass) partida local de Faísca > reproduz o exemplo do regulamento, com saltos, alvo b3 e reservas finais [0.13ms]
+(pass) partida local de Faísca > perde quem não tem peças e não se pode jogar após o resultado [0.03ms]
+(pass) partida local de Faísca > perde quem não pode apontar para uma casa livre mesmo tendo peças [0.05ms]
+
+src/games/y/logic.test.ts:
+(pass) coloca numa intersecção livre, recusa ocupadas e conserva a peça inicial depois da troca [0.14ms]
+(pass) recusa a troca depois de o segundo participante colocar a sua peça [0.02ms]
+(pass) um grupo liga o canto ao lado oposto; a vitória segue o participante após troca [0.45ms]
+(pass) três grupos separados nos lados não vencem, nem dois cantos desligados [0.05ms]
+(pass) a ligação desenhada D3–E3 une o grupo, mas a proximidade E3–E2 não é uma ligação [0.29ms]
+(pass) o tabuleiro do anexo conserva lados, cantos e as cinco ligações de E3 [0.29ms]
+(pass) o grupo vermelho vence ligando o canto inferior ao lado superior [0.23ms]
+
+src/games/faisca/ai/engine.test.ts:
+(pass) N2 escolhe a vitória imediata e N1 repete a escolha com a mesma seed [0.34ms]
+(pass) pedidos de IA completam partidas legais nos dois lados sem alterar o estado recebido [94.13ms]
+
+src/games/y/ai/engine.test.ts:
+(pass) o pedido local devolve uma ação legal reproduzível sem alterar a posição [0.45ms]
+(pass) a IA conclui a ligação vencedora para o participante que recebeu azul na troca [5.22ms]
+(pass) o computador pode trocar ou colocar e completa partidas legais em ambos os lados [114.22ms]
+
+ 60 pass
+ 0 fail
+ 5541 expect() calls
+Ran 60 tests across 8 files. [13.28s]

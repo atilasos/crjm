@@ -1,0 +1,4 @@
+[classroom-ui-smoke] Error: 11.º CRJM: seleção pública: ["Gatos & Cães","Dominório","Quelhas","Produto","Atari Go","Nex"]
+    at assertTitles (file:///home/proteu/.t3/worktrees/crjm/t3code-810c2859/.tmp/classroom-ui-smoke.js:6724:13)
+    at async checkGameSelection (file:///home/proteu/.t3/worktrees/crjm/t3code-810c2859/.tmp/classroom-ui-smoke.js:6727:3)
+    at async main (file:///home/proteu/.t3/worktrees/crjm/t3code-810c2859/.tmp/classroom-ui-smoke.js:7253:9)

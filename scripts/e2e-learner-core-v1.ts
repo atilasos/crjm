@@ -131,7 +131,8 @@ async function main() {
     await expectText(page, 'Atividade Recente');
     await expectText(page, 'Partida jogada');
     await expectText(page, 'Revisão concluída');
-    await expectText(page, '0/25');
+    // The 25 existing pattern cards plus one each for Faísca and Y.
+    await expectText(page, '0/27');
 
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
@@ -189,7 +190,7 @@ async function main() {
         throw new Error(`O progresso legado de ${gameId} não foi preservado.`);
       }
     }
-    await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
     await checkFaiscaTutor(page);
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByText('Já praticaste a próxima casa com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
@@ -240,7 +241,7 @@ async function main() {
     await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
     if (await page.getByRole('region', { name: 'Revisão rápida pós-jogo' }).count() || await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0') throw new Error('Restart retained review or hints');
-    await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+    await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
     await checkYTutor(page);
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByText('Já praticaste os três lados com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
@@ -287,7 +288,7 @@ async function main() {
     const winsByLevel = { 1: 0, 2: 0 };
     for (const level of [1, 2] as const) {
       for (const human of ['jogador1', 'jogador2'] as const) {
-        await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+        await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
         const won = await playFaiscaAgainstComputer(page, human, level);
         faiscaWins += Number(won);
         winsByLevel[level] += Number(won);
@@ -312,7 +313,7 @@ async function main() {
     const yWinsByLevel = { 1: 0, 2: 0 };
     for (const level of [1, 2] as const) {
       for (const human of ['jogador1', 'jogador2'] as const) {
-        await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+        await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
         const won = await playYAgainstComputer(page, human, level);
         yWins += Number(won);
         yWinsByLevel[level] += Number(won);
@@ -339,7 +340,7 @@ async function main() {
     await context.close();
     const resumed = await browser.newContext({ storageState });
     const resumedPage = await resumed.newPage();
-    await resumedPage.goto(`${BASE_URL}/?integracao=1#/perfil`, { waitUntil: 'networkidle' });
+    await resumedPage.goto(`${BASE_URL}/#/perfil`, { waitUntil: 'networkidle' });
     await expectText(resumedPage, 'Faísca');
     const learning = resumedPage.getByRole('heading', { name: 'O que já consigo fazer sem ajuda', exact: true }).locator('..');
     await learning.getByRole('heading', { name: 'Faísca', exact: true }).locator('..').locator('[data-strategy-progress="independent"]').waitFor();
@@ -357,10 +358,10 @@ async function main() {
     if (repeated.status !== 200) throw new Error(`Importação repetida: HTTP ${repeated.status}`);
     const resumedProfile = await resumedPage.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
     if (JSON.stringify(resumedProfile) !== JSON.stringify(afterYTraining)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
-    await resumedPage.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+    await resumedPage.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
     await resumedPage.getByText('Já praticaste a próxima casa com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
     if (resumedProfile.gameProgress.faisca.reviews !== 1 || resumedProfile.patterns['faisca:proxima-casa'].soloContextIds.length) throw new Error('New session lost guided review evidence');
-    await resumedPage.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+    await resumedPage.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
     await resumedPage.getByText('Já praticaste os três lados com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
     if (await resumedPage.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0' || await resumedPage.locator('[data-tutor-solution]').count()) throw new Error('Y: new session revealed help');
     if (resumedProfile.gameProgress.y.reviews !== 1 || resumedProfile.patterns['y:tres-lados'].soloContextIds.length) throw new Error('Y: new session lost guided review evidence');

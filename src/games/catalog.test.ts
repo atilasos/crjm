@@ -2,17 +2,17 @@ import { describe, expect, test } from 'bun:test';
 import { getGamesFor, isGameAvailable, isIntegrationPreview, type GameDefinition } from './catalog';
 
 describe('seleção de jogos por percurso', () => {
-  test.each(['faisca', 'y'] as const)('%s disponibiliza apenas capacidades implementadas na integração', gameId => {
+  test.each(['faisca', 'y'] as const)('%s disponibiliza todos os modos da edição atual', gameId => {
     expect(getGamesFor('local', true).find(game => game.id === gameId)?.capabilities).toEqual(['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress', 'tournament']);
     expect(getGamesFor('progress', true).some(game => game.id === gameId)).toBe(true);
     for (const capability of ['ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'tournament'] as const) {
       expect(getGamesFor(capability, true).some(game => game.id === gameId)).toBe(true);
     }
   });
-  test('mantém os seis jogos públicos em todos os percursos atuais', () => {
+  test('apresenta os seis jogos do 11.º CRJM em todos os percursos atuais', () => {
     for (const capability of ['local', 'puzzles', 'training', 'strategy', 'tournament', 'progress'] as const) {
       expect(getGamesFor(capability).map(game => game.id)).toEqual([
-        'gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex',
+        'dominorio', 'quelhas', 'produto', 'atari-go', 'faisca', 'y',
       ]);
     }
   });

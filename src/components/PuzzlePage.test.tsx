@@ -12,7 +12,7 @@ describe('PuzzlePage', () => {
     );
 
     expect(html).toContain('Laboratório de Estratégias');
-    for (const label of ['Gatos &amp; Cães', 'Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Nex']) {
+    for (const label of ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca', 'Y']) {
       expect(html).toContain(label);
     }
     expect(html).toContain('Pedir uma pista');

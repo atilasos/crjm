@@ -145,6 +145,7 @@ function AppContent() {
             className="mb-4 text-4xl font-extrabold md:text-5xl [color:var(--tinta)]"
             style={{ fontFamily: 'var(--font-display)' }}
           >{t("Treino para o CRJM")}</h1>
+          <p className="mb-3 font-bold [color:var(--tinta)]">{t("11.º CRJM — 2026/27")}</p>
           <p className="mx-auto mb-8 max-w-xl text-lg [color:var(--tinta-suave)]">{t("Pratica os seis jogos oficiais do Campeonato Regional de Jogos Matemáticos da Madeira — do 1.º Ciclo ao Secundário.")}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button

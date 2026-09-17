@@ -4,7 +4,7 @@ import { evaluateDesafioGoals, getTrainingPath } from '../src/ai-core/training-p
 export async function checkFaiscaLaboratory(page: Page, baseUrl: string): Promise<void> {
   const before = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
   const open = async () => {
-    await page.goto(`${baseUrl}/?integracao=1#/puzzles`, { waitUntil: 'networkidle' });
+    await page.goto(`${baseUrl}/#/puzzles`, { waitUntil: 'networkidle' });
     await page.reload({ waitUntil: 'networkidle' });
     await page.locator('[data-puzzle-lab] nav button').filter({ hasText: 'Faísca' }).click();
     await page.locator('[data-strategy-practice] input').first().waitFor();
@@ -70,7 +70,7 @@ export async function checkFaiscaLaboratory(page: Page, baseUrl: string): Promis
   await page.getByRole('button', { name: 'Confirmar resposta', exact: true }).click();
   const repeated = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
   if (repeated.profile.totalXp !== after.profile.totalXp) throw new Error('Faísca: repeating a puzzle duplicated XP');
-  await page.goto(`${baseUrl}/?integracao=1#/perfil`, { waitUntil: 'networkidle' });
+  await page.goto(`${baseUrl}/#/perfil`, { waitUntil: 'networkidle' });
   const summary = page.getByRole('heading', { name: 'O que já consigo fazer sem ajuda', exact: true }).locator('..');
   await summary.getByRole('heading', { name: 'Faísca', exact: true }).locator('..').locator('[data-strategy-progress="independent"]').waitFor();
 }

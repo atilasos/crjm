@@ -18,7 +18,7 @@ export async function checkYTournament(browser: Browser, app: string, server: st
       if (!String(error).includes('No dialog is showing')) errors.push(String(error));
     }); });
     try {
-      await teacher.goto(`${server}/admin?integracao=1`);
+      await teacher.goto(`${server}/admin`);
       await teacher.getByRole('button', { name: '➕ Criar', exact: true }).click();
       const modal = teacher.locator('#createTournamentModal');
       await modal.locator('#gameSelect').selectOption('y');
@@ -38,7 +38,7 @@ export async function checkYTournament(browser: Browser, app: string, server: st
         return player;
       };
       const connect = async (page: Page, index: number) => {
-        await page.goto(`${app}/?integracao=1#/campeonato`);
+        await page.goto(`${app}/#/campeonato`);
         await page.locator('#tournament-game').selectOption('y');
         await page.locator('select').filter({ has: page.locator('option[value="custom"]') }).selectOption('custom');
         await page.getByPlaceholder('wss://torneio.exemplo.com ou ws://192.168.1.100:4000').fill(server);

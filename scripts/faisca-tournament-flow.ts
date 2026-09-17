@@ -17,13 +17,13 @@ export async function checkFaiscaTournament(browser: Browser, app: string, serve
       if (!String(error).includes('No dialog is showing')) errors.push(String(error));
     }); });
     const setServer = async (page: Page) => {
-      await page.goto(`${app}/?integracao=1#/campeonato`);
+      await page.goto(`${app}/#/campeonato`);
       await page.locator('#tournament-game').selectOption('faisca');
       await page.locator('select').filter({ has: page.locator('option[value="custom"]') }).selectOption('custom');
       await page.getByPlaceholder('wss://torneio.exemplo.com ou ws://192.168.1.100:4000').fill(server);
     };
     try {
-      await teacher.goto(`${server}/admin?integracao=1`);
+      await teacher.goto(`${server}/admin`);
       await teacher.getByRole('button', { name: '➕ Criar', exact: true }).click();
       const modal = teacher.locator('#createTournamentModal');
       await modal.locator('#gameSelect').selectOption('faisca');

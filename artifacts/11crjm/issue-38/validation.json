@@ -1,0 +1,351 @@
+{
+  "issue": 38,
+  "base": "a18df16bbebb5274484e25873ef4e5cd6f65954d",
+  "dependencies": [
+    {
+      "issue": 27,
+      "commit": "c28d9be",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    },
+    {
+      "issue": 32,
+      "commit": "a39f01b",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    },
+    {
+      "issue": 33,
+      "commit": "24ee4bf",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    },
+    {
+      "issue": 34,
+      "commit": "e45e658",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    },
+    {
+      "issue": 35,
+      "commit": "1b1310a",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    },
+    {
+      "issue": 36,
+      "commit": "ff8828f",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    },
+    {
+      "issue": 37,
+      "commit": "a18df16",
+      "ancestorPresent": true,
+      "technicalBlockResolved": true,
+      "githubState": "OPEN"
+    }
+  ],
+  "tests": {
+    "passed": 576,
+    "failed": 0,
+    "assertions": 24030,
+    "files": 72
+  },
+  "typecheck": {
+    "base": "a18df16bbebb5274484e25873ef4e5cd6f65954d",
+    "preExistingDiagnostics": 704,
+    "currentDiagnostics": 704,
+    "newDiagnostics": [],
+    "comparison": "Same file, diagnostic code and message; line/column normalized."
+  },
+  "fullBuild": {
+    "passed": true,
+    "wasmEngines": [
+      "dominorio",
+      "quelhas",
+      "produto",
+      "atari-go",
+      "nex"
+    ]
+  },
+  "classroomHttp": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:4377",
+    "checks": {
+      "health": true,
+      "homepage": true,
+      "anonymousLearnerSession": true,
+      "runtimeConfig": true,
+      "workerAssets": 8
+    }
+  },
+  "classroomUi": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:4943",
+    "checks": [
+      {
+        "viewport": "desktop/tablet/mobile",
+        "game": "Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop/tablet/mobile",
+        "game": "Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Espectador: alternância entre Y e Faísca simultâneos"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Arquivo: criação/administração, participantes e espectador reais"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Produto"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Nex"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Produto"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Nex"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Produto"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Nex"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório de Estratégias"
+      }
+    ]
+  },
+  "learnerCoreE2e": {
+    "passed": true,
+    "checks": [
+      "legacy import remains idempotent",
+      "eight games on public profile",
+      "old progress and XP preserved",
+      "local and AI results for both sides and levels",
+      "requested hints stay assisted after reload",
+      "reviews persist without duplicate XP",
+      "puzzles and strategy choices",
+      "new browser context restores progress"
+    ]
+  },
+  "i18n": {
+    "passed": true,
+    "tests": 11,
+    "assertions": 4336
+  },
+  "arenas": {
+    "source": "arenas.json",
+    "replayedGames": 100,
+    "replayedMoves": 2021,
+    "newStrengthMeasurements": false
+  },
+  "review": {
+    "standardsFindings": 0,
+    "specFindings": 0
+  },
+  "preservedInputFiles": {
+    "count": 13,
+    "unchangedSha256": true,
+    "sha256": {
+      "CLAUDE.md": "0e7cf6212bf2e756ba5250f1f273e381b8d1cc4ed1c0ef4961a9870369646e5d",
+      "CONTEXT.md": "63ab8dc0d9b875100cc42d8642aacdbdf992f3769f868211b56d442452fd1949",
+      "docs/agents/domain.md": "0de50c7443e88a5a49fc8c7afc4fec69267af1906a90ea204486dc12bdd13c52",
+      "docs/agents/issue-tracker.md": "dbc751c78928d1f65ce648e192ca799ab9dac690442e4b08f57f358a084ab803",
+      "docs/agents/triage-labels.md": "7f8c4d9530e283188abf205da3c332e910397173df2b86954a0fe846401d73cd",
+      "docs/design/11crjm-spec.md": "5d597f0143008cce20d36e58f1f3c71013f9480c25c1e2d8c6c7a00b4eb8eaa2",
+      "docs/design/11crjm-ticket-publication.json": "eb5a0344623f9e8c246d656170e1db0afd5a2cd36ba22eafbd8bed34a8172c26",
+      "docs/design/11crjm-tickets.md": "95700ddea6b57295e20bcc4e7cec4bd6ec8e7fdce939db8c2ae7eb69c68f8c53",
+      "docs/design/11crjm-update-brief.md": "2546e18f2c82ec33ab767557726600932b0913ce96c5dd33ab824c8055adfd77",
+      "docs/research/11crjm-2026.md": "6ad7b3a8e66dec236c933558ec44555288ee43411da1df74552be6b101637a01",
+      "docs/research/11crjm-sources/Tabela_jogos_2026.jpg": "457b25f248924b8ee952ca81aaa082ab82697ac344d012ca6469611e807d5eac",
+      "docs/research/11crjm-sources/Tabuleiro_Faisca_regras-1.docx": "5df329104610342a2a9dbd4c0627befd69400dcedc60a43b3e775accddfd100e",
+      "docs/research/11crjm-sources/Tabuleiro_Y_regras-2.docx": "360be143cd44168cb10b7e071130c9e644b107e4cc1e24af5b1ad656f235c7fc"
+    }
+  },
+  "i18nUi": {
+    "pass": true,
+    "checks": [
+      "1440px gatos-caes: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1440px dominorio: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1440px quelhas: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1440px produto: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1440px atari-go: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1440px nex: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1440px puzzles: answer, hint and feedback preserved",
+      "1024px gatos-caes: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1024px dominorio: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1024px quelhas: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1024px produto: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1024px atari-go: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1024px nex: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "1024px puzzles: answer, hint and feedback preserved",
+      "390px gatos-caes: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "390px dominorio: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "390px quelhas: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "390px produto: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "390px atari-go: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "390px nex: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+      "390px puzzles: answer, hint and feedback preserved",
+      "Offline profile save leaves the selected language usable; explicit retry succeeds",
+      "Live championship WebSocket and reconnection code preserved; existing messages retranslated",
+      "Pupil language recovered on a second device; name unchanged; sign-out restores guest default"
+    ]
+  },
+  "browser": {
+    "provider": "agent-browser-hub",
+    "profile": "research",
+    "session": "issue38",
+    "sessionClosed": true,
+    "viewports": [
+      1440,
+      1024,
+      390
+    ],
+    "locales": [
+      "pt-PT",
+      "en",
+      "ne"
+    ],
+    "themes": [
+      "claro",
+      "escuro"
+    ]
+  }
+}

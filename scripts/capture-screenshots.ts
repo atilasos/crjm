@@ -43,8 +43,7 @@ const screenshots: ScreenshotConfig[] = [
     description: "Gatos & Cães game board",
     viewport: { width: 1280, height: 900 },
     setup: async (page) => {
-      await page.goto(BASE_URL, { waitUntil: "networkidle" });
-      await page.click('text="Gatos & Cães"');
+      await page.goto(`${BASE_URL}/#/gatos-caes`, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
     },
     delay: 500,
@@ -108,8 +107,7 @@ const screenshots: ScreenshotConfig[] = [
     description: "Nex connection game board",
     viewport: { width: 1280, height: 900 },
     setup: async (page) => {
-      await page.goto(BASE_URL, { waitUntil: "networkidle" });
-      await page.click('text="Nex"');
+      await page.goto(`${BASE_URL}/#/nex`, { waitUntil: "networkidle" });
       await page.waitForTimeout(500);
     },
     delay: 500,

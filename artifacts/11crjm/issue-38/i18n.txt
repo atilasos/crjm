@@ -1,0 +1,23 @@
+$ bun run scripts/i18n-check.ts && bun test src/i18n
+pt-PT, en, ne: 1884 messages each; catalogue parity, placeholders, JSX, accessible labels and game rules covered.
+bun test v1.3.4 (5eb2145b)
+
+src/i18n/translate.test.ts:
+(pass) Presentation in every supported language > defaults to Portugal Portuguese without browser-language detection [1.00ms]
+(pass) Presentation in every supported language > preserves meaningful whitespace and leaves unknown/user text untouched [1.00ms]
+(pass) Presentation in every supported language > updates complete hints and preserves whitespace around inline elements
+(pass) Presentation in every supported language > every puzzle, path, achievement and mission has content in all languages [2.00ms]
+(pass) Presentation in every supported language > faisca choices, predictions and feedback are translated for every situation [10.00ms]
+(pass) Presentation in every supported language > y choices, predictions and feedback are translated for every situation [4.00ms]
+(pass) Presentation in every supported language > all languages have exactly the same keys and interpolation slots [14.00ms]
+(pass) Presentation in every supported language > the catalogue contract rejects missing locales, messages and incorrect slots
+(pass) Presentation in every supported language > whole messages support different word order without changing pupil names
+
+src/i18n/format.test.ts:
+(pass) formats decimals and duration plurals for the chosen language [6.00ms]
+(pass) Nepali uses the same 0–9 digits as the school boards [2.00ms]
+
+ 11 pass
+ 0 fail
+ 4336 expect() calls
+Ran 11 tests across 2 files. [99.00ms]
