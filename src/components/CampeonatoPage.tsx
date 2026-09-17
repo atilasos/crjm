@@ -26,6 +26,8 @@ import {
   AtariGoBoard,
   NexBoard,
   FaiscaBoard,
+  YTournamentBoard,
+  fromNetworkYState,
   toNetworkFaiscaMove,
   toNetworkProdutoMove,
   toNetworkAtariGoMove,
@@ -409,12 +411,13 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'active_games_list':
         // Atualiza lista de jogos activos para modo espectador
-        setActiveGames((message as any).games || []);
+        if (!message.gameId || message.gameId === currentGameIdRef.current) setActiveGames(message.games);
         break;
 
       case 'spectator_game_state': {
         // Atualiza estado de jogo para espectadores
-        const specMsg = message as any;
+        if (message.gameId !== currentGameIdRef.current) break;
+        const specMsg = message;
         setSpectatorMatchStates(prev => {
           const newMap = new Map(prev);
           newMap.set(specMsg.matchId, {
@@ -1170,6 +1173,11 @@ function TournamentLobby({
                             onMove={() => {}}
                           />
                         )}
+                        {currentGameId === 'y' && (
+                          <YTournamentBoard state={fromNetworkYState(spectatorGameState)}
+                            gameNumber={selectedSpectateState.gameNumber} player1Name={selectedSpectateState.player1Name}
+                            player2Name={selectedSpectateState.player2Name} />
+                        )}
                         {currentGameId === 'faisca' && (
                           <FaiscaBoard state={spectatorGameState as FaiscaState} interactive={false} onMove={() => {}} />
                         )}
@@ -1402,7 +1410,7 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                 {gameId === 'atari-go' && (
                   <>{t("Serás ")}{t(iStartNext ? '⚫ Pretas' : '⚪ Brancas')}</>
                 )}
-                {gameId === 'faisca' && (
+                {(gameId === 'faisca' || gameId === 'y') && (
                   <>{t('Serás ')}{t(iStartNext ? 'Azul' : 'Vermelho')}</>
                 )}
                 {gameId === 'nex' && (
@@ -1491,6 +1499,11 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
             />
           )}
 
+          {gameId === 'y' && (
+            <YTournamentBoard state={fromNetworkYState(gameState)} gameNumber={currentGameNumber}
+              player1Name={match.player1?.name ?? ''} player2Name={match.player2?.name ?? ''}
+              myRole={gameMyRole} interactive={isMyTurn} onMove={onMove} />
+          )}
           {gameId === 'faisca' && (
             <FaiscaBoard key={`${match.id}:${currentGameNumber}`} state={gameState as FaiscaState} interactive={isMyTurn}
               myRole={gameMyRole as 'jogador1' | 'jogador2'} onMove={onMove} />

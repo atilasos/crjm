@@ -1,3 +1,6 @@
+import { criarEstadoInicial as criarY, aplicarJogada as aplicarY, getJogadasValidas as getYMoves } from '../games/y/logic';
+import type { YState } from '../games/y/types';
+import { fromNetworkYMove } from './game-protocol';
 import { criarEstadoInicial as criarFaisca, colocarPeca as colocarFaisca, getJogadasValidas as getFaiscaMoves } from '../games/faisca/logic';
 import type { FaiscaState } from '../games/faisca/types';
 import { fromNetworkFaiscaMove } from './game-protocol';
@@ -88,7 +91,7 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 10);
 }
 
-type GameState = FaiscaState | GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
+type GameState = YState | FaiscaState | GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
 
 // Internal match tracking (includes game number etc.)
 interface InternalMatch extends Match {
@@ -745,6 +748,8 @@ export class TournamentClientMock implements TournamentClient {
         return criarProduto('dois-jogadores');
       case 'atari-go':
         return criarAtariGo('dois-jogadores');
+      case 'y':
+        return criarY();
       case 'faisca':
         return criarFaisca();
       case 'nex':
@@ -818,6 +823,12 @@ export class TournamentClientMock implements TournamentClient {
           if (!isJogadaValidaAtariGo(agState, pos)) return null;
           return colocarAtariGoPedra(agState, pos);
         }
+        case 'y': {
+          const action = fromNetworkYMove(move);
+          if (!action || !('cores' in state)) return null;
+          const next = aplicarY(state, action);
+          return next === state ? null : next;
+        }
         case 'faisca': {
           const moveLocal = fromNetworkFaiscaMove(move);
           if (!moveLocal) return null;
@@ -859,6 +870,11 @@ export class TournamentClientMock implements TournamentClient {
         return iaProduto(state as ProdutoState);
       case 'atari-go':
         return iaAtariGo(state as AtariGoState);
+      case 'y': {
+        if (!('cores' in state)) return null;
+        const action = getYMoves(state).find(move => move.type === 'swap') ?? getYMoves(state)[0];
+        return action ? aplicarY(state, action) : null;
+      }
       case 'faisca': {
         const move = getFaiscaMoves(state as FaiscaState)[0];
         return move ? colocarFaisca(state as FaiscaState, move) : null;

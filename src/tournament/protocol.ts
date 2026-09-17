@@ -262,6 +262,8 @@ export interface SpectatorGameStateMessage {
 /** Lista de jogos em curso disponíveis para observar */
 export interface ActiveGamesListMessage {
   type: 'active_games_list';
+  /** Identifies the tournament whose list is replaced, including an empty list. */
+  gameId?: GameId;
   games: Array<{
     gameId: GameId;
     matchId: string;

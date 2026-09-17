@@ -1090,3 +1090,5 @@ export function NexBoard({ state, isMyTurn, myRole, onMove }: NexBoardProps) {
 }
 
 export { FaiscaBoard } from '../games/faisca/FaiscaBoard';
+
+export { YTournamentBoard } from './YTournamentBoard';

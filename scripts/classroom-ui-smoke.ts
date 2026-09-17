@@ -1,3 +1,4 @@
+import { checkYTournament, checkMixedTournamentSpectator } from './y-tournament-flow';
 import { checkFaiscaTournament } from './faisca-tournament-flow';
 import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -628,8 +629,13 @@ async function main(): Promise<void> {
     const checks: Array<{ viewport: string; game: string }> = [];
 
     try {
+      await checkYTournament(browser, BASE_URL, TOURNAMENT_URL, ADMIN_KEY);
+      checks.push({ viewport: 'desktop/tablet/mobile', game: 'Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro' });
+      if (process.env.Y_TOURNAMENT_ONLY) return;
       await checkFaiscaTournament(browser, BASE_URL, TOURNAMENT_URL, ADMIN_KEY);
       checks.push({ viewport: 'desktop/tablet/mobile', game: 'Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro' });
+      await checkMixedTournamentSpectator(browser, TOURNAMENT_URL, ADMIN_KEY);
+      checks.push({ viewport: 'desktop', game: 'Espectador: alternância entre Y e Faísca simultâneos' });
       if (process.env.FAISCA_TOURNAMENT_ONLY) return;
       await checkArchiveAdministration(browser);
       checks.push({ viewport: 'desktop', game: 'Arquivo: criação/administração, participantes e espectador reais' });

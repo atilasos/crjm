@@ -1,5 +1,6 @@
+import { criarEstadoInicial as criarY, aplicarJogada as aplicarY } from '../games/y/logic';
 import { toNetworkFaiscaMove, toNetworkGameState, fromNetworkGameState } from '../tournament/game-protocol';
-import { describe, it, expect } from 'bun:test';
+import { describe, it, expect, test } from 'bun:test';
 import { getGameAdapter } from './game-adapter';
 import type { ProdutoState } from '../games/produto/types';
 import type { AtariGoState } from '../games/atari-go/types';
@@ -174,4 +175,68 @@ it('Faísca: sequência oficial local/online, reservas, quatro direções, salto
     expect(adapter.isGameOver(online)).toBe(true);
     expect(adapter.getWinner(online)).toBe('jogador2');
     expect(adapter.applyMove(online, { row: 4, col: 0, distance: 2, direction: 'right' })).toBeNull();
+});
+
+
+describe('Y no torneio', () => {
+    it('aplica a abertura e a troca mantendo a identidade e a peça inicial', () => {
+        const adapter = getGameAdapter('y');
+        expect(adapter).not.toBeNull();
+        if (!adapter) throw new Error('Y indisponível no torneio');
+        const initial = adapter.createInitialState();
+        expect(adapter.applyMove(initial, { type: 'swap' })).toBeNull();
+        const opened = adapter.applyMove(initial, { type: 'place', node: 'A1' });
+        expect(opened).toEqual(aplicarY(criarY(), { type: 'place', node: 'A1' }));
+        if (!opened) throw new Error('Abertura recusada');
+        const swapped = adapter.applyMove(opened, { type: 'swap' });
+        expect(swapped).toEqual(aplicarY(aplicarY(criarY(), { type: 'place', node: 'A1' }), { type: 'swap' }));
+        if (!swapped) throw new Error('Troca recusada');
+        expect(adapter.getCurrentPlayer(swapped)).toBe('jogador1');
+        expect(adapter.applyMove(swapped, { type: 'swap' })).toBeNull();
+        expect(adapter.applyMove(swapped, { type: 'place', node: 'A1' })).toBeNull();
+        expect(initial).toEqual(criarY());
+    });
+});
+
+
+test.each([false, true])('Y: sequência local/online, serialização e vencedor com troca=%s', swap => {
+    const adapter = getGameAdapter('y');
+    if (!adapter) throw new Error('Y indisponível');
+    let local = criarY();
+    let online = adapter.createInitialState();
+    const path = ['A1', 'B1', 'C1', 'D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'D8', 'C7', 'B8', 'A9'];
+    const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
+    const play = (move: import('../games/y/types').YMove) => {
+        expect(adapter.isValidMove(online, move)).toBe(true);
+        local = aplicarY(local, move);
+        const next = adapter.applyMove(online, move);
+        expect(next).toEqual(local);
+        if (!next) throw new Error('Jogada recusada');
+        online = next;
+        expect(fromNetworkGameState('y', JSON.parse(JSON.stringify(toNetworkGameState('y', local))))).toEqual(local);
+        expect(adapter.getCurrentPlayer(online)).toBe(local.jogadorAtual);
+    };
+    play({ type: 'place', node: 'A1' });
+    if (swap) play({ type: 'swap' });
+    for (let i = 1; i < path.length; i++) {
+        play({ type: 'place', node: replies[i - 1]! });
+        expect(adapter.applyMove(online, { type: 'swap' })).toBeNull();
+        play({ type: 'place', node: path[i]! });
+    }
+    expect(adapter.getWinner(online)).toBe(swap ? 'jogador2' : 'jogador1');
+    expect(adapter.isGameOver(online)).toBe(true);
+    expect(adapter.applyMove(online, { type: 'place', node: 'A5' })).toBeNull();
+    expect(adapter.applyMove(online, { type: 'swap' })).toBeNull();
+});
+
+test('Y: rejeita entradas inválidas sem alterar o estado', () => {
+    const adapter = getGameAdapter('y');
+    if (!adapter) throw new Error('Y indisponível');
+    const initial = adapter.createInitialState();
+    for (const move of [null, {}, [], 1, { type: 'place' }, { type: 'place', node: 1 },
+        { type: 'place', node: 'fora' }, { type: 'place', node: '__proto__' }, { type: 'swap' }, { type: 'reset' }]) {
+        expect(adapter.isValidMove(initial, move)).toBe(false);
+        expect(adapter.applyMove(initial, move)).toBeNull();
+        expect(initial).toEqual(criarY());
+    }
 });

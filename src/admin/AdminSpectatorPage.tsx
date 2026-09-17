@@ -1,3 +1,4 @@
+import { fromNetworkYState } from '../tournament/game-protocol';
 import { LanguageProvider, LanguageSelector, useTranslation } from '../i18n/LanguageProvider';
 import { ThemeToggle } from '../components/ThemeToggle';
 /**
@@ -16,6 +17,7 @@ import {
   AtariGoBoard,
   NexBoard,
   FaiscaBoard,
+  YTournamentBoard,
 } from '../tournament/GameBoards';
 
 // Tipos para os estados
@@ -53,7 +55,6 @@ function AdminSpectatorPage() {
   const [activeGames, setActiveGames] = useState<ActiveGameInfo[]>([]);
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(initialMatchId);
   const [matchState, setMatchState] = useState<SpectatorMatchState | null>(null);
-  const [gameId, setGameId] = useState<GameId | null>(gameIdParam);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -84,12 +85,15 @@ function AdminSpectatorPage() {
           const msg = JSON.parse(event.data);
 
           if (msg.type === 'active_games_list') {
-            setActiveGames(msg.games || []);
+            setActiveGames(previous => msg.gameId
+              ? [...previous.filter(game => game.gameId !== msg.gameId), ...(msg.games || [])]
+              : msg.games || []);
           }
 
           if (msg.type === 'spectator_game_state') {
             statesRef.current.set(msg.matchId, msg);
-            if (msg.matchId === selectedMatchRef.current || !selectedMatchRef.current) {
+            if (msg.matchId === selectedMatchRef.current
+              || (!selectedMatchRef.current && (!gameIdParam || msg.gameId === gameIdParam))) {
               setMatchState({
                 gameId: msg.gameId,
                 matchId: msg.matchId,
@@ -107,7 +111,6 @@ function AdminSpectatorPage() {
                 selectedMatchRef.current = msg.matchId;
                 setSelectedMatchId(msg.matchId);
               }
-              setGameId(msg.gameId);
             }
           }
         } catch (e) {
@@ -149,7 +152,7 @@ function AdminSpectatorPage() {
 
   // Renderizar tabuleiro baseado no gameId
   const renderBoard = () => {
-    if (!matchState || !matchState.gameState || !gameId) {
+    if (!matchState || !matchState.gameState) {
       return (
         <div className="flex items-center justify-center h-64 [color:var(--tinta-suave)]">
           <p>{t('A aguardar dados do jogo...')}</p>
@@ -164,7 +167,7 @@ function AdminSpectatorPage() {
       onMove: () => {},
     };
 
-    switch (gameId) {
+    switch (matchState.gameId) {
       case 'gatos-caes':
         return <GatosCaesBoard state={state} {...commonProps} />;
       case 'dominorio':
@@ -175,12 +178,15 @@ function AdminSpectatorPage() {
         return <ProdutoBoard state={state} {...commonProps} />;
       case 'atari-go':
         return <AtariGoBoard state={state} {...commonProps} />;
+      case 'y':
+        return <YTournamentBoard state={fromNetworkYState(matchState.gameState)} gameNumber={matchState.gameNumber}
+          player1Name={matchState.player1Name} player2Name={matchState.player2Name} />;
       case 'faisca':
         return <FaiscaBoard state={state} interactive={false} onMove={() => {}} />;
       case 'nex':
         return <NexBoard state={state} {...commonProps} />;
       default:
-        return <div className="[color:var(--tinta-suave)]">{t('Jogo desconhecido:')} {gameId}</div>;
+        return <div className="[color:var(--tinta-suave)]">{t('Jogo desconhecido:')} {matchState.gameId}</div>;
     }
   };
 
@@ -235,7 +241,6 @@ function AdminSpectatorPage() {
                   key={game.matchId}
                   onClick={() => {
                     setSelectedMatchId(game.matchId);
-                    setGameId(game.gameId);
                   }}
                   className={`w-full text-left p-2 rounded-lg transition-all ${
                     selectedMatchId === game.matchId

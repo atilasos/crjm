@@ -1,0 +1,263 @@
+{
+  "issue": 37,
+  "base": "ff8828ff3da0c323d7a1e550b992ac277e589ca2",
+  "dependency": {
+    "issue": 29,
+    "commit": "f2d31550425a3b891085a6293df1e50bf61b9073",
+    "presentAndValidated": true,
+    "githubState": "OPEN"
+  },
+  "tests": {
+    "passed": 576,
+    "failed": 0,
+    "assertions": 24030,
+    "files": 72
+  },
+  "typecheck": {
+    "preExistingDiagnostics": 704,
+    "currentDiagnostics": 704,
+    "newDiagnostics": 0
+  },
+  "fullBuild": {
+    "passed": true,
+    "wasmEngines": [
+      "dominorio",
+      "quelhas",
+      "produto",
+      "atari-go",
+      "nex"
+    ],
+    "includesI18nGate": true
+  },
+  "classroomHttp": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:4374",
+    "checks": {
+      "health": true,
+      "homepage": true,
+      "anonymousLearnerSession": true,
+      "runtimeConfig": true,
+      "workerAssets": 8
+    }
+  },
+  "classroomUi": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:5209",
+    "checks": [
+      {
+        "viewport": "desktop/tablet/mobile",
+        "game": "Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop/tablet/mobile",
+        "game": "Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Arquivo: criação/administração, participantes e espectador reais"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Seleção, ciclos, perfil e pré-visualização"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Produto"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Nex"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Seleção, ciclos, perfil e pré-visualização"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Produto"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Nex"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Seleção, ciclos, perfil e pré-visualização"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Produto"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Nex"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório de Estratégias"
+      }
+    ]
+  },
+  "learnerCoreE2e": {
+    "passed": true
+  },
+  "tournamentBrowser": {
+    "passed": true,
+    "profile": "research",
+    "session": "issue37",
+    "viewports": [
+      1440,
+      1024,
+      390
+    ],
+    "locales": [
+      "pt-PT",
+      "en",
+      "ne"
+    ],
+    "themes": [
+      "claro",
+      "escuro"
+    ],
+    "checks": [
+      "teacher creates Y",
+      "two participants play",
+      "swap with stable identities",
+      "reconnect before and after swap",
+      "both devices offline and paused recovery",
+      "spectator receives final board and winner",
+      "next game alternates starting participant",
+      "Y and Faisca coexist",
+      "repeated spectator selection across games"
+    ],
+    "sessionClosed": true
+  },
+  "serverTournament": {
+    "passed": true,
+    "players": 4,
+    "checks": [
+      "invalid actions and turns",
+      "duplicate placement and swap rejection",
+      "local/online state parity",
+      "reconnect and replacement connections",
+      "both devices offline before and after swap",
+      "score recovery between games",
+      "double elimination",
+      "winner follows participant after swap",
+      "export/import"
+    ]
+  },
+  "review": {
+    "standardsMaterialFindings": 0,
+    "standardsNonBlockingSuggestions": 2,
+    "specPendingFindings": 0
+  },
+  "preservedInputFiles": {
+    "count": 13,
+    "unchangedSha256": true
+  }
+}

@@ -163,6 +163,7 @@ function sendActiveGamesListToSocket(socket: ServerWebSocket<ClientData>, tourna
 
   sendToSocket(socket, {
     type: 'active_games_list',
+    gameId: tournament.gameId,
     games,
   });
 }
@@ -451,6 +452,17 @@ function handleRejoinTournament(
           yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
           opponentName: opponent?.name ?? 'Adversário desconectado',
         });
+
+        // Recovery also returns the board while waiting for the other device.
+        if (match.phase === 'playing' && match.gameState) {
+          sendToSocket(socket, {
+            type: 'game_state_update',
+            matchId: resumedMatchId,
+            gameNumber: match.currentGame,
+            gameState: match.gameState,
+            yourTurn: false,
+          });
+        }
 
         log({
           type: 'match',
