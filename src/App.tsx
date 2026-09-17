@@ -23,6 +23,8 @@ import { QuelhasGame } from './games/quelhas/QuelhasGame';
 import { AtariGoGame } from './games/atari-go/AtariGoGame';
 import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
+import { FaiscaGame } from './games/faisca/FaiscaGame';
+import FaiscaVignette from './components/vignettes/FaiscaVignette';
 import { PuzzlePage } from './components/PuzzlePage';
 import { LoginPage } from './components/LoginPage';
 import { GameSelectionControl } from './components/GameSelectionControl';
@@ -40,6 +42,7 @@ const GAME_VIEWS: Partial<Record<GameId, {
   produto: { Game: ProdutoGame, Vignette: ProdutoVignette },
   'atari-go': { Game: AtariGoGame, Vignette: AtariGoVignette },
   nex: { Game: NexGame, Vignette: NexVignette },
+  faisca: { Game: FaiscaGame, Vignette: FaiscaVignette },
 };
 
 function paginaDoHash(): Pagina {

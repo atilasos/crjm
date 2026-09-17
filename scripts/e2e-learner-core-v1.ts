@@ -185,11 +185,42 @@ async function main() {
         throw new Error(`O progresso legado de ${gameId} não foi preservado.`);
       }
     }
+    await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+    const board = page.getByRole('group', { name: 'Tabuleiro de Faísca' });
+    await board.getByRole('button', { name: /^f3:/ }).click();
+    // Official twenty-piece example, followed by b3 → a3 → a1: Red wins.
+    const moves = [
+      [3, 'Esquerda'], [2, 'Baixo'], [3, 'Direita'], [1, 'Cima'], [3, 'Esquerda'],
+      [3, 'Cima'], [3, 'Direita'], [1, 'Baixo'], [3, 'Esquerda'], [2, 'Esquerda'],
+      [2, 'Baixo'], [3, 'Cima'], [1, 'Direita'], [1, 'Baixo'], [2, 'Direita'],
+      [3, 'Baixo'], [1, 'Direita'], [3, 'Esquerda'], [1, 'Cima'], [1, 'Cima'],
+      [1, 'Esquerda'], [2, 'Baixo'],
+    ] as const;
+    for (const [distance, direction] of moves) {
+      await page.getByRole('button', { name: `Distância ${distance}`, exact: true }).click();
+      await page.getByRole('group', { name: 'Direção da peça' }).getByRole('button', { name: new RegExp(direction) }).click();
+      await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).click();
+    }
+    await page.getByRole('status').filter({ hasText: 'Venceu Vermelho!' }).waitFor();
+    if (!await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).isDisabled()) throw new Error('Partida terminada ainda permite jogar.');
+    await page.waitForFunction(async () => {
+      const dashboard = await (await fetch('/api/learner/dashboard')).json();
+      return dashboard.gameProgress.faisca.played === 1;
+    });
+    const afterFaisca = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (afterFaisca.profile.totalXp !== 80 || afterFaisca.gameProgress.faisca.wins !== 0) throw new Error('Resultado local de Faísca não respeita a prática existente.');
+    for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex']) {
+      if (JSON.stringify(afterFaisca.gameProgress[gameId]) !== JSON.stringify(archivedProgress.gameProgress[gameId])) throw new Error(`Faísca alterou ${gameId}.`);
+    }
+    await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
     const storageState = await context.storageState();
     await context.close();
     const resumed = await browser.newContext({ storageState });
     const resumedPage = await resumed.newPage();
-    await resumedPage.goto(`${BASE_URL}/#/puzzles/arquivo`, { waitUntil: 'networkidle' });
+    await resumedPage.goto(`${BASE_URL}/?integracao=1#/perfil`, { waitUntil: 'networkidle' });
+    await expectText(resumedPage, 'Faísca');
+    await expectText(resumedPage, '80 XP total');
     const repeated = await resumedPage.evaluate(async legacy => {
       const response = await fetch('/api/learner/import-local-profile', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile: legacy }),
@@ -198,7 +229,7 @@ async function main() {
     }, legacyProfile);
     if (repeated.status !== 200) throw new Error(`Importação repetida: HTTP ${repeated.status}`);
     const resumedProfile = await resumedPage.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
-    if (JSON.stringify(resumedProfile) !== JSON.stringify(archivedProgress)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
+    if (JSON.stringify(resumedProfile) !== JSON.stringify(afterFaisca)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
     await resumed.close();
     await browser.close();
     console.log('Learner-core V1 e2e flow passed');

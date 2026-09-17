@@ -81,6 +81,16 @@ export const GAME_CATALOG = [
     selection: 'archive',
     capabilities: EXISTING_CAPABILITIES,
   },
+  {
+    id: 'faisca',
+    name: 'Faísca',
+    description: 'Coloca uma peça e aponta para a próxima casa. Deixa o adversário sem jogada válida!',
+    accent: 'var(--tinta)',
+    cycles: ['1.º Ciclo', '2.º Ciclo'],
+    mark: '➤',
+    selection: 'integration',
+    capabilities: ['local', 'progress'],
+  },
 ] as const satisfies readonly GameDefinition[];
 
 export type GameId = (typeof GAME_CATALOG)[number]['id'];

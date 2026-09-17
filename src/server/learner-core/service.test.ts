@@ -215,6 +215,36 @@ describe('learner core service', () => {
     }
   });
 
+  test('guarda uma partida local de Faísca sem alterar os seis jogos e recupera-a noutra sessão', () => {
+    const { db, service } = createService();
+    const session = service.ensureSession(null);
+    const previousGames = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'] as const;
+    for (const gameId of previousGames) service.recordGameCompleted(session.userId, gameId, true);
+    const before = service.getDashboard(session.userId);
+    expect(before.gameProgress.faisca.played).toBe(0);
+    const completed = service.recordGameCompleted(session.userId, 'faisca', false).dashboard;
+    expect(completed.gameProgress.faisca.played).toBe(1);
+    expect(completed.gameProgress.faisca.wins).toBe(0);
+    expect(completed.profile.totalXp).toBe(before.profile.totalXp + 10);
+    expect(completed.levelProgress.faisca).toBeUndefined();
+    for (const gameId of previousGames) expect(completed.gameProgress[gameId]).toEqual(before.gameProgress[gameId]);
+    expect(completed.recentEvents).toContainEqual(expect.objectContaining({ gameId: 'faisca', type: 'game_completed', won: false }));
+    db.close();
+
+    const reopened = createService();
+    try {
+      const resumed = reopened.service.ensureSession(session.sessionId);
+      const restored = reopened.service.getDashboard(resumed.userId);
+      expect(restored.gameProgress).toEqual(completed.gameProgress);
+      expect(restored.profile).toEqual(completed.profile);
+      expect(restored.achievements).toEqual(completed.achievements);
+      expect(restored.recentEvents).toHaveLength(completed.recentEvents.length);
+      expect(restored.recentEvents).toEqual(expect.arrayContaining(completed.recentEvents));
+      const other = reopened.service.ensureSession(null);
+      expect(reopened.service.getDashboard(other.userId).gameProgress.faisca.played).toBe(0);
+    } finally { reopened.db.close(); }
+  });
+
   test('imports a legacy profile idempotently while keeping the V1 core strict', () => {
     const { db, service } = createService();
     const session = service.ensureSession(null);

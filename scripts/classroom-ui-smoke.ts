@@ -3,6 +3,9 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import pt from '../src/i18n/pt-PT.json' with { type: 'json' };
+import en from '../src/i18n/en.json' with { type: 'json' };
+import ne from '../src/i18n/ne.json' with { type: 'json' };
 
 const PORT = 4800 + (process.pid % 500);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -146,7 +149,7 @@ async function checkGameSelection(page: Page): Promise<void> {
   if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('Ciclos da seleção pública alterados.');
   await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
   await page.getByRole('status').filter({ hasText: 'Pré-visualização de integração' }).waitFor();
-  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização', ['Dominório', 'Quelhas', 'Produto', 'Atari Go']);
+  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização', ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca']);
   await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
   await assertTitles(page.locator('main select').first().locator('option'), 'Jogos do campeonato');
   await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
@@ -157,6 +160,48 @@ async function checkGameSelection(page: Page): Promise<void> {
   }
   await page.goto(`${BASE_URL}/#/perfil`, { waitUntil: 'networkidle' });
   for (const title of titles) await page.getByText(title, { exact: true }).first().waitFor();
+}
+
+async function checkFaisca(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
+  if (await page.locator('.faisca').count()) throw new Error('Faísca foi publicada fora da integração.');
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    const formatMessage = (text: keyof typeof pt, _locale: string, values: (string | number)[]) =>
+      t(text).replace(/\{(\d+)\}/g, (_, index) => String(values[Number(index)]));
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: t('Faísca'), exact: true }) }).click();
+      await page.getByText(t('Faísca joga-se num tabuleiro de cinco linhas e seis colunas. Azul começa.'), { exact: true }).waitFor();
+      const board = page.getByRole('group', { name: t('Tabuleiro de Faísca') });
+      if (await board.getByRole('button').count() !== 30) throw new Error('Faísca: tabuleiro deve ter 30 casas.');
+      await board.getByRole('button', { name: /^f3:/ }).focus();
+      await page.keyboard.press('Enter');
+      await page.getByRole('button', { name: formatMessage('Distância {0}', locale, [3]), exact: true }).click();
+      await page.getByRole('button', { name: t('Confirmar jogada'), exact: true }).click();
+      await page.getByRole('alert').filter({ hasText: t('Jogada inválida. Escolhe uma peça disponível e um destino vazio dentro do tabuleiro.') }).waitFor();
+      await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Azul')]) }).waitFor();
+      await page.getByRole('button', { name: t('Esquerda'), exact: false }).click();
+      await page.getByRole('button', { name: t('Confirmar jogada'), exact: true }).click();
+      await page.getByText(formatMessage('Casa obrigatória: {0}', locale, ['c3']), { exact: true }).waitFor();
+      await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
+      await board.getByRole('button', { name: formatMessage('{0}: {1}, distância {2}, {3}', locale, ['f3', t('Azul'), 3, t('Esquerda')]), exact: true }).waitFor();
+      if (await page.getByRole('button', { name: /^N[1-6],/ }).count()) throw new Error('Faísca expõe dificuldades não implementadas.');
+      await assertViewport(page, `Faísca ${locale} ${theme}`, '.faisca-board');
+      for (const label of ['Confirmar jogada', 'Nova partida'] as const) {
+        const bounds = await page.getByRole('button', { name: t(label), exact: true }).boundingBox();
+        if (!bounds || bounds.height < 44 || bounds.width < 44) throw new Error(`Faísca: controlo ${label} demasiado pequeno.`);
+      }
+      if (process.env.FAISCA_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: process.env.FAISCA_SCREENSHOT_PATH, fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
 }
 
 async function checkArchive(page: Page): Promise<void> {
@@ -369,6 +414,8 @@ async function main(): Promise<void> {
         checks.push({ viewport: viewport.name, game: 'Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro' });
         await checkGameSelection(page);
         checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
+        await checkFaisca(page);
+        checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
         for (const game of GAMES) {
           await runGame(page, game.title, game.play);
           checks.push({ viewport: viewport.name, game: game.title });
