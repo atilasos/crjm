@@ -102,7 +102,7 @@ export async function playFaiscaAgainstComputer(page: Page, human: Player, level
       const game = document.querySelector('.faisca');
       return game?.querySelector('[role="alert"]') || !game?.querySelector('[role="status"]')?.textContent?.includes('Computador');
     });
-    if (await page.locator('.faisca [role="alert"]').count()) throw new Error('Faísca AI failed in the browser');
+    if (await page.locator('.faisca [role="alert"]').count()) throw new Error(`Faísca failed in the browser: ${await page.locator('.faisca [role="alert"]').allTextContents()}`);
     const labels = await page.locator('.faisca-cell[data-player]').evaluateAll(cells => cells.map(cell => cell.getAttribute('aria-label')!));
     for (const label of labels) {
       const match = /^([a-f])([1-5]): (Azul|Vermelho), distância ([123]), (Cima|Direita|Baixo|Esquerda)$/.exec(label);

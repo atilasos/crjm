@@ -89,7 +89,7 @@ export const GAME_CATALOG = [
     cycles: ['1.º Ciclo', '2.º Ciclo'],
     mark: '➤',
     selection: 'integration',
-    capabilities: ['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress'],
+    capabilities: ['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress', 'tournament'],
   },
   {
     id: 'y',

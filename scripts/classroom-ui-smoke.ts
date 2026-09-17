@@ -1,3 +1,4 @@
+import { checkFaiscaTournament } from './faisca-tournament-flow';
 import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { rm } from 'node:fs/promises';
@@ -627,6 +628,9 @@ async function main(): Promise<void> {
     const checks: Array<{ viewport: string; game: string }> = [];
 
     try {
+      await checkFaiscaTournament(browser, BASE_URL, TOURNAMENT_URL, ADMIN_KEY);
+      checks.push({ viewport: 'desktop/tablet/mobile', game: 'Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro' });
+      if (process.env.FAISCA_TOURNAMENT_ONLY) return;
       await checkArchiveAdministration(browser);
       checks.push({ viewport: 'desktop', game: 'Arquivo: criação/administração, participantes e espectador reais' });
       for (const viewport of VIEWPORTS) {

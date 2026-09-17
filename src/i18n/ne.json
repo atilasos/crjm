@@ -1868,5 +1868,18 @@
   "Sempre ao participante que começou com essa cor": "सधैँ त्यो रङबाट सुरु गरेको सहभागीलाई",
   "Sempre ao primeiro participante": "सधैँ पहिलो सहभागीलाई",
   "A vitória pertence a quem tem a cor do grupo vencedor nesse momento, respeitando a troca.": "साटिएको रङअनुसार जित त्यसबेला विजेता समूहको रङ भएको सहभागीलाई जान्छ।",
-  "Ligações do tabuleiro (texto)": "बोर्डका जडानहरू (पाठ)"
+  "Ligações do tabuleiro (texto)": "बोर्डका जडानहरू (पाठ)",
+  "A partida não está em curso.": "खेल चलिरहेको छैन।",
+  "Admin Spectator": "प्रशासक दर्शक",
+  "A aguardar dados do jogo...": "खेलको जानकारी पर्खँदै...",
+  "Erro na conexao WebSocket": "जडान त्रुटि",
+  "Conectado": "जडान भएको",
+  "Desconectado": "जडान विच्छेद भएको",
+  "Jogos em Curso": "चलिरहेका खेलहरू",
+  "Nenhum jogo em curso": "कुनै खेल चलिरहेको छैन",
+  "Modo espectador - apenas a observar": "दर्शक मोड - हेर्न मात्र",
+  "Jogo desconhecido:": "अज्ञात खेल:",
+  "Grande Final": "महाफाइनल",
+  "Final Reset": "महाफाइनल पुनः",
+  "Ronda": "चरण"
 }

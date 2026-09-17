@@ -1,3 +1,4 @@
+import type { FaiscaState, Jogada as FaiscaMove } from '../games/faisca/types';
 import { getGamesFor, isIntegrationPreview, type BrowsableSelection } from '../games/catalog';
 import { GameSelectionControl } from './GameSelectionControl';
 import { formatDateTime } from '../i18n/format';
@@ -24,6 +25,8 @@ import {
   ProdutoBoard,
   AtariGoBoard,
   NexBoard,
+  FaiscaBoard,
+  toNetworkFaiscaMove,
   toNetworkProdutoMove,
   toNetworkAtariGoMove,
   toNetworkNexMove,
@@ -577,6 +580,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       }
     } else if (currentGameId === 'atari-go' && move) {
       networkMove = toNetworkAtariGoMove(move as AtariGoPosicao);
+    } else if (currentGameId === 'faisca' && move) {
+      networkMove = toNetworkFaiscaMove(move as FaiscaMove);
     } else if (currentGameId === 'nex' && move) {
       networkMove = toNetworkNexMove(move as NexAcao);
     }
@@ -1165,6 +1170,9 @@ function TournamentLobby({
                             onMove={() => {}}
                           />
                         )}
+                        {currentGameId === 'faisca' && (
+                          <FaiscaBoard state={spectatorGameState as FaiscaState} interactive={false} onMove={() => {}} />
+                        )}
                         {currentGameId === 'nex' && (
                           <NexBoard
                             state={spectatorGameState as NexState}
@@ -1394,6 +1402,9 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                 {gameId === 'atari-go' && (
                   <>{t("Serás ")}{t(iStartNext ? '⚫ Pretas' : '⚪ Brancas')}</>
                 )}
+                {gameId === 'faisca' && (
+                  <>{t('Serás ')}{t(iStartNext ? 'Azul' : 'Vermelho')}</>
+                )}
                 {gameId === 'nex' && (
                   <>{t("Serás ")}{t(iStartNext ? '⚫ Pretas' : '⚪ Brancas')}</>
                 )}
@@ -1478,6 +1489,11 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               myRole={gameMyRole as 'jogador1' | 'jogador2'}
               onMove={(pos: AtariGoPosicao) => onMove(pos)}
             />
+          )}
+
+          {gameId === 'faisca' && (
+            <FaiscaBoard key={`${match.id}:${currentGameNumber}`} state={gameState as FaiscaState} interactive={isMyTurn}
+              myRole={gameMyRole as 'jogador1' | 'jogador2'} onMove={onMove} />
           )}
 
           {gameId === 'nex' && (

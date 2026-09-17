@@ -1868,5 +1868,18 @@
   "Sempre ao participante que começou com essa cor": "Always the participant who started with that colour",
   "Sempre ao primeiro participante": "Always the first participant",
   "A vitória pertence a quem tem a cor do grupo vencedor nesse momento, respeitando a troca.": "The win belongs to whoever has the winning group's colour at that moment, accounting for the swap.",
-  "Ligações do tabuleiro (texto)": "Board connections (text)"
+  "Ligações do tabuleiro (texto)": "Board connections (text)",
+  "A partida não está em curso.": "The game is not in progress.",
+  "Admin Spectator": "Admin spectator",
+  "A aguardar dados do jogo...": "Waiting for game data...",
+  "Erro na conexao WebSocket": "Connection error",
+  "Conectado": "Connected",
+  "Desconectado": "Disconnected",
+  "Jogos em Curso": "Games in progress",
+  "Nenhum jogo em curso": "No games in progress",
+  "Modo espectador - apenas a observar": "Spectator mode - watching only",
+  "Jogo desconhecido:": "Unknown game:",
+  "Grande Final": "Grand final",
+  "Final Reset": "Grand final reset",
+  "Ronda": "Round"
 }

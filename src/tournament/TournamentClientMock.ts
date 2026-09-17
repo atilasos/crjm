@@ -1,3 +1,6 @@
+import { criarEstadoInicial as criarFaisca, colocarPeca as colocarFaisca, getJogadasValidas as getFaiscaMoves } from '../games/faisca/logic';
+import type { FaiscaState } from '../games/faisca/types';
+import { fromNetworkFaiscaMove } from './game-protocol';
 /**
  * Cliente mock para testar a UI de campeonato sem servidor real.
  * 
@@ -85,7 +88,7 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 10);
 }
 
-type GameState = GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
+type GameState = FaiscaState | GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
 
 // Internal match tracking (includes game number etc.)
 interface InternalMatch extends Match {
@@ -742,6 +745,8 @@ export class TournamentClientMock implements TournamentClient {
         return criarProduto('dois-jogadores');
       case 'atari-go':
         return criarAtariGo('dois-jogadores');
+      case 'faisca':
+        return criarFaisca();
       case 'nex':
         return criarNex('dois-jogadores');
       default:
@@ -813,6 +818,12 @@ export class TournamentClientMock implements TournamentClient {
           if (!isJogadaValidaAtariGo(agState, pos)) return null;
           return colocarAtariGoPedra(agState, pos);
         }
+        case 'faisca': {
+          const moveLocal = fromNetworkFaiscaMove(move);
+          if (!moveLocal) return null;
+          const next = colocarFaisca(state as FaiscaState, moveLocal);
+          return next === state ? null : next;
+        }
         case 'nex': {
           const nState = state as NexState;
           const nMove = move as any;
@@ -848,6 +859,10 @@ export class TournamentClientMock implements TournamentClient {
         return iaProduto(state as ProdutoState);
       case 'atari-go':
         return iaAtariGo(state as AtariGoState);
+      case 'faisca': {
+        const move = getFaiscaMoves(state as FaiscaState)[0];
+        return move ? colocarFaisca(state as FaiscaState, move) : null;
+      }
       case 'nex':
         return iaNex(state as NexState);
       default:

@@ -1868,5 +1868,18 @@
   "Sempre ao participante que começou com essa cor": "Sempre ao participante que começou com essa cor",
   "Sempre ao primeiro participante": "Sempre ao primeiro participante",
   "A vitória pertence a quem tem a cor do grupo vencedor nesse momento, respeitando a troca.": "A vitória pertence a quem tem a cor do grupo vencedor nesse momento, respeitando a troca.",
-  "Ligações do tabuleiro (texto)": "Ligações do tabuleiro (texto)"
+  "Ligações do tabuleiro (texto)": "Ligações do tabuleiro (texto)",
+  "A partida não está em curso.": "A partida não está em curso.",
+  "Admin Spectator": "Espectador do torneio",
+  "A aguardar dados do jogo...": "A aguardar dados do jogo...",
+  "Erro na conexao WebSocket": "Erro de ligação",
+  "Conectado": "Conectado",
+  "Desconectado": "Desconectado",
+  "Jogos em Curso": "Jogos em Curso",
+  "Nenhum jogo em curso": "Nenhum jogo em curso",
+  "Modo espectador - apenas a observar": "Modo espectador - apenas a observar",
+  "Jogo desconhecido:": "Jogo desconhecido:",
+  "Grande Final": "Grande Final",
+  "Final Reset": "Repetição da grande final",
+  "Ronda": "Ronda"
 }

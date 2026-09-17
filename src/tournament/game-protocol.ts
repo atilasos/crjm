@@ -4,6 +4,7 @@
  */
 
 import type { GameId } from './protocol';
+import type { FaiscaState, Jogada as FaiscaMove, Direcao } from '../games/faisca/types';
 
 // Tipos locais (UI)
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
@@ -688,7 +689,36 @@ export function fromNetworkNexState(
 // Generic converters by GameId
 // ============================================================================
 
+// Faísca uses the same complete state on the server and client. No derived
+// turn, inventory or result is accepted as part of a submitted move.
+export type NetworkFaiscaState = FaiscaState;
+export interface NetworkFaiscaMove {
+  row: number;
+  col: number;
+  distance: 1 | 2 | 3;
+  direction: 'up' | 'right' | 'down' | 'left';
+}
+const FAISCA_DIRECTIONS = { up: 'cima', right: 'direita', down: 'baixo', left: 'esquerda' } as const;
+const FAISCA_NETWORK_DIRECTIONS: Record<Direcao, NetworkFaiscaMove['direction']> = {
+  cima: 'up', direita: 'right', baixo: 'down', esquerda: 'left',
+};
+
+export function toNetworkFaiscaMove(move: FaiscaMove): NetworkFaiscaMove {
+  return { row: move.casa.linha, col: move.casa.coluna, distance: move.distancia, direction: FAISCA_NETWORK_DIRECTIONS[move.direcao] };
+}
+
+export function fromNetworkFaiscaMove(value: unknown): FaiscaMove | null {
+  if (!value || typeof value !== 'object') return null;
+  const move = value as Record<string, unknown>;
+  if (typeof move.row !== 'number' || !Number.isInteger(move.row)
+    || typeof move.col !== 'number' || !Number.isInteger(move.col)
+    || (move.distance !== 1 && move.distance !== 2 && move.distance !== 3)
+    || (move.direction !== 'up' && move.direction !== 'right' && move.direction !== 'down' && move.direction !== 'left')) return null;
+  return { casa: { linha: move.row, coluna: move.col }, distancia: move.distance, direcao: FAISCA_DIRECTIONS[move.direction] };
+}
+
 export type NetworkGameState =
+  | NetworkFaiscaState
   | NetworkGatosCaesState
   | NetworkDominorioState
   | NetworkQuelhasState
@@ -697,6 +727,7 @@ export type NetworkGameState =
   | NetworkNexState;
 
 export type NetworkGameMove =
+  | NetworkFaiscaMove
   | NetworkGatosCaesMove
   | NetworkDominorioMove
   | NetworkQuelhasMove
@@ -705,6 +736,7 @@ export type NetworkGameMove =
   | NetworkNexMove;
 
 export type LocalGameState =
+  | FaiscaState
   | GatosCaesState
   | DominorioState
   | QuelhasState
@@ -717,6 +749,8 @@ export type LocalGameState =
  */
 export function fromNetworkGameState(gameId: GameId, state: unknown): LocalGameState {
   switch (gameId) {
+    case 'faisca':
+      return structuredClone(state as FaiscaState);
     case 'gatos-caes':
       return fromNetworkGatosCaesState(state as NetworkGatosCaesState);
     case 'dominorio':
@@ -739,6 +773,8 @@ export function fromNetworkGameState(gameId: GameId, state: unknown): LocalGameS
  */
 export function toNetworkGameState(gameId: GameId, state: LocalGameState): NetworkGameState {
   switch (gameId) {
+    case 'faisca':
+      return structuredClone(state as FaiscaState);
     case 'gatos-caes':
       return toNetworkGatosCaesState(state as GatosCaesState);
     case 'dominorio':

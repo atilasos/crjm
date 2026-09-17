@@ -1,3 +1,5 @@
+import { LanguageProvider, LanguageSelector, useTranslation } from '../i18n/LanguageProvider';
+import { ThemeToggle } from '../components/ThemeToggle';
 /**
  * Página de espectador para o painel de administração.
  * Mostra jogos em curso e permite visualizar tabuleiros em tempo real.
@@ -13,6 +15,7 @@ import {
   ProdutoBoard,
   AtariGoBoard,
   NexBoard,
+  FaiscaBoard,
 } from '../tournament/GameBoards';
 
 // Tipos para os estados
@@ -42,6 +45,7 @@ interface SpectatorMatchState {
 
 // Componente principal
 function AdminSpectatorPage() {
+  const { t, setLocale } = useTranslation();
   const urlParams = new URLSearchParams(window.location.search);
   const initialMatchId = urlParams.get('matchId');
   const gameIdParam = urlParams.get('gameId') as GameId | null;
@@ -53,6 +57,9 @@ function AdminSpectatorPage() {
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedMatchRef = useRef(selectedMatchId);
+  selectedMatchRef.current = selectedMatchId;
+  const statesRef = useRef(new Map<string, SpectatorMatchState>());
   const wsRef = useRef<WebSocket | null>(null);
 
   // Conexao WebSocket
@@ -60,7 +67,10 @@ function AdminSpectatorPage() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws`;
 
+    let disposed = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     const connect = () => {
+      if (disposed) return;
       const ws = new WebSocket(wsUrl);
       wsRef.current = ws;
 
@@ -78,8 +88,8 @@ function AdminSpectatorPage() {
           }
 
           if (msg.type === 'spectator_game_state') {
-            // Actualiza se for o match selecionado ou se nenhum está selecionado ainda
-            if (msg.matchId === selectedMatchId || !selectedMatchId) {
+            statesRef.current.set(msg.matchId, msg);
+            if (msg.matchId === selectedMatchRef.current || !selectedMatchRef.current) {
               setMatchState({
                 gameId: msg.gameId,
                 matchId: msg.matchId,
@@ -93,7 +103,8 @@ function AdminSpectatorPage() {
                 whoseTurn: msg.whoseTurn,
               });
               // Se não havia match selecionado, seleciona este
-              if (!selectedMatchId) {
+              if (!selectedMatchRef.current) {
+                selectedMatchRef.current = msg.matchId;
                 setSelectedMatchId(msg.matchId);
               }
               setGameId(msg.gameId);
@@ -112,33 +123,36 @@ function AdminSpectatorPage() {
       ws.onclose = () => {
         setConnected(false);
         // Tentar reconectar após 3 segundos
-        setTimeout(connect, 3000);
+        if (!disposed) retry = setTimeout(connect, 3000);
       };
     };
 
     connect();
 
     return () => {
+      disposed = true;
+      clearTimeout(retry);
       if (wsRef.current) {
         wsRef.current.close();
       }
     };
   }, []);
 
-  // Atualizar matchState quando selectedMatchId muda
   useEffect(() => {
-    if (selectedMatchId && matchState && matchState.matchId !== selectedMatchId) {
-      // Limpar estado antigo ao trocar de match
-      setMatchState(null);
-    }
+    setMatchState(selectedMatchId ? statesRef.current.get(selectedMatchId) ?? null : null);
   }, [selectedMatchId]);
+
+  useEffect(() => {
+    const lang = new URLSearchParams(window.location.search).get('lang');
+    if (lang === 'pt-PT' || lang === 'en' || lang === 'ne') setLocale(lang);
+  }, [setLocale]);
 
   // Renderizar tabuleiro baseado no gameId
   const renderBoard = () => {
     if (!matchState || !matchState.gameState || !gameId) {
       return (
         <div className="flex items-center justify-center h-64 [color:var(--tinta-suave)]">
-          <p>A aguardar dados do jogo...</p>
+          <p>{t('A aguardar dados do jogo...')}</p>
         </div>
       );
     }
@@ -161,19 +175,21 @@ function AdminSpectatorPage() {
         return <ProdutoBoard state={state} {...commonProps} />;
       case 'atari-go':
         return <AtariGoBoard state={state} {...commonProps} />;
+      case 'faisca':
+        return <FaiscaBoard state={state} interactive={false} onMove={() => {}} />;
       case 'nex':
         return <NexBoard state={state} {...commonProps} />;
       default:
-        return <div className="[color:var(--tinta-suave)]">Jogo desconhecido: {gameId}</div>;
+        return <div className="[color:var(--tinta-suave)]">{t('Jogo desconhecido:')} {gameId}</div>;
     }
   };
 
   const getBracketLabel = (bracket: BracketType | 'grandFinal' | 'grandFinalReset') => {
     switch (bracket) {
-      case 'winners': return 'Winners';
-      case 'losers': return 'Losers';
-      case 'grandFinal': return 'Grande Final';
-      case 'grandFinalReset': return 'Final Reset';
+      case 'winners': return t('Winners Bracket');
+      case 'losers': return t('Losers Bracket');
+      case 'grandFinal': return t('Grande Final');
+      case 'grandFinalReset': return t('Final Reset');
       default: return bracket;
     }
   };
@@ -192,25 +208,26 @@ function AdminSpectatorPage() {
     <div className="min-h-screen [background:var(--fundo)] [color:var(--tinta)] p-4">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <h1 className="text-lg font-bold">Admin Spectator</h1>
+        <div className="flex gap-2 items-center"><LanguageSelector /><ThemeToggle /></div>
+        <h1 className="text-lg font-bold">{t('Admin Spectator')}</h1>
         <div className={`px-2 py-1 rounded text-xs ${connected ? '[background:color-mix(in_srgb,var(--sucesso)_15%,transparent)] [color:var(--sucesso)]' : '[background:color-mix(in_srgb,var(--perigo)_15%,transparent)] [color:var(--perigo)]'}`}>
-          {connected ? 'Conectado' : 'Desconectado'}
+          {t(connected ? 'Conectado' : 'Desconectado')}
         </div>
       </div>
 
       {error && (
         <div className="rounded-lg p-3 mb-4 border [border-color:var(--perigo)] [background:color-mix(in_srgb,var(--perigo)_10%,transparent)] [color:var(--perigo)] text-sm">
-          {error}
+          {t(error)}
         </div>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         {/* Lista de jogos */}
         <div className="lg:col-span-1 rounded-xl p-3 border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
-          <h2 className="text-sm font-semibold mb-3 [color:var(--tinta-suave)]">Jogos em Curso ({activeGames.length})</h2>
+          <h2 className="text-sm font-semibold mb-3 [color:var(--tinta-suave)]">{t('Jogos em Curso')} ({activeGames.length})</h2>
 
           {activeGames.length === 0 ? (
-            <p className="[color:var(--tinta-suave)] text-sm">Nenhum jogo em curso</p>
+            <p className="[color:var(--tinta-suave)] text-sm">{t('Nenhum jogo em curso')}</p>
           ) : (
             <div className="space-y-2">
               {activeGames.map((game) => (
@@ -241,10 +258,10 @@ function AdminSpectatorPage() {
                       <span className="[color:var(--tinta-suave)]"> - </span>
                       <span className="[color:var(--perigo)]">{game.score.player2Wins}</span>
                     </span>
-                    <span className="text-[10px] [color:var(--tinta-suave)]">Jogo {game.gameNumber}</span>
+                    <span className="text-[10px] [color:var(--tinta-suave)]">{t('Jogo')} {game.gameNumber}</span>
                   </div>
                   {selectedMatchId === game.matchId && (
-                    <div className="text-[10px] [color:var(--ouro)] mt-1">A observar</div>
+                    <div className="text-[10px] [color:var(--ouro)] mt-1">{t('A observar')}</div>
                   )}
                 </button>
               ))}
@@ -261,9 +278,9 @@ function AdminSpectatorPage() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className={`text-xs px-2 py-0.5 rounded border ${getBracketColor(matchState.bracket)}`}>
-                      {getBracketLabel(matchState.bracket)} - Ronda {matchState.round}
+                      {getBracketLabel(matchState.bracket)} - {t('Ronda')} {matchState.round}
                     </span>
-                    <span className="text-xs [color:var(--tinta-suave)]">Jogo {matchState.gameNumber}</span>
+                    <span className="text-xs [color:var(--tinta-suave)]">{t('Jogo')} {matchState.gameNumber}</span>
                   </div>
                   <h3 className="text-lg font-bold">
                     {matchState.player1Name} vs {matchState.player2Name}
@@ -277,7 +294,7 @@ function AdminSpectatorPage() {
                   </div>
                   {matchState.whoseTurn && (
                     <div className="text-xs [color:var(--tinta-suave)]">
-                      Vez de: {matchState.whoseTurn === 'player1' ? matchState.player1Name : matchState.player2Name}
+                      {t('Vez de:')} {matchState.whoseTurn === 'player1' ? matchState.player1Name : matchState.player2Name}
                     </div>
                   )}
                 </div>
@@ -290,7 +307,7 @@ function AdminSpectatorPage() {
 
               {/* Aviso de modo espectador */}
               <div className="mt-3 text-center text-xs [color:var(--tinta-suave)] border [border-color:var(--linha)] [background:var(--fundo)] py-2 rounded-lg">
-                Modo espectador - apenas a observar
+                {t('Modo espectador - apenas a observar')}
               </div>
             </>
           ) : (
@@ -299,7 +316,7 @@ function AdminSpectatorPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              <p>Seleciona um jogo para observar</p>
+              <p>{t('Seleciona um jogo para observar')}</p>
             </div>
           )}
         </div>
@@ -311,5 +328,5 @@ function AdminSpectatorPage() {
 // Mount
 const rootEl = document.getElementById('root');
 if (rootEl) {
-  createRoot(rootEl).render(<AdminSpectatorPage />);
+  createRoot(rootEl).render(<LanguageProvider><AdminSpectatorPage /></LanguageProvider>);
 }

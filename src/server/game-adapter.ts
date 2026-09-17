@@ -1,3 +1,6 @@
+import { criarEstadoInicial as criarFaisca, colocarPeca as colocarFaisca, isJogadaValida as isFaiscaValida } from '../games/faisca/logic';
+import type { FaiscaState, Jogada as FaiscaMove } from '../games/faisca/types';
+import { fromNetworkFaiscaMove } from '../tournament/game-protocol';
 import { getGame, GAME_IDS } from '../games/catalog';
 /**
  * Adaptador de jogos para o servidor de torneios.
@@ -61,9 +64,10 @@ import type { NexState, Acao as NexAcao, AcaoEmCurso as NexAcaoEmCurso } from '.
 // Tipos
 // ============================================================================
 
-export type GameState = GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
+export type GameState = FaiscaState | GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
 
 export type GameMove =
+  | FaiscaMove
   | GatosCaesPosicao
   | Domino
   | QuelhasSegmento
@@ -651,6 +655,24 @@ const nexAdapter: GameAdapter = {
 // Mapa de adaptadores
 // ============================================================================
 
+const faiscaAdapter: GameAdapter = {
+  createInitialState: criarFaisca,
+  applyMove(state, value) {
+    const move = fromNetworkFaiscaMove(value);
+    if (!move) return null;
+    const next = colocarFaisca(state as FaiscaState, move);
+    return next === state ? null : next;
+  },
+  isValidMove(state, value) {
+    const move = fromNetworkFaiscaMove(value);
+    return move !== null && isFaiscaValida(state as FaiscaState, move);
+  },
+  isGameOver: state => state.estado !== 'a-jogar',
+  getWinner: state => state.estado === 'vitoria-jogador1' ? 'jogador1'
+    : state.estado === 'vitoria-jogador2' ? 'jogador2' : null,
+  getCurrentPlayer: state => state.jogadorAtual,
+};
+
 const adapters: Partial<Record<GameId, GameAdapter>> = {
   'gatos-caes': gatosCaesAdapter,
   'dominorio': dominorioAdapter,
@@ -658,6 +680,7 @@ const adapters: Partial<Record<GameId, GameAdapter>> = {
   'produto': produtoAdapter,
   'atari-go': atariGoAdapter,
   'nex': nexAdapter,
+  'faisca': faiscaAdapter,
 };
 
 // ============================================================================

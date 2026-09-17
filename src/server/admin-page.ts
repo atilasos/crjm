@@ -2516,7 +2516,7 @@ Pedro Costa"></textarea>
       }
 
       watchingMatchId = matchId;
-      iframe.src = '/admin/spectator?matchId=' + matchId + '&gameId=' + gameId;
+      iframe.src = '/admin/spectator?matchId=' + matchId + '&gameId=' + gameId + '&lang=' + document.documentElement.lang;
       card.style.display = 'block';
 
       // Scroll to iframe
