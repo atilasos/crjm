@@ -99,7 +99,7 @@ export const GAME_CATALOG = [
     cycles: ['Secundário'],
     mark: 'Y',
     selection: 'integration',
-    capabilities: ['local', 'ai', 'tutor', 'review', 'progress'],
+    capabilities: ['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress'],
   },
 ] as const satisfies readonly GameDefinition[];
 

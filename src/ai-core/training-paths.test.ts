@@ -3,7 +3,7 @@ import type { GameId } from './types';
 import { getTrainingPath, evaluateDesafioGoals } from './training-paths';
 import { getPuzzlesForGame } from './puzzles';
 
-const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca'];
+const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca', 'y'];
 
 describe('percursos de treino para o campeonato', () => {
   test('cada jogo tem quatro etapas com o desenho Descobrir→Campeonato', () => {
@@ -70,8 +70,8 @@ describe('avaliação dos desafios por nível', () => {
     expect(evaluateDesafioGoals([{ level: 4, half: true }], { 4: snapshot(1, 3, 1) })?.done).toBe(false);
   });
 
-  test('Faísca uses only the two verified local difficulties', () => {
-    const path = getTrainingPath('faisca')!;
+  test.each(['faisca', 'y'] as const)('%s uses only the two verified local difficulties', gameId => {
+    const path = getTrainingPath(gameId)!;
     expect(path).toBeDefined();
     expect(path.steps.flatMap(step => step.desafioGoals ?? []).map(goal => goal.level)).toEqual([1, 1, 2, 2]);
     const lower = { 1: snapshot(10, 10, 10) };

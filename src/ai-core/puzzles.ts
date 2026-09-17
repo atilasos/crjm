@@ -1,3 +1,5 @@
+import { Y_PUZZLES } from '../games/y/puzzles';
+import type { YState } from '../games/y/types';
 import { FAISCA_PUZZLES } from '../games/faisca/puzzles';
 import type { GameId } from './types';
 
@@ -13,12 +15,10 @@ export interface PuzzleOption {
  * 'N' neutra · '*' casa em destaque · '#' fora do excerto ·
  * '1'/'2'/'3' casas candidatas de um puzzle «encontra a jogada».
  */
-export interface PuzzleDiagram {
-  rows: string[];
-  caption: string;
-  /** Desloca as linhas ímpares meia casa (tabuleiros hexagonais, ex.: Nex). */
-  hexOffset?: boolean;
-}
+export type PuzzleDiagram = { caption: string } & (
+  | { rows: string[]; hexOffset?: boolean; yState?: never }
+  | { yState: YState; rows?: never; hexOffset?: never }
+);
 
 export interface PuzzleDefinition {
   id: string;
@@ -571,6 +571,7 @@ export const PUZZLES: PuzzleDefinition[] = [
     },
   },
   ...FAISCA_PUZZLES,
+  ...Y_PUZZLES,
 ];
 
 export function getPuzzlesForGame(gameId: GameId): PuzzleDefinition[] {

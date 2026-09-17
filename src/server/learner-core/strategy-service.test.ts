@@ -3,7 +3,7 @@ import type { Database } from 'bun:sqlite';
 import { createLearnerCoreDb } from './db';
 import { LearnerCoreService } from './service';
 import { StrategyPracticeService } from './strategy-service';
-import { getStrategyChallenge, STRATEGY_GAMES } from './strategy-challenges';
+import { getStrategyChallenge, getStrategyChallengeCount, STRATEGY_GAMES } from './strategy-challenges';
 import { getStrategyProgress, RETENTION_DELAY_MS } from '../../ai-core/strategy-progress';
 import type { StrategyEvidence } from '../../types/strategy-practice';
 
@@ -20,6 +20,41 @@ function setup() {
 }
 
 describe('strategy practice: evidence survives real learner operations', () => {
+  test('Y teaches the drawn adjacency and preserves the first error after reload', () => {
+    const { service, user, db } = setup();
+    const view = service.start(user, 'y');
+    expect(view.challenge.skill).toBe('Seguir as ligações desenhadas');
+    const wrong = service.answer(user, view.attemptId, '1', '0');
+    expect(wrong.feedback?.correct).toBe(false);
+    const reloaded = new StrategyPracticeService(db);
+    expect(reloaded.answer(user, view.attemptId, '0', '1')).toEqual(wrong);
+    expect(reloaded.progress(user).y.independent).toBe(0);
+  });
+
+  test('Y solutions follow the official drawing, and immediate repetitions add no autonomy', () => {
+    const { service, user, advance } = setup();
+    // D3–E3, A1 touches two sides, three separate groups, D3 joins C1/E3,
+    // swapping leaves A5 blue, then A9 completes the A1-to-right path.
+    const worked = [['0', '1'], ['0', '1'], ['0', '2'], ['1', '2'], ['1', '0'], ['2', '0']];
+    for (const [answer, prediction] of worked) {
+      const view = service.start(user, 'y');
+      service.hint(user, view.attemptId);
+      expect(service.answer(user, view.attemptId, answer!, prediction!).feedback?.correct).toBe(true);
+    }
+    for (const [answer, prediction] of worked) {
+      const view = service.start(user, 'y');
+      const result = service.answer(user, view.attemptId, answer!, prediction!);
+      expect(result.feedback?.independent).toBe(false);
+      expect(result.progress.independent).toBe(0);
+    }
+    advance(RETENTION_DELAY_MS - 1);
+    const early = service.start(user, 'y');
+    expect(service.answer(user, early.attemptId, '0', '1').feedback?.independent).toBe(false);
+    advance(1);
+    const later = service.start(user, 'y');
+    expect(service.answer(user, later.attemptId, '0', '1').feedback?.independent).toBe(true);
+  });
+
   test('Faísca offers a choice with a verifiable opening consequence', () => {
     const { service, user } = setup();
     const view = service.start(user, 'faisca');
@@ -40,7 +75,7 @@ describe('strategy practice: evidence survives real learner operations', () => {
     expect(service.start(user, 'gatos-caes').attemptId).toBe(view.attemptId);
   });
 
-  test.each(['atari-go', 'faisca'] as const)('%s: a saved hint survives a reload and cannot count as solo evidence', gameId => {
+  test.each(['atari-go', 'faisca', 'y'] as const)('%s: a saved hint survives a reload and cannot count as solo evidence', gameId => {
     const { service, user, db } = setup();
     const view = service.start(user, gameId);
     service.hint(user, view.attemptId);
@@ -87,7 +122,7 @@ describe('strategy practice: evidence survives real learner operations', () => {
   test('all available games can progress, and retention requires a later day', () => {
     for (const gameId of STRATEGY_GAMES) {
       const { service, user, advance } = setup();
-      for (let variant = 0; variant < 24; variant++) {
+      for (let variant = 0; variant < getStrategyChallengeCount(gameId); variant++) {
         const view = service.start(user, gameId);
         const solution = getStrategyChallenge(gameId, variant);
         service.answer(user, view.attemptId, solution.answer, solution.prediction);
@@ -100,9 +135,9 @@ describe('strategy practice: evidence survives real learner operations', () => {
     }
   });
 
-  test.each(['nex', 'faisca'] as const)('%s: an assisted catalogue can be learned later, without an immediate retry shortcut', gameId => {
+  test.each(['nex', 'faisca', 'y'] as const)('%s: an assisted catalogue can be learned later, without an immediate retry shortcut', gameId => {
     const { service, user, advance } = setup();
-    for (let v = 0; v < 24; v++) {
+    for (let v = 0; v < getStrategyChallengeCount(gameId); v++) {
       const view = service.start(user, gameId);
       service.hint(user, view.attemptId);
       const solution = getStrategyChallenge(gameId, v);

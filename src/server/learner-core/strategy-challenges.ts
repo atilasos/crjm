@@ -1,3 +1,4 @@
+import { getYChallenge } from '../../games/y/exercises';
 import { getFaiscaChallenge } from './faisca-challenges';
 import { GAME_CATALOG } from '../../games/catalog';
 import type { GameId } from '../../ai-core/types';
@@ -7,6 +8,7 @@ import { criarEstadoInicial as createNex, executarSubstituicao } from '../../gam
 
 export const STRATEGY_GAMES: GameId[] = GAME_CATALOG.filter(game => (game.capabilities as readonly string[]).includes('strategy')).map(game => game.id);
 export const CHALLENGES_PER_GAME = 24;
+export const getStrategyChallengeCount = (gameId: GameId): number => gameId === 'y' ? 6 : CHALLENGES_PER_GAME;
 
 export interface StrategySolution {
   challenge: StrategyChallenge;
@@ -26,9 +28,10 @@ function options(values: string[], offset: number): StrategyOption[] {
 
 /** Small, explicit situations; not claims that one heuristic solves the whole game. */
 export function getStrategyChallenge(gameId: GameId, variant: number): StrategySolution {
-  if (!STRATEGY_GAMES.includes(gameId) || !Number.isInteger(variant) || variant < 0 || variant >= CHALLENGES_PER_GAME) {
+  if (!STRATEGY_GAMES.includes(gameId) || !Number.isInteger(variant) || variant < 0 || variant >= getStrategyChallengeCount(gameId)) {
     throw new Error('invalid strategy challenge');
   }
+  if (gameId === 'y') return getYChallenge(variant);
   if (gameId === 'faisca') return getFaiscaChallenge(variant);
   const id = `strategy-v1:${gameId}:${variant}`;
   if (gameId === 'gatos-caes' || gameId === 'dominorio' || gameId === 'quelhas') {

@@ -1,4 +1,4 @@
-import { getStrategyChallenge } from '../server/learner-core/strategy-challenges';
+import { getStrategyChallenge, getStrategyChallengeCount } from '../server/learner-core/strategy-challenges';
 import { describe, expect, test } from 'bun:test';
 import { messages, formatMessage, translate } from './translate';
 import { SUPPORTED_LOCALES, localeOrDefault } from './locale';
@@ -48,13 +48,14 @@ describe('Presentation in every supported language', () => {
   test('every puzzle, path, achievement and mission has content in all languages', () => {
     checkContent([PUZZLES, TRAINING_PATHS, PATTERN_CARDS, STARTER_ACHIEVEMENTS, STARTER_MISSIONS]);
   });
-  test('Faísca choices, predictions and feedback are translated for every situation', () => {
-    for (let variant = 0; variant < 24; variant++) {
-      const { challenge, hint, explanation } = getStrategyChallenge('faisca', variant);
+  test.each(['faisca', 'y'] as const)('%s choices, predictions and feedback are translated for every situation', gameId => {
+    for (let variant = 0; variant < getStrategyChallengeCount(gameId); variant++) {
+      const { challenge, hint, explanation } = getStrategyChallenge(gameId, variant);
       const copy = [challenge.skill, challenge.prompt, ...challenge.facts, challenge.question, challenge.prediction,
         ...challenge.options.map(option => option.label), ...challenge.predictions.map(option => option.label),
         challenge.diagram!.caption, hint, explanation];
       for (const value of copy) for (const locale of ['en', 'ne'] as const) {
+        if (/^(?:[A-M]\d+|\d+)$/.test(value)) continue; // Board identifiers and counts are invariant.
         expect(translate(value, locale), `Missing ${locale}: ${value}`).not.toBe(value);
         expect(translate(value, locale)).not.toMatch(/\{\d+\}/);
       }

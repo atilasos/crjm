@@ -556,6 +556,32 @@ async function checkFaiscaLaboratoryPresentation(page: Page): Promise<void> {
   await page.locator('[data-language-selector]').selectOption('pt-PT');
 }
 
+async function checkYLaboratoryPresentation(page: Page): Promise<void> {
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(`${BASE_URL}/?integracao=1#/puzzles`, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('[data-puzzle-lab] nav button').filter({ hasText: /Y/ }).last().click();
+      const practice = page.locator('[data-strategy-practice]');
+      await practice.getByText(t('Seguir as ligações desenhadas'), { exact: true }).waitFor();
+      await practice.getByRole('radio').first().focus();
+      await page.keyboard.press('Space');
+      if (!(await practice.getByRole('radio').first().isChecked())) throw new Error('Y: keyboard did not select a choice');
+      if (await practice.locator('.y-node').count() !== 93) throw new Error('Y exercise uses a different graph');
+      await page.locator('[data-percurso]').getByText(t('Vence o N2 uma vez.'), { exact: false }).waitFor();
+      await assertViewport(page, `Laboratório Y ${locale} ${theme}`, '[data-puzzle-lab]');
+      if (locale === 'ne' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: 'artifacts/y-laboratory/mobile-ne.png', fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+}
+
 async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Resolver exercícios' }).click();
@@ -621,6 +647,7 @@ async function main(): Promise<void> {
         checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
         await checkFaisca(page);
         await checkFaiscaLaboratoryPresentation(page);
+        await checkYLaboratoryPresentation(page);
         checks.push({ viewport: viewport.name, game: 'Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro' });
         await checkFaiscaCancellation(page);
         await checkFaiscaHintCancellation(page);

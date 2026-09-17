@@ -3,13 +3,11 @@ import { getGamesFor, isGameAvailable, isIntegrationPreview, type GameDefinition
 
 describe('seleção de jogos por percurso', () => {
   test.each(['faisca', 'y'] as const)('%s disponibiliza apenas capacidades implementadas na integração', gameId => {
-    expect(getGamesFor('local', true).find(game => game.id === gameId)?.capabilities).toEqual(gameId === 'faisca'
-      ? ['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress']
-      : ['local', 'ai', 'tutor', 'review', 'progress']);
+    expect(getGamesFor('local', true).find(game => game.id === gameId)?.capabilities).toEqual(['local', 'ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'progress']);
     expect(getGamesFor('progress', true).some(game => game.id === gameId)).toBe(true);
     for (const capability of ['ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'tournament'] as const) {
       expect(getGamesFor(capability, true).some(game => game.id === gameId)).toBe(capability === 'ai' || capability === 'tutor' || capability === 'review'
-        || (gameId === 'faisca' && ['puzzles', 'training', 'strategy'].includes(capability)));
+        || ['puzzles', 'training', 'strategy'].includes(capability));
     }
   });
   test('mantém os seis jogos públicos em todos os percursos atuais', () => {

@@ -1,3 +1,4 @@
+import { checkYLaboratory } from './y-laboratory-flow';
 import { checkFaiscaLaboratory } from './faisca-laboratory-flow';
 import { chromium, type Browser } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -332,6 +333,7 @@ async function main() {
       if (JSON.stringify(afterYTraining.gameProgress[gameId]) !== JSON.stringify(afterTraining.gameProgress[gameId])) throw new Error(`IA de Y alterou ${gameId}.`);
     }
     await checkFaiscaLaboratory(page, BASE_URL);
+    await checkYLaboratory(page, BASE_URL);
     Object.assign(afterYTraining, await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json()));
     const storageState = await context.storageState();
     await context.close();
@@ -341,6 +343,7 @@ async function main() {
     await expectText(resumedPage, 'Faísca');
     const learning = resumedPage.getByRole('heading', { name: 'O que já consigo fazer sem ajuda', exact: true }).locator('..');
     await learning.getByRole('heading', { name: 'Faísca', exact: true }).locator('..').locator('[data-strategy-progress="independent"]').waitFor();
+    await learning.getByRole('heading', { name: 'Y', exact: true }).locator('..').locator('[data-strategy-progress="independent"]').waitFor();
     await expectText(resumedPage, `${afterYTraining.profile.totalXp} XP total`);
     const yCard = resumedPage.getByText('Y', { exact: true }).locator('../..');
     await yCard.getByText(`${yPlayed} partidas · 1 revisões`, { exact: true }).waitFor();

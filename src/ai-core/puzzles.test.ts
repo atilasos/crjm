@@ -3,14 +3,14 @@ import type { GameId } from './types';
 import { PUZZLES, evaluatePuzzleAnswer, getDisplayOptions, getPuzzlesForGame } from './puzzles';
 import { PATTERN_CARDS } from './gamification';
 
-const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca'];
+const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca', 'y'];
 
 describe('catálogo de puzzles estratégicos', () => {
   test('oferece o catálogo completo de puzzles válidos por jogo', () => {
-    expect(PUZZLES).toHaveLength(51);
+    expect(PUZZLES).toHaveLength(57);
     for (const gameId of GAME_IDS) {
       const puzzles = getPuzzlesForGame(gameId);
-      const expected = gameId === 'atari-go' ? 10 : gameId === 'faisca' ? 6 : 7;
+      const expected = gameId === 'atari-go' ? 10 : ['faisca', 'y'].includes(gameId) ? 6 : 7;
       expect(puzzles).toHaveLength(expected);
       expect(new Set(puzzles.map((puzzle) => puzzle.id)).size).toBe(expected);
       for (const puzzle of puzzles) {
@@ -66,10 +66,10 @@ describe('apresentação dos puzzles', () => {
 
   test('os diagramas são retangulares e usam apenas símbolos conhecidos', () => {
     const allowed = new Set(['.', 'X', 'O', 'N', '*', '#', '1', '2', '3']);
-    const withDiagram = PUZZLES.filter((puzzle) => puzzle.diagram);
+    const withDiagram = PUZZLES.filter((puzzle) => puzzle.diagram?.rows);
     expect(withDiagram.length).toBeGreaterThanOrEqual(10);
     for (const puzzle of withDiagram) {
-      const rows = puzzle.diagram!.rows;
+      const rows = puzzle.diagram!.rows!;
       expect(rows.length).toBeGreaterThan(0);
       const width = rows[0]!.length;
       for (const row of rows) {

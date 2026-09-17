@@ -77,6 +77,24 @@ export interface TrainingPath {
 }
 
 export const TRAINING_PATHS = {
+  y: {
+    focusNow: 'Ligar um único grupo aos três lados e acompanhar as cores após a troca.',
+    commonMistake: 'Somar lados de grupos separados ou confundir proximidade com ligação.',
+    steps: [
+      { title: 'Descobrir', checkpoints: ['Seguir os traços e reconhecer os lados dos cantos.'],
+        puzzleIds: ['y-adjacency-1', 'y-corner-1'],
+        desafio: 'Vence o N1 uma vez.', desafioGoals: [{ level: 1, wins: 1 }] },
+      { title: 'Táticas', checkpoints: ['Distinguir grupos separados e encontrar uma ligação que os una.'],
+        puzzleIds: ['y-separate-1', 'y-join-1'],
+        desafio: 'Vence o N1 duas vezes seguidas.', desafioGoals: [{ level: 1, streak: 2 }] },
+      { title: 'Estratégia', checkpoints: ['Prever a cor e o turno de cada participante após a troca.'],
+        puzzleIds: ['y-swap-1'],
+        desafio: 'Vence o N2 uma vez.', desafioGoals: [{ level: 2, wins: 1 }] },
+      { title: 'Campeonato', checkpoints: ['Completar e verificar um único grupo que toque os três lados.'],
+        puzzleIds: ['y-win-1'],
+        desafio: 'Ganha pelo menos metade das partidas contra o N2.', desafioGoals: [{ level: 2, half: true }] },
+    ],
+  },
   faisca: {
     focusNow: 'Antecipar a próxima casa, os destinos vazios e as peças que ainda restam.',
     commonMistake: 'Escolher uma seta sem verificar as reservas e a resposta do adversário.',
