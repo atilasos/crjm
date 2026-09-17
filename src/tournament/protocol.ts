@@ -16,16 +16,9 @@
 // Tipos base
 // ============================================================================
 
-export type GameId = 'gatos-caes' | 'dominorio' | 'quelhas' | 'produto' | 'atari-go' | 'nex';
-
-export const GAME_NAMES: Record<GameId, string> = {
-  'gatos-caes': 'Gatos & Cães',
-  'dominorio': 'Dominório',
-  'quelhas': 'Quelhas',
-  'produto': 'Produto',
-  'atari-go': 'Atari Go',
-  'nex': 'Nex',
-};
+import type { GameId } from '../games/catalog';
+export type { GameId } from '../games/catalog';
+export { GAME_NAMES } from '../games/catalog';
 
 export type PlayerStatus = 'active' | 'suspended' | 'eliminated';
 

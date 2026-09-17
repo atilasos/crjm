@@ -32,7 +32,7 @@ export function advanceThinking(state: ThinkingState, turn: string): ThinkingSta
   return { turn, level: Math.min(3, thinkingLevel(state, turn) + 1) as ThinkingLevel };
 }
 
-export const THINKING_PROMPTS: Record<GameId, { question: string; principle: string; compare: string }> = {
+export const THINKING_PROMPTS: Partial<Record<GameId, { question: string; principle: string; compare: string }>> = {
   'gatos-caes': {
     question: 'Escolhe uma casa. Onde poderá o adversário jogar depois?',
     principle: 'Conta as casas legais de cada espécie. Uma casa exclusiva pode ficar guardada.',

@@ -1,11 +1,6 @@
 import type { Locale } from '../i18n/locale';
-export type GameId =
-  | 'gatos-caes'
-  | 'dominorio'
-  | 'quelhas'
-  | 'produto'
-  | 'atari-go'
-  | 'nex';
+import type { GameId } from '../games/catalog';
+export type { GameId } from '../games/catalog';
 
 export type TutorMode = 'competitive' | 'tutor';
 

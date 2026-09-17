@@ -1,3 +1,4 @@
+import { GAME_IDS } from '../../games/catalog';
 import { DEFAULT_LOCALE, localeOrDefault } from '../../i18n/locale';
 import { Database } from 'bun:sqlite';
 import type { GameId } from '../../ai-core/types';
@@ -25,7 +26,7 @@ import type {
   LearnerProfileRecord,
 } from '../../types/learner-core';
 
-const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
+
 
 interface SessionRow {
   id: string;

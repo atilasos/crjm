@@ -1,3 +1,4 @@
+import { getGame, getGamesFor, isIntegrationPreview, SCHOOL_CYCLES, type GameId } from './games/catalog';
 import { useTranslation, LanguageProvider } from './i18n/LanguageProvider';
 import { useEffect, useRef, useState, type ComponentType } from 'react';
 import "./index.css";
@@ -25,84 +26,45 @@ import { NexGame } from './games/nex/NexGame';
 import { PuzzlePage } from './components/PuzzlePage';
 import { LoginPage } from './components/LoginPage';
 
-type Pagina = 'inicio' | 'perfil' | 'entrar' | 'puzzles' | 'campeonato' | 'admin' | 'gatos-caes' | 'dominorio' | 'quelhas' | 'atari-go' | 'produto' | 'nex';
+type Pagina = 'inicio' | 'perfil' | 'entrar' | 'puzzles' | 'campeonato' | 'admin' | GameId;
+const PAGINAS: readonly string[] = ['inicio', 'perfil', 'entrar', 'puzzles', 'campeonato', 'admin'];
 
-const PAGINAS: readonly Pagina[] = ['inicio', 'perfil', 'entrar', 'puzzles', 'campeonato', 'admin', 'gatos-caes', 'dominorio', 'quelhas', 'atari-go', 'produto', 'nex'];
-
-interface JogoInfo {
-  id: Pagina;
-  titulo: string;
-  descricao: string;
-  acento: string;
-  ciclos: string[];
+const GAME_VIEWS: Partial<Record<GameId, {
+  Game: ComponentType<{ onVoltar: () => void }>;
   Vignette: ComponentType<{ animate?: boolean; className?: string }>;
-}
-
-const JOGOS: JogoInfo[] = [
-  {
-    id: 'gatos-caes',
-    titulo: 'Gatos & Cães',
-    descricao: 'Jogo de colocação: coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada!',
-    acento: 'var(--jogo-gatos)',
-    ciclos: ['1.º Ciclo'],
-    Vignette: GatosCaesVignette,
-  },
-  {
-    id: 'dominorio',
-    titulo: 'Dominório',
-    descricao: 'Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça!',
-    acento: 'var(--jogo-dominorio)',
-    ciclos: ['1.º Ciclo', '2.º Ciclo'],
-    Vignette: DominorioVignette,
-  },
-  {
-    id: 'quelhas',
-    titulo: 'Quelhas',
-    descricao: 'Coloca segmentos no tabuleiro: um joga na vertical, outro na horizontal. ATENÇÃO: Perde quem fizer a última jogada!',
-    acento: 'var(--jogo-quelhas)',
-    ciclos: ['1.º Ciclo', '2.º Ciclo', '3.º Ciclo'],
-    Vignette: QuelhasVignette,
-  },
-  {
-    id: 'produto',
-    titulo: 'Produto',
-    descricao: 'Maximiza a pontuação dos teus grupos num tabuleiro hexagonal. Sabota o adversário unindo os grupos dele!',
-    acento: 'var(--jogo-produto)',
-    ciclos: ['2.º Ciclo', '3.º Ciclo', 'Secundário'],
-    Vignette: ProdutoVignette,
-  },
-  {
-    id: 'atari-go',
-    titulo: 'Atari Go',
-    descricao: 'Variante simplificada do Go: rodeia as pedras adversárias. A primeira captura vence o jogo!',
-    acento: 'var(--jogo-atari)',
-    ciclos: ['3.º Ciclo', 'Secundário'],
-    Vignette: AtariGoVignette,
-  },
-  {
-    id: 'nex',
-    titulo: 'Nex',
-    descricao: 'Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário!',
-    acento: 'var(--jogo-nex)',
-    ciclos: ['Secundário'],
-    Vignette: NexVignette,
-  },
-];
+}>> = {
+  'gatos-caes': { Game: GatosCaesGame, Vignette: GatosCaesVignette },
+  dominorio: { Game: DominorioGame, Vignette: DominorioVignette },
+  quelhas: { Game: QuelhasGame, Vignette: QuelhasVignette },
+  produto: { Game: ProdutoGame, Vignette: ProdutoVignette },
+  'atari-go': { Game: AtariGoGame, Vignette: AtariGoVignette },
+  nex: { Game: NexGame, Vignette: NexVignette },
+};
 
 function paginaDoHash(): Pagina {
   if (typeof window === 'undefined') return 'inicio';
   const slug = window.location.hash.replace(/^#\/?/, '');
-  return (PAGINAS as readonly string[]).includes(slug) ? (slug as Pagina) : 'inicio';
+  if (PAGINAS.includes(slug)) return slug as Pagina;
+  const game = getGame(slug);
+  if (!game || !game.capabilities.includes('local') || !GAME_VIEWS[game.id]) return 'inicio';
+  if (game.selection === 'integration' && !isIntegrationPreview()) return 'inicio';
+  return game.id;
 }
 
 export function App() {
   return (
     <LanguageProvider>
       <GamificationProvider>
+        <IntegrationNotice />
         <AppContent />
       </GamificationProvider>
     </LanguageProvider>
   );
+}
+
+function IntegrationNotice() {
+  const { t } = useTranslation();
+  return isIntegrationPreview() ? <p role="status" className="border-b p-3 text-center [background:var(--painel)] [color:var(--tinta)]">{t('Pré-visualização de integração — a edição pública mantém-se inalterada.')}</p> : null;
 }
 
 function AppContent() {
@@ -156,29 +118,8 @@ function AppContent() {
     return <AdminPanelPage onVoltar={voltarInicio} />;
   }
 
-  if (paginaAtual === 'gatos-caes') {
-    return <GatosCaesGame onVoltar={voltarInicio} />;
-  }
-
-  if (paginaAtual === 'dominorio') {
-    return <DominorioGame onVoltar={voltarInicio} />;
-  }
-
-  if (paginaAtual === 'quelhas') {
-    return <QuelhasGame onVoltar={voltarInicio} />;
-  }
-
-  if (paginaAtual === 'atari-go') {
-    return <AtariGoGame onVoltar={voltarInicio} />;
-  }
-
-  if (paginaAtual === 'produto') {
-    return <ProdutoGame onVoltar={voltarInicio} />;
-  }
-
-  if (paginaAtual === 'nex') {
-    return <NexGame onVoltar={voltarInicio} />;
-  }
+  const view = GAME_VIEWS[paginaAtual as GameId];
+  if (view) return <view.Game onVoltar={voltarInicio} />;
 
 
   return (
@@ -217,17 +158,21 @@ function AppContent() {
             style={{ fontFamily: 'var(--font-display)' }}
           >{t("Escolhe o teu jogo")}</h2>
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {JOGOS.map(({ id, titulo, descricao, acento, ciclos, Vignette }) => (
+            {getGamesFor('local', isIntegrationPreview()).map(({ id, name, description, accent, cycles }) => {
+              const view = GAME_VIEWS[id];
+              if (!view) return null;
+              return (
               <GameCard
                 key={id}
-                titulo={titulo}
-                descricao={descricao}
-                acento={acento}
-                ciclos={ciclos}
-                vignette={<Vignette />}
+                titulo={name}
+                descricao={description}
+                acento={accent}
+                ciclos={[...cycles]}
+                vignette={<view.Vignette />}
                 onClick={() => setPaginaAtual(id)}
               />
-            ))}
+              );
+            })}
           </div>
         </section>
 
@@ -284,7 +229,8 @@ function AppContent() {
             <p>{t("Podes jogar sozinho contra o computador ou com um amigo no mesmo computador. As regras de cada jogo seguem as regras oficiais do campeonato.")}</p>
             <div className="mt-4 rounded-[var(--raio-controlo)] border p-3 [border-color:var(--linha)]">
               <p className="text-sm">
-                <strong className="[color:var(--tinta)]">{t("Jogos por ciclo:")}</strong><br/>{t("• 1.º Ciclo: Gatos & Cães, Dominório, Quelhas")}<br/>{t("• 2.º Ciclo: Dominório, Quelhas, Produto")}<br/>{t("• 3.º Ciclo: Quelhas, Produto, Atari Go")}<br/>{t("• Secundário: Produto, Atari Go, Nex")}</p>
+                <strong className="[color:var(--tinta)]">{t("Jogos por ciclo:")}</strong>
+                {SCHOOL_CYCLES.map(cycle => <span key={cycle} className="block">• {t(cycle)}: {getGamesFor('local', isIntegrationPreview()).filter(game => game.cycles.includes(cycle)).map(game => t(game.name)).join(', ')}</span>)}</p>
             </div>
             <div className="mt-2 rounded-[var(--raio-controlo)] border p-3 [border-color:var(--linha)]">
               <p className="text-sm">

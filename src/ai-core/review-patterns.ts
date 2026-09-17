@@ -1,5 +1,6 @@
 import { PATTERN_CARDS, type PatternCardDefinition } from './gamification';
-import type { GameId } from './types';
+import type { GameWithCapability } from '../games/catalog';
+type GameId = GameWithCapability<'review'>;
 
 export interface ReviewPatternSignals {
   reviewPatternId?: string;

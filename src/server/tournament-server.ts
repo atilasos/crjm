@@ -1,3 +1,4 @@
+import { isIntegrationPreview } from '../games/catalog';
 import { isLocale, localeOrDefault } from '../i18n/locale';
 /**
  * Servidor de torneios WebSocket usando Bun.
@@ -1184,7 +1185,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     });
     headers.append('Set-Cookie', adminSessionCookie(ADMIN_KEY));
 
-    return new Response(getAdminPageHtml(), {
+    return new Response(getAdminPageHtml(isIntegrationPreview(url.search)), {
       headers,
     });
   }

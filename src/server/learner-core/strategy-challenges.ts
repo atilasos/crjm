@@ -1,9 +1,10 @@
+import { GAME_CATALOG } from '../../games/catalog';
 import type { GameId } from '../../ai-core/types';
 import type { StrategyChallenge, StrategyOption } from '../../types/strategy-practice';
 import { criarEstadoInicial as createAtari, encontrarGrupo } from '../../games/atari-go/logic';
 import { criarEstadoInicial as createNex, executarSubstituicao } from '../../games/nex/logic';
 
-export const STRATEGY_GAMES: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
+export const STRATEGY_GAMES: GameId[] = GAME_CATALOG.filter(game => (game.capabilities as readonly string[]).includes('strategy')).map(game => game.id);
 export const CHALLENGES_PER_GAME = 24;
 
 export interface StrategySolution {

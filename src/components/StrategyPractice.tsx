@@ -5,6 +5,7 @@ import { useTranslation } from '../i18n/LanguageProvider';
 import { PuzzleDiagramView } from './PuzzleDiagramView';
 import { useGamification } from './gamification/GamificationProvider';
 import { GAME_LABELS } from './gamification/GameProgressBars';
+import { getProfileGames, isIntegrationPreview } from '../games/catalog';
 
 export function StrategyProgressView({ progress }: { progress: StrategyProgress }) {
   const { t, locale } = useTranslation();
@@ -145,9 +146,13 @@ export function StrategyProgressSummary() {
     <h2 className="text-lg font-bold">{t('O que já consigo fazer sem ajuda')}</h2>
     <p className="mt-2 text-sm">{t('Confirma os fundamentos no Laboratório: escolher, prever e voltar a conseguir noutro dia.')}</p>
     {error && <p className="mt-2 text-sm" role="status">{t('Não foi possível carregar este progresso. Volta a abrir o perfil para tentar novamente.')}</p>}
-    <div className="mt-4 grid gap-4 md:grid-cols-2">{(Object.entries(progress) as [GameId, StrategyProgress][]).map(([gameId, value]) => <div key={gameId}>
+    <div className="mt-4 grid gap-4 md:grid-cols-2">{getProfileGames(isIntegrationPreview()).map(({ id: gameId, capabilities }) => {
+      const value = progress[gameId];
+      if (!value || !capabilities.includes('strategy')) return null;
+      return <div key={gameId}>
       <h3 className="mb-2 font-bold">{t(GAME_LABELS[gameId])}</h3>
       <StrategyProgressView progress={value} />
-    </div>)}</div>
+    </div>;
+    })}</div>
   </section>;
 }

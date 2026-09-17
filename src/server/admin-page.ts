@@ -1,3 +1,4 @@
+import { GAME_NAMES, getGamesFor } from '../games/catalog';
 /**
  * Página de administração HTML para o servidor de torneios.
  * 
@@ -11,7 +12,7 @@
  * - Modo fullscreen para projeção
  */
 
-export function getAdminPageHtml(): string {
+export function getAdminPageHtml(includeIntegration = false): string {
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -1086,15 +1087,11 @@ export function getAdminPageHtml(): string {
     <div class="modal-backdrop" onclick="hideCreateTournamentModal()"></div>
     <div class="modal-content">
       <h2>➕ Criar Torneio</h2>
+      ${includeIntegration ? '<p>Pré-visualização de integração — a edição pública mantém-se inalterada.</p>' : ''}
       <div class="form-group">
         <label for="gameSelect">Jogo:</label>
         <select id="gameSelect" class="form-input">
-          <option value="gatos-caes">Gatos & Cães</option>
-          <option value="dominorio">Dominório</option>
-          <option value="quelhas">Quelhas</option>
-          <option value="produto">Produto</option>
-          <option value="atari-go">Atari Go</option>
-          <option value="nex">Nex</option>
+          ${getGamesFor('tournament', includeIntegration).map(game => `<option value="${game.id}">${game.name}</option>`).join('\n')}
         </select>
       </div>
       <div class="form-group">
@@ -1189,14 +1186,7 @@ Pedro Costa"></textarea>
     let isFullscreen = false;
     let cachedTournaments = [];
     
-    const GAME_NAMES = {
-      'gatos-caes': 'Gatos & Cães',
-      'dominorio': 'Dominório',
-      'quelhas': 'Quelhas',
-      'produto': 'Produto',
-      'atari-go': 'Atari Go',
-      'nex': 'Nex',
-    };
+    const GAME_NAMES = ${JSON.stringify(GAME_NAMES)};
     
     // ========== DATA FETCHING ==========
     

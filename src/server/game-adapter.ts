@@ -1,3 +1,4 @@
+import { getGame, GAME_IDS } from '../games/catalog';
 /**
  * Adaptador de jogos para o servidor de torneios.
  * 
@@ -650,7 +651,7 @@ const nexAdapter: GameAdapter = {
 // Mapa de adaptadores
 // ============================================================================
 
-const adapters: Record<GameId, GameAdapter> = {
+const adapters: Partial<Record<GameId, GameAdapter>> = {
   'gatos-caes': gatosCaesAdapter,
   'dominorio': dominorioAdapter,
   'quelhas': quelhasAdapter,
@@ -664,15 +665,15 @@ const adapters: Record<GameId, GameAdapter> = {
 // ============================================================================
 
 export function getGameAdapter(gameId: GameId): GameAdapter | null {
-  return adapters[gameId] ?? null;
+  return getGame(gameId)?.capabilities.includes('tournament') ? adapters[gameId] ?? null : null;
 }
 
 export function getSupportedGames(): GameId[] {
-  return Object.keys(adapters) as GameId[];
+  return GAME_IDS.filter(isGameSupported);
 }
 
 export function isGameSupported(gameId: GameId): boolean {
-  return gameId in adapters;
+  return getGameAdapter(gameId) !== null;
 }
 
 // ============================================================================

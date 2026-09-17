@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { GameId } from './types';
-import { TRAINING_PATHS, evaluateDesafioGoals } from './training-paths';
+import { getTrainingPath, evaluateDesafioGoals } from './training-paths';
 import { getPuzzlesForGame } from './puzzles';
 
 const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
@@ -8,7 +8,9 @@ const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'at
 describe('percursos de treino para o campeonato', () => {
   test('cada jogo tem quatro etapas com o desenho Descobrir→Campeonato', () => {
     for (const gameId of GAME_IDS) {
-      const path = TRAINING_PATHS[gameId];
+      const path = getTrainingPath(gameId);
+      expect(path).toBeDefined();
+      if (!path) throw new Error(`Missing training path: ${gameId}`);
       expect(path.steps.map((step) => step.title)).toEqual([
         'Descobrir',
         'Táticas',
@@ -25,7 +27,7 @@ describe('percursos de treino para o campeonato', () => {
   test('os puzzleIds das etapas existem e pertencem ao jogo certo, cobrindo todos os puzzles', () => {
     for (const gameId of GAME_IDS) {
       const puzzleIds = new Set(getPuzzlesForGame(gameId).map((puzzle) => puzzle.id));
-      const referenced = TRAINING_PATHS[gameId].steps.flatMap((step) => step.puzzleIds ?? []);
+      const referenced = getTrainingPath(gameId)!.steps.flatMap((step) => step.puzzleIds ?? []);
       expect(new Set(referenced).size).toBe(referenced.length);
       for (const id of referenced) {
         expect(puzzleIds.has(id)).toBe(true);

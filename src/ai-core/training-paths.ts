@@ -76,7 +76,7 @@ export interface TrainingPath {
   steps: TrainingPathStep[];
 }
 
-export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
+export const TRAINING_PATHS = {
   'gatos-caes': {
     focusNow: 'Preservar mobilidade: joga para continuares com mais casas legais do que o adversário.',
     commonMistake: 'Fechar cedo as casas centrais ou encostar peças que bloqueiam demasiadas respostas.',
@@ -359,8 +359,9 @@ export const TRAINING_PATHS: Record<GameId, TrainingPath> = {
       },
     ],
   },
-};
+} satisfies Partial<Record<GameId, TrainingPath>>;
 
-export function getTrainingPath(gameId: GameId): TrainingPath {
-  return TRAINING_PATHS[gameId];
+export function getTrainingPath(gameId: GameId): TrainingPath | undefined {
+  const paths: Partial<Record<GameId, TrainingPath>> = TRAINING_PATHS;
+  return paths[gameId];
 }

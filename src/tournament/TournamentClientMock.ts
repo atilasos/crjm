@@ -745,8 +745,7 @@ export class TournamentClientMock implements TournamentClient {
       case 'nex':
         return criarNex('dois-jogadores');
       default:
-        // Fallback para Gatos & Cães
-        return criarGatosCaes('dois-jogadores');
+        throw new Error(`Unsupported tournament game: ${gameId}`);
     }
   }
 

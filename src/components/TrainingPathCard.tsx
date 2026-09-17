@@ -9,6 +9,7 @@ interface TrainingPathCardProps {
 export function TrainingPathCard({ gameId }: TrainingPathCardProps) {
   const { t } = useTranslation();
   const path = getTrainingPath(gameId);
+  if (!path) return null;
 
   return (
     <section className="rounded-xl border px-4 py-3 text-sm [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] [color:var(--tinta)]">

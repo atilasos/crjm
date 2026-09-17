@@ -1564,5 +1564,6 @@
   "Antes de imitar uma jogada, confirmar a legalidade e prever a resposta seguinte.": "कुनै चालको नक्कल गर्नुअघि त्यो वैध छ कि छैन जाँच र अर्को जवाफी चाल अनुमान गर।",
   "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.": "तिमीले मात्र सकाउन सक्ने पट्टी र विपक्षीले काट्न सक्ने पट्टी छुट्याऊ।",
   "Rever duas derrotas e localizar onde a contagem de turnos mudou.": "दुई हारको समीक्षा गर र पालोको गन्ती कहाँ बदलियो पत्ता लगाऊ।",
-  "• Segmentos possíveis agora: {0}": "• अहिले सम्भव खण्डहरू: {0}"
+  "• Segmentos possíveis agora: {0}": "• अहिले सम्भव खण्डहरू: {0}",
+  "Pré-visualização de integração — a edição pública mantém-se inalterada.": "एकीकरण पूर्वावलोकन — सार्वजनिक संस्करण अपरिवर्तित रहन्छ।"
 }

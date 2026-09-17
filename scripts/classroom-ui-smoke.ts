@@ -129,6 +129,32 @@ async function assertViewport(page: Page, game: string, selector = '.game-contai
   }
 }
 
+async function checkGameSelection(page: Page): Promise<void> {
+  const titles = ['Gatos & Cães', 'Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Nex'];
+  const assertTitles = async (locator: Locator, label: string) => {
+    const actual = (await locator.allTextContents()).map(text => text.trim());
+    if (JSON.stringify(actual) !== JSON.stringify(titles)) throw new Error(`${label}: ${JSON.stringify(actual)}`);
+  };
+  await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  await assertTitles(page.locator('button.game-card h2'), 'Seleção pública');
+  const cycles = await page.locator('button.game-card ul').allTextContents();
+  const expected = ['1.º Ciclo', '1.º Ciclo2.º Ciclo', '1.º Ciclo2.º Ciclo3.º Ciclo', '2.º Ciclo3.º CicloSecundário', '3.º CicloSecundário', 'Secundário'];
+  if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('Ciclos da seleção pública alterados.');
+  await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
+  await page.getByRole('status').filter({ hasText: 'Pré-visualização de integração' }).waitFor();
+  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização');
+  await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
+  await assertTitles(page.locator('main select').first().locator('option'), 'Jogos do campeonato');
+  await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+  for (const title of titles) {
+    await page.locator('[data-puzzle-lab] nav button').filter({ hasText: title }).click();
+    await page.locator('[data-percurso]').filter({ hasText: title }).waitFor();
+    await page.locator('[data-puzzle-option]').first().waitFor();
+  }
+  await page.goto(`${BASE_URL}/#/perfil`, { waitUntil: 'networkidle' });
+  for (const title of titles) await page.getByText(title, { exact: true }).first().waitFor();
+}
+
 async function runGame(page: Page, title: string, play: (page: Page) => Promise<void>): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.locator('button.game-card').filter({ hasText: title }).click();
@@ -187,6 +213,8 @@ async function main(): Promise<void> {
           if (message.type() === 'error') errors.push(message.text());
         });
 
+        await checkGameSelection(page);
+        checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
         for (const game of GAMES) {
           await runGame(page, game.title, game.play);
           checks.push({ viewport: viewport.name, game: game.title });

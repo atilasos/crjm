@@ -1,3 +1,4 @@
+import { getGamesFor, isIntegrationPreview } from '../games/catalog';
 import { formatDateTime } from '../i18n/format';
 import { useTranslation } from '../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -737,7 +738,7 @@ function ConnectForm({
 }: ConnectFormProps) {
   const { t, locale } = useTranslation();
   // Jogos suportados no modo campeonato (servidor real + mock)
-  const games: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
+  const games = getGamesFor('tournament', isIntegrationPreview()).map(game => game.id);
   const isConnecting = connectionStatus === 'connecting';
 
   return (

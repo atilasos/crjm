@@ -1,15 +1,10 @@
 import { useTranslation } from '../../i18n/LanguageProvider';
 import type { GameId } from '../../ai-core/types';
 import type { GameProgressSnapshot } from './gamification-state';
+import { getProfileGames, isIntegrationPreview } from '../../games/catalog';
 
-export const GAME_LABELS: Record<GameId, string> = {
-  'gatos-caes': 'Gatos & Cães',
-  dominorio: 'Dominório',
-  quelhas: 'Quelhas',
-  produto: 'Produto',
-  'atari-go': 'Atari Go',
-  nex: 'Nex',
-};
+import { GAME_NAMES as GAME_LABELS } from '../../games/catalog';
+export { GAME_NAMES as GAME_LABELS } from '../../games/catalog';
 
 interface GameProgressBarsProps {
   gameProgress: Record<GameId, GameProgressSnapshot>;
@@ -23,7 +18,10 @@ export function GameProgressBars({ gameProgress, isReady = true }: GameProgressB
       <p className="text-lg font-bold [color:var(--tinta)]">{t('Prática por jogo')}</p>
       <p className="mt-2 text-sm [color:var(--tinta-suave)]">{t('XP, partidas e revisões registam a tua prática. A aprendizagem confirma-se nas decisões sem ajuda.')}</p>
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        {(Object.entries(gameProgress) as Array<[GameId, GameProgressSnapshot]>).map(([gameId, progress]) => (
+        {getProfileGames(isIntegrationPreview()).map(({ id: gameId }) => {
+          const progress = gameProgress[gameId];
+          if (!progress) return null;
+          return (
           <div key={gameId} className="rounded-lg border p-4 [background:var(--fundo)] [border-color:var(--linha)]">
             <div className="flex items-center justify-between gap-3">
               <p className="font-semibold">{t(GAME_LABELS[gameId])}</p>
@@ -33,7 +31,8 @@ export function GameProgressBars({ gameProgress, isReady = true }: GameProgressB
             </div>
             <p className="mt-3 text-sm">{t('Vitórias:')} {isReady ? progress.wins : '—'}</p>
           </div>
-        ))}
+          );
+        })}
       </div>
     </section>
   );
