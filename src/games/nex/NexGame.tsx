@@ -668,7 +668,7 @@ export function NexGame({ onVoltar }: NexGameProps) {
   };
 
   return (
-    <GameLayout titulo="Nex" regras={REGRAS} onVoltar={onVoltar}>
+    <GameLayout gameId="nex" titulo="Nex" regras={REGRAS} onVoltar={onVoltar}>
       <div className="flex flex-col gap-4">
         {/* Info do jogador — em mobile passa para depois do tabuleiro */}
         <div className="order-5 lg:order-none">

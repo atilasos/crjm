@@ -180,6 +180,41 @@ describe('learner core service', () => {
     expect(dashboard.gameProgress.dominorio.played).toBe(0);
   });
 
+  test('conserva o perfil persistido dos seis jogos e continua o Arquivo após reabrir a sessão', () => {
+    const { db, service } = createService();
+    const session = service.ensureSession(null);
+    for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'] as const) {
+      service.recordGameCompleted(session.userId, gameId, true, 2);
+      service.recordReviewCompleted(session.userId, gameId);
+    }
+    service.recordPuzzleSolved(session.userId, 'gatos-caes', { puzzleId: 'gc-centro-1', usedHint: true });
+    service.recordPuzzleSolved(session.userId, 'nex', { puzzleId: 'nx-ponte-1', usedHint: true });
+    const before = service.getDashboard(session.userId);
+    db.close();
+
+    const reopened = createService();
+    try {
+      const resumed = reopened.service.ensureSession(session.sessionId);
+      expect(resumed.userId).toBe(session.userId);
+      expect(reopened.service.getDashboard(resumed.userId)).toEqual(before);
+      expect(before.achievements.first_game).toBeDefined();
+      expect(before.achievements.first_puzzle).toBeDefined();
+      expect(before.solvedPuzzleIds).toContain('gc-centro-1');
+      expect(before.solvedPuzzleIds).toContain('nx-ponte-1');
+      const next = reopened.service.recordGameCompleted(resumed.userId, 'nex', false, 2).dashboard;
+      expect(next.gameProgress.nex.played).toBe(2);
+      expect(next.gameProgress['gatos-caes']).toEqual(before.gameProgress['gatos-caes']);
+      expect(next.profile.totalXp).toBe(before.profile.totalXp + 10);
+      expect(next.levelProgress.nex?.[2]?.played).toBe(2);
+      const other = reopened.service.ensureSession(null);
+      const otherProfile = reopened.service.getDashboard(other.userId);
+      expect(otherProfile.gameProgress.nex.played).toBe(0);
+      expect(otherProfile.profile.totalXp).toBe(0);
+    } finally {
+      reopened.db.close();
+    }
+  });
+
   test('imports a legacy profile idempotently while keeping the V1 core strict', () => {
     const { db, service } = createService();
     const session = service.ensureSession(null);
@@ -190,16 +225,18 @@ describe('learner core service', () => {
       lastActiveDate: '2026-04-06',
       achievements: {},
       gameProgress: {
-        'gatos-caes': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+        'gatos-caes': { played: 4, wins: 2, reviews: 1, rules: 2, strategy: 1, mastery: 1 },
         dominorio: { played: 2, wins: 1, reviews: 1, rules: 1, strategy: 1, mastery: 1 },
         quelhas: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
         produto: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
         'atari-go': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
-        nex: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+        nex: { played: 3, wins: 1, reviews: 1, rules: 2, strategy: 1, mastery: 1 },
       },
       recentEvents: [
         { type: 'game_completed', gameId: 'dominorio', at: '2026-04-06T10:00:00.000Z', won: true },
         { type: 'review_completed', gameId: 'dominorio', at: '2026-04-06T10:10:00.000Z' },
+        { type: 'game_completed', gameId: 'gatos-caes', at: '2026-04-06T10:20:00.000Z', won: true },
+        { type: 'review_completed', gameId: 'nex', at: '2026-04-06T10:30:00.000Z' },
       ],
     };
 
@@ -208,6 +245,24 @@ describe('learner core service', () => {
 
     expect(firstImport.profile.totalXp).toBe(42);
     expect(secondImport.importFingerprint).toBe(firstImport.importFingerprint);
+    expect(secondImport).toEqual(firstImport);
+    expect(firstImport.gameProgress['gatos-caes']).toEqual(legacy.gameProgress['gatos-caes']);
+    expect(firstImport.gameProgress.nex).toEqual(legacy.gameProgress.nex);
+    expect(firstImport.recentEvents).toHaveLength(4);
+    expect(firstImport.achievements.first_win).toBeDefined();
+    service.recordGameCompleted(session.userId, 'nex', true, 1);
+    const continued = service.getDashboard(session.userId);
+    expect(continued.gameProgress.nex.played).toBe(4);
+    const restarted = createService();
+    try {
+      const resumed = restarted.service.ensureSession(session.sessionId);
+      const repeated = restarted.service.importLocalProfile(resumed.userId, legacy);
+      expect(repeated).toEqual(continued);
+      expect(repeated.profile.totalXp).toBe(60);
+      expect(repeated.recentEvents).toHaveLength(5);
+    } finally {
+      restarted.db.close();
+    }
 
     const tables = db
       .query<{ name: string }, []>("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")

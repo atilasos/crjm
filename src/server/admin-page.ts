@@ -1,4 +1,6 @@
 import { GAME_NAMES, getGamesFor } from '../games/catalog';
+import { translate } from '../i18n/translate';
+import type { Locale } from '../i18n/locale';
 /**
  * Página de administração HTML para o servidor de torneios.
  * 
@@ -12,7 +14,17 @@ import { GAME_NAMES, getGamesFor } from '../games/catalog';
  * - Modo fullscreen para projeção
  */
 
-export function getAdminPageHtml(includeIntegration = false): string {
+export function getAdminPageHtml(includeIntegration = false, locale: Locale = 'pt-PT'): string {
+  const t = (message: string) => translate(message, locale);
+  const selections = {
+    current: getGamesFor('tournament', includeIntegration),
+    archive: getGamesFor('tournament', includeIntegration, 'archive'),
+  };
+  const selectionControl = `<div role="group" aria-label="${t('Seleção de jogos')}" class="game-selection">
+    <button type="button" class="btn-secondary" data-game-selection="current" aria-pressed="true" onclick="selectGames('current')">${t('Seleção atual')}</button>
+    <button type="button" class="btn-secondary" data-game-selection="archive" aria-pressed="false" onclick="selectGames('archive')">${t('Arquivo')}</button>
+    <p data-archive-description hidden>${t('Arquivo jogável: continua a jogar e a aprender, com todo o teu progresso.')}</p>
+  </div>`;
   return `<!DOCTYPE html>
 <html lang="pt">
 <head>
@@ -959,6 +971,11 @@ export function getAdminPageHtml(includeIntegration = false): string {
       gap: 4px;
     }
 
+    .game-selection { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .game-selection button { min-height: 44px; }
+    .game-selection button[aria-pressed="true"] { outline: 2px solid #FFD700; }
+    .game-selection p { flex-basis: 100%; }
+
     /* ========== RESPONSIVE ========== */
 
     @media (max-width: 900px) {
@@ -1025,6 +1042,7 @@ export function getAdminPageHtml(includeIntegration = false): string {
               <button id="viewBracket" onclick="setView('bracket')">Bracket</button>
             </div>
           </h2>
+          ${selectionControl}
           <div id="tournaments">
             <div class="no-data">A carregar...</div>
           </div>
@@ -1088,10 +1106,11 @@ export function getAdminPageHtml(includeIntegration = false): string {
     <div class="modal-content">
       <h2>➕ Criar Torneio</h2>
       ${includeIntegration ? '<p>Pré-visualização de integração — a edição pública mantém-se inalterada.</p>' : ''}
+      ${selectionControl}
       <div class="form-group">
         <label for="gameSelect">Jogo:</label>
         <select id="gameSelect" class="form-input">
-          ${getGamesFor('tournament', includeIntegration).map(game => `<option value="${game.id}">${game.name}</option>`).join('\n')}
+          ${selections.current.map(game => `<option value="${game.id}">${t(game.name)}</option>`).join('\n')}
         </select>
       </div>
       <div class="form-group">
@@ -1186,7 +1205,20 @@ Pedro Costa"></textarea>
     let isFullscreen = false;
     let cachedTournaments = [];
     
-    const GAME_NAMES = ${JSON.stringify(GAME_NAMES)};
+    const GAME_NAMES = ${JSON.stringify(Object.fromEntries(Object.entries(GAME_NAMES).map(([id, name]) => [id, t(name)])))};
+    const GAME_SELECTIONS = ${JSON.stringify(Object.fromEntries(Object.entries(selections).map(([key, games]) => [key, games.map(game => game.id)])))};
+    let gameSelection = 'current';
+
+    function selectGames(selection) {
+      gameSelection = selection;
+      const select = document.getElementById('gameSelect');
+      select.replaceChildren(...GAME_SELECTIONS[selection].map(id => new Option(GAME_NAMES[id], id)));
+      document.querySelectorAll('[data-game-selection]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.gameSelection === selection));
+      });
+      document.querySelectorAll('[data-archive-description]').forEach(description => { description.hidden = selection !== 'archive'; });
+      renderTournaments(cachedTournaments);
+    }
     
     // ========== DATA FETCHING ==========
     
@@ -1430,6 +1462,7 @@ Pedro Costa"></textarea>
     // ========== TOURNAMENT RENDERING ==========
     
     function renderTournaments(tournaments) {
+      tournaments = tournaments.filter(t => GAME_SELECTIONS[gameSelection].includes(t.gameId));
       const container = document.getElementById('tournaments');
       
       if (tournaments.length === 0) {

@@ -1,4 +1,4 @@
-import { GAME_CATALOG, isGameAvailable, isIntegrationPreview, type GameCapability } from '../games/catalog';
+import { GAME_CATALOG, isGameAvailable, isIntegrationPreview, type BrowsableSelection, type GameCapability } from '../games/catalog';
 import { useTranslation } from '../i18n/LanguageProvider';
 import { useMemo, useState } from 'react';
 import type { GameId } from '../ai-core/types';
@@ -8,15 +8,18 @@ import { Header } from './Header';
 import { PuzzleDiagramView } from './PuzzleDiagramView';
 import { useGamification } from './gamification/GamificationProvider';
 import { StrategyPractice } from './StrategyPractice';
+import { GameSelectionControl } from './GameSelectionControl';
 
 interface PuzzlePageProps {
   onVoltar: () => void;
+  selection: BrowsableSelection;
+  onSelectionChange: (selection: BrowsableSelection) => void;
 }
 
-export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
+export function PuzzlePage({ onVoltar, selection, onSelectionChange }: PuzzlePageProps) {
   const { t } = useTranslation();
   const games = GAME_CATALOG.filter(game =>
-    (['puzzles', 'training', 'strategy'] as const).some(capability => isGameAvailable(game, capability, isIntegrationPreview()))
+    (['puzzles', 'training', 'strategy'] as const).some(capability => isGameAvailable(game, capability, isIntegrationPreview(), selection))
   );
   const { profile, levelProgress, recordPatternProgress, recordPuzzleSolved } = useGamification();
   const [gameId, setGameId] = useState<GameId>(games[0]!.id);
@@ -67,7 +70,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
 
   return (
     <div className="min-h-screen">
-      <Header titulo="Laboratório de Estratégias" onVoltar={onVoltar} />
+      <Header titulo="Laboratório de Estratégias" onVoltar={onVoltar} voltarLabel={selection === 'archive' ? 'Voltar ao Arquivo' : undefined} />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <section data-puzzle-lab className="relative overflow-hidden rounded-xl border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
           <div className="absolute inset-y-0 left-5 hidden w-px [background:var(--ouro)] opacity-50 sm:block" aria-hidden="true" />
@@ -84,6 +87,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
           </div>
 
           <div className="p-5 sm:pl-12 sm:pr-8 sm:py-8">
+            <GameSelectionControl selection={selection} onChange={onSelectionChange} />
             <nav className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={t("Escolher jogo dos puzzles")}>
               {games.map((candidate) => (
                 <button

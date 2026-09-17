@@ -1565,5 +1565,10 @@
   "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.": "तिमीले मात्र सकाउन सक्ने पट्टी र विपक्षीले काट्न सक्ने पट्टी छुट्याऊ।",
   "Rever duas derrotas e localizar onde a contagem de turnos mudou.": "दुई हारको समीक्षा गर र पालोको गन्ती कहाँ बदलियो पत्ता लगाऊ।",
   "• Segmentos possíveis agora: {0}": "• अहिले सम्भव खण्डहरू: {0}",
-  "Pré-visualização de integração — a edição pública mantém-se inalterada.": "एकीकरण पूर्वावलोकन — सार्वजनिक संस्करण अपरिवर्तित रहन्छ।"
+  "Pré-visualização de integração — a edição pública mantém-se inalterada.": "एकीकरण पूर्वावलोकन — सार्वजनिक संस्करण अपरिवर्तित रहन्छ।",
+  "Seleção de jogos": "खेल छनोट",
+  "Seleção atual": "हालको छनोट",
+  "Arquivo": "अभिलेख",
+  "Voltar ao Arquivo": "अभिलेखमा फर्कनुहोस्",
+  "Arquivo jogável: continua a jogar e a aprender, com todo o teu progresso.": "खेल्न मिल्ने अभिलेख: आफ्नो सबै प्रगतिसहित खेल्न र सिक्न जारी राख्नुहोस्।"
 }

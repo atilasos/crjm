@@ -1565,5 +1565,10 @@
   "Distinguir faixas que só tu podes gastar de faixas que o adversário pode cortar.": "Distinguish strips only you can use up from strips your opponent can cut.",
   "Rever duas derrotas e localizar onde a contagem de turnos mudou.": "Review two losses and find where the turn count changed.",
   "• Segmentos possíveis agora: {0}": "• Available segments now: {0}",
-  "Pré-visualização de integração — a edição pública mantém-se inalterada.": "Integration preview — the public edition remains unchanged."
+  "Pré-visualização de integração — a edição pública mantém-se inalterada.": "Integration preview — the public edition remains unchanged.",
+  "Seleção de jogos": "Game selection",
+  "Seleção atual": "Current selection",
+  "Arquivo": "Archive",
+  "Voltar ao Arquivo": "Back to Archive",
+  "Arquivo jogável: continua a jogar e a aprender, com todo o teu progresso.": "Playable archive: keep playing and learning, with all your progress."
 }

@@ -1185,7 +1185,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     });
     headers.append('Set-Cookie', adminSessionCookie(ADMIN_KEY));
 
-    return new Response(getAdminPageHtml(isIntegrationPreview(url.search)), {
+    return new Response(getAdminPageHtml(isIntegrationPreview(url.search), localeOrDefault(url.searchParams.get('lang'))), {
       headers,
     });
   }

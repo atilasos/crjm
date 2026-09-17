@@ -25,9 +25,10 @@ import { ProdutoGame } from './games/produto/ProdutoGame';
 import { NexGame } from './games/nex/NexGame';
 import { PuzzlePage } from './components/PuzzlePage';
 import { LoginPage } from './components/LoginPage';
+import { GameSelectionControl } from './components/GameSelectionControl';
 
-type Pagina = 'inicio' | 'perfil' | 'entrar' | 'puzzles' | 'campeonato' | 'admin' | GameId;
-const PAGINAS: readonly string[] = ['inicio', 'perfil', 'entrar', 'puzzles', 'campeonato', 'admin'];
+type Pagina = 'inicio' | 'arquivo' | 'perfil' | 'entrar' | 'puzzles' | 'puzzles/arquivo' | 'campeonato' | 'admin' | GameId;
+const PAGINAS: readonly string[] = ['inicio', 'arquivo', 'perfil', 'entrar', 'puzzles', 'puzzles/arquivo', 'campeonato', 'admin'];
 
 const GAME_VIEWS: Partial<Record<GameId, {
   Game: ComponentType<{ onVoltar: () => void }>;
@@ -97,6 +98,7 @@ function AppContent() {
   };
 
   const voltarInicio = () => setPaginaAtual('inicio');
+  const selection = paginaAtual === 'arquivo' ? 'archive' : 'current';
 
   if (paginaAtual === 'campeonato') {
     return <CampeonatoPage onVoltar={voltarInicio} />;
@@ -110,8 +112,11 @@ function AppContent() {
     return <LoginPage onVoltar={voltarInicio} />;
   }
 
-  if (paginaAtual === 'puzzles') {
-    return <PuzzlePage onVoltar={voltarInicio} />;
+  if (paginaAtual === 'puzzles' || paginaAtual === 'puzzles/arquivo') {
+    const archive = paginaAtual === 'puzzles/arquivo';
+    return <PuzzlePage key={paginaAtual} selection={archive ? 'archive' : 'current'}
+      onSelectionChange={value => setPaginaAtual(value === 'archive' ? 'puzzles/arquivo' : 'puzzles')}
+      onVoltar={() => setPaginaAtual(archive ? 'arquivo' : 'inicio')} />;
   }
 
   if (paginaAtual === 'admin') {
@@ -119,7 +124,7 @@ function AppContent() {
   }
 
   const view = GAME_VIEWS[paginaAtual as GameId];
-  if (view) return <view.Game onVoltar={voltarInicio} />;
+  if (view) return <view.Game onVoltar={() => setPaginaAtual(getGame(paginaAtual)?.selection === 'archive' ? 'arquivo' : 'inicio')} />;
 
 
   return (
@@ -157,8 +162,9 @@ function AppContent() {
             className="mb-6 text-2xl font-bold [color:var(--tinta)]"
             style={{ fontFamily: 'var(--font-display)' }}
           >{t("Escolhe o teu jogo")}</h2>
+          <GameSelectionControl selection={selection} onChange={value => setPaginaAtual(value === 'archive' ? 'arquivo' : 'inicio')} />
           <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {getGamesFor('local', isIntegrationPreview()).map(({ id, name, description, accent, cycles }) => {
+            {getGamesFor('local', isIntegrationPreview(), selection).map(({ id, name, description, accent, cycles }) => {
               const view = GAME_VIEWS[id];
               if (!view) return null;
               return (
@@ -208,7 +214,7 @@ function AppContent() {
             </div>
             <button
               type="button"
-              onClick={() => setPaginaAtual('puzzles')}
+              onClick={() => setPaginaAtual(selection === 'archive' ? 'puzzles/arquivo' : 'puzzles')}
               className="btn btn-secondary self-start md:self-auto"
             >{t("Resolver puzzles")}</button>
           </div>

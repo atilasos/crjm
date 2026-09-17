@@ -34,12 +34,12 @@ const legacyProfile = {
   lastActiveDate: '2026-04-06',
   achievements: {},
   gameProgress: {
-    'gatos-caes': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+    'gatos-caes': { played: 4, wins: 2, reviews: 1, rules: 2, strategy: 1, mastery: 1 },
     dominorio: { played: 2, wins: 1, reviews: 1, rules: 1, strategy: 1, mastery: 1 },
     quelhas: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
     produto: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
     'atari-go': { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
-    nex: { played: 0, wins: 0, reviews: 0, rules: 0, strategy: 0, mastery: 0 },
+    nex: { played: 3, wins: 1, reviews: 1, rules: 2, strategy: 1, mastery: 1 },
   },
   recentEvents: [
     { type: 'game_completed', gameId: 'dominorio', at: '2026-04-06T10:00:00.000Z', won: true },
@@ -121,7 +121,7 @@ async function main() {
     await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
 
     await expectText(page, '42 XP total');
-    await expectText(page, '4/29');
+    await expectText(page, '6/29');
     await expectText(page, '2 partidas');
     await expectText(page, '1 revisões');
     await expectText(page, 'Atividade Recente');
@@ -132,7 +132,7 @@ async function main() {
     await page.reload({ waitUntil: 'networkidle' });
     await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
     await expectText(page, '42 XP total');
-    await expectText(page, '4/29');
+    await expectText(page, '6/29');
 
     const commandResult = await page.evaluate(async () => {
       const gameResponse = await fetch('/api/learner/events/game-completed', {
@@ -171,7 +171,7 @@ async function main() {
     await expectText(page, '70 XP total');
     await expectText(page, '3 partidas');
     await expectText(page, '2 revisões');
-    await expectText(page, '4/29');
+    await expectText(page, '5/29');
     await expectText(page, 'Atividade Recente');
 
     const localValue = await page.evaluate((key) => window.localStorage.getItem(key), LEGACY_PROFILE_KEY);
@@ -179,6 +179,27 @@ async function main() {
       throw new Error('expected legacy local profile to be cleared after successful import');
     }
 
+    const archivedProgress = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    for (const gameId of ['gatos-caes', 'nex'] as const) {
+      if (JSON.stringify(archivedProgress.gameProgress[gameId]) !== JSON.stringify(legacyProfile.gameProgress[gameId])) {
+        throw new Error(`O progresso legado de ${gameId} não foi preservado.`);
+      }
+    }
+    const storageState = await context.storageState();
+    await context.close();
+    const resumed = await browser.newContext({ storageState });
+    const resumedPage = await resumed.newPage();
+    await resumedPage.goto(`${BASE_URL}/#/puzzles/arquivo`, { waitUntil: 'networkidle' });
+    const repeated = await resumedPage.evaluate(async legacy => {
+      const response = await fetch('/api/learner/import-local-profile', {
+        method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile: legacy }),
+      });
+      return { status: response.status, body: await response.json() };
+    }, legacyProfile);
+    if (repeated.status !== 200) throw new Error(`Importação repetida: HTTP ${repeated.status}`);
+    const resumedProfile = await resumedPage.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (JSON.stringify(resumedProfile) !== JSON.stringify(archivedProgress)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
+    await resumed.close();
     await browser.close();
     console.log('Learner-core V1 e2e flow passed');
   } finally {

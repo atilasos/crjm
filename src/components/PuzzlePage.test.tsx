@@ -7,7 +7,7 @@ describe('PuzzlePage', () => {
   test('apresenta um laboratório acessível com seis jogos e três respostas', () => {
     const html = renderToStaticMarkup(
       <GamificationProvider>
-        <PuzzlePage onVoltar={() => undefined} />
+        <PuzzlePage onVoltar={() => undefined} selection="current" onSelectionChange={() => undefined} />
       </GamificationProvider>,
     );
 

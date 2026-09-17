@@ -1,4 +1,5 @@
-import { getGamesFor, isIntegrationPreview } from '../games/catalog';
+import { getGamesFor, isIntegrationPreview, type BrowsableSelection } from '../games/catalog';
+import { GameSelectionControl } from './GameSelectionControl';
 import { formatDateTime } from '../i18n/format';
 import { useTranslation } from '../i18n/LanguageProvider';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
@@ -122,7 +123,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [useMockServer, setUseMockServer] = useState(false); // Default to real server with preset
   const [playerName, setPlayerName] = useState('');
   const [classId, setClassId] = useState('');
-  const [selectedGame, setSelectedGame] = useState<GameId>('gatos-caes');
+  const [gameSelection, setGameSelection] = useState<BrowsableSelection>('current');
+  const [selectedGame, setSelectedGame] = useState<GameId>(() => getGamesFor('tournament', isIntegrationPreview())[0]!.id);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>('disconnected');
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [reconnectionCode, setReconnectionCode] = useState<string | null>(null);
@@ -635,6 +637,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   setPlayerName={setPlayerName}
                   classId={classId}
                   setClassId={setClassId}
+                  selection={gameSelection}
+                  setSelection={setGameSelection}
                   selectedGame={selectedGame}
                   setSelectedGame={setSelectedGame}
                   connectionStatus={connectionStatus}
@@ -715,6 +719,8 @@ interface ConnectFormProps {
   setPlayerName: (name: string) => void;
   classId: string;
   setClassId: (id: string) => void;
+  selection: BrowsableSelection;
+  setSelection: (selection: BrowsableSelection) => void;
   selectedGame: GameId;
   setSelectedGame: (game: GameId) => void;
   connectionStatus: ConnectionStatus;
@@ -730,6 +736,7 @@ function ConnectForm({
   useMockServer, setUseMockServer,
   playerName, setPlayerName,
   classId, setClassId,
+  selection, setSelection,
   selectedGame, setSelectedGame,
   connectionStatus, connectionError,
   onConnect,
@@ -738,7 +745,7 @@ function ConnectForm({
 }: ConnectFormProps) {
   const { t, locale } = useTranslation();
   // Jogos suportados no modo campeonato (servidor real + mock)
-  const games = getGamesFor('tournament', isIntegrationPreview()).map(game => game.id);
+  const games = getGamesFor('tournament', isIntegrationPreview(), selection).map(game => game.id);
   const isConnecting = connectionStatus === 'connecting';
 
   return (
@@ -772,8 +779,13 @@ function ConnectForm({
         </div>
 
         <div>
-          <label className="block [color:var(--tinta)] text-sm font-medium mb-2">{t("Jogo do campeonato *")}</label>
+          <GameSelectionControl selection={selection} disabled={isConnecting} onChange={value => {
+            setSelection(value);
+            setSelectedGame(getGamesFor('tournament', isIntegrationPreview(), value)[0]!.id);
+          }} />
+          <label htmlFor="tournament-game" className="block [color:var(--tinta)] text-sm font-medium mb-2">{t("Jogo do campeonato *")}</label>
           <select
+            id="tournament-game"
             value={selectedGame}
             onChange={e => setSelectedGame(e.target.value as GameId)}
             className="w-full px-4 py-3 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)]"
@@ -794,6 +806,8 @@ function ConnectForm({
             <label className="[color:var(--tinta)] text-sm font-medium">{t("Modo de ligação")}</label>
             <button
               type="button"
+              aria-label={t("Modo de ligação")}
+              aria-pressed={useMockServer}
               onClick={() => setUseMockServer(!useMockServer)}
               disabled={isConnecting}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${useMockServer ? '[background:var(--jogo-dominorio)]' : '[background:var(--sucesso)]'
@@ -890,7 +904,7 @@ function ConnectForm({
                 onChange={e => setReconnectionCodeInput(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ''))}
                 placeholder={t("ABC234")}
                 maxLength={6}
-                className="flex-1 px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-lg tracking-widest text-center uppercase"
+                className="min-w-0 flex-1 px-3 py-2 rounded-lg [background:var(--fundo)] border [border-color:var(--linha)] [color:var(--tinta)] placeholder:[color:var(--tinta-suave)] focus:outline-none focus:ring-2 focus:ring-[var(--ouro)] font-mono text-lg tracking-widest text-center uppercase"
                 disabled={isConnecting}
               />
               <button

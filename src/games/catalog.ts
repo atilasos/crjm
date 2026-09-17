@@ -4,6 +4,7 @@
  */
 export type GameCapability = 'local' | 'ai' | 'tutor' | 'review' | 'puzzles' | 'training' | 'strategy' | 'tournament' | 'progress';
 export type GameSelection = 'current' | 'archive' | 'integration';
+export type BrowsableSelection = Exclude<GameSelection, 'integration'>;
 export const SCHOOL_CYCLES = ['1.º Ciclo', '2.º Ciclo', '3.º Ciclo', 'Secundário'] as const;
 
 export interface GameDefinition {
@@ -27,7 +28,7 @@ export const GAME_CATALOG = [
     accent: 'var(--jogo-gatos)',
     cycles: ['1.º Ciclo'],
     mark: '🐱',
-    selection: 'current',
+    selection: 'archive',
     capabilities: EXISTING_CAPABILITIES,
   },
   {
@@ -77,7 +78,7 @@ export const GAME_CATALOG = [
     accent: 'var(--jogo-nex)',
     cycles: ['Secundário'],
     mark: '⬡',
-    selection: 'current',
+    selection: 'archive',
     capabilities: EXISTING_CAPABILITIES,
   },
 ] as const satisfies readonly GameDefinition[];
@@ -94,12 +95,18 @@ export function getGame(id: string): (GameDefinition & { id: GameId }) | undefin
   return GAME_CATALOG.find(game => game.id === id);
 }
 
-export function isGameAvailable(game: GameDefinition, capability: GameCapability, includeIntegration = false): boolean {
-  return game.capabilities.includes(capability) && (game.selection === 'current' || (includeIntegration && game.selection === 'integration'));
+export function isGameAvailable(game: GameDefinition, capability: GameCapability, includeIntegration = false, selection: BrowsableSelection = 'current'): boolean {
+  if (!game.capabilities.includes(capability)) return false;
+  if (selection === 'archive') return game.selection === 'archive';
+  // Until #38 activates the complete edition, the public default keeps all six
+  // existing games. Explicit integration preview already separates the archive.
+  return game.selection === 'current' || (includeIntegration
+    ? game.selection === 'integration'
+    : game.selection === 'archive');
 }
 
-export function getGamesFor(capability: GameCapability, includeIntegration = false): Array<GameDefinition & { id: GameId }> {
-  return GAME_CATALOG.filter(game => isGameAvailable(game, capability, includeIntegration));
+export function getGamesFor(capability: GameCapability, includeIntegration = false, selection: BrowsableSelection = 'current'): Array<GameDefinition & { id: GameId }> {
+  return GAME_CATALOG.filter(game => isGameAvailable(game, capability, includeIntegration, selection));
 }
 
 /** The profile retains archived progress, without advertising unfinished games. */

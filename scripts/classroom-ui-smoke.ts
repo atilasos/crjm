@@ -6,6 +6,9 @@ import { fileURLToPath } from 'node:url';
 
 const PORT = 4800 + (process.pid % 500);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const TOURNAMENT_PORT = PORT + 10000;
+const TOURNAMENT_URL = `http://127.0.0.1:${TOURNAMENT_PORT}`;
+const ADMIN_KEY = 'archive-smoke-local-only';
 const DB_PATH = `/tmp/crjm-classroom-ui-${process.pid}.sqlite`;
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -131,9 +134,10 @@ async function assertViewport(page: Page, game: string, selector = '.game-contai
 
 async function checkGameSelection(page: Page): Promise<void> {
   const titles = ['Gatos & Cães', 'Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Nex'];
-  const assertTitles = async (locator: Locator, label: string) => {
+  const assertTitles = async (locator: Locator, label: string, expectedTitles = titles) => {
+    await locator.first().waitFor({ state: 'attached' });
     const actual = (await locator.allTextContents()).map(text => text.trim());
-    if (JSON.stringify(actual) !== JSON.stringify(titles)) throw new Error(`${label}: ${JSON.stringify(actual)}`);
+    if (JSON.stringify(actual) !== JSON.stringify(expectedTitles)) throw new Error(`${label}: ${JSON.stringify(actual)}`);
   };
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await assertTitles(page.locator('button.game-card h2'), 'Seleção pública');
@@ -142,7 +146,7 @@ async function checkGameSelection(page: Page): Promise<void> {
   if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('Ciclos da seleção pública alterados.');
   await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
   await page.getByRole('status').filter({ hasText: 'Pré-visualização de integração' }).waitFor();
-  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização');
+  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização', ['Dominório', 'Quelhas', 'Produto', 'Atari Go']);
   await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
   await assertTitles(page.locator('main select').first().locator('option'), 'Jogos do campeonato');
   await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
@@ -155,6 +159,142 @@ async function checkGameSelection(page: Page): Promise<void> {
   for (const title of titles) await page.getByText(title, { exact: true }).first().waitFor();
 }
 
+async function checkArchive(page: Page): Promise<void> {
+  for (const [locale, archive, back, current] of [
+    ['pt-PT', 'Arquivo', 'Voltar ao Arquivo', 'Seleção atual'],
+    ['en', 'Archive', 'Back to Archive', 'Current selection'],
+    ['ne', 'अभिलेख', 'अभिलेखमा फर्कनुहोस्', 'हालको छनोट'],
+  ]) {
+    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+    await page.locator('[data-language-selector]').selectOption(locale!);
+    await page.getByRole('button', { name: archive, exact: true }).click();
+    await page.waitForURL('**/#/arquivo');
+    const titles = await page.locator('button.game-card h2').allTextContents();
+    if (titles.length !== 2 || !titles.includes('Nex')) throw new Error('Arquivo: esperados dois jogos.');
+    for (const theme of ['claro', 'escuro']) {
+      await page.evaluate(value => {
+        localStorage.setItem('crjm-tema', value);
+      }, theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await assertViewport(page, `Arquivo ${locale} ${theme}`, 'main');
+      for (const slug of ['gatos-caes', 'nex']) {
+        // Old bookmarks retain their exact route and return to the archive.
+        await page.goto(`${BASE_URL}/#/${slug}`, { waitUntil: 'networkidle' });
+        await page.getByText(archive!, { exact: true }).waitFor();
+        await assertViewport(page, `${slug} ${locale} ${theme}`);
+        await page.getByRole('button', { name: back, exact: true }).click();
+        await page.waitForURL('**/#/arquivo');
+        if (await page.locator('button.game-card').count() !== 2) throw new Error('Regresso fora do Arquivo.');
+      }
+    }
+    await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: archive, exact: true }).click();
+    await page.waitForURL('**/#/puzzles/arquivo');
+    const games = page.locator('[data-puzzle-lab] nav button');
+    if (await games.count() !== 2) throw new Error('Laboratório: seleção do Arquivo incorreta.');
+    for (let i = 0; i < 2; i++) {
+      await games.nth(i).click();
+      await page.locator('[data-percurso]').waitFor();
+      await page.locator('[data-puzzle-option]').first().waitFor();
+    }
+    await assertViewport(page, `Laboratório Arquivo ${locale}`, '[data-puzzle-lab]');
+    await page.reload({ waitUntil: 'networkidle' });
+    if (await games.count() !== 2) throw new Error('Recarregar perdeu o contexto de Arquivo.');
+    await page.getByRole('button', { name: back, exact: true }).click();
+    await page.waitForURL('**/#/arquivo');
+    await page.getByRole('button', { name: current, exact: true }).click();
+    await page.goBack();
+    await page.waitForURL('**/#/arquivo');
+    await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: archive, exact: true }).click();
+    const options = page.locator('#tournament-game option');
+    if (await options.count() !== 2) throw new Error('Torneios: seleção do Arquivo incorreta.');
+    await page.locator('#tournament-game').selectOption('nex');
+    await page.getByRole('button', { name: current, exact: true }).click();
+    if (await options.count() !== 6) throw new Error('Seleção pública foi ativada prematuramente.');
+    await assertViewport(page, `Torneios Arquivo ${locale}`, 'main');
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+  await page.goto(`${BASE_URL}/?integracao=1#/campeonato`, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
+  await page.locator('#tournament-game').selectOption('nex');
+  await page.getByPlaceholder('Ex: João Silva').fill('Aluno Arquivo');
+  await page.getByRole('button', { name: 'Modo de ligação', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar Treino', exact: false }).click();
+  await page.getByRole('button', { name: '❌ Sair do Campeonato', exact: true }).click();
+  if (await page.getByRole('button', { name: 'Arquivo', exact: true }).getAttribute('aria-pressed') !== 'true'
+      || await page.locator('#tournament-game').inputValue() !== 'nex') {
+    throw new Error('Sair do torneio perdeu a seleção Arquivo/Nex.');
+  }
+}
+
+async function checkArchiveAdministration(browser: Browser): Promise<void> {
+  const context = await browser.newContext({ httpCredentials: { username: 'admin', password: ADMIN_KEY } });
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('dialog', dialog => {
+    void dialog.accept().catch(error => {
+      if (!String(error).includes('No dialog is showing')) errors.push(String(error));
+    });
+  });
+  try {
+    for (const gameId of ['gatos-caes', 'nex']) {
+      await page.goto(`${TOURNAMENT_URL}/admin?integracao=1`);
+      await page.getByRole('button', { name: '➕ Criar', exact: true }).click();
+      const modal = page.locator('#createTournamentModal');
+      await modal.getByRole('button', { name: 'Arquivo', exact: true }).click();
+      const options = await modal.locator('#gameSelect option').evaluateAll(elements => elements.map(element => (element as HTMLOptionElement).value));
+      if (JSON.stringify(options) !== JSON.stringify(['gatos-caes', 'nex'])) throw new Error('Administração: Arquivo incorreto.');
+      await modal.locator('#gameSelect').selectOption(gameId);
+      await modal.locator('#playerList').fill('Aluno A;4A\nAluno B;4A');
+      const created = page.waitForResponse(response => response.url().endsWith(`/api/tournaments/${gameId}/create-with-players`) && response.request().method() === 'POST');
+      await modal.getByRole('button', { name: 'Criar Torneio', exact: true }).click();
+      const payload = await (await created).json();
+      if (!payload.success || payload.gameId !== gameId || payload.players.length !== 2) throw new Error('Criação do torneio do Arquivo falhou.');
+      await page.locator('#tournaments .tournament-name').filter({ hasText: gameId === 'nex' ? 'Nex' : 'Gatos & Cães' }).waitFor();
+
+      // Rejoin through the same public protocol used by pupils with entry codes.
+      const sockets: WebSocket[] = [];
+      let started = 0;
+      let matchId = '';
+      try {
+        await Promise.all(payload.players.map((player: { reconnectionCode: string }) => new Promise<void>((resolve, reject) => {
+          const socket = new WebSocket(`${TOURNAMENT_URL.replace('http:', 'ws:')}/ws`);
+          sockets.push(socket);
+          const timeout = setTimeout(() => reject(new Error('Aluno não conseguiu entrar no torneio.')), 10_000);
+          socket.onopen = () => socket.send(JSON.stringify({ type: 'rejoin_tournament', reconnectionCode: player.reconnectionCode }));
+          socket.onmessage = event => {
+            const message = JSON.parse(String(event.data));
+            if (message.type === 'welcome') { clearTimeout(timeout); resolve(); }
+            if (message.type === 'match_assigned') {
+              socket.send(JSON.stringify({ type: 'ready_for_match', matchId: message.match.id }));
+            }
+            if (message.type === 'game_start') { started += 1; matchId = message.matchId; }
+          };
+        })));
+        const response = await page.request.post(`${TOURNAMENT_URL}/api/tournaments/${gameId}/start`);
+        if (!response.ok()) throw new Error('Torneio do Arquivo não arrancou.');
+        for (let attempt = 0; attempt < 50 && started < 2; attempt++) await delay(100);
+        if (started < 2) throw new Error('Os dois alunos não receberam o tabuleiro inicial.');
+        await page.goto(`${TOURNAMENT_URL}/admin/spectator?gameId=${gameId}&matchId=${matchId}`);
+        await page.getByRole('heading', { name: /Aluno [AB] vs Aluno [AB]/ }).waitFor();
+        await page.locator(gameId === 'nex' ? 'svg polygon' : '.grid button').first().waitFor();
+      } finally {
+        for (const socket of sockets) socket.close();
+      }
+    }
+    for (const [locale, archive] of [['en', 'Archive'], ['ne', 'अभिलेख']]) {
+      await page.goto(`${TOURNAMENT_URL}/admin?integracao=1&lang=${locale}`);
+      await page.getByRole('button', { name: archive, exact: true }).first().click();
+      await page.locator('#tournaments .tournament-name').filter({ hasText: 'Nex' }).waitFor();
+    }
+    if (errors.length) throw new Error(`Administração/espectador: ${errors.join('; ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
 async function runGame(page: Page, title: string, play: (page: Page) => Promise<void>): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.locator('button.game-card').filter({ hasText: title }).click();
@@ -162,7 +302,7 @@ async function runGame(page: Page, title: string, play: (page: Page) => Promise<
   await chooseN1(page);
   await assertViewport(page, title);
   await play(page);
-  await page.getByRole('button', { name: 'Voltar à página inicial' }).click();
+  await page.getByRole('button', { name: ['Gatos & Cães', 'Nex'].includes(title) ? 'Voltar ao Arquivo' : 'Voltar à página inicial' }).click();
   await page.getByRole('heading', { name: 'Treino para o CRJM' }).waitFor();
 }
 
@@ -195,12 +335,24 @@ async function main(): Promise<void> {
     stdio: 'pipe',
   });
 
+  const tournamentServer = spawn('bun', ['src/server/tournament-server.ts'], {
+    cwd: PROJECT_ROOT,
+    env: { ...process.env, PORT: String(TOURNAMENT_PORT), ADMIN_KEY, CLASS_STORE_PATH: `/tmp/crjm-archive-classes-${process.pid}.json` },
+    stdio: 'ignore',
+  });
   try {
     await waitForServer();
+    for (let attempt = 0; attempt < 60; attempt++) {
+      try { if ((await fetch(`${TOURNAMENT_URL}/health`)).ok) break; } catch {}
+      if (attempt === 59) throw new Error('Servidor de torneios indisponível.');
+      await delay(250);
+    }
     const browser = await launchBrowser();
     const checks: Array<{ viewport: string; game: string }> = [];
 
     try {
+      await checkArchiveAdministration(browser);
+      checks.push({ viewport: 'desktop', game: 'Arquivo: criação/administração, participantes e espectador reais' });
       for (const viewport of VIEWPORTS) {
         const context = await browser.newContext({
           locale: 'pt-PT',
@@ -213,6 +365,8 @@ async function main(): Promise<void> {
           if (message.type() === 'error') errors.push(message.text());
         });
 
+        await checkArchive(page);
+        checks.push({ viewport: viewport.name, game: 'Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro' });
         await checkGameSelection(page);
         checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
         for (const game of GAMES) {
@@ -231,6 +385,8 @@ async function main(): Promise<void> {
     console.log(JSON.stringify({ pass: true, baseUrl: BASE_URL, checks }, null, 2));
   } finally {
     server.kill('SIGTERM');
+    tournamentServer.kill('SIGTERM');
+    await rm(`/tmp/crjm-archive-classes-${process.pid}.json`, { force: true });
     await rm(DB_PATH, { force: true });
   }
 }
