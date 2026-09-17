@@ -91,6 +91,16 @@ export const GAME_CATALOG = [
     selection: 'integration',
     capabilities: ['local', 'progress'],
   },
+  {
+    id: 'y',
+    name: 'Y',
+    description: 'Liga os três lados do tabuleiro com um único grupo de peças da tua cor.',
+    accent: 'var(--tinta)',
+    cycles: ['Secundário'],
+    mark: 'Y',
+    selection: 'integration',
+    capabilities: ['local', 'progress'],
+  },
 ] as const satisfies readonly GameDefinition[];
 
 export type GameId = (typeof GAME_CATALOG)[number]['id'];

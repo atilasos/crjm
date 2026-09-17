@@ -26,7 +26,7 @@ export function GameLayout({ titulo, regras, children, onVoltar, gameId }: GameL
           </p>}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Área do jogo */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 min-w-0">
               {children}
             </div>
             

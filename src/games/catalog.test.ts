@@ -2,11 +2,11 @@ import { describe, expect, test } from 'bun:test';
 import { getGamesFor, isGameAvailable, isIntegrationPreview, type GameDefinition } from './catalog';
 
 describe('seleção de jogos por percurso', () => {
-  test('Faísca disponibiliza apenas partida local e progresso na integração', () => {
-    expect(getGamesFor('local', true).find(game => game.id === 'faisca')?.capabilities).toEqual(['local', 'progress']);
-    expect(getGamesFor('progress', true).some(game => game.id === 'faisca')).toBe(true);
+  test.each(['faisca', 'y'] as const)('%s disponibiliza apenas partida local e progresso na integração', gameId => {
+    expect(getGamesFor('local', true).find(game => game.id === gameId)?.capabilities).toEqual(['local', 'progress']);
+    expect(getGamesFor('progress', true).some(game => game.id === gameId)).toBe(true);
     for (const capability of ['ai', 'tutor', 'review', 'puzzles', 'training', 'strategy', 'tournament'] as const) {
-      expect(getGamesFor(capability, true).some(game => game.id === 'faisca')).toBe(false);
+      expect(getGamesFor(capability, true).some(game => game.id === gameId)).toBe(false);
     }
   });
   test('mantém os seis jogos públicos em todos os percursos atuais', () => {

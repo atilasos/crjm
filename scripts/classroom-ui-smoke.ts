@@ -149,7 +149,7 @@ async function checkGameSelection(page: Page): Promise<void> {
   if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('Ciclos da seleção pública alterados.');
   await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
   await page.getByRole('status').filter({ hasText: 'Pré-visualização de integração' }).waitFor();
-  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização', ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca']);
+  await assertTitles(page.locator('button.game-card h2'), 'Seleção em pré-visualização', ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca', 'Y']);
   await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
   await assertTitles(page.locator('main select').first().locator('option'), 'Jogos do campeonato');
   await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
@@ -202,6 +202,73 @@ async function checkFaisca(page: Page): Promise<void> {
     }
   }
   await page.locator('[data-language-selector]').selectOption('pt-PT');
+}
+
+async function checkY(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
+  if (await page.locator('.y-game').count()) throw new Error('Y foi publicado fora da integração.');
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    const msg = (text: keyof typeof pt, values: string[]) => t(text).replace(/\{(\d+)\}/g, (_, i) => values[Number(i)]!);
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Y', exact: true }) }).click();
+      await page.getByText(t('Cada canto pertence aos dois lados adjacentes. Ligar um canto ao lado oposto pode vencer; grupos separados não se somam.'), { exact: true }).waitFor();
+      const board = page.getByRole('group', { name: t('Intersecções de Y') });
+      if (await board.getByRole('button').count() !== 93) throw new Error('Y: esperadas 93 intersecções.');
+      await board.getByRole('button', { name: /^A1:/ }).focus();
+      await page.keyboard.press('Enter');
+      const profile = page.getByLabel(t('O meu perfil corresponde a:'));
+      if (await profile.isEnabled()) throw new Error('Y: identidade alterável a meio da partida.');
+      await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 1'), t('Vermelho')]) }).waitFor();
+      const first = board.getByRole('button', { name: new RegExp(`^A1: ${t('Azul')};`) });
+      if (await first.isEnabled()) throw new Error('Y: peça inicial desapareceu após troca.');
+      if (await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).count()) throw new Error('Y: troca oferecida duas vezes.');
+      await board.getByRole('button', { name: /^M1:/ }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 2'), t('Azul')]) }).waitFor();
+      if (await page.getByRole('button', { name: /^N[1-6],/ }).count()) throw new Error('Y: expõe IA não implementada.');
+      await assertViewport(page, `Y ${locale} ${theme}`, '.y-board-viewport');
+      const bounds = await first.boundingBox();
+      if (!bounds || bounds.width < 44 || bounds.height < 44) throw new Error('Y: alvo tátil inferior a 44px.');
+      if (process.env.Y_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: process.env.Y_SCREENSHOT_PATH, fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+  let played = 0;
+  let wins = 0;
+  for (const participant of ['jogador1', 'jogador2']) {
+    for (const swap of [false, true]) {
+      await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
+      await page.getByLabel('O meu perfil corresponde a:').selectOption(participant);
+      const board = page.getByRole('group', { name: 'Intersecções de Y' });
+      const place = (id: string) => board.getByRole('button', { name: new RegExp(`^${id}:`) }).click();
+      await place('A1');
+      if (swap) await page.getByRole('button', { name: 'Trocar de cores', exact: true }).click();
+      const path = ['B1', 'C1', 'D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'D8', 'C7', 'B8', 'A9'];
+      const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
+      for (let i = 0; i < path.length; i++) { await place(replies[i]!); await place(path[i]!); }
+      await page.getByRole('status').filter({ hasText: `Venceu Jogador ${swap ? 2 : 1} com Azul!` }).waitFor();
+      if (await board.locator('button:not(:disabled)').count()) throw new Error('Y: permite continuar após vitória.');
+      played++;
+      if (participant === (swap ? 'jogador2' : 'jogador1')) wins++;
+      await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
+      const card = page.getByText('Y', { exact: true }).locator('../..');
+      await card.getByText(`${played} partidas · 0 revisões`, { exact: true }).waitFor();
+      await card.getByText(`Vitórias: ${wins}`, { exact: true }).waitFor();
+      // Reload forces a fresh bootstrap of the persisted profile.
+      await page.reload({ waitUntil: 'networkidle' });
+      await card.getByText(`${played} partidas · 0 revisões`, { exact: true }).waitFor();
+      await card.getByText(`Vitórias: ${wins}`, { exact: true }).waitFor();
+    }
+  }
 }
 
 async function checkArchive(page: Page): Promise<void> {
@@ -416,6 +483,8 @@ async function main(): Promise<void> {
         checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
         await checkFaisca(page);
         checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
+        await checkY(page);
+        checks.push({ viewport: viewport.name, game: 'Y: regras, troca, teclado e 4 partidas com perfil persistido × PT/EN/NE × claro/escuro' });
         for (const game of GAMES) {
           await runGame(page, game.title, game.play);
           checks.push({ viewport: viewport.name, game: game.title });

@@ -1,3 +1,4 @@
+import { criarEstadoInicial, colocarPeca, trocarCores } from '../../games/y/logic';
 import { SUPPORTED_LOCALES } from '../../i18n/locale';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { rmSync } from 'node:fs';
@@ -242,6 +243,42 @@ describe('learner core service', () => {
       expect(restored.recentEvents).toEqual(expect.arrayContaining(completed.recentEvents));
       const other = reopened.service.ensureSession(null);
       expect(reopened.service.getDashboard(other.userId).gameProgress.faisca.played).toBe(0);
+    } finally { reopened.db.close(); }
+  });
+
+  test.each([false, true])('Y guarda a vitória do participante após troca=%s e recupera o perfil sem alterar outros jogos', swap => {
+    const { db, service } = createService();
+    const session = service.ensureSession(null);
+    const previousGames = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca'] as const;
+    for (const game of previousGames) service.recordGameCompleted(session.userId, game, true);
+    const before = service.getDashboard(session.userId);
+    let state = colocarPeca(criarEstadoInicial(), 'A1');
+    if (swap) state = trocarCores(state);
+    const path = ['B1', 'C1', 'D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'D8', 'C7', 'B8', 'A9'];
+    const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
+    for (let i = 0; i < path.length; i++) {
+      state = colocarPeca(state, replies[i]!);
+      state = colocarPeca(state, path[i]!);
+    }
+    // This device's learner chose participant 2, regardless of colour.
+    const won = state.estado === 'vitoria-jogador2';
+    expect(won).toBe(swap);
+    const completed = service.recordGameCompleted(session.userId, 'y', won).dashboard;
+    expect(completed.gameProgress.y.played).toBe(1);
+    expect(completed.gameProgress.y.wins).toBe(swap ? 1 : 0);
+    expect(completed.levelProgress.y).toBeUndefined();
+    for (const game of previousGames) expect(completed.gameProgress[game]).toEqual(before.gameProgress[game]);
+    expect(completed.recentEvents).toContainEqual(expect.objectContaining({ gameId: 'y', type: 'game_completed', won }));
+    db.close();
+    const reopened = createService();
+    try {
+      const resumed = reopened.service.ensureSession(session.sessionId);
+      const restored = reopened.service.getDashboard(resumed.userId);
+      expect(restored.gameProgress).toEqual(completed.gameProgress);
+      expect(restored.profile).toEqual(completed.profile);
+      expect(restored.achievements).toEqual(completed.achievements);
+      const other = reopened.service.ensureSession(null);
+      expect(reopened.service.getDashboard(other.userId).gameProgress.y.played).toBe(0);
     } finally { reopened.db.close(); }
   });
 

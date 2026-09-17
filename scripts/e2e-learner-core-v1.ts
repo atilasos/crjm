@@ -214,13 +214,35 @@ async function main() {
     }
     await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
+    await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+    await page.getByLabel('O meu perfil corresponde a:').selectOption('jogador2');
+    const yBoard = page.getByRole('group', { name: 'Intersecções de Y' });
+    const placeY = (id: string) => yBoard.getByRole('button', { name: new RegExp(`^${id}:`) }).click();
+    await placeY('A1');
+    await page.getByRole('button', { name: 'Trocar de cores', exact: true }).click();
+    const path = ['B1', 'C1', 'D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'D8', 'C7', 'B8', 'A9'];
+    const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
+    for (let i = 0; i < path.length; i++) { await placeY(replies[i]!); await placeY(path[i]!); }
+    await page.getByRole('status').filter({ hasText: 'Venceu Jogador 2 com Azul!' }).waitFor();
+    await page.waitForFunction(async () => {
+      const dashboard = await (await fetch('/api/learner/dashboard')).json();
+      return dashboard.gameProgress.y.played === 1;
+    });
+    const afterY = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (afterY.profile.totalXp !== 98 || afterY.gameProgress.y.wins !== 1) throw new Error('Y não atribuiu a vitória ao participante do perfil após troca.');
+    for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca']) {
+      if (JSON.stringify(afterY.gameProgress[gameId]) !== JSON.stringify(afterFaisca.gameProgress[gameId])) throw new Error(`Y alterou ${gameId}.`);
+    }
     const storageState = await context.storageState();
     await context.close();
     const resumed = await browser.newContext({ storageState });
     const resumedPage = await resumed.newPage();
     await resumedPage.goto(`${BASE_URL}/?integracao=1#/perfil`, { waitUntil: 'networkidle' });
     await expectText(resumedPage, 'Faísca');
-    await expectText(resumedPage, '80 XP total');
+    await expectText(resumedPage, '98 XP total');
+    const yCard = resumedPage.getByText('Y', { exact: true }).locator('../..');
+    await yCard.getByText('1 partidas · 0 revisões', { exact: true }).waitFor();
+    await yCard.getByText('Vitórias: 1', { exact: true }).waitFor();
     const repeated = await resumedPage.evaluate(async legacy => {
       const response = await fetch('/api/learner/import-local-profile', {
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ profile: legacy }),
@@ -229,7 +251,7 @@ async function main() {
     }, legacyProfile);
     if (repeated.status !== 200) throw new Error(`Importação repetida: HTTP ${repeated.status}`);
     const resumedProfile = await resumedPage.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
-    if (JSON.stringify(resumedProfile) !== JSON.stringify(afterFaisca)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
+    if (JSON.stringify(resumedProfile) !== JSON.stringify(afterY)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
     await resumed.close();
     await browser.close();
     console.log('Learner-core V1 e2e flow passed');
