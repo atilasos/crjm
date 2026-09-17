@@ -33,6 +33,11 @@ export function advanceThinking(state: ThinkingState, turn: string): ThinkingSta
 }
 
 export const THINKING_PROMPTS: Partial<Record<GameId, { question: string; principle: string; compare: string }>> = {
+  y: {
+    question: 'Que lados pode alcançar um único grupo da tua cor?',
+    principle: 'Segue apenas as linhas desenhadas. Um canto toca dois lados; grupos separados não somam os seus lados.',
+    compare: 'Imagina duas escolhas e a resposta do adversário. Que grupos unem? Se puderes trocar, compara as cores que cada participante terá.',
+  },
   faisca: {
     question: 'Que opções terá o adversário na próxima casa?',
     principle: 'A distância e a direção escolhem a próxima casa. Confirma as peças disponíveis dos dois jogadores.',

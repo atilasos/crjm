@@ -3,12 +3,13 @@ import { GameLayout } from '../../components/GameLayout';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { useTranslation } from '../../i18n/LanguageProvider';
 import type { Player } from '../../types';
-import { LIGACOES, NOS } from './board';
-import { criarEstadoInicial, colocarPeca, trocarCores, aplicarJogada } from './logic';
+import { YBoard } from './YBoard';
+import { YTutor, YReview, type YDecision } from './YLearning';
+import { criarEstadoInicial, aplicarJogada, getJogadasValidas } from './logic';
 import { requestYMove } from './ai/ai-client';
 import { Y_DIFFICULTIES, type YLevel } from './ai/engine';
 import { DifficultySelector } from '../../components/DifficultySelector';
-import type { YState } from './types';
+import type { YState, YMove } from './types';
 import './y.css';
 
 const REGRAS = [
@@ -19,11 +20,12 @@ const REGRAS = [
   'Ganha quem ligar os três lados com um único grupo de peças da mesma cor, seguindo as linhas desenhadas.',
   'Cada canto pertence aos dois lados adjacentes. Ligar um canto ao lado oposto pode vencer; grupos separados não se somam.',
 ];
-const BY_ID = new Map(NOS.map(no => [no.id, no]));
 
 export function YGame({ onVoltar }: { onVoltar: () => void }) {
   const { t, msg } = useTranslation();
-  const { recordGameCompleted, isReady } = useGamification();
+  const { recordGameCompleted, isReady, profile } = useGamification();
+  const [matchId, setMatchId] = useState(() => crypto.randomUUID());
+  const [decision, setDecision] = useState<YDecision | null>(null);
   const [state, setState] = useState(criarEstadoInicial);
   const [participante, setParticipante] = useState<Player>('jogador1');
   const [mode, setMode] = useState<'local' | 'ai'>('local');
@@ -31,6 +33,8 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
   const [aiError, setAiError] = useState(false);
   const [retry, setRetry] = useState(0);
   const computation = useRef<AbortController | null>(null);
+  const turnNumber = state.colocacoes + (state.cores.jogador1 === 'vermelho' ? 1 : 0) + 1;
+  const turn = `${matchId}:${turnNumber}`;
   const terminou = state.estado !== 'a-jogar';
   const aiTurn = !terminou && mode === 'ai' && state.jogadorAtual !== participante;
   const nome = (id: Player) => t(id === 'jogador1' ? 'Jogador 1' : 'Jogador 2');
@@ -60,8 +64,12 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
     return () => controller.abort();
   }, [isReady, aiTurn, state, level, retry, applyMove]);
 
-  function jogar(next: YState) {
+  function jogar(move: YMove) {
+    const next = aplicarJogada(state, move);
     if (!isReady || aiTurn || next === state) return;
+    if (state.jogadorAtual === participante && (getJogadasValidas(state).length > 1 || !decision)) {
+      setDecision({ state, move, turn: turnNumber });
+    }
     applyMove(next);
   }
 
@@ -69,6 +77,8 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
     computation.current?.abort();
     setAiError(false);
     setState(criarEstadoInicial());
+    setMatchId(crypto.randomUUID());
+    setDecision(null);
   }
 
   return <GameLayout titulo="Y" gameId="y" regras={REGRAS} onVoltar={() => { computation.current?.abort(); onVoltar(); }}>
@@ -111,7 +121,7 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
       {state.podeTrocar && !aiTurn && <p className="mb-3">{t('Podes colocar uma peça ou trocar de cores. A troca ocupa este turno.')}</p>}
       <div className="flex flex-wrap gap-3 mb-3">
         {state.podeTrocar && <button className="btn btn-primary" type="button" disabled={!isReady || aiTurn}
-          onClick={() => jogar(trocarCores(state))}>{t('Trocar de cores')}</button>}
+          onClick={() => jogar({ type: 'swap' })}>{t('Trocar de cores')}</button>}
         <button className="btn btn-secondary" type="button" onClick={novaPartida}>{t('Nova partida')}</button>
       </div>
       {aiError && <div role="alert" className="my-3">
@@ -119,31 +129,10 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
         <button type="button" className="btn btn-secondary" onClick={() => setRetry(value => value + 1)}>{t('Tentar novamente')}</button>
       </div>}
       <p className="text-sm mb-2">{t('Se necessário, desliza o tabuleiro na horizontal para alcançar todas as intersecções.')}</p>
-      <div className="y-board-viewport" role="region" aria-label={t('Tabuleiro de Y')} tabIndex={0}>
-        <div className="y-board" role="group" aria-label={t('Intersecções de Y')}>
-          <svg viewBox="-25 -15 900 900" aria-hidden="true">
-            {LIGACOES.map(([a, b]) => {
-              const start = BY_ID.get(a)!;
-              const end = BY_ID.get(b)!;
-              const boundary = start.lados.some(lado => end.lados.includes(lado));
-              return <line key={`${a}-${b}`} x1={start.x} y1={start.y} x2={end.x} y2={end.y}
-                stroke="currentColor" strokeWidth={boundary ? 5 : 1.5} />;
-            })}
-          </svg>
-          {NOS.map(no => {
-            const piece = state.tabuleiro[no.id];
-            const sides = no.lados.map(lado => t(lado === 'superior' ? 'Lado superior' : lado === 'esquerdo' ? 'Lado esquerdo' : 'Lado direito')).join(', ');
-            return <button key={no.id} type="button" className="y-node" data-color={piece ?? 'empty'}
-              style={{ left: `${(no.x + 25) / 9}%`, top: `${(no.y + 15) / 9}%` }}
-              disabled={!isReady || terminou || aiTurn || !!piece}
-              aria-label={`${no.id}: ${piece ? t(piece === 'azul' ? 'Azul' : 'Vermelho') : t('Vazia')}${sides ? `; ${sides}` : ''}`}
-              onClick={() => jogar(colocarPeca(state, no.id))}>
-              {piece && <span aria-hidden="true">{piece === 'azul' ? '●' : '◆'}</span>}
-              <small>{no.id}</small>
-            </button>;
-          })}
-        </div>
-      </div>
+      <YBoard state={state} disabled={!isReady || terminou || aiTurn} onPlace={node => jogar({ type: 'place', node })} />
+      {profile.patterns['y:tres-lados']?.state === 'used_with_help' && <p className="my-3">{t('Já praticaste os três lados com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.')}</p>}
+      {!terminou && isReady && state.jogadorAtual === participante && <YTutor key={turn} state={state} turn={turn} />}
+      {terminou && decision && <YReview key={matchId} decision={decision} matchId={matchId} />}
     </div>
   </GameLayout>;
 }

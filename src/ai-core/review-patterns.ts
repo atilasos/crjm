@@ -12,6 +12,7 @@ export interface ReviewPatternSignals {
 
 const DEFAULT_PATTERN: Record<GameId, string> = {
   faisca: 'faisca:proxima-casa',
+  y: 'y:tres-lados',
   'gatos-caes': 'gatos-caes:centro',
   dominorio: 'dominorio:paridade',
   quelhas: 'quelhas:misere-final',

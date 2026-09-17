@@ -210,6 +210,7 @@ export const STARTER_ACHIEVEMENTS: AchievementDefinition[] = [
 ];
 
 export const PATTERN_CARDS: PatternCardDefinition[] = [
+  { id: 'y:tres-lados', gameId: 'y', title: 'Três lados, um grupo', description: 'Seguir as ligações desenhadas e reconhecer os lados tocados por um único grupo.', minimumPhase: 'A' },
   { id: 'faisca:proxima-casa', gameId: 'faisca', title: 'Próxima casa', description: 'Antecipar as opções do adversário usando a próxima casa e as reservas.', minimumPhase: 'A' },
   { id: 'gatos-caes:centro', gameId: 'gatos-caes', title: 'Centro', description: 'Controlar casas centrais na abertura.', minimumPhase: 'A' },
   { id: 'gatos-caes:casa-em-disputa', gameId: 'gatos-caes', title: 'Casa em disputa', description: 'Reconhecer uma casa útil para os dois lados.', minimumPhase: 'B' },

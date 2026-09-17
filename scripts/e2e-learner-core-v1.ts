@@ -3,7 +3,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
-import { playYAgainstComputer } from './y-browser-flow';
+import { playYAgainstComputer, checkYTutor, checkYReview } from './y-browser-flow';
 import { checkFaiscaTutor, playFaiscaAgainstComputer, playFaiscaLocalExample } from './faisca-browser-flow';
 
 const PORT = 3200 + (process.pid % 1000);
@@ -239,6 +239,10 @@ async function main() {
     await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
     if (await page.getByRole('region', { name: 'Revisão rápida pós-jogo' }).count() || await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0') throw new Error('Restart retained review or hints');
     await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+    await checkYTutor(page);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.getByText('Já praticaste os três lados com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
+    if (await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0') throw new Error('Y: reload revealed a solution');
     await page.getByLabel('O meu perfil corresponde a:').selectOption('jogador2');
     const yBoard = page.getByRole('group', { name: 'Intersecções de Y' });
     const placeY = (id: string) => yBoard.getByRole('button', { name: new RegExp(`^${id}:`) }).click();
@@ -253,10 +257,29 @@ async function main() {
       return dashboard.gameProgress.y.played === 1;
     });
     const afterY = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
-    if (afterY.profile.totalXp !== 111 || afterY.gameProgress.y.wins !== 1) throw new Error('Y não atribuiu a vitória ao participante do perfil após troca.');
+    // The first assisted Y pattern adds the existing +3 XP practice reward.
+    if (afterY.profile.totalXp !== 114 || afterY.gameProgress.y.wins !== 1) throw new Error('Y não atribuiu a vitória ao participante do perfil após troca.');
     for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca']) {
       if (JSON.stringify(afterY.gameProgress[gameId]) !== JSON.stringify(afterFaisca.gameProgress[gameId])) throw new Error(`Y alterou ${gameId}.`);
     }
+    await checkYReview(page, 'jogador2', true);
+    const yReview = page.getByRole('region', { name: 'Revisão rápida pós-jogo' });
+    // Lost acknowledgement: retry the same real decision, without a second reward.
+    await page.route(reviewUrl, async route => {
+      await route.fetch();
+      await route.fulfill({ status: 503, body: '{}' });
+    });
+    await yReview.getByRole('button', { name: 'Marcar revisão concluída (+10 XP)', exact: true }).click();
+    await yReview.getByRole('alert').waitFor();
+    await page.unroute(reviewUrl);
+    await yReview.getByRole('button', { name: 'Marcar revisão concluída (+10 XP)', exact: true }).click();
+    await yReview.getByRole('button', { name: 'Revisão registada', exact: true }).waitFor();
+    const yReviewed = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (yReviewed.profile.totalXp !== afterY.profile.totalXp + 10 || yReviewed.gameProgress.y.reviews !== 1) throw new Error('Y: duplicated or missing review reward');
+    if (yReviewed.patterns['y:tres-lados'].state !== 'used_with_help' || yReviewed.patterns['y:tres-lados'].soloContextIds.length) throw new Error('Y: guided review became independent evidence');
+    Object.assign(afterY, yReviewed);
+    await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
+    if (await page.getByRole('region', { name: 'Revisão rápida pós-jogo' }).count() || await page.locator('[data-tutor-solution]').count()) throw new Error('Y: restart retained review or example');
     let faiscaWins = 0;
     let faiscaPlayed = 1;
     const winsByLevel = { 1: 0, 2: 0 };
@@ -315,7 +338,7 @@ async function main() {
     await expectText(resumedPage, 'Faísca');
     await expectText(resumedPage, `${afterYTraining.profile.totalXp} XP total`);
     const yCard = resumedPage.getByText('Y', { exact: true }).locator('../..');
-    await yCard.getByText(`${yPlayed} partidas · 0 revisões`, { exact: true }).waitFor();
+    await yCard.getByText(`${yPlayed} partidas · 1 revisões`, { exact: true }).waitFor();
     await yCard.getByText(`Vitórias: ${yWins}`, { exact: true }).waitFor();
     const repeated = await resumedPage.evaluate(async legacy => {
       const response = await fetch('/api/learner/import-local-profile', {
@@ -329,6 +352,10 @@ async function main() {
     await resumedPage.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
     await resumedPage.getByText('Já praticaste a próxima casa com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
     if (resumedProfile.gameProgress.faisca.reviews !== 1 || resumedProfile.patterns['faisca:proxima-casa'].soloContextIds.length) throw new Error('New session lost guided review evidence');
+    await resumedPage.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+    await resumedPage.getByText('Já praticaste os três lados com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
+    if (await resumedPage.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0' || await resumedPage.locator('[data-tutor-solution]').count()) throw new Error('Y: new session revealed help');
+    if (resumedProfile.gameProgress.y.reviews !== 1 || resumedProfile.patterns['y:tres-lados'].soloContextIds.length) throw new Error('Y: new session lost guided review evidence');
     await resumed.close();
     await browser.close();
     console.log('Learner-core V1 e2e flow passed');

@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import pt from '../src/i18n/pt-PT.json' with { type: 'json' };
 import en from '../src/i18n/en.json' with { type: 'json' };
 import ne from '../src/i18n/ne.json' with { type: 'json' };
+import { checkYTutor, checkYReview, checkYHintCancellation, playYLocalExample } from './y-browser-flow';
 import { checkFaiscaHintCancellation, checkFaiscaTutor, playFaiscaLocalExample } from './faisca-browser-flow';
 
 const PORT = 4800 + (process.pid % 500);
@@ -297,6 +298,8 @@ async function checkYCancellation(page: Page): Promise<void> {
 }
 
 async function checkY(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+  await checkYHintCancellation(page);
   await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
   if (await page.locator('.y-game').count()) throw new Error('Y foi publicado fora da integração.');
   for (const locale of ['pt-PT', 'en', 'ne'] as const) {
@@ -338,14 +341,18 @@ async function checkY(page: Page): Promise<void> {
       await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).click();
       await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 2'), t('Azul')]) }).waitFor();
       await assertViewport(page, `Y IA ${locale} ${theme}`, '.y-board-viewport');
+      await checkYTutor(page, text => t(text as keyof typeof pt));
+      await playYLocalExample(page, 'jogador2', true, text => t(text as keyof typeof pt));
+      await checkYReview(page, 'jogador2', true, text => t(text as keyof typeof pt));
+      await assertViewport(page, `Y revisão ${locale} ${theme}`, '.y-board-viewport');
       if (process.env.Y_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
         await page.screenshot({ path: process.env.Y_SCREENSHOT_PATH, fullPage: true });
       }
     }
   }
   await page.locator('[data-language-selector]').selectOption('pt-PT');
-  let played = 0;
-  let wins = 0;
+  let played = 6;
+  let wins = 6;
   for (const participant of ['jogador1', 'jogador2']) {
     for (const swap of [false, true]) {
       await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
@@ -361,6 +368,7 @@ async function checkY(page: Page): Promise<void> {
       for (let i = 0; i < path.length; i++) { await place(replies[i]!); await place(path[i]!); }
       await page.getByRole('status').filter({ hasText: `Venceu Jogador ${swap ? 2 : 1} com Azul!` }).waitFor();
       if (await board.locator('button:not(:disabled)').count()) throw new Error('Y: permite continuar após vitória.');
+      await checkYReview(page, participant as 'jogador1' | 'jogador2', swap);
       played++;
       if (participant === (swap ? 'jogador2' : 'jogador1')) wins++;
       await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
@@ -591,7 +599,7 @@ async function main(): Promise<void> {
         checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
         await checkY(page);
         await checkYCancellation(page);
-        checks.push({ viewport: viewport.name, game: 'Y: IA, cancelamento, regras, troca, teclado e 4 partidas com perfil persistido × PT/EN/NE × claro/escuro' });
+        checks.push({ viewport: viewport.name, game: 'Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro' });
         for (const game of GAMES) {
           await runGame(page, game.title, game.play);
           checks.push({ viewport: viewport.name, game: game.title });
