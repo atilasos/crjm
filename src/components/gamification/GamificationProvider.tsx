@@ -48,9 +48,9 @@ interface GamificationContextValue {
   activePopup: AchievementDefinition | null;
   isReady: boolean;
   recordGameCompleted: (gameId: GameId, won: boolean, difficultyLevel?: number) => void;
-  recordReviewCompleted: (gameId: GameId) => void;
+  recordReviewCompleted: (gameId: GameId, contextId?: string) => Promise<boolean>;
   recordPuzzleSolved: (gameId: GameId, puzzleId?: string, usedHint?: boolean) => void;
-  recordPatternProgress: (input: { gameId: GameId; patternId: string; evidence: PatternEvidence; contextId: string }) => void;
+  recordPatternProgress: (input: { gameId: GameId; patternId: string; evidence: PatternEvidence; contextId: string }) => Promise<boolean>;
   claimMissionReward: (missionId: string) => void;
   recordAdaptiveDecision: (gameId: GameId, decision: AdaptiveDecisionEvidence) => void;
   getDifficultyRecommendation: (gameId: GameId, level: DifficultyLevel) => DifficultyRecommendation;
@@ -175,14 +175,15 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     applyOfflineProfile(result.profile, result.popups);
   }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
-  const recordReviewCompletedHandler = useCallback((gameId: GameId) => {
+  const recordReviewCompletedHandler = useCallback(async (gameId: GameId, contextId?: string) => {
     if (learnerApiEnabled) {
-      void commandGateRef.current.run(() => postReviewCompleted(fetch, gameId)).then(applyCommandResult).catch(() => undefined);
-      return;
+      return commandGateRef.current.run(() => postReviewCompleted(fetch, gameId, contextId))
+        .then(result => { applyCommandResult(result); return true; }).catch(() => false);
     }
 
     const result = recordReviewCompletion(profileRef.current, gameId, new Date());
     applyOfflineProfile(result.profile, result.popups);
+    return true;
   }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
   const recordPuzzleSolvedHandler = useCallback((gameId: GameId, puzzleId?: string, usedHint = false) => {
@@ -194,18 +195,19 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
     if (result.awarded) applyOfflineProfile(result.profile, result.popups);
   }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
-  const recordPatternProgressHandler = useCallback((input: {
+  const recordPatternProgressHandler = useCallback(async (input: {
     gameId: GameId;
     patternId: string;
     evidence: PatternEvidence;
     contextId: string;
   }) => {
     if (learnerApiEnabled) {
-      void commandGateRef.current.run(() => postPatternProgress(fetch, input)).then(applyCommandResult).catch(() => undefined);
-      return;
+      return commandGateRef.current.run(() => postPatternProgress(fetch, input))
+        .then(result => { applyCommandResult(result); return true; }).catch(() => false);
     }
     const result = recordPatternProgress(profileRef.current, { ...input, now: new Date() });
     applyOfflineProfile(result.profile, result.popups);
+    return true;
   }, [applyCommandResult, applyOfflineProfile, learnerApiEnabled]);
 
   const claimMissionRewardHandler = useCallback((missionId: string) => {

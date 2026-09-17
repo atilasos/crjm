@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import pt from '../src/i18n/pt-PT.json' with { type: 'json' };
 import en from '../src/i18n/en.json' with { type: 'json' };
 import ne from '../src/i18n/ne.json' with { type: 'json' };
+import { checkFaiscaHintCancellation, checkFaiscaTutor, playFaiscaLocalExample } from './faisca-browser-flow';
 
 const PORT = 4800 + (process.pid % 500);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -212,6 +213,7 @@ async function checkFaisca(page: Page): Promise<void> {
       await page.reload({ waitUntil: 'networkidle' });
       await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: t('Faísca'), exact: true }) }).click();
       await page.getByText(t('Faísca joga-se num tabuleiro de cinco linhas e seis colunas. Azul começa.'), { exact: true }).waitFor();
+      await checkFaiscaTutor(page, text => t(text as keyof typeof pt));
       const board = page.getByRole('group', { name: t('Tabuleiro de Faísca') });
       if (await board.getByRole('button').count() !== 30) throw new Error('Faísca: tabuleiro deve ter 30 casas.');
       await board.getByRole('button', { name: /^f3:/ }).focus();
@@ -224,6 +226,7 @@ async function checkFaisca(page: Page): Promise<void> {
       await page.getByRole('button', { name: t('Confirmar jogada'), exact: true }).click();
       await page.getByText(formatMessage('Casa obrigatória: {0}', locale, ['c3']), { exact: true }).waitFor();
       await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
+      if (await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0' || await page.locator('[data-tutor-solution]').count()) throw new Error('New turn inherited a hint');
       await board.getByRole('button', { name: formatMessage('{0}: {1}, distância {2}, {3}', locale, ['f3', t('Azul'), 3, t('Esquerda')]), exact: true }).waitFor();
       if (await page.getByRole('button', { name: /^N[1-6],/ }).count()) throw new Error('Faísca expõe dificuldades não implementadas.');
       await page.getByRole('button', { name: t('🤖 vs Computador'), exact: true }).click();
@@ -239,6 +242,17 @@ async function checkFaisca(page: Page): Promise<void> {
         const bounds = await page.getByRole('button', { name: t(label), exact: true }).boundingBox();
         if (!bounds || bounds.height < 44 || bounds.width < 44) throw new Error(`Faísca: controlo ${label} demasiado pequeno.`);
       }
+      await playFaiscaLocalExample(page, text => t(text as keyof typeof pt));
+      const review = page.getByRole('region', { name: t('Revisão rápida pós-jogo') });
+      await review.getByText(t('Ver a posição antes da decisão'), { exact: true }).click();
+      await review.getByRole('img', { name: formatMessage('{0}: {1}', locale, ['a3', t('Casa obrigatória')]), exact: true }).waitFor();
+      await review.getByText(t('Sem resposta legal: esta jogada termina a partida e vence quem a fez.'), { exact: true }).waitFor();
+      await assertViewport(page, `Faísca revisão ${locale} ${theme}`);
+      const save = review.getByRole('button', { name: t('Marcar revisão concluída (+10 XP)'), exact: true });
+      const bounds = await save.boundingBox();
+      if (!bounds || bounds.height < 48 || bounds.width < 48) throw new Error('Review touch target is too small');
+      await save.click();
+      await review.getByRole('button', { name: t('Revisão registada'), exact: true }).waitFor();
       if (process.env.FAISCA_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
         await page.screenshot({ path: process.env.FAISCA_SCREENSHOT_PATH, fullPage: true });
       }
@@ -573,6 +587,7 @@ async function main(): Promise<void> {
         checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
         await checkFaisca(page);
         await checkFaiscaCancellation(page);
+        await checkFaiscaHintCancellation(page);
         checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
         await checkY(page);
         await checkYCancellation(page);

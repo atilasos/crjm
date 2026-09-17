@@ -15,3 +15,4 @@
 .faisca-control[aria-pressed="true"] { outline: 2px solid var(--tinta); outline-offset: -2px; font-weight: bold; }
 .faisca-control:disabled { opacity: 0.45; }
 .faisca button:focus-visible { outline: 3px solid var(--tinta); outline-offset: 3px; }
+.faisca [data-faisca-learning] button, .faisca [data-faisca-learning] summary { min-height: 48px; min-width: 48px; }

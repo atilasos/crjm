@@ -33,6 +33,11 @@ export function advanceThinking(state: ThinkingState, turn: string): ThinkingSta
 }
 
 export const THINKING_PROMPTS: Partial<Record<GameId, { question: string; principle: string; compare: string }>> = {
+  faisca: {
+    question: 'Que opções terá o adversário na próxima casa?',
+    principle: 'A distância e a direção escolhem a próxima casa. Confirma as peças disponíveis dos dois jogadores.',
+    compare: 'Imagina duas escolhas e conta as respostas legais do adversário em cada destino. Menos respostas não garante vitória.',
+  },
   'gatos-caes': {
     question: 'Escolhe uma casa. Onde poderá o adversário jogar depois?',
     principle: 'Conta as casas legais de cada espécie. Uma casa exclusiva pode ficar guardada.',

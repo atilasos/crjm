@@ -3,11 +3,12 @@ import { GameLayout } from '../../components/GameLayout';
 import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { useTranslation } from '../../i18n/LanguageProvider';
-import { criarEstadoInicial, colocarPeca, getDestino, isJogadaValida } from './logic';
+import { criarEstadoInicial, colocarPeca, getDestino, getJogadasValidas, isJogadaValida } from './logic';
 import type { Player } from '../../types';
 import type { Casa, Direcao, Distancia, FaiscaState } from './types';
 import { requestFaiscaMove } from './ai/ai-client';
 import { FAISCA_DIFFICULTIES, type FaiscaLevel } from './ai/engine';
+import { FaiscaTutor, FaiscaReview, type FaiscaDecision } from './FaiscaLearning';
 import './faisca.css';
 
 const REGRAS = [
@@ -28,7 +29,9 @@ const same = (a: Casa | null, b: Casa) => a?.linha === b.linha && a.coluna === b
 
 export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
   const { t, msg } = useTranslation();
-  const { recordGameCompleted } = useGamification();
+  const { recordGameCompleted, profile } = useGamification();
+  const [matchId, setMatchId] = useState(() => crypto.randomUUID());
+  const [decision, setDecision] = useState<FaiscaDecision | null>(null);
   const [state, setState] = useState(criarEstadoInicial);
   const [abertura, setAbertura] = useState<Casa | null>(null);
   const [distancia, setDistancia] = useState<Distancia>(1);
@@ -77,12 +80,17 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
     const next = colocarPeca(state, jogada);
     if (next === state) { setErro(true); return; }
     setErro(false);
+    if (getJogadasValidas(state).length > 1 || !decision) {
+      setDecision({ state, move: jogada, turn: state.tabuleiro.flat().filter(Boolean).length + 1 });
+    }
     applyMove(next);
   }
 
   function novaPartida() {
     computation.current?.abort();
     setState(criarEstadoInicial());
+    setMatchId(crypto.randomUUID());
+    setDecision(null);
     setAbertura(null);
     setDistancia(1);
     setDirecao('direita');
@@ -169,6 +177,9 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
         <p>{t('Não foi possível calcular a jogada. Tenta novamente ou inicia outra partida.')}</p>
         <button type="button" className="btn btn-secondary" onClick={() => setRetry(value => value + 1)}>{t('Tentar novamente')}</button>
       </div>}
+      {profile.patterns['faisca:proxima-casa']?.state === 'used_with_help' && <p className="my-3">{t('Já praticaste a próxima casa com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.')}</p>}
+      {!terminou && !aiTurn && <FaiscaTutor key={`${matchId}:${state.tabuleiro.flat().filter(Boolean).length}`} state={state} turn={`${matchId}:${state.tabuleiro.flat().filter(Boolean).length}`} />}
+      {terminou && decision && <FaiscaReview key={matchId} decision={decision} matchId={matchId} />}
       <div className="flex flex-wrap gap-3">
         <button type="button" className="btn btn-primary" disabled={!casa || terminou || aiTurn} onClick={confirmar}>{t('Confirmar jogada')}</button>
         <button type="button" className="btn btn-secondary" onClick={novaPartida}>{t('Nova partida')}</button>

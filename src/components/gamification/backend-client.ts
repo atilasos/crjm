@@ -116,12 +116,12 @@ export async function postGameCompleted(fetchImpl: FetchLike, gameId: GameId, wo
   };
 }
 
-export async function postReviewCompleted(fetchImpl: FetchLike, gameId: GameId): Promise<ClientCommandResult> {
+export async function postReviewCompleted(fetchImpl: FetchLike, gameId: GameId, contextId?: string): Promise<ClientCommandResult> {
   const response = await fetchImpl('/api/learner/events/review-completed', {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ gameId }),
+    body: JSON.stringify({ gameId, ...(contextId === undefined ? {} : { contextId }) }),
   });
   if (!response.ok) {
     throw new Error(`review completion failed: ${response.status}`);

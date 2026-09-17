@@ -242,13 +242,21 @@ export class LearnerCoreService {
     return byGame;
   }
 
-  recordReviewCompleted(userId: string, gameId: GameId): LearnerCommandResponse {
+  recordReviewCompleted(userId: string, gameId: GameId, contextId?: string): LearnerCommandResponse {
+    if (contextId !== undefined && (typeof contextId !== 'string' || !contextId.trim() || contextId.length > 200)) {
+      throw new Error('invalid review context');
+    }
+    // Reuse the minimal activity log; no board or match history is persisted.
+    const eventId = contextId === undefined ? crypto.randomUUID() : JSON.stringify([userId, gameId, 'review', contextId]);
     const before = this.reconstructProfile(userId);
+    if (this.db.query('SELECT id FROM learner_activity_events WHERE id = ?').get(eventId)) {
+      return this.buildCommandResponse(userId, before, before);
+    }
     const now = this.now();
     const { profile: after } = recordReviewCompletion(before, gameId, now);
     this.runInTransaction(() => {
       this.insertEvent(userId, {
-        id: crypto.randomUUID(),
+        id: eventId,
         game_id: gameId,
         event_type: 'review_completed',
         occurred_at: now.toISOString(),

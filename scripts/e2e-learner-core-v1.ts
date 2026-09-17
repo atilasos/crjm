@@ -4,7 +4,7 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { playYAgainstComputer } from './y-browser-flow';
-import { playFaiscaAgainstComputer } from './faisca-browser-flow';
+import { checkFaiscaTutor, playFaiscaAgainstComputer, playFaiscaLocalExample } from './faisca-browser-flow';
 
 const PORT = 3200 + (process.pid % 1000);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -188,21 +188,13 @@ async function main() {
       }
     }
     await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
-    const board = page.getByRole('group', { name: 'Tabuleiro de Faísca' });
-    await board.getByRole('button', { name: /^f3:/ }).click();
-    // Official twenty-piece example, followed by b3 → a3 → a1: Red wins.
-    const moves = [
-      [3, 'Esquerda'], [2, 'Baixo'], [3, 'Direita'], [1, 'Cima'], [3, 'Esquerda'],
-      [3, 'Cima'], [3, 'Direita'], [1, 'Baixo'], [3, 'Esquerda'], [2, 'Esquerda'],
-      [2, 'Baixo'], [3, 'Cima'], [1, 'Direita'], [1, 'Baixo'], [2, 'Direita'],
-      [3, 'Baixo'], [1, 'Direita'], [3, 'Esquerda'], [1, 'Cima'], [1, 'Cima'],
-      [1, 'Esquerda'], [2, 'Baixo'],
-    ] as const;
-    for (const [distance, direction] of moves) {
-      await page.getByRole('button', { name: `Distância ${distance}`, exact: true }).click();
-      await page.getByRole('group', { name: 'Direção da peça' }).getByRole('button', { name: new RegExp(direction) }).click();
-      await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).click();
-    }
+    await checkFaiscaTutor(page);
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.getByText('Já praticaste a próxima casa com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
+    if (await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0') throw new Error('Reload revealed a solution');
+    const assisted = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (assisted.patterns['faisca:proxima-casa'].state !== 'used_with_help' || assisted.patterns['faisca:proxima-casa'].soloContextIds.length) throw new Error('Hint became independent evidence');
+    await playFaiscaLocalExample(page);
     await page.getByRole('status').filter({ hasText: 'Venceu Vermelho!' }).waitFor();
     if (!await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).isDisabled()) throw new Error('Partida terminada ainda permite jogar.');
     await page.waitForFunction(async () => {
@@ -210,12 +202,42 @@ async function main() {
       return dashboard.gameProgress.faisca.played === 1;
     });
     const afterFaisca = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
-    if (afterFaisca.profile.totalXp !== 80 || afterFaisca.gameProgress.faisca.wins !== 0) throw new Error('Resultado local de Faísca não respeita a prática existente.');
+    if (afterFaisca.profile.totalXp !== 83 || afterFaisca.gameProgress.faisca.wins !== 0) throw new Error('Resultado local de Faísca não respeita a prática existente.');
     for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex']) {
       if (JSON.stringify(afterFaisca.gameProgress[gameId]) !== JSON.stringify(archivedProgress.gameProgress[gameId])) throw new Error(`Faísca alterou ${gameId}.`);
     }
+    if (await page.locator('[data-thinking-tutor]').count()) throw new Error('Tutor remains active after the match');
+    const review = page.getByRole('region', { name: 'Revisão rápida pós-jogo' });
+    await review.getByText('Decisão da partida: turno 22, Vermelho.', { exact: true }).waitFor();
+    await review.getByText('Colocar em a3: distância 2, Baixo → a1.', { exact: true }).waitFor();
+    await review.getByText('Consequência verificada pelas regras: 0 respostas legais para o adversário.', { exact: true }).waitFor();
+    await review.getByText('Colocar em a3: distância 3, Direita → d3.', { exact: true }).waitFor();
+    await review.getByText('Consequência verificada pelas regras: 3 respostas legais para o adversário.', { exact: true }).waitFor();
+    await review.getByText('Jogada realizada', { exact: true }).waitFor();
+    await review.getByText('Alternativa legal', { exact: true }).waitFor();
+    await review.getByText('Ver a posição antes da decisão', { exact: true }).click();
+    await review.getByRole('img', { name: 'a3: Casa obrigatória', exact: true }).waitFor();
+    if (await review.getByRole('group', { name: 'Posição antes da decisão' }).locator('[data-player]').count() < 1) throw new Error('Review did not retain a real position');
+    // The server saves the review, but the acknowledgement is lost. Retrying
+    // the visible action must not grant a second reward.
+    const reviewUrl = '**/api/learner/events/review-completed';
+    await page.route(reviewUrl, async route => {
+      await route.fetch();
+      await route.fulfill({ status: 503, body: '{}' });
+    });
+    await review.getByRole('button', { name: 'Marcar revisão concluída (+10 XP)', exact: true }).click();
+    await review.getByRole('alert').waitFor();
+    await page.unroute(reviewUrl);
+    await review.getByRole('button', { name: 'Marcar revisão concluída (+10 XP)', exact: true }).click();
+    await review.getByRole('button', { name: 'Revisão registada', exact: true }).waitFor();
+    if (!await review.getByRole('button', { name: 'Revisão registada', exact: true }).isDisabled()) throw new Error('Review can be rewarded twice');
+    const reviewed = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (reviewed.gameProgress.faisca.reviews !== 1 || reviewed.profile.totalXp !== afterFaisca.profile.totalXp + 10) throw new Error('Review reward is wrong');
+    if (reviewed.patterns['faisca:proxima-casa'].state !== 'used_with_help') throw new Error('Review erased assistance');
+    Object.assign(afterFaisca, reviewed);
     await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
     await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
+    if (await page.getByRole('region', { name: 'Revisão rápida pós-jogo' }).count() || await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0') throw new Error('Restart retained review or hints');
     await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
     await page.getByLabel('O meu perfil corresponde a:').selectOption('jogador2');
     const yBoard = page.getByRole('group', { name: 'Intersecções de Y' });
@@ -231,7 +253,7 @@ async function main() {
       return dashboard.gameProgress.y.played === 1;
     });
     const afterY = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
-    if (afterY.profile.totalXp !== 98 || afterY.gameProgress.y.wins !== 1) throw new Error('Y não atribuiu a vitória ao participante do perfil após troca.');
+    if (afterY.profile.totalXp !== 111 || afterY.gameProgress.y.wins !== 1) throw new Error('Y não atribuiu a vitória ao participante do perfil após troca.');
     for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca']) {
       if (JSON.stringify(afterY.gameProgress[gameId]) !== JSON.stringify(afterFaisca.gameProgress[gameId])) throw new Error(`Y alterou ${gameId}.`);
     }
@@ -304,6 +326,9 @@ async function main() {
     if (repeated.status !== 200) throw new Error(`Importação repetida: HTTP ${repeated.status}`);
     const resumedProfile = await resumedPage.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
     if (JSON.stringify(resumedProfile) !== JSON.stringify(afterYTraining)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
+    await resumedPage.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+    await resumedPage.getByText('Já praticaste a próxima casa com ajuda. Esse registo mantém-se entre sessões e não conta como resolução autónoma.', { exact: true }).waitFor();
+    if (resumedProfile.gameProgress.faisca.reviews !== 1 || resumedProfile.patterns['faisca:proxima-casa'].soloContextIds.length) throw new Error('New session lost guided review evidence');
     await resumed.close();
     await browser.close();
     console.log('Learner-core V1 e2e flow passed');

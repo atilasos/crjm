@@ -210,6 +210,7 @@ export const STARTER_ACHIEVEMENTS: AchievementDefinition[] = [
 ];
 
 export const PATTERN_CARDS: PatternCardDefinition[] = [
+  { id: 'faisca:proxima-casa', gameId: 'faisca', title: 'Próxima casa', description: 'Antecipar as opções do adversário usando a próxima casa e as reservas.', minimumPhase: 'A' },
   { id: 'gatos-caes:centro', gameId: 'gatos-caes', title: 'Centro', description: 'Controlar casas centrais na abertura.', minimumPhase: 'A' },
   { id: 'gatos-caes:casa-em-disputa', gameId: 'gatos-caes', title: 'Casa em disputa', description: 'Reconhecer uma casa útil para os dois lados.', minimumPhase: 'B' },
   { id: 'gatos-caes:jogada-garantida', gameId: 'gatos-caes', title: 'Jogada garantida', description: 'Guardar uma casa que só o teu lado pode ocupar.', minimumPhase: 'C' },
