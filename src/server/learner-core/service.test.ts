@@ -246,6 +246,30 @@ describe('learner core service', () => {
     } finally { reopened.db.close(); }
   });
 
+  test('Faísca conserva resultados por dificuldade e por aluno após reabrir a sessão', () => {
+    const { db, service } = createService();
+    const session = service.ensureSession(null);
+    service.recordGameCompleted(session.userId, 'dominorio', true, 2);
+    const before = service.getDashboard(session.userId);
+    service.recordGameCompleted(session.userId, 'faisca', true, 1);
+    service.recordGameCompleted(session.userId, 'faisca', false, 2);
+    service.recordGameCompleted(session.userId, 'faisca', true, 2);
+    const completed = service.getDashboard(session.userId);
+    expect(completed.levelProgress.faisca?.[1]).toMatchObject({ played: 1, wins: 1, bestWinStreak: 1 });
+    expect(completed.levelProgress.faisca?.[2]).toMatchObject({ played: 2, wins: 1, bestWinStreak: 1 });
+    expect(completed.gameProgress.faisca).toMatchObject({ played: 3, wins: 2 });
+    expect(completed.gameProgress.dominorio).toEqual(before.gameProgress.dominorio);
+    expect(completed.levelProgress.dominorio).toEqual(before.levelProgress.dominorio);
+    db.close();
+    const reopened = createService();
+    try {
+      const resumed = reopened.service.ensureSession(session.sessionId);
+      expect(reopened.service.getDashboard(resumed.userId).levelProgress).toEqual(completed.levelProgress);
+      const other = reopened.service.ensureSession(null);
+      expect(reopened.service.getDashboard(other.userId).levelProgress.faisca).toBeUndefined();
+    } finally { reopened.db.close(); }
+  });
+
   test.each([false, true])('Y guarda a vitória do participante após troca=%s e recupera o perfil sem alterar outros jogos', swap => {
     const { db, service } = createService();
     const session = service.ensureSession(null);

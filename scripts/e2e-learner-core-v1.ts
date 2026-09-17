@@ -3,6 +3,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 import { rm } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { playFaiscaAgainstComputer } from './faisca-browser-flow';
 
 const PORT = 3200 + (process.pid % 1000);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
@@ -233,13 +234,38 @@ async function main() {
     for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'faisca']) {
       if (JSON.stringify(afterY.gameProgress[gameId]) !== JSON.stringify(afterFaisca.gameProgress[gameId])) throw new Error(`Y alterou ${gameId}.`);
     }
+    let faiscaWins = 0;
+    let faiscaPlayed = 1;
+    const winsByLevel = { 1: 0, 2: 0 };
+    for (const level of [1, 2] as const) {
+      for (const human of ['jogador1', 'jogador2'] as const) {
+        await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+        const won = await playFaiscaAgainstComputer(page, human, level);
+        faiscaWins += Number(won);
+        winsByLevel[level] += Number(won);
+        faiscaPlayed++;
+        await page.waitForFunction(async count => {
+          const dashboard = await (await fetch('/api/learner/dashboard')).json();
+          return dashboard.gameProgress.faisca.played === count;
+        }, faiscaPlayed);
+      }
+    }
+    const afterTraining = await page.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
+    if (afterTraining.gameProgress.faisca.wins !== faiscaWins) throw new Error('Vitórias não correspondem ao lado do aluno.');
+    for (const level of [1, 2] as const) {
+      const progress = afterTraining.levelProgress.faisca[level];
+      if (progress.played !== 2 || progress.wins !== winsByLevel[level]) throw new Error(`Progresso errado em Faísca N${level}.`);
+    }
+    for (const gameId of ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex', 'y']) {
+      if (JSON.stringify(afterTraining.gameProgress[gameId]) !== JSON.stringify(afterY.gameProgress[gameId])) throw new Error(`IA de Faísca alterou ${gameId}.`);
+    }
     const storageState = await context.storageState();
     await context.close();
     const resumed = await browser.newContext({ storageState });
     const resumedPage = await resumed.newPage();
     await resumedPage.goto(`${BASE_URL}/?integracao=1#/perfil`, { waitUntil: 'networkidle' });
     await expectText(resumedPage, 'Faísca');
-    await expectText(resumedPage, '98 XP total');
+    await expectText(resumedPage, `${afterTraining.profile.totalXp} XP total`);
     const yCard = resumedPage.getByText('Y', { exact: true }).locator('../..');
     await yCard.getByText('1 partidas · 0 revisões', { exact: true }).waitFor();
     await yCard.getByText('Vitórias: 1', { exact: true }).waitFor();
@@ -251,7 +277,7 @@ async function main() {
     }, legacyProfile);
     if (repeated.status !== 200) throw new Error(`Importação repetida: HTTP ${repeated.status}`);
     const resumedProfile = await resumedPage.evaluate(async () => (await fetch('/api/learner/dashboard')).json());
-    if (JSON.stringify(resumedProfile) !== JSON.stringify(afterY)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
+    if (JSON.stringify(resumedProfile) !== JSON.stringify(afterTraining)) throw new Error('Nova sessão ou importação repetida alterou o perfil.');
     await resumed.close();
     await browser.close();
     console.log('Learner-core V1 e2e flow passed');

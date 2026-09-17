@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameLayout } from '../../components/GameLayout';
+import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { useTranslation } from '../../i18n/LanguageProvider';
 import { criarEstadoInicial, colocarPeca, getDestino, isJogadaValida } from './logic';
-import type { Casa, Direcao, Distancia } from './types';
+import type { Player } from '../../types';
+import type { Casa, Direcao, Distancia, FaiscaState } from './types';
+import { requestFaiscaMove } from './ai/ai-client';
+import { FAISCA_DIFFICULTIES, type FaiscaLevel } from './ai/engine';
 import './faisca.css';
 
 const REGRAS = [
@@ -30,40 +34,87 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
   const [distancia, setDistancia] = useState<Distancia>(1);
   const [direcao, setDirecao] = useState<Direcao>('direita');
   const [erro, setErro] = useState(false);
+  const [mode, setMode] = useState<'local' | 'ai'>('local');
+  const [human, setHuman] = useState<Player>('jogador1');
+  const [level, setLevel] = useState<FaiscaLevel>(1);
+  const [aiError, setAiError] = useState(false);
+  const [retry, setRetry] = useState(0);
+  const computation = useRef<AbortController | null>(null);
   const casa = state.casaObrigatoria ?? abertura;
   const jogada = casa ? { casa, distancia, direcao } : null;
   const destino = jogada ? getDestino(jogada) : null;
   const destinoDentro = destino && destino.linha >= 0 && destino.linha < 5 && destino.coluna >= 0 && destino.coluna < 6;
   const valida = jogada ? isJogadaValida(state, jogada) : false;
   const terminou = state.estado !== 'a-jogar';
+  const aiTurn = !terminou && mode === 'ai' && state.jogadorAtual !== human;
   const jogador = (id: string) => t(id === 'jogador1' ? 'Azul' : 'Vermelho');
 
+  const applyMove = useCallback((next: FaiscaState) => {
+    setState(next);
+    if (next.estado !== 'a-jogar') {
+      const won = mode === 'ai' && next.estado === `vitoria-${human}`;
+      recordGameCompleted('faisca', won, mode === 'ai' ? level : undefined);
+    }
+  }, [mode, human, level, recordGameCompleted]);
+
+  useEffect(() => {
+    if (!aiTurn) return;
+    const controller = new AbortController();
+    computation.current = controller;
+    setAiError(false);
+    void requestFaiscaMove({ version: '1.0', requestId: crypto.randomUUID(), gameId: 'faisca',
+      mode: 'competitive', state, level, seed: crypto.getRandomValues(new Uint32Array(1))[0] }, controller.signal)
+      .then(response => {
+        if (controller.signal.aborted) return;
+        if (!response.bestMove || !isJogadaValida(state, response.bestMove)) { setAiError(true); return; }
+        applyMove(colocarPeca(state, response.bestMove));
+      }).catch(() => { if (!controller.signal.aborted) setAiError(true); });
+    return () => controller.abort();
+  }, [aiTurn, state, level, retry, applyMove]);
+
   function confirmar() {
-    if (!jogada) return;
+    if (!jogada || aiTurn) return;
     const next = colocarPeca(state, jogada);
     if (next === state) { setErro(true); return; }
     setErro(false);
-    setState(next);
-    // As in the other local two-player games, completion records practice;
-    // neither participant is assigned a learner win against the computer.
-    if (next.estado !== 'a-jogar') recordGameCompleted('faisca', false);
+    applyMove(next);
   }
 
   function novaPartida() {
+    computation.current?.abort();
     setState(criarEstadoInicial());
     setAbertura(null);
     setDistancia(1);
     setDirecao('direita');
     setErro(false);
+    setAiError(false);
   }
 
-  return <GameLayout titulo="Faísca" gameId="faisca" regras={REGRAS} onVoltar={onVoltar}>
+  return <GameLayout titulo="Faísca" gameId="faisca" regras={REGRAS} onVoltar={() => { computation.current?.abort(); onVoltar(); }}>
     <div className="game-container faisca">
-      <p className="text-sm mb-2">{t('Dois jogadores no mesmo dispositivo')}</p>
+      <fieldset className="mb-4">
+        <legend className="font-bold mb-2">{t('Modo de jogo:')}</legend>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="faisca-control" aria-pressed={mode === 'local'} onClick={() => { novaPartida(); setMode('local'); }}>{t('Dois jogadores no mesmo dispositivo')}</button>
+          <button type="button" className="faisca-control" aria-pressed={mode === 'ai'} onClick={() => { novaPartida(); setMode('ai'); }}>{t('🤖 vs Computador')}</button>
+        </div>
+      </fieldset>
+      {mode === 'ai' && <div className="mb-4">
+        <label className="block mb-3">{t('Jogar como:')}{' '}
+          <select className="faisca-control" aria-label={t('Jogar como:')} value={human} onChange={event => { novaPartida(); setHuman(event.target.value as Player); }}>
+            <option value="jogador1">{t('Azul')}</option><option value="jogador2">{t('Vermelho')}</option>
+          </select>
+        </label>
+        <DifficultySelector level={level} maxLevel={2} profiles={FAISCA_DIFFICULTIES}
+          onChange={value => { novaPartida(); setLevel(value); }} />
+        <p className="text-sm mt-2">{t('Alterar o modo, lado ou nível inicia uma nova partida.')}</p>
+        <p className="text-sm mt-2">{t('Níveis avaliados em Faísca; não equivalem aos de outros jogos.')}</p>
+      </div>}
       <p role="status" className="text-xl font-bold mb-2">
         {terminou
           ? msg('Venceu {0}!', [jogador(state.estado === 'vitoria-jogador1' ? 'jogador1' : 'jogador2')])
-          : msg('Vez de {0}', [jogador(state.jogadorAtual)])}
+          : aiTurn ? `${msg('Vez de {0}', [jogador(state.jogadorAtual)])} · ${t('Computador')}${aiError ? '' : ` · ${t('A pensar…')}`}`
+            : msg('Vez de {0}', [jogador(state.jogadorAtual)])}
       </p>
       <p className="mb-4">{terminou ? t('O adversário ficou sem jogada válida ou sem peças.')
         : state.casaObrigatoria ? msg('Casa obrigatória: {0}', [coordinate(state.casaObrigatoria)])
@@ -79,7 +130,7 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
             ? msg('{0}: {1}, distância {2}, {3}', [coordinate(pos), jogador(peca.jogador), peca.distancia, t(DIRECOES[peca.direcao].nome)])
             : msg('{0}: {1}', [coordinate(pos), obrigatoria ? t('Casa obrigatória') : alvo ? t('Destino') : t('Vazia')]);
           return <button key={coordinate(pos)} type="button" aria-label={label} aria-pressed={selecionada}
-            disabled={terminou || peca !== null || (!!state.casaObrigatoria && !obrigatoria)}
+            disabled={terminou || aiTurn || peca !== null || (!!state.casaObrigatoria && !obrigatoria)}
             className="faisca-cell" data-player={peca?.jogador} data-selected={selecionada} data-target={alvo}
             onClick={() => { setAbertura(pos); setErro(false); }}>
             <span className="faisca-coordinate">{coordinate(pos)}</span>
@@ -96,26 +147,30 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
         </div>)}
       </div>
 
-      <fieldset disabled={terminou} className="mb-3">
+      <fieldset disabled={terminou || aiTurn} className="mb-3">
         <legend className="font-bold mb-2">{t('Distância da peça')}</legend>
         <div className="flex gap-2">{([1, 2, 3] as const).map(d => <button key={d} type="button"
           className="faisca-control" aria-pressed={distancia === d} aria-label={msg('Distância {0}', [d])}
           disabled={state.reservas[state.jogadorAtual][d] === 0}
           onClick={() => { setDistancia(d); setErro(false); }}>{d}</button>)}</div>
       </fieldset>
-      <fieldset disabled={terminou} className="mb-3">
+      <fieldset disabled={terminou || aiTurn} className="mb-3">
         <legend className="font-bold mb-2">{t('Direção da peça')}</legend>
         <div className="flex flex-wrap gap-2">{(Object.entries(DIRECOES) as [Direcao, typeof DIRECOES[Direcao]][]).map(([id, info]) =>
           <button key={id} type="button" className="faisca-control" aria-pressed={direcao === id}
             onClick={() => { setDirecao(id); setErro(false); }}><span aria-hidden="true">{info.simbolo}</span> {t(info.nome)}</button>)}</div>
       </fieldset>
 
-      {!terminou && <p aria-live="polite" className="my-3">{destino
+      {!terminou && !aiTurn && <p aria-live="polite" className="my-3">{destino
         ? msg('Destino: {0} — {1}', [destinoDentro ? coordinate(destino) : t('Fora do tabuleiro'), t(valida ? 'jogada válida' : 'jogada inválida')])
         : t('Seleciona a casa de abertura para ver o destino.')}</p>}
       {erro && <p role="alert" className="font-bold my-3">{t('Jogada inválida. Escolhe uma peça disponível e um destino vazio dentro do tabuleiro.')}</p>}
+      {aiError && <div role="alert" className="my-3">
+        <p>{t('Não foi possível calcular a jogada. Tenta novamente ou inicia outra partida.')}</p>
+        <button type="button" className="btn btn-secondary" onClick={() => setRetry(value => value + 1)}>{t('Tentar novamente')}</button>
+      </div>}
       <div className="flex flex-wrap gap-3">
-        <button type="button" className="btn btn-primary" disabled={!casa || terminou} onClick={confirmar}>{t('Confirmar jogada')}</button>
+        <button type="button" className="btn btn-primary" disabled={!casa || terminou || aiTurn} onClick={confirmar}>{t('Confirmar jogada')}</button>
         <button type="button" className="btn btn-secondary" onClick={novaPartida}>{t('Nova partida')}</button>
       </div>
     </div>

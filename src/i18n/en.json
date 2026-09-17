@@ -1630,5 +1630,9 @@
   "Intersecções de Y": "Y intersections",
   "Lado superior": "Top side",
   "Lado esquerdo": "Left side",
-  "Lado direito": "Right side"
+  "Lado direito": "Right side",
+  "Antecipar": "Look ahead",
+  "Níveis avaliados em Faísca; não equivalem aos de outros jogos.": "Levels evaluated in Faísca; they are not equivalent to levels in other games.",
+  "Não foi possível calcular a jogada. Tenta novamente ou inicia outra partida.": "The move could not be calculated. Try again or start another match.",
+  "Alterar o modo, lado ou nível inicia uma nova partida.": "Changing mode, side or level starts a new match."
 }

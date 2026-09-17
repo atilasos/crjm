@@ -9,6 +9,7 @@ interface DifficultySelectorProps<T extends ExtendedDifficultyLevel> {
   level: T;
   onChange: (level: T) => void;
   maxLevel?: ExtendedDifficultyLevel;
+  profiles?: Partial<Record<ExtendedDifficultyLevel, { label: string; timeBudgetMs: number }>>;
   disabled?: boolean;
   label?: string;
   recommendation?: DifficultyRecommendation;
@@ -22,6 +23,7 @@ export function DifficultySelector<T extends ExtendedDifficultyLevel = Difficult
   level,
   onChange,
   maxLevel = 5,
+  profiles = DIFFICULTY_PROFILES,
   disabled = false,
   label = 'Desafio da IA',
   recommendation,
@@ -30,7 +32,7 @@ export function DifficultySelector<T extends ExtendedDifficultyLevel = Difficult
 }: DifficultySelectorProps<T>) {
   const { t, msg, locale } = useTranslation();
   const formatBudget = (ms: number) => formatDuration(ms, locale);
-  const selected = DIFFICULTY_PROFILES[level];
+  const selected = profiles[level] ?? DIFFICULTY_PROFILES[level];
   const levels = ALL_LEVELS.filter((candidate) => candidate <= maxLevel) as T[];
 
   return (
@@ -42,7 +44,7 @@ export function DifficultySelector<T extends ExtendedDifficultyLevel = Difficult
         aria-label={t("Escolher nível de dificuldade")}
       >
         {levels.map((candidate) => {
-          const profile = DIFFICULTY_PROFILES[candidate];
+          const profile = profiles[candidate] ?? DIFFICULTY_PROFILES[candidate];
           const active = candidate === level;
           return (
             <button

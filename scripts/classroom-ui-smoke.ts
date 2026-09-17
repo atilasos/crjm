@@ -162,6 +162,41 @@ async function checkGameSelection(page: Page): Promise<void> {
   for (const title of titles) await page.getByText(title, { exact: true }).first().waitFor();
 }
 
+async function checkFaiscaCancellation(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/?integracao=1#/faisca`, { waitUntil: 'networkidle' });
+  // Delay the real worker's response at the transport boundary, so controls
+  // must remain usable while a search belongs to an obsolete match.
+  const workerUrl = '**/ai/faisca/faisca.worker.js';
+  await page.route(workerUrl, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `const send = self.postMessage.bind(self); self.postMessage = data => setTimeout(() => send(data), 600);\n${await response.text()}` });
+  });
+  for (const action of ['restart', 'leave'] as const) {
+    await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+    await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+    await page.getByRole('status').filter({ hasText: 'Computador' }).waitFor();
+    if (!await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).isDisabled()) throw new Error('Human can play during AI turn');
+    if (action === 'restart') {
+      await page.getByRole('button', { name: 'Nova partida', exact: true }).click({ timeout: 500 });
+      await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).click({ timeout: 500 });
+    } else {
+      await page.getByRole('button', { name: 'Voltar à página inicial', exact: true }).click({ timeout: 500 });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Faísca', exact: true }) }).click();
+    }
+    await page.waitForTimeout(800); // Beyond the deliberately delayed old response.
+    if (await page.locator('.faisca-cell[data-player]').count()) throw new Error('Obsolete AI response changed a new match');
+    await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
+  }
+  await page.unroute(workerUrl);
+  await page.route(workerUrl, route => route.abort());
+  await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+  await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+  await page.getByRole('alert').filter({ hasText: 'Não foi possível calcular a jogada.' }).waitFor();
+  await page.unroute(workerUrl);
+  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.faisca-cell[data-player]').length === 1);
+}
+
 async function checkFaisca(page: Page): Promise<void> {
   await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
   if (await page.locator('.faisca').count()) throw new Error('Faísca foi publicada fora da integração.');
@@ -191,6 +226,14 @@ async function checkFaisca(page: Page): Promise<void> {
       await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
       await board.getByRole('button', { name: formatMessage('{0}: {1}, distância {2}, {3}', locale, ['f3', t('Azul'), 3, t('Esquerda')]), exact: true }).waitFor();
       if (await page.getByRole('button', { name: /^N[1-6],/ }).count()) throw new Error('Faísca expõe dificuldades não implementadas.');
+      await page.getByRole('button', { name: t('🤖 vs Computador'), exact: true }).click();
+      const levels = page.getByRole('group', { name: t('Desafio da IA'), exact: true }).getByRole('button');
+      if (await levels.count() !== 2) throw new Error(`Faísca ${locale}: deve apresentar os dois níveis avaliados.`);
+      await levels.nth(1).click();
+      await page.getByLabel(t('Jogar como:'), { exact: true }).selectOption('jogador2');
+      await page.waitForFunction(() => document.querySelectorAll('.faisca-cell[data-player="jogador1"]').length === 1);
+      await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
+      await page.getByText(t('Níveis avaliados em Faísca; não equivalem aos de outros jogos.'), { exact: true }).waitFor();
       await assertViewport(page, `Faísca ${locale} ${theme}`, '.faisca-board');
       for (const label of ['Confirmar jogada', 'Nova partida'] as const) {
         const bounds = await page.getByRole('button', { name: t(label), exact: true }).boundingBox();
@@ -482,6 +525,7 @@ async function main(): Promise<void> {
         await checkGameSelection(page);
         checks.push({ viewport: viewport.name, game: 'Seleção, ciclos, perfil e pré-visualização' });
         await checkFaisca(page);
+        await checkFaiscaCancellation(page);
         checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
         await checkY(page);
         checks.push({ viewport: viewport.name, game: 'Y: regras, troca, teclado e 4 partidas com perfil persistido × PT/EN/NE × claro/escuro' });

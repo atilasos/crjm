@@ -50,3 +50,17 @@ export function isJogadaValida(state: FaiscaState, jogada: Jogada): boolean {
   if (state.casaObrigatoria && (jogada.casa.linha !== state.casaObrigatoria.linha || jogada.casa.coluna !== state.casaObrigatoria.coluna)) return false;
   return state.reservas[state.jogadorAtual][jogada.distancia] > 0;
 }
+
+export function getJogadasValidas(state: FaiscaState): Jogada[] {
+  if (state.estado !== 'a-jogar') return [];
+  const casas = state.casaObrigatoria ? [state.casaObrigatoria]
+    : state.tabuleiro.flatMap((row, linha) => row.map((_, coluna) => ({ linha, coluna })));
+  const moves: Jogada[] = [];
+  for (const casa of casas) for (const distancia of [1, 2, 3] as const) {
+    for (const direcao of Object.keys(PASSOS) as Direcao[]) {
+      const move = { casa, distancia, direcao };
+      if (isJogadaValida(state, move)) moves.push(move);
+    }
+  }
+  return moves;
+}

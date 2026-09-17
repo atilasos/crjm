@@ -739,6 +739,10 @@ console.log(`\n✅ Build completed in ${buildTime}ms\n`);
 // Extra outputs: AI workers + WASM pkg copies (for GitHub Pages)
 // ============================================================================
 
+const aiFaiscaOut = path.join(outdir, "ai", "faisca");
+await mkdir(aiFaiscaOut, { recursive: true });
+await buildWorker(path.join(process.cwd(), "src", "games", "faisca", "ai", "faisca.worker.ts"), aiFaiscaOut);
+
 try {
   const aiGatosCaesOut = path.join(outdir, "ai", "gatos-caes");
   await mkdir(aiGatosCaesOut, { recursive: true });
