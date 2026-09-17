@@ -1,5 +1,5 @@
 import { LIGACOES, NOS, type Lado } from './board';
-import type { YState } from './types';
+import type { YMove, YState } from './types';
 
 export function criarEstadoInicial(): YState {
   return {
@@ -37,4 +37,17 @@ export function colocarPeca(state: YState, no: string): YState {
     jogadorAtual: state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1',
     estado: lados.size === 3 ? (state.jogadorAtual === 'jogador1' ? 'vitoria-jogador1' : 'vitoria-jogador2') : 'a-jogar',
   };
+}
+
+/** The same actions are used by the board, local engine and replayable arenas. */
+export function getJogadasValidas(state: YState): YMove[] {
+  if (state.estado !== 'a-jogar') return [];
+  const moves: YMove[] = NOS.filter(no => state.tabuleiro[no.id] === null)
+    .map(no => ({ type: 'place', node: no.id }));
+  if (state.podeTrocar) moves.push({ type: 'swap' });
+  return moves;
+}
+
+export function aplicarJogada(state: YState, move: YMove): YState {
+  return move.type === 'swap' ? trocarCores(state) : colocarPeca(state, move.node);
 }

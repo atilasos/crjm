@@ -247,6 +247,41 @@ async function checkFaisca(page: Page): Promise<void> {
   await page.locator('[data-language-selector]').selectOption('pt-PT');
 }
 
+async function checkYCancellation(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+  const workerUrl = '**/ai/y/y.worker.js';
+  await page.route(workerUrl, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `const send = self.postMessage.bind(self); self.postMessage = data => setTimeout(() => send(data), 600);\n${await response.text()}` });
+  });
+  for (const action of ['restart', 'side', 'level', 'leave'] as const) {
+    await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+    await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+    await page.getByRole('status').filter({ hasText: 'Computador' }).waitFor();
+    if (await page.locator('.y-node:enabled').count()) throw new Error('Y: human can play during AI turn');
+    if (action === 'leave') {
+      await page.getByRole('button', { name: 'Voltar à página inicial', exact: true }).click({ timeout: 500 });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Y', exact: true }) }).click();
+    } else {
+      if (action === 'restart') await page.getByRole('button', { name: 'Nova partida', exact: true }).click({ timeout: 500 });
+      if (action === 'level') await page.getByRole('button', { name: /^N2,/ }).click({ timeout: 500 });
+      await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador1');
+    }
+    await page.waitForTimeout(800);
+    if (await page.locator('.y-node:not([data-color="empty"])').count()) throw new Error('Y: obsolete response changed new match');
+    await page.getByRole('status').filter({ hasText: 'Vez de Jogador 1 — Azul' }).waitFor();
+  }
+  await page.unroute(workerUrl);
+  await page.route(workerUrl, route => route.abort());
+  await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+  await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+  await page.getByRole('alert').filter({ hasText: 'Não foi possível calcular a jogada.' }).waitFor();
+  if ((await page.locator('.y-game').getByRole('status').innerText()).includes('A pensar')) throw new Error('Y: thinking after worker failure');
+  await page.unroute(workerUrl);
+  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.y-node:not([data-color="empty"])').length === 1);
+}
+
 async function checkY(page: Page): Promise<void> {
   await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
   if (await page.locator('.y-game').count()) throw new Error('Y foi publicado fora da integração.');
@@ -278,6 +313,17 @@ async function checkY(page: Page): Promise<void> {
       await assertViewport(page, `Y ${locale} ${theme}`, '.y-board-viewport');
       const bounds = await first.boundingBox();
       if (!bounds || bounds.width < 44 || bounds.height < 44) throw new Error('Y: alvo tátil inferior a 44px.');
+      await page.getByRole('button', { name: t('🤖 vs Computador'), exact: true }).click();
+      const levels = page.getByRole('group', { name: t('Desafio da IA'), exact: true }).getByRole('button');
+      if (await levels.count() !== 2) throw new Error('Y: expected two evaluated levels');
+      await levels.nth(1).click();
+      await board.getByRole('button', { name: /^A1:/ }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 1'), t('Vermelho')]) }).waitFor();
+      await page.getByText(t('Níveis avaliados em Y; não equivalem aos de outros jogos.'), { exact: true }).waitFor();
+      await page.getByLabel(t('Jogar como:'), { exact: true }).selectOption('jogador2');
+      await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 2'), t('Azul')]) }).waitFor();
+      await assertViewport(page, `Y IA ${locale} ${theme}`, '.y-board-viewport');
       if (process.env.Y_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
         await page.screenshot({ path: process.env.Y_SCREENSHOT_PATH, fullPage: true });
       }
@@ -289,6 +335,7 @@ async function checkY(page: Page): Promise<void> {
   for (const participant of ['jogador1', 'jogador2']) {
     for (const swap of [false, true]) {
       await page.goto(`${BASE_URL}/?integracao=1#/y`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).click();
       await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
       await page.getByLabel('O meu perfil corresponde a:').selectOption(participant);
       const board = page.getByRole('group', { name: 'Intersecções de Y' });
@@ -528,7 +575,8 @@ async function main(): Promise<void> {
         await checkFaiscaCancellation(page);
         checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
         await checkY(page);
-        checks.push({ viewport: viewport.name, game: 'Y: regras, troca, teclado e 4 partidas com perfil persistido × PT/EN/NE × claro/escuro' });
+        await checkYCancellation(page);
+        checks.push({ viewport: viewport.name, game: 'Y: IA, cancelamento, regras, troca, teclado e 4 partidas com perfil persistido × PT/EN/NE × claro/escuro' });
         for (const game of GAMES) {
           await runGame(page, game.title, game.play);
           checks.push({ viewport: viewport.name, game: game.title });

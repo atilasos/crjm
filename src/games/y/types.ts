@@ -8,3 +8,5 @@ export interface YState {
   colocacoes: number;
   estado: GameStatus;
 }
+
+export type YMove = { type: 'place'; node: string } | { type: 'swap' };
