@@ -62,6 +62,8 @@ curl -s https://crjmai-torneio.infantinho.xyz/health
 
 O workflow `.github/workflows/deploy.yml` continua a publicar o site estático no GitHub Pages como espelho de segurança (sem backend: sem login de alunos, sem campeonato ligado por defeito, sem N6). O deploy «a sério» é o desta máquina.
 
+A publicação no Pages é apenas manual, por `workflow_dispatch`, após os testes e o build completo passarem. As pull requests e os pushes para `main` executam a validação sem publicar. As permissões de escrita no Pages e de emissão do token OIDC ficam limitadas ao job de publicação.
+
 ## Serviço N6 do Quelhas (az-quelhas)
 
 ### Cache dos workers

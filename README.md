@@ -285,12 +285,12 @@ Para um guia detalhado sobre como organizar um torneio, consulta o ficheiro [`TO
 
 ## 📦 Publicar no GitHub Pages
 
-Este repositório já inclui um workflow em `.github/workflows/deploy.yml` que faz build e publica para GitHub Pages.
+O workflow `.github/workflows/deploy.yml` executa testes e build completo com os cinco motores WASM nas pull requests e nos pushes para `main`. A publicação no GitHub Pages exige execução manual do workflow e só avança depois da validação passar.
 
 ### Opção 1: GitHub Actions (recomendado)
 
 1. Ativar GitHub Pages nas definições do repositório (Source: **GitHub Actions**)
-2. Fazer push para `main` (ou correr manualmente via `workflow_dispatch`)
+2. Em **Actions**, abrir **Validate and deploy to GitHub Pages** e escolher **Run workflow** (`workflow_dispatch`) na referência que se pretende publicar. Pushes e merges em `main` apenas validam; não publicam.
 
 ### Opção 2: Manualmente
 
