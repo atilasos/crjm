@@ -1,3 +1,4 @@
+import { GAME_IDS } from '../games/catalog';
 import type { AchievementDefinition, MissionDefinition } from './gamification';
 import { PATTERN_CARDS, STARTER_ACHIEVEMENTS, STARTER_MISSIONS } from './gamification';
 import type { GameId } from './types';
@@ -58,7 +59,7 @@ export interface AchievementPopupState {
   achievement: AchievementDefinition;
 }
 
-const GAME_IDS: GameId[] = ['gatos-caes', 'dominorio', 'quelhas', 'produto', 'atari-go', 'nex'];
+
 const PATTERN_STATE_RANK: Record<PatternState, number> = {
   seen: 1,
   used_with_help: 2,
@@ -120,14 +121,7 @@ export function createInitialProfile(): GamificationProfile {
     patterns: {},
     missionClaims: {},
     solvedPuzzleIds: [],
-    gameProgress: {
-      'gatos-caes': createGameProgress(),
-      dominorio: createGameProgress(),
-      quelhas: createGameProgress(),
-      produto: createGameProgress(),
-      'atari-go': createGameProgress(),
-      nex: createGameProgress(),
-    },
+    gameProgress: Object.fromEntries(GAME_IDS.map(gameId => [gameId, createGameProgress()])) as Record<GameId, GameProgressSnapshot>,
     recentEvents: [],
   };
 }

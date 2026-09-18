@@ -1,3 +1,5 @@
+import { isIntegrationPreview } from '../games/catalog';
+import { useTranslation } from '../i18n/LanguageProvider';
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './Header';
 import {
@@ -21,12 +23,20 @@ interface AdminPanelPageProps {
 }
 
 export function AdminPanelPage({ onVoltar }: AdminPanelPageProps) {
+  const { locale } = useTranslation();
   const [serverUrl, setServerUrl] = useState(DEFAULT_TOURNAMENT_SERVER_URL);
 
   const selectedPreset = PRESET_TOURNAMENT_SERVERS.find((server) => server.url === serverUrl)?.url || 'custom';
   const showCustomInput = !PRESET_TOURNAMENT_SERVERS.some((server) => server.url === serverUrl && server.url !== 'custom');
 
-  const adminUrl = useMemo(() => toTournamentAdminUrl(serverUrl), [serverUrl]);
+  const adminUrl = useMemo(() => {
+    const base = toTournamentAdminUrl(serverUrl);
+    if (!base) return base;
+    const url = new URL(base);
+    url.searchParams.set('lang', locale);
+    if (isIntegrationPreview()) url.searchParams.set('integracao', '1');
+    return url.toString();
+  }, [serverUrl, locale]);
   const spectatorUrl = useMemo(() => toTournamentSpectatorUrl(serverUrl), [serverUrl]);
   const browserBaseUrl = useMemo(() => toTournamentHttpBaseUrl(serverUrl), [serverUrl]);
   const canOpenLinks = Boolean(browserBaseUrl);

@@ -23,6 +23,7 @@ export function ThinkingTutor({ gameId, tutor, children, solutionReady }: {
 }) {
   const { t } = useTranslation();
   const prompt = THINKING_PROMPTS[gameId];
+  if (!prompt) return null;
   return (
     <section data-thinking-tutor data-hint-level={tutor.level} className="rounded-xl border p-4 [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)]">
       <h3 className="font-bold">{t('Pensa, joga, confere')}</h3>

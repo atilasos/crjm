@@ -1,3 +1,10 @@
+import { criarEstadoInicial as criarY, aplicarJogada as aplicarY } from '../games/y/logic';
+import type { YState, YMove } from '../games/y/types';
+import { fromNetworkYMove } from '../tournament/game-protocol';
+import { criarEstadoInicial as criarFaisca, colocarPeca as colocarFaisca, isJogadaValida as isFaiscaValida } from '../games/faisca/logic';
+import type { FaiscaState, Jogada as FaiscaMove } from '../games/faisca/types';
+import { fromNetworkFaiscaMove } from '../tournament/game-protocol';
+import { getGame, GAME_IDS } from '../games/catalog';
 /**
  * Adaptador de jogos para o servidor de torneios.
  * 
@@ -60,9 +67,11 @@ import type { NexState, Acao as NexAcao, AcaoEmCurso as NexAcaoEmCurso } from '.
 // Tipos
 // ============================================================================
 
-export type GameState = GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
+export type GameState = YState | FaiscaState | GatosCaesState | DominorioState | QuelhasState | ProdutoState | AtariGoState | NexState;
 
 export type GameMove =
+  | YMove
+  | FaiscaMove
   | GatosCaesPosicao
   | Domino
   | QuelhasSegmento
@@ -650,13 +659,48 @@ const nexAdapter: GameAdapter = {
 // Mapa de adaptadores
 // ============================================================================
 
-const adapters: Record<GameId, GameAdapter> = {
+const faiscaAdapter: GameAdapter = {
+  createInitialState: criarFaisca,
+  applyMove(state, value) {
+    const move = fromNetworkFaiscaMove(value);
+    if (!move) return null;
+    const next = colocarFaisca(state as FaiscaState, move);
+    return next === state ? null : next;
+  },
+  isValidMove(state, value) {
+    const move = fromNetworkFaiscaMove(value);
+    return move !== null && isFaiscaValida(state as FaiscaState, move);
+  },
+  isGameOver: state => state.estado !== 'a-jogar',
+  getWinner: state => state.estado === 'vitoria-jogador1' ? 'jogador1'
+    : state.estado === 'vitoria-jogador2' ? 'jogador2' : null,
+  getCurrentPlayer: state => state.jogadorAtual,
+};
+
+const yAdapter: GameAdapter = {
+  createInitialState: criarY,
+  applyMove(state, value) {
+    const move = fromNetworkYMove(value);
+    if (!move || !('cores' in state)) return null;
+    const next = aplicarY(state, move);
+    return next === state ? null : next;
+  },
+  isValidMove(state, value) { return this.applyMove(state, value) !== null; },
+  isGameOver: state => state.estado !== 'a-jogar',
+  getWinner: state => state.estado === 'vitoria-jogador1' ? 'jogador1'
+    : state.estado === 'vitoria-jogador2' ? 'jogador2' : null,
+  getCurrentPlayer: state => state.jogadorAtual,
+};
+
+const adapters: Partial<Record<GameId, GameAdapter>> = {
   'gatos-caes': gatosCaesAdapter,
   'dominorio': dominorioAdapter,
   'quelhas': quelhasAdapter,
   'produto': produtoAdapter,
   'atari-go': atariGoAdapter,
   'nex': nexAdapter,
+  'faisca': faiscaAdapter,
+  'y': yAdapter,
 };
 
 // ============================================================================
@@ -664,15 +708,15 @@ const adapters: Record<GameId, GameAdapter> = {
 // ============================================================================
 
 export function getGameAdapter(gameId: GameId): GameAdapter | null {
-  return adapters[gameId] ?? null;
+  return getGame(gameId)?.capabilities.includes('tournament') ? adapters[gameId] ?? null : null;
 }
 
 export function getSupportedGames(): GameId[] {
-  return Object.keys(adapters) as GameId[];
+  return GAME_IDS.filter(isGameSupported);
 }
 
 export function isGameSupported(gameId: GameId): boolean {
-  return gameId in adapters;
+  return getGameAdapter(gameId) !== null;
 }
 
 // ============================================================================

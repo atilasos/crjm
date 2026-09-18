@@ -1,11 +1,21 @@
+import { checkYTournament, checkMixedTournamentSpectator } from './y-tournament-flow';
+import { checkFaiscaTournament } from './faisca-tournament-flow';
 import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { rm } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
+import pt from '../src/i18n/pt-PT.json' with { type: 'json' };
+import en from '../src/i18n/en.json' with { type: 'json' };
+import ne from '../src/i18n/ne.json' with { type: 'json' };
+import { checkYTutor, checkYReview, checkYHintCancellation, playYLocalExample } from './y-browser-flow';
+import { checkFaiscaHintCancellation, checkFaiscaTutor, playFaiscaLocalExample } from './faisca-browser-flow';
 
 const PORT = 4800 + (process.pid % 500);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const TOURNAMENT_PORT = PORT + 10000;
+const TOURNAMENT_URL = `http://127.0.0.1:${TOURNAMENT_PORT}`;
+const ADMIN_KEY = 'archive-smoke-local-only';
 const DB_PATH = `/tmp/crjm-classroom-ui-${process.pid}.sqlite`;
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
 
@@ -129,21 +139,483 @@ async function assertViewport(page: Page, game: string, selector = '.game-contai
   }
 }
 
+async function checkGameSelection(page: Page): Promise<void> {
+  const titles = ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca', 'Y'];
+  const assertTitles = async (locator: Locator, label: string, expectedTitles = titles) => {
+    await locator.first().waitFor({ state: 'attached' });
+    const actual = (await locator.allTextContents()).map(text => text.trim());
+    if (JSON.stringify(actual) !== JSON.stringify(expectedTitles)) throw new Error(`${label}: ${JSON.stringify(actual)}`);
+  };
+  await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  await assertTitles(page.locator('button.game-card h2'), '11.º CRJM: seleção pública');
+  const cycles = await page.locator('button.game-card ul').allTextContents();
+  const expected = ['1.º Ciclo', '1.º Ciclo2.º Ciclo3.º Ciclo', '2.º Ciclo3.º CicloSecundário', '3.º CicloSecundário', '1.º Ciclo2.º Ciclo', 'Secundário'];
+  if (JSON.stringify(cycles) !== JSON.stringify(expected)) throw new Error('11.º CRJM: ciclos incorretos.');
+  await page.getByText('11.º CRJM — 2026/27', { exact: true }).waitFor();
+  await page.goto(`${BASE_URL}/?integracao=1`, { waitUntil: 'networkidle' });
+  await assertTitles(page.locator('button.game-card h2'), 'Ligação antiga de pré-visualização');
+  await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
+  await assertTitles(page.locator('#tournament-game option'), 'Jogos do campeonato');
+  await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+  const tabs = page.locator('[data-puzzle-lab] nav button');
+  if (await tabs.count() !== 6) throw new Error('Laboratório: esperados seis jogos atuais.');
+  for (const title of titles) {
+    await tabs.filter({ hasText: title }).last().click();
+    await page.locator('[data-percurso]').filter({ hasText: title }).waitFor();
+    await page.locator('[data-puzzle-option]').first().waitFor();
+  }
+  await page.goto(`${BASE_URL}/#/perfil`, { waitUntil: 'networkidle' });
+  for (const title of [...titles, 'Gatos & Cães', 'Nex']) await page.getByText(title, { exact: true }).first().waitFor();
+}
+
+async function checkFaiscaCancellation(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
+  // Delay the real worker's response at the transport boundary, so controls
+  // must remain usable while a search belongs to an obsolete match.
+  const workerUrl = '**/ai/faisca/faisca.worker.js';
+  await page.route(workerUrl, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `const send = self.postMessage.bind(self); self.postMessage = data => setTimeout(() => send(data), 600);\n${await response.text()}` });
+  });
+  for (const action of ['restart', 'leave'] as const) {
+    await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+    await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+    await page.getByRole('status').filter({ hasText: 'Computador' }).waitFor();
+    if (!await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).isDisabled()) throw new Error('Human can play during AI turn');
+    // Keyboard activation keeps smooth scrolling outside the cancellation deadline.
+    if (action === 'restart') {
+      await page.getByRole('button', { name: 'Nova partida', exact: true }).press('Enter', { timeout: 500 });
+      await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).press('Enter', { timeout: 500 });
+    } else {
+      await page.getByRole('button', { name: 'Voltar à página inicial', exact: true }).press('Enter', { timeout: 500 });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Faísca', exact: true }) }).click();
+    }
+    await page.waitForTimeout(800); // Beyond the deliberately delayed old response.
+    if (await page.locator('.faisca-cell[data-player]').count()) throw new Error('Obsolete AI response changed a new match');
+    await page.getByRole('status').filter({ hasText: 'Vez de Azul' }).waitFor();
+  }
+  await page.unroute(workerUrl);
+  await page.route(workerUrl, route => route.abort());
+  await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+  await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+  await page.getByRole('alert').filter({ hasText: 'Não foi possível calcular a jogada.' }).waitFor();
+  await page.unroute(workerUrl);
+  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.faisca-cell[data-player]').length === 1);
+}
+
+async function checkFaisca(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/#/faisca`, { waitUntil: 'networkidle' });
+  await page.locator('.game-container.faisca').waitFor();
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    const formatMessage = (text: keyof typeof pt, _locale: string, values: (string | number)[]) =>
+      t(text).replace(/\{(\d+)\}/g, (_, index) => String(values[Number(index)]));
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: t('Faísca'), exact: true }) }).click();
+      await page.getByText(t('Faísca joga-se num tabuleiro de cinco linhas e seis colunas. Azul começa.'), { exact: true }).waitFor();
+      await checkFaiscaTutor(page, text => t(text as keyof typeof pt));
+      const board = page.getByRole('group', { name: t('Tabuleiro de Faísca') });
+      if (await board.getByRole('button').count() !== 30) throw new Error('Faísca: tabuleiro deve ter 30 casas.');
+      await board.getByRole('button', { name: /^f3:/ }).focus();
+      await page.keyboard.press('Enter');
+      await page.getByRole('button', { name: formatMessage('Distância {0}', locale, [3]), exact: true }).click();
+      await page.getByRole('button', { name: t('Confirmar jogada'), exact: true }).click();
+      await page.getByRole('alert').filter({ hasText: t('Jogada inválida. Escolhe uma peça disponível e um destino vazio dentro do tabuleiro.') }).waitFor();
+      await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Azul')]) }).waitFor();
+      await page.getByRole('button', { name: t('Esquerda'), exact: false }).click();
+      await page.getByRole('button', { name: t('Confirmar jogada'), exact: true }).click();
+      await page.getByText(formatMessage('Casa obrigatória: {0}', locale, ['c3']), { exact: true }).waitFor();
+      await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
+      if (await page.locator('[data-thinking-tutor]').getAttribute('data-hint-level') !== '0' || await page.locator('[data-tutor-solution]').count()) throw new Error('New turn inherited a hint');
+      await board.getByRole('button', { name: formatMessage('{0}: {1}, distância {2}, {3}', locale, ['f3', t('Azul'), 3, t('Esquerda')]), exact: true }).waitFor();
+      if (await page.getByRole('button', { name: /^N[1-6],/ }).count()) throw new Error('Faísca expõe dificuldades não implementadas.');
+      await page.getByRole('button', { name: t('🤖 vs Computador'), exact: true }).click();
+      const levels = page.getByRole('group', { name: t('Desafio da IA'), exact: true }).getByRole('button');
+      if (await levels.count() !== 2) throw new Error(`Faísca ${locale}: deve apresentar os dois níveis avaliados.`);
+      await levels.nth(1).click();
+      await page.getByLabel(t('Jogar como:'), { exact: true }).selectOption('jogador2');
+      await page.waitForFunction(() => document.querySelectorAll('.faisca-cell[data-player="jogador1"]').length === 1);
+      await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
+      await page.getByText(t('Níveis avaliados em Faísca; não equivalem aos de outros jogos.'), { exact: true }).waitFor();
+      await assertViewport(page, `Faísca ${locale} ${theme}`, '.faisca-board');
+      const controls = await page.locator('.faisca-control, .faisca-cell').evaluateAll(elements => elements.map(element => {
+        const { width, height } = element.getBoundingClientRect();
+        return { width, height };
+      }));
+      if (controls.some(({ width, height }) => width < 48 || height < 48)) throw new Error('Faísca: controlos inferiores a 48×48px.');
+      for (const label of ['Confirmar jogada', 'Nova partida'] as const) {
+        const bounds = await page.getByRole('button', { name: t(label), exact: true }).boundingBox();
+        if (!bounds || bounds.height < 48 || bounds.width < 48) throw new Error(`Faísca: controlo ${label} demasiado pequeno.`);
+      }
+      const viewport = page.viewportSize();
+      if (viewport?.width === 390 && locale === 'pt-PT' && theme === 'claro') {
+        try {
+          for (const width of [375, 320]) {
+            await page.setViewportSize({ ...viewport, width });
+            if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) {
+              throw new Error(`Faísca ${width}px: overflow horizontal.`);
+            }
+            const cells = await board.getByRole('button').evaluateAll(elements => elements.map(element => {
+              const { width, height } = element.getBoundingClientRect();
+              return { width, height };
+            }));
+            if (cells.some(({ width, height }) => width < 48 || height < 48)) throw new Error(`Faísca ${width}px: casas inferiores a 48×48px.`);
+          }
+        } finally { await page.setViewportSize(viewport); }
+      }
+      await playFaiscaLocalExample(page, text => t(text as keyof typeof pt));
+      const review = page.getByRole('region', { name: t('Revisão rápida pós-jogo') });
+      await review.getByText(t('Ver a posição antes da decisão'), { exact: true }).click();
+      await review.getByRole('img', { name: formatMessage('{0}: {1}', locale, ['a3', t('Casa obrigatória')]), exact: true }).waitFor();
+      await review.getByText(t('Sem resposta legal: esta jogada termina a partida e vence quem a fez.'), { exact: true }).waitFor();
+      await assertViewport(page, `Faísca revisão ${locale} ${theme}`);
+      const save = review.getByRole('button', { name: t('Marcar revisão concluída (+10 XP)'), exact: true });
+      const bounds = await save.boundingBox();
+      if (!bounds || bounds.height < 48 || bounds.width < 48) throw new Error('Review touch target is too small');
+      await save.click();
+      await review.getByRole('button', { name: t('Revisão registada'), exact: true }).waitFor();
+      if (process.env.FAISCA_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: process.env.FAISCA_SCREENSHOT_PATH, fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+}
+
+async function checkYCancellation(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
+  const workerUrl = '**/ai/y/y.worker.js';
+  await page.route(workerUrl, async route => {
+    const response = await route.fetch();
+    await route.fulfill({ response, body: `const send = self.postMessage.bind(self); self.postMessage = data => setTimeout(() => send(data), 600);\n${await response.text()}` });
+  });
+  for (const action of ['restart', 'side', 'level', 'leave'] as const) {
+    await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+    await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+    await page.getByRole('status').filter({ hasText: 'Computador' }).waitFor();
+    if (await page.locator('.y-node:enabled').count()) throw new Error('Y: human can play during AI turn');
+    if (action === 'leave') {
+      await page.getByRole('button', { name: 'Voltar à página inicial', exact: true }).click({ timeout: 500 });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Y', exact: true }) }).click();
+    } else {
+      if (action === 'restart') await page.getByRole('button', { name: 'Nova partida', exact: true }).click({ timeout: 500 });
+      if (action === 'level') await page.getByRole('button', { name: /^N2,/ }).click({ timeout: 500 });
+      await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador1');
+    }
+    await page.waitForTimeout(800);
+    if (await page.locator('.y-node:not([data-color="empty"])').count()) throw new Error('Y: obsolete response changed new match');
+    await page.getByRole('status').filter({ hasText: 'Vez de Jogador 1 — Azul' }).waitFor();
+  }
+  await page.unroute(workerUrl);
+  await page.route(workerUrl, route => route.abort());
+  await page.getByRole('button', { name: '🤖 vs Computador', exact: true }).click();
+  await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
+  await page.getByRole('alert').filter({ hasText: 'Não foi possível calcular a jogada.' }).waitFor();
+  if ((await page.locator('.y-game').getByRole('status').innerText()).includes('A pensar')) throw new Error('Y: thinking after worker failure');
+  await page.unroute(workerUrl);
+  await page.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+  await page.waitForFunction(() => document.querySelectorAll('.y-node:not([data-color="empty"])').length === 1);
+}
+
+async function checkY(page: Page): Promise<void> {
+  await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
+  await checkYHintCancellation(page);
+  await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
+  await page.locator('.y-game').waitFor();
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    const msg = (text: keyof typeof pt, values: string[]) => t(text).replace(/\{(\d+)\}/g, (_, i) => values[Number(i)]!);
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Y', exact: true }) }).click();
+      await page.getByText(t('Cada canto pertence aos dois lados adjacentes. Ligar um canto ao lado oposto pode vencer; grupos separados não se somam.'), { exact: true }).waitFor();
+      const board = page.getByRole('group', { name: t('Intersecções de Y') });
+      if (await board.getByRole('button').count() !== 93) throw new Error('Y: esperadas 93 intersecções.');
+      await board.getByRole('button', { name: /^A1:/ }).focus();
+      await page.keyboard.press('Enter');
+      const profile = page.getByLabel(t('O meu perfil corresponde a:'));
+      if (await profile.isEnabled()) throw new Error('Y: identidade alterável a meio da partida.');
+      await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 1'), t('Vermelho')]) }).waitFor();
+      const first = board.getByRole('button', { name: new RegExp(`^A1: ${t('Azul')};`) });
+      if (await first.isEnabled()) throw new Error('Y: peça inicial desapareceu após troca.');
+      if (await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).count()) throw new Error('Y: troca oferecida duas vezes.');
+      await board.getByRole('button', { name: /^M1:/ }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 2'), t('Azul')]) }).waitFor();
+      if (await page.getByRole('button', { name: /^N[1-6],/ }).count()) throw new Error('Y: expõe IA não implementada.');
+      await assertViewport(page, `Y ${locale} ${theme}`, '.y-board-viewport');
+      const bounds = await first.boundingBox();
+      if (!bounds || bounds.width < 44 || bounds.height < 44) throw new Error('Y: alvo tátil inferior a 44px.');
+      await page.getByRole('button', { name: t('🤖 vs Computador'), exact: true }).click();
+      const levels = page.getByRole('group', { name: t('Desafio da IA'), exact: true }).getByRole('button');
+      if (await levels.count() !== 2) throw new Error('Y: expected two evaluated levels');
+      await levels.nth(1).click();
+      await board.getByRole('button', { name: /^A1:/ }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 1'), t('Vermelho')]) }).waitFor();
+      await page.getByText(t('Níveis avaliados em Y; não equivalem aos de outros jogos.'), { exact: true }).waitFor();
+      await page.getByLabel(t('Jogar como:'), { exact: true }).selectOption('jogador2');
+      await page.getByRole('button', { name: t('Trocar de cores'), exact: true }).click();
+      await page.getByRole('status').filter({ hasText: msg('Vez de {0} — {1}', [t('Jogador 2'), t('Azul')]) }).waitFor();
+      await assertViewport(page, `Y IA ${locale} ${theme}`, '.y-board-viewport');
+      await checkYTutor(page, text => t(text as keyof typeof pt));
+      await playYLocalExample(page, 'jogador2', true, text => t(text as keyof typeof pt));
+      await checkYReview(page, 'jogador2', true, text => t(text as keyof typeof pt));
+      await assertViewport(page, `Y revisão ${locale} ${theme}`, '.y-board-viewport');
+      if (process.env.Y_SCREENSHOT_PATH && locale === 'pt-PT' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: process.env.Y_SCREENSHOT_PATH, fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+  let played = 6;
+  let wins = 6;
+  for (const participant of ['jogador1', 'jogador2']) {
+    for (const swap of [false, true]) {
+      await page.goto(`${BASE_URL}/#/y`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).click();
+      await page.getByRole('button', { name: 'Nova partida', exact: true }).click();
+      await page.getByLabel('O meu perfil corresponde a:').selectOption(participant);
+      const board = page.getByRole('group', { name: 'Intersecções de Y' });
+      const place = (id: string) => board.getByRole('button', { name: new RegExp(`^${id}:`) }).click();
+      await place('A1');
+      if (swap) await page.getByRole('button', { name: 'Trocar de cores', exact: true }).click();
+      const path = ['B1', 'C1', 'D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'D8', 'C7', 'B8', 'A9'];
+      const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
+      for (let i = 0; i < path.length; i++) { await place(replies[i]!); await place(path[i]!); }
+      await page.getByRole('status').filter({ hasText: `Venceu Jogador ${swap ? 2 : 1} com Azul!` }).waitFor();
+      if (await board.locator('button:not(:disabled)').count()) throw new Error('Y: permite continuar após vitória.');
+      await checkYReview(page, participant as 'jogador1' | 'jogador2', swap);
+      played++;
+      if (participant === (swap ? 'jogador2' : 'jogador1')) wins++;
+      await page.getByRole('link', { name: /ver perfil e progresso/i }).click();
+      const card = page.getByText('Y', { exact: true }).locator('../..');
+      await card.getByText(`${played} partidas · 0 revisões`, { exact: true }).waitFor();
+      await card.getByText(`Vitórias: ${wins}`, { exact: true }).waitFor();
+      // Reload forces a fresh bootstrap of the persisted profile.
+      await page.reload({ waitUntil: 'networkidle' });
+      await card.getByText(`${played} partidas · 0 revisões`, { exact: true }).waitFor();
+      await card.getByText(`Vitórias: ${wins}`, { exact: true }).waitFor();
+    }
+  }
+}
+
+async function checkArchive(page: Page): Promise<void> {
+  for (const [locale, archive, back, current] of [
+    ['pt-PT', 'Arquivo', 'Voltar ao Arquivo', 'Seleção atual'],
+    ['en', 'Archive', 'Back to Archive', 'Current selection'],
+    ['ne', 'अभिलेख', 'अभिलेखमा फर्कनुहोस्', 'हालको छनोट'],
+  ]) {
+    await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+    await page.locator('[data-language-selector]').selectOption(locale!);
+    await page.getByRole('button', { name: archive, exact: true }).click();
+    await page.waitForURL('**/#/arquivo');
+    const titles = await page.locator('button.game-card h2').allTextContents();
+    if (titles.length !== 2 || !titles.includes('Nex')) throw new Error('Arquivo: esperados dois jogos.');
+    for (const theme of ['claro', 'escuro']) {
+      await page.evaluate(value => {
+        localStorage.setItem('crjm-tema', value);
+      }, theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await assertViewport(page, `Arquivo ${locale} ${theme}`, 'main');
+      for (const slug of ['gatos-caes', 'nex']) {
+        // Old bookmarks retain their exact route and return to the archive.
+        await page.goto(`${BASE_URL}/#/${slug}`, { waitUntil: 'networkidle' });
+        await page.getByText(archive!, { exact: true }).waitFor();
+        await assertViewport(page, `${slug} ${locale} ${theme}`);
+        await page.getByRole('button', { name: back, exact: true }).click();
+        await page.waitForURL('**/#/arquivo');
+        if (await page.locator('button.game-card').count() !== 2) throw new Error('Regresso fora do Arquivo.');
+      }
+    }
+    await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: archive, exact: true }).click();
+    await page.waitForURL('**/#/puzzles/arquivo');
+    const games = page.locator('[data-puzzle-lab] nav button');
+    if (await games.count() !== 2) throw new Error('Laboratório: seleção do Arquivo incorreta.');
+    for (let i = 0; i < 2; i++) {
+      await games.nth(i).click();
+      await page.locator('[data-percurso]').waitFor();
+      await page.locator('[data-puzzle-option]').first().waitFor();
+    }
+    await assertViewport(page, `Laboratório Arquivo ${locale}`, '[data-puzzle-lab]');
+    await page.reload({ waitUntil: 'networkidle' });
+    if (await games.count() !== 2) throw new Error('Recarregar perdeu o contexto de Arquivo.');
+    await page.getByRole('button', { name: back, exact: true }).click();
+    await page.waitForURL('**/#/arquivo');
+    await page.getByRole('button', { name: current, exact: true }).click();
+    await page.goBack();
+    await page.waitForURL('**/#/arquivo');
+    await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: archive, exact: true }).click();
+    const options = page.locator('#tournament-game option');
+    if (await options.count() !== 2) throw new Error('Torneios: seleção do Arquivo incorreta.');
+    await page.locator('#tournament-game').selectOption('nex');
+    await page.getByRole('button', { name: current, exact: true }).click();
+    if (await options.count() !== 6) throw new Error('Torneios: esperados seis jogos atuais.');
+    await assertViewport(page, `Torneios Arquivo ${locale}`, 'main');
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+  await page.goto(`${BASE_URL}/#/campeonato`, { waitUntil: 'networkidle' });
+  await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
+  await page.locator('#tournament-game').selectOption('nex');
+  await page.getByPlaceholder('Ex: João Silva').fill('Aluno Arquivo');
+  await page.getByRole('button', { name: 'Modo de ligação', exact: true }).click();
+  await page.getByRole('button', { name: 'Iniciar Treino', exact: false }).click();
+  await page.getByRole('button', { name: '❌ Sair do Campeonato', exact: true }).click();
+  if (await page.getByRole('button', { name: 'Arquivo', exact: true }).getAttribute('aria-pressed') !== 'true'
+      || await page.locator('#tournament-game').inputValue() !== 'nex') {
+    throw new Error('Sair do torneio perdeu a seleção Arquivo/Nex.');
+  }
+}
+
+async function checkArchiveAdministration(browser: Browser): Promise<void> {
+  const context = await browser.newContext({ httpCredentials: { username: 'admin', password: ADMIN_KEY } });
+  const page = await context.newPage();
+  const errors: string[] = [];
+  page.on('pageerror', error => errors.push(error.message));
+  page.on('dialog', dialog => {
+    void dialog.accept().catch(error => {
+      if (!String(error).includes('No dialog is showing')) errors.push(String(error));
+    });
+  });
+  try {
+    for (const gameId of ['gatos-caes', 'nex']) {
+      await page.goto(`${TOURNAMENT_URL}/admin`);
+      await page.getByRole('button', { name: '➕ Criar', exact: true }).click();
+      const modal = page.locator('#createTournamentModal');
+      const currentGames = await modal.locator('#gameSelect option').evaluateAll(elements => elements.map(element => (element as HTMLOptionElement).value));
+      if (JSON.stringify(currentGames) !== JSON.stringify(['dominorio', 'quelhas', 'produto', 'atari-go', 'faisca', 'y'])) throw new Error('Administração: seleção atual incorreta.');
+      await modal.getByRole('button', { name: 'Arquivo', exact: true }).click();
+      const options = await modal.locator('#gameSelect option').evaluateAll(elements => elements.map(element => (element as HTMLOptionElement).value));
+      if (JSON.stringify(options) !== JSON.stringify(['gatos-caes', 'nex'])) throw new Error('Administração: Arquivo incorreto.');
+      await modal.locator('#gameSelect').selectOption(gameId);
+      await modal.locator('#playerList').fill('Aluno A;4A\nAluno B;4A');
+      const created = page.waitForResponse(response => response.url().endsWith(`/api/tournaments/${gameId}/create-with-players`) && response.request().method() === 'POST');
+      await modal.getByRole('button', { name: 'Criar Torneio', exact: true }).click();
+      const payload = await (await created).json();
+      if (!payload.success || payload.gameId !== gameId || payload.players.length !== 2) throw new Error('Criação do torneio do Arquivo falhou.');
+      await page.locator('#tournaments .tournament-name').filter({ hasText: gameId === 'nex' ? 'Nex' : 'Gatos & Cães' }).waitFor();
+
+      // Rejoin through the same public protocol used by pupils with entry codes.
+      const sockets: WebSocket[] = [];
+      let started = 0;
+      let matchId = '';
+      try {
+        await Promise.all(payload.players.map((player: { reconnectionCode: string }) => new Promise<void>((resolve, reject) => {
+          const socket = new WebSocket(`${TOURNAMENT_URL.replace('http:', 'ws:')}/ws`);
+          sockets.push(socket);
+          const timeout = setTimeout(() => reject(new Error('Aluno não conseguiu entrar no torneio.')), 10_000);
+          socket.onopen = () => socket.send(JSON.stringify({ type: 'rejoin_tournament', reconnectionCode: player.reconnectionCode }));
+          socket.onmessage = event => {
+            const message = JSON.parse(String(event.data));
+            if (message.type === 'welcome') { clearTimeout(timeout); resolve(); }
+            if (message.type === 'match_assigned') {
+              socket.send(JSON.stringify({ type: 'ready_for_match', matchId: message.match.id }));
+            }
+            if (message.type === 'game_start') { started += 1; matchId = message.matchId; }
+          };
+        })));
+        const response = await page.request.post(`${TOURNAMENT_URL}/api/tournaments/${gameId}/start`);
+        if (!response.ok()) throw new Error('Torneio do Arquivo não arrancou.');
+        for (let attempt = 0; attempt < 50 && started < 2; attempt++) await delay(100);
+        if (started < 2) throw new Error('Os dois alunos não receberam o tabuleiro inicial.');
+        await page.goto(`${TOURNAMENT_URL}/admin/spectator?gameId=${gameId}&matchId=${matchId}`);
+        await page.getByRole('heading', { name: /Aluno [AB] vs Aluno [AB]/ }).waitFor();
+        await page.locator(gameId === 'nex' ? 'svg polygon' : '.grid button').first().waitFor();
+      } finally {
+        for (const socket of sockets) socket.close();
+      }
+    }
+    for (const [locale, archive] of [['en', 'Archive'], ['ne', 'अभिलेख']]) {
+      await page.goto(`${TOURNAMENT_URL}/admin?lang=${locale}`);
+      await page.getByRole('button', { name: archive, exact: true }).first().click();
+      await page.locator('#tournaments .tournament-name').filter({ hasText: 'Nex' }).waitFor();
+    }
+    if (errors.length) throw new Error(`Administração/espectador: ${errors.join('; ')}`);
+  } finally {
+    await context.close();
+  }
+}
+
 async function runGame(page: Page, title: string, play: (page: Page) => Promise<void>): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  if (['Gatos & Cães', 'Nex'].includes(title)) await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
   await page.locator('button.game-card').filter({ hasText: title }).click();
   await page.getByRole('heading', { name: title, exact: true }).first().waitFor();
   await chooseN1(page);
   await assertViewport(page, title);
   await play(page);
-  await page.getByRole('button', { name: 'Voltar à página inicial' }).click();
+  await page.getByRole('button', { name: ['Gatos & Cães', 'Nex'].includes(title) ? 'Voltar ao Arquivo' : 'Voltar à página inicial' }).click();
   await page.getByRole('heading', { name: 'Treino para o CRJM' }).waitFor();
+}
+
+async function checkFaiscaLaboratoryPresentation(page: Page): Promise<void> {
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('[data-puzzle-lab] nav button').filter({ hasText: t('Faísca') }).click();
+      const practice = page.locator('[data-strategy-practice]');
+      await practice.getByText(t('Abrir com um destino válido'), { exact: true }).waitFor();
+      await practice.getByRole('radio').first().focus();
+      await page.keyboard.press('Space');
+      if (!(await practice.getByRole('radio').first().isChecked())) throw new Error('Faísca: keyboard did not select a choice');
+      await page.getByText(t('A seta da abertura'), { exact: true }).waitFor();
+      await page.locator('[data-percurso]').getByText(t('Vence o N2 uma vez.'), { exact: false }).waitFor();
+      await assertViewport(page, `Laboratório Faísca ${locale} ${theme}`, '[data-puzzle-lab]');
+      if (locale === 'ne' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: 'artifacts/faisca-laboratory/mobile-ne.png', fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
+}
+
+async function checkYLaboratoryPresentation(page: Page): Promise<void> {
+  for (const locale of ['pt-PT', 'en', 'ne'] as const) {
+    const catalog = { 'pt-PT': pt, en, ne }[locale];
+    const t = (text: keyof typeof pt) => catalog[text];
+    for (const theme of ['claro', 'escuro']) {
+      await page.goto(`${BASE_URL}/#/puzzles`, { waitUntil: 'networkidle' });
+      await page.locator('[data-language-selector]').selectOption(locale);
+      await page.evaluate(value => localStorage.setItem('crjm-tema', value), theme);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.locator('[data-puzzle-lab] nav button').filter({ hasText: /Y/ }).last().click();
+      const practice = page.locator('[data-strategy-practice]');
+      await practice.getByText(t('Seguir as ligações desenhadas'), { exact: true }).waitFor();
+      await practice.getByRole('radio').first().focus();
+      await page.keyboard.press('Space');
+      if (!(await practice.getByRole('radio').first().isChecked())) throw new Error('Y: keyboard did not select a choice');
+      if (await practice.locator('.y-node').count() !== 93) throw new Error('Y exercise uses a different graph');
+      await page.locator('[data-percurso]').getByText(t('Vence o N2 uma vez.'), { exact: false }).waitFor();
+      await assertViewport(page, `Laboratório Y ${locale} ${theme}`, '[data-puzzle-lab]');
+      if (locale === 'ne' && theme === 'escuro' && page.viewportSize()?.width === 390) {
+        await page.screenshot({ path: 'artifacts/y-laboratory/mobile-ne.png', fullPage: true });
+      }
+    }
+  }
+  await page.locator('[data-language-selector]').selectOption('pt-PT');
 }
 
 async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.getByRole('button', { name: 'Resolver exercícios' }).click();
   await page.getByRole('heading', { name: 'Laboratório de Estratégias', exact: true }).first().waitFor();
+  await page.getByRole('button', { name: 'Arquivo', exact: true }).click();
   await page.locator('[data-puzzle-option="centro"]').click();
   await page.getByRole('button', { name: 'Confirmar resposta' }).click();
   await page.getByText(/Boa leitura|Já dominaste esta ideia/, { exact: false }).waitFor();
@@ -151,7 +623,7 @@ async function runPuzzleLaboratory(page: Page): Promise<void> {
   await page.locator('[data-percurso]').waitFor({ state: 'visible' });
   await page.getByText('Percurso para o campeonato', { exact: false }).first().waitFor();
   await assertViewport(page, 'Laboratório de Estratégias', '[data-puzzle-lab]');
-  await page.getByRole('button', { name: 'Voltar à página inicial' }).click();
+  await page.getByRole('button', { name: 'Voltar ao Arquivo' }).click();
   await page.getByRole('heading', { name: 'Treino para o CRJM' }).waitFor();
 }
 
@@ -169,12 +641,39 @@ async function main(): Promise<void> {
     stdio: 'pipe',
   });
 
+  const tournamentServer = spawn('bun', ['src/server/tournament-server.ts'], {
+    cwd: PROJECT_ROOT,
+    env: { ...process.env, PORT: String(TOURNAMENT_PORT), ADMIN_KEY, CLASS_STORE_PATH: `/tmp/crjm-archive-classes-${process.pid}.json` },
+    stdio: 'ignore',
+  });
   try {
     await waitForServer();
+    for (let attempt = 0; attempt < 60; attempt++) {
+      try { if ((await fetch(`${TOURNAMENT_URL}/health`)).ok) break; } catch {}
+      if (attempt === 59) throw new Error('Servidor de torneios indisponível.');
+      await delay(250);
+    }
     const browser = await launchBrowser();
     const checks: Array<{ viewport: string; game: string }> = [];
 
     try {
+      const selectionContext = await browser.newContext({ locale: 'pt-PT' });
+      try {
+        await checkGameSelection(await selectionContext.newPage());
+      } finally {
+        await selectionContext.close();
+      }
+      if (process.env.CLASSROOM_SELECTION_ONLY) return;
+      await checkYTournament(browser, BASE_URL, TOURNAMENT_URL, ADMIN_KEY);
+      checks.push({ viewport: 'desktop/tablet/mobile', game: 'Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro' });
+      if (process.env.Y_TOURNAMENT_ONLY) return;
+      await checkFaiscaTournament(browser, BASE_URL, TOURNAMENT_URL, ADMIN_KEY);
+      checks.push({ viewport: 'desktop/tablet/mobile', game: 'Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro' });
+      await checkMixedTournamentSpectator(browser, TOURNAMENT_URL, ADMIN_KEY);
+      checks.push({ viewport: 'desktop', game: 'Espectador: alternância entre Y e Faísca simultâneos' });
+      if (process.env.FAISCA_TOURNAMENT_ONLY) return;
+      await checkArchiveAdministration(browser);
+      checks.push({ viewport: 'desktop', game: 'Arquivo: criação/administração, participantes e espectador reais' });
       for (const viewport of VIEWPORTS) {
         const context = await browser.newContext({
           locale: 'pt-PT',
@@ -187,6 +686,20 @@ async function main(): Promise<void> {
           if (message.type() === 'error') errors.push(message.text());
         });
 
+        await checkArchive(page);
+        checks.push({ viewport: viewport.name, game: 'Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro' });
+        await checkGameSelection(page);
+        checks.push({ viewport: viewport.name, game: '11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos' });
+        await checkFaisca(page);
+        await checkFaiscaLaboratoryPresentation(page);
+        await checkYLaboratoryPresentation(page);
+        checks.push({ viewport: viewport.name, game: 'Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro' });
+        await checkFaiscaCancellation(page);
+        await checkFaiscaHintCancellation(page);
+        checks.push({ viewport: viewport.name, game: 'Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro' });
+        await checkY(page);
+        await checkYCancellation(page);
+        checks.push({ viewport: viewport.name, game: 'Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro' });
         for (const game of GAMES) {
           await runGame(page, game.title, game.play);
           checks.push({ viewport: viewport.name, game: game.title });
@@ -203,6 +716,8 @@ async function main(): Promise<void> {
     console.log(JSON.stringify({ pass: true, baseUrl: BASE_URL, checks }, null, 2));
   } finally {
     server.kill('SIGTERM');
+    tournamentServer.kill('SIGTERM');
+    await rm(`/tmp/crjm-archive-classes-${process.pid}.json`, { force: true });
     await rm(DB_PATH, { force: true });
   }
 }

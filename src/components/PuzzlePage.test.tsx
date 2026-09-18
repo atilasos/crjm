@@ -7,12 +7,12 @@ describe('PuzzlePage', () => {
   test('apresenta um laboratório acessível com seis jogos e três respostas', () => {
     const html = renderToStaticMarkup(
       <GamificationProvider>
-        <PuzzlePage onVoltar={() => undefined} />
+        <PuzzlePage onVoltar={() => undefined} selection="current" onSelectionChange={() => undefined} />
       </GamificationProvider>,
     );
 
     expect(html).toContain('Laboratório de Estratégias');
-    for (const label of ['Gatos &amp; Cães', 'Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Nex']) {
+    for (const label of ['Dominório', 'Quelhas', 'Produto', 'Atari Go', 'Faísca', 'Y']) {
       expect(html).toContain(label);
     }
     expect(html).toContain('Pedir uma pista');

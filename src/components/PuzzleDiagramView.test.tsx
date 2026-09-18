@@ -1,3 +1,4 @@
+import { getStrategyChallenge } from '../server/learner-core/strategy-challenges';
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { PUZZLES } from '../ai-core/puzzles';
@@ -12,6 +13,18 @@ describe('PuzzleDiagramView', () => {
       expect(html).toContain(digit);
     }
     expect(html).toContain(mestre.diagram!.caption);
+  });
+
+  test('Y learning uses the championship graph and accessible stone identities', () => {
+    const { challenge } = getStrategyChallenge('y', 0);
+    const html = renderToStaticMarkup(<PuzzleDiagramView diagram={challenge.diagram!} />);
+    expect((html.match(/<line /g) ?? []).length).toBe(252);
+    expect((html.match(/class="y-node"/g) ?? []).length).toBe(93);
+    expect(html).toContain('E3: Azul');
+    expect(html).toContain('M1: Vermelho; Lado esquerdo, Lado direito');
+    expect(html).toContain('tabindex="0"');
+    expect(html).toContain('Ligações do tabuleiro (texto)');
+    expect(html).toContain('D3, D4, E4, F2, F3');
   });
 
   test('as linhas hexagonais recebem deslocamento progressivo', () => {

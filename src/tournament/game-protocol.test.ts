@@ -1,3 +1,5 @@
+import { criarEstadoInicial as criarY, aplicarJogada as aplicarY } from '../games/y/logic';
+import { fromNetworkYState } from './game-protocol';
 /**
  * Tests for game protocol types and conversion functions.
  * Validates that network types match CLIENT-INTEGRATION_NEW.md specification
@@ -337,5 +339,28 @@ describe('Generic fromNetworkGameState', () => {
     // Should have GatosCaesState properties
     expect('totalGatos' in state).toBe(true);
     expect('totalCaes' in state).toBe(true);
+  });
+});
+
+
+describe('Y network state', () => {
+  test('recovers the colour assignment, swap opportunity and turn without sharing mutable state', () => {
+    const state = aplicarY(aplicarY(criarY(), { type: 'place', node: 'A1' }), { type: 'swap' });
+    const recovered = fromNetworkYState(JSON.parse(JSON.stringify(state)));
+    expect(recovered).toEqual(state);
+    recovered.tabuleiro.A1 = null;
+    recovered.cores.jogador1 = 'azul';
+    expect(state.tabuleiro.A1).toBe('azul');
+    expect(state.cores.jogador1).toBe('vermelho');
+  });
+  test('refuses incomplete boards, invalid colours and invalid turn data', () => {
+    const state = criarY();
+    for (const value of [null, {}, { ...state, tabuleiro: {} },
+      { ...state, cores: { jogador1: 'azul', jogador2: 'azul' } },
+      { ...state, tabuleiro: { ...state.tabuleiro, A1: 'green' } },
+      { ...state, jogadorAtual: 'player1' }, { ...state, colocacoes: -1 },
+      { ...state, podeTrocar: 'true' }, { ...state, estado: 'finished' }]) {
+      expect(() => fromNetworkYState(value)).toThrow();
+    }
   });
 });

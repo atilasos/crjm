@@ -1,0 +1,156 @@
+{
+  "parent": "https://github.com/atilasos/crjm/issues/25",
+  "parent_unchanged": true,
+  "dependency_representation": "GitHub native issue dependencies",
+  "verified_tickets": 13,
+  "verified_edges": 18,
+  "tickets": [
+    {
+      "ticket": 1,
+      "issue": 26,
+      "title": "Preparar o catálogo partilhado sem alterar os jogos disponíveis",
+      "url": "https://github.com/atilasos/crjm/issues/26",
+      "blocked_by": [],
+      "label": "ready-for-agent",
+      "body_sha256": "87ff6f645b039cc779289081a72dac668cb5818a9e051e709c21f6610650c02a"
+    },
+    {
+      "ticket": 2,
+      "issue": 27,
+      "title": "Aceder ao arquivo jogável com aprendizagem, torneios e progresso",
+      "url": "https://github.com/atilasos/crjm/issues/27",
+      "blocked_by": [
+        26
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "55f5d09ab39b7841b8f63aa5d0ffdeb60b9424e4e8c15234b0976baddfa043e7"
+    },
+    {
+      "ticket": 3,
+      "issue": 28,
+      "title": "Jogar Faísca a dois e guardar o resultado",
+      "url": "https://github.com/atilasos/crjm/issues/28",
+      "blocked_by": [
+        26
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "36484c01ee1b083ed2b4bd4236478a01ace6877cab06591b652f89fd70eaa3b7"
+    },
+    {
+      "ticket": 4,
+      "issue": 29,
+      "title": "Jogar Y a dois no tabuleiro oficial e guardar o resultado",
+      "url": "https://github.com/atilasos/crjm/issues/29",
+      "blocked_by": [
+        26
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "fb7c2e057b14eb7adf56124d4e8703c79d09d7b3c44eeb712ea6a31bdae7b9aa"
+    },
+    {
+      "ticket": 5,
+      "issue": 30,
+      "title": "Treinar Faísca contra IA local com dificuldades verificadas",
+      "url": "https://github.com/atilasos/crjm/issues/30",
+      "blocked_by": [
+        28
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "359b002b32af85aa3478381ddf9aa96b84878d1db99120f425b00689099e924a"
+    },
+    {
+      "ticket": 6,
+      "issue": 31,
+      "title": "Treinar Y contra IA local com dificuldades verificadas",
+      "url": "https://github.com/atilasos/crjm/issues/31",
+      "blocked_by": [
+        29
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "5bef6bf49a90a473257fd0f6b58e1875adedc49a38684a8886fa0133f33945f3"
+    },
+    {
+      "ticket": 7,
+      "issue": 32,
+      "title": "Pedir ajuda e rever decisões numa partida de Faísca",
+      "url": "https://github.com/atilasos/crjm/issues/32",
+      "blocked_by": [
+        30
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "4e560943be2fa623b3618a77a3763229d8fc179a519ab75ae4f8d4b777740d6f"
+    },
+    {
+      "ticket": 8,
+      "issue": 33,
+      "title": "Pedir ajuda e rever decisões numa partida de Y",
+      "url": "https://github.com/atilasos/crjm/issues/33",
+      "blocked_by": [
+        31
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "58d4e22e1166cf2fc6f003da41c3fe2b9daf0db94253dc1d0b7917176571b52b"
+    },
+    {
+      "ticket": 9,
+      "issue": 34,
+      "title": "Aprender Faísca no Laboratório com progresso verificável",
+      "url": "https://github.com/atilasos/crjm/issues/34",
+      "blocked_by": [
+        30
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "05d19b79febe01a104421938017b219036edc32269df98621f59d5f256fe5042"
+    },
+    {
+      "ticket": 10,
+      "issue": 35,
+      "title": "Aprender Y no Laboratório com progresso verificável",
+      "url": "https://github.com/atilasos/crjm/issues/35",
+      "blocked_by": [
+        31
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "f49349a314de492bece9a6f42fa15c080c540adddc36b1ff0ddb29b099d5cd36"
+    },
+    {
+      "ticket": 11,
+      "issue": 36,
+      "title": "Disputar e acompanhar torneios online de Faísca",
+      "url": "https://github.com/atilasos/crjm/issues/36",
+      "blocked_by": [
+        28
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "2c7191743a9461d8ef8e43f3e416655dfc08226ed1d3bed2ab203475841db0bd"
+    },
+    {
+      "ticket": 12,
+      "issue": 37,
+      "title": "Disputar e acompanhar torneios online de Y",
+      "url": "https://github.com/atilasos/crjm/issues/37",
+      "blocked_by": [
+        29
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "b7987e1c01144af6e95cbffe28ee3c15d12c1e9e04577809bad7fb66e05867d7"
+    },
+    {
+      "ticket": 13,
+      "issue": 38,
+      "title": "Ativar e verificar a edição completa do 11.º CRJM",
+      "url": "https://github.com/atilasos/crjm/issues/38",
+      "blocked_by": [
+        27,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37
+      ],
+      "label": "ready-for-agent",
+      "body_sha256": "7a3bdb92b2e48f9c3f019707a1d51359938bccb1d6af869c38e70e13ac2411e9"
+    }
+  ]
+}

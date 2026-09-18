@@ -8,6 +8,8 @@ const BASE_URL = `http://127.0.0.1:${PORT}`;
 const DB_PATH = `/tmp/crjm-classroom-smoke-${process.pid}.sqlite`;
 const PROJECT_ROOT = fileURLToPath(new URL('..', import.meta.url));
 const WORKERS = [
+  'y/y.worker.js',
+  'faisca/faisca.worker.js',
   'gatos-caes/gatos-caes.worker.js',
   'dominorio/dominorio.worker.js',
   'quelhas/quelhas.worker.js',

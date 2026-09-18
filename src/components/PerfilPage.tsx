@@ -10,6 +10,7 @@ import { useGamification } from './gamification/GamificationProvider';
 import { GameProgressBars, GAME_LABELS } from './gamification/GameProgressBars';
 import { StrategyProgressSummary } from './StrategyPractice';
 import { Header } from './Header';
+import { getProfileGames, isIntegrationPreview } from '../games/catalog';
 
 interface PerfilPageProps {
   onVoltar: () => void;
@@ -36,6 +37,8 @@ export function formatStreak(days: number): string {
 export function PerfilPage({ onVoltar }: PerfilPageProps) {
   const { t, locale } = useTranslation();
   const { claimMissionReward, isReady, level, levelTitle, missions, profile, xpWindow } = useGamification();
+  const visibleGames = new Set(getProfileGames(isIntegrationPreview()).map(game => game.id));
+  const patternCards = PATTERN_CARDS.filter(card => visibleGames.has(card.gameId));
   const shieldUsedThisWeek = profile.streakShieldWeeks.includes(currentWeekKey());
   const missionHistory = Object.entries(profile.missionClaims)
     .map(([claimKey, claim]) => {
@@ -243,11 +246,11 @@ export function PerfilPage({ onVoltar }: PerfilPageProps) {
               <p className="mt-1 text-sm [color:var(--tinta-suave)]">{t('Cartões das ideias que exploraste. Confirma a aprendizagem na atividade Escolhe e prevê.')}</p>
             </div>
             <span className="text-sm [color:var(--tinta-suave)]">
-              {t(Object.keys(profile.patterns).length)}/{t(PATTERN_CARDS.length)}
+              {t(patternCards.filter(card => profile.patterns[card.id]).length)}/{t(patternCards.length)}
             </span>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {PATTERN_CARDS.map((card) => {
+            {patternCards.map((card) => {
               const progress = profile.patterns[card.id];
               const stateLabel = progress?.state === 'mastered'
                 ? '⭐ Praticado em várias situações'

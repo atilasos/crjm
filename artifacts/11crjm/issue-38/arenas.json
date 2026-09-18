@@ -1,0 +1,78 @@
+[
+  {
+    "game": "faisca",
+    "source": "artifacts/faisca-arena/seed-3002026.json",
+    "sha256": "d75b54319aad7ec8261a1d807993a894e4b6752d903272a51ad964304ae5f070",
+    "seed": 3002026,
+    "games": 50,
+    "pairedOpenings": true,
+    "alternatingSides": true,
+    "replayedMoves": 1086,
+    "replayPassed": true,
+    "illegalMoves": 0,
+    "wins": {
+      "1": 1,
+      "2": 49
+    },
+    "budgetsMs": {
+      "1": {
+        "label": "Explorar",
+        "timeBudgetMs": 5
+      },
+      "2": {
+        "label": "Antecipar",
+        "timeBudgetMs": 120
+      }
+    },
+    "latency": {
+      "1": {
+        "p50": 0.007323000000724278,
+        "p95": 0.01160699999991266,
+        "max": 0.05487700000003315
+      },
+      "2": {
+        "p50": 30.815271999999823,
+        "p95": 120.02094100000022,
+        "max": 120.26236
+      }
+    }
+  },
+  {
+    "game": "y",
+    "source": "artifacts/y-arena/seed-3002026.json",
+    "sha256": "241e89edd0fe5d107ff049a353fae03ef9c45e65b4a2f6d87d5eb16d31cb5466",
+    "seed": 3002026,
+    "games": 50,
+    "pairedOpenings": true,
+    "alternatingSides": true,
+    "replayedMoves": 935,
+    "replayPassed": true,
+    "illegalMoves": 0,
+    "wins": {
+      "1": 0,
+      "2": 50
+    },
+    "budgetsMs": {
+      "1": {
+        "label": "Explorar",
+        "timeBudgetMs": 5
+      },
+      "2": {
+        "label": "Antecipar",
+        "timeBudgetMs": 120
+      }
+    },
+    "latency": {
+      "1": {
+        "p50": 0.005945999999994456,
+        "p95": 0.010578000000123211,
+        "max": 0.06812400000000451
+      },
+      "2": {
+        "p50": 6.3629799999998795,
+        "p95": 6.946260999999822,
+        "max": 18.287924
+      }
+    }
+  }
+]

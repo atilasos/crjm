@@ -1,3 +1,6 @@
+import { NOS, LIGACOES } from '../games/y/board';
+import { YBoard } from '../games/y/YBoard';
+import '../games/y/y.css';
 import { useTranslation } from '../i18n/LanguageProvider';
 import type { PuzzleDiagram } from '../ai-core/puzzles';
 
@@ -37,7 +40,15 @@ export function PuzzleDiagramView({ diagram }: PuzzleDiagramViewProps) {
   const { t } = useTranslation();
   return (
     <figure className="mt-5" data-puzzle-diagram>
-      <div className="inline-block rounded-lg border p-2 [background:var(--papel)] [border-color:var(--linha)]">
+      {diagram.yState ? <>
+        <YBoard state={diagram.yState} />
+        <details className="mt-2 text-sm">
+          <summary className="cursor-pointer min-h-11">{t('Ligações do tabuleiro (texto)')}</summary>
+          <ul>{NOS.map(node => <li key={node.id}>
+            {node.id}: {LIGACOES.flatMap(([a, b]) => a === node.id ? [b] : b === node.id ? [a] : []).join(', ')}
+          </li>)}</ul>
+        </details>
+      </> : <div className="inline-block rounded-lg border p-2 [background:var(--papel)] [border-color:var(--linha)]">
         {diagram.rows.map((row, rowIndex) => (
           <div
             key={rowIndex}
@@ -58,7 +69,7 @@ export function PuzzleDiagramView({ diagram }: PuzzleDiagramViewProps) {
             ))}
           </div>
         ))}
-      </div>
+      </div>}
       <figcaption className="mt-2 max-w-xs text-xs leading-relaxed [color:var(--tinta-suave)]">
         {t(diagram.caption)}
       </figcaption>

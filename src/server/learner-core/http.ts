@@ -142,8 +142,8 @@ export async function handleAppRequest(req: Request, _server: Server<unknown>): 
   if (url.pathname === '/api/learner/events/review-completed' && req.method === 'POST') {
     try {
       const { userId, headers } = withSession(req);
-      const body = await readJson<{ gameId: GameId }>(req);
-      return json(service.recordReviewCompleted(userId, body.gameId), { headers });
+      const body = await readJson<{ gameId: GameId; contextId?: string }>(req);
+      return json(service.recordReviewCompleted(userId, body.gameId, body.contextId), { headers });
     } catch (error) {
       return errorResponse(error);
     }

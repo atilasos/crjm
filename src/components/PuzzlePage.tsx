@@ -1,3 +1,4 @@
+import { GAME_CATALOG, isGameAvailable, isIntegrationPreview, type BrowsableSelection, type GameCapability } from '../games/catalog';
 import { useTranslation } from '../i18n/LanguageProvider';
 import { useMemo, useState } from 'react';
 import type { GameId } from '../ai-core/types';
@@ -7,35 +8,34 @@ import { Header } from './Header';
 import { PuzzleDiagramView } from './PuzzleDiagramView';
 import { useGamification } from './gamification/GamificationProvider';
 import { StrategyPractice } from './StrategyPractice';
+import { GameSelectionControl } from './GameSelectionControl';
 
 interface PuzzlePageProps {
   onVoltar: () => void;
+  selection: BrowsableSelection;
+  onSelectionChange: (selection: BrowsableSelection) => void;
 }
 
-const GAMES: Array<{ id: GameId; label: string; mark: string }> = [
-  { id: 'gatos-caes', label: 'Gatos & Cães', mark: '🐱' },
-  { id: 'dominorio', label: 'Dominório', mark: '🁓' },
-  { id: 'quelhas', label: 'Quelhas', mark: '▮' },
-  { id: 'produto', label: 'Produto', mark: '×' },
-  { id: 'atari-go', label: 'Atari Go', mark: '●' },
-  { id: 'nex', label: 'Nex', mark: '⬡' },
-];
-
-export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
+export function PuzzlePage({ onVoltar, selection, onSelectionChange }: PuzzlePageProps) {
   const { t } = useTranslation();
+  const games = GAME_CATALOG.filter(game =>
+    (['puzzles', 'training', 'strategy'] as const).some(capability => isGameAvailable(game, capability, isIntegrationPreview(), selection))
+  );
   const { profile, levelProgress, recordPatternProgress, recordPuzzleSolved } = useGamification();
-  const [gameId, setGameId] = useState<GameId>('gatos-caes');
+  const [gameId, setGameId] = useState<GameId>(games[0]!.id);
   const [puzzleIndex, setPuzzleIndex] = useState(0);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [usedHint, setUsedHint] = useState(false);
   const [result, setResult] = useState<{ correct: boolean; explanation: string } | null>(null);
 
-  const puzzles = useMemo(() => getPuzzlesForGame(gameId), [gameId]);
-  const puzzle = puzzles[puzzleIndex] ?? puzzles[0]!;
-  const displayOptions = useMemo(() => getDisplayOptions(puzzle), [puzzle]);
+  const game = games.find(candidate => candidate.id === gameId) ?? games[0]!;
+  const hasCapability = (capability: GameCapability) => (game.capabilities as readonly GameCapability[]).includes(capability);
+  const path = hasCapability('training') ? getTrainingPath(gameId) : undefined;
+  const puzzles = useMemo(() => hasCapability('puzzles') ? getPuzzlesForGame(gameId) : [], [gameId]);
+  const puzzle = puzzles[puzzleIndex] ?? puzzles[0];
+  const displayOptions = useMemo(() => puzzle ? getDisplayOptions(puzzle) : [], [puzzle]);
   const solved = new Set(profile.solvedPuzzleIds);
   const solvedCount = puzzles.filter((candidate) => solved.has(candidate.id)).length;
-  const game = GAMES.find((candidate) => candidate.id === gameId) ?? GAMES[0]!;
 
   const selectGame = (nextGameId: GameId) => {
     setGameId(nextGameId);
@@ -46,6 +46,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
   };
 
   const confirmAnswer = () => {
+    if (!puzzle) return;
     const nextResult = evaluatePuzzleAnswer(puzzle, selectedOption ?? '');
     setResult(nextResult);
     if (!nextResult.correct || solved.has(puzzle.id)) return;
@@ -69,7 +70,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
 
   return (
     <div className="min-h-screen">
-      <Header titulo="Laboratório de Estratégias" onVoltar={onVoltar} />
+      <Header titulo="Laboratório de Estratégias" onVoltar={onVoltar} voltarLabel={selection === 'archive' ? 'Voltar ao Arquivo' : undefined} />
       <main className="mx-auto max-w-5xl px-4 py-8">
         <section data-puzzle-lab className="relative overflow-hidden rounded-xl border [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
           <div className="absolute inset-y-0 left-5 hidden w-px [background:var(--ouro)] opacity-50 sm:block" aria-hidden="true" />
@@ -80,14 +81,15 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 <h2 className="text-3xl font-black [color:var(--tinta)]">{t("Uma decisão. Uma ideia.")}</h2>
                 <p className="mt-1 max-w-2xl text-sm [color:var(--tinta-suave)]">{t("Experimenta, pede uma pista se precisares e lê a explicação antes de avançar.")}</p>
               </div>
-              <p className="rounded-full border px-4 py-2 text-sm font-bold [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
-                {t(game.label)}: {t(solvedCount)}/{t(puzzles.length)}{t(" resolvidos")}</p>
+              {puzzle && <p className="rounded-full border px-4 py-2 text-sm font-bold [background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
+                {t(game.name)}: {t(solvedCount)}/{t(puzzles.length)}{t(" resolvidos")}</p>}
             </div>
           </div>
 
           <div className="p-5 sm:pl-12 sm:pr-8 sm:py-8">
+            <GameSelectionControl selection={selection} onChange={onSelectionChange} />
             <nav className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" aria-label={t("Escolher jogo dos puzzles")}>
-              {GAMES.map((candidate) => (
+              {games.map((candidate) => (
                 <button
                   key={candidate.id}
                   type="button"
@@ -99,13 +101,14 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                       : '[background:var(--painel)] [border-color:var(--linha)] [color:var(--tinta-suave)] hover:[border-color:var(--ouro)] hover:[color:var(--tinta)]'
                   }`}
                 >
-                  <span className="mr-1" aria-hidden="true">{t(candidate.mark)}</span>{t(candidate.label)}
+                  <span className="mr-1" aria-hidden="true">{t(candidate.mark)}</span>{t(candidate.name)}
                 </button>
               ))}
             </nav>
 
-            <StrategyPractice key={gameId} gameId={gameId} />
+            {hasCapability('strategy') && <StrategyPractice key={gameId} gameId={gameId} />}
 
+            {puzzle && <>
             <h3 className="mt-8 text-xl font-bold [color:var(--tinta)]">{t('Explorar ideias com explicações')}</h3>
 
             <article className="mt-7 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
@@ -179,18 +182,19 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 )}
               </div>
             </article>
+            </>}
 
-            <section data-percurso aria-label={t(`Percurso para o campeonato — ${game.label}`)} className="mt-8 rounded-xl border p-5 [background:var(--fundo)] [border-color:var(--linha)]">
+            {path && <section data-percurso aria-label={t(`Percurso para o campeonato — ${game.name}`)} className="mt-8 rounded-xl border p-5 [background:var(--fundo)] [border-color:var(--linha)]">
               <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.22em] [color:var(--ouro)]">{t("Percurso para o campeonato")}</p>
-                  <h3 className="mt-1 text-xl font-black [color:var(--tinta)]">{t(game.label)}{t(": quatro etapas até ao torneio")}</h3>
+                  <h3 className="mt-1 text-xl font-black [color:var(--tinta)]">{t(game.name)}{t(": quatro etapas até ao torneio")}</h3>
                 </div>
                 <p className="text-xs font-bold [color:var(--tinta-suave)]">{t("Vitórias registadas neste jogo: ")}{t(profile.gameProgress[gameId]?.wins ?? 0)}
                 </p>
               </div>
               <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {getTrainingPath(gameId).steps.map((step, stepIndex) => {
+                {path.steps.map((step, stepIndex) => {
                   const stepPuzzles = step.puzzleIds ?? [];
                   const solvedInStep = stepPuzzles.filter((id) => solved.has(id)).length;
                   const puzzlesDone = stepPuzzles.length === 0 || solvedInStep === stepPuzzles.length;
@@ -226,7 +230,7 @@ export function PuzzlePage({ onVoltar }: PuzzlePageProps) {
                 })}
               </div>
               <p className="mt-3 text-xs [color:var(--tinta-suave)]">{t('Estas etapas registam prática e vitórias. Confirma o que aprendeste na atividade Escolhe e prevê.')}</p>
-            </section>
+            </section>}
           </div>
         </section>
       </main>

@@ -2,7 +2,7 @@ import type { Database } from 'bun:sqlite';
 import type { GameId } from '../../ai-core/types';
 import { getStrategyProgress, RETENTION_DELAY_MS } from '../../ai-core/strategy-progress';
 import type { StrategyEvidence, StrategyPracticeView, StrategyProgress } from '../../types/strategy-practice';
-import { CHALLENGES_PER_GAME, STRATEGY_GAMES, getStrategyChallenge } from './strategy-challenges';
+import { getStrategyChallengeCount, STRATEGY_GAMES, getStrategyChallenge } from './strategy-challenges';
 
 interface AttemptRow {
   id: string;
@@ -74,7 +74,7 @@ export class StrategyPracticeService {
       const id = crypto.randomUUID();
       this.db.query(
         'INSERT INTO learner_strategy_attempts (id, user_id, game_id, variant, created_at) VALUES (?, ?, ?, ?, ?)',
-      ).run(id, userId, gameId, rows.length % CHALLENGES_PER_GAME, this.now().toISOString());
+      ).run(id, userId, gameId, rows.length % getStrategyChallengeCount(gameId), this.now().toISOString());
       return this.view(userId, this.ownedAttempt(userId, id));
     })();
   }

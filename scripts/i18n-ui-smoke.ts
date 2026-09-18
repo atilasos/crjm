@@ -5,6 +5,9 @@ import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import assert from 'node:assert/strict';
+import pt from '../src/i18n/pt-PT.json' with { type: 'json' };
+import en from '../src/i18n/en.json' with { type: 'json' };
+import ne from '../src/i18n/ne.json' with { type: 'json' };
 
 const cdp = process.env.HUB_CDP_URL;
 if (!cdp) throw new Error('Set HUB_CDP_URL to the CDP URL of your Agent Browser Hub session.');
@@ -31,6 +34,15 @@ async function ready(url: string) {
 async function language(page: Page, locale: 'pt-PT' | 'en' | 'ne') {
   await page.locator('[data-language-selector]').selectOption(locale);
   await page.waitForFunction(expected => document.documentElement.lang === expected, locale);
+  const catalog = { 'pt-PT': pt, en, ne }[locale];
+  const initialTheme = await page.locator('html').getAttribute('data-theme');
+  // Each language must fit both themes, without resetting the active exercise/board.
+  for (let i = 0; i < 2; i++) {
+    const theme = await page.locator('html').getAttribute('data-theme');
+    await page.getByRole('button', { name: catalog[theme === 'claro' ? 'Ativar modo noite' : 'Ativar modo dia'], exact: true }).click();
+    await noOverflow(page);
+  }
+  assert.equal(await page.locator('html').getAttribute('data-theme'), initialTheme);
 }
 async function noOverflow(page: Page) {
   const size = await page.evaluate(() => ({ page: document.documentElement.scrollWidth, viewport: innerWidth }));
@@ -105,17 +117,18 @@ try {
       if(game === 'atari-go') assert.ok(rules.includes('capture WINS'));
       await mkdir('artifacts/i18n', { recursive: true });
       await writeFile(`artifacts/i18n/${game}-${width}.txt`, await page.locator('body').innerText());
-      reports.push(`${width}px ${game}: state preserved in PT/EN/NE; English and Nepali rules visible`);
+      reports.push(`${width}px ${game}: state preserved in PT/EN/NE and both themes; English and Nepali rules visible`);
     }
     // Keep a puzzle answer selected and a hint visible across both language changes.
     await page.goto(`${base}/#/puzzles`);
+    await page.getByRole('button', { name: 'Archive', exact: true }).click();
     await page.locator('[data-puzzle-option="centro"]').click();
-    await page.getByRole('button', { name: 'Ask for a hint' }).click();
+    await page.getByRole('article').getByRole('button', { name: 'Ask for a hint', exact: true }).click();
     await language(page, 'pt-PT');
     await page.getByRole('button', { name: 'Confirmar resposta' }).click();
-    await page.getByText(/Boa leitura|Já dominaste esta ideia/).first().waitFor();
+    await page.getByRole('article').getByText(pt['✓ Boa leitura — ideia praticada'], { exact: true }).waitFor();
     await language(page, 'en');
-    await page.getByText(/Well read|You have mastered this idea/).first().waitFor();
+    await page.getByRole('article').getByText(en['✓ Boa leitura — ideia praticada'], { exact: true }).waitFor();
     await page.getByText('The first piece cannot start near the edge.', { exact: true }).waitFor();
     await noOverflow(page);
     if(width === 390) {
@@ -124,7 +137,7 @@ try {
     }
     await language(page, 'ne');
     await page.getByText('पहिलो गोटी किनारामा राख्न मिल्दैन।', { exact: true }).waitFor();
-    await page.getByText(/राम्रोसँग बुझ्यौ|यो विचारमा दक्षता हासिल गरिसक्यौ/).first().waitFor();
+    await page.getByRole('article').getByText(ne['✓ Boa leitura — ideia praticada'], { exact: true }).waitFor();
     await noOverflow(page);
     if (width === 390) await page.screenshot({ path: 'artifacts/i18n/lab-ne-mobile.png', fullPage: true });
     await page.reload();
@@ -133,6 +146,11 @@ try {
     // A real tutor response, already displayed, changes language without a new move.
     await page.goto(`${base}/#/gatos-caes`);
     await page.getByRole('button', { name: /^L1,/ }).click();
+    const tutor = page.locator('[data-thinking-tutor]');
+    assert.equal(await tutor.locator('[data-tutor-solution]').count(), 0);
+    for (const key of ['Pedir uma pista', 'Ajudar a comparar', 'Ver um exemplo de jogada'] as const) {
+      await tutor.getByRole('button', { name: en[key], exact: true }).click();
+    }
     await page.getByText('Prefer a safe centre square that keeps several legal options for the next cycle.', { exact: false }).waitFor();
     const tutorBoard = await boardState(page);
     await language(page, 'pt-PT');

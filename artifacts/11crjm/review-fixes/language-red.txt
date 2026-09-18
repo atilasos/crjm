@@ -1,0 +1,8 @@
+[classroom-ui-smoke] locator.waitFor: Timeout 5000ms exceeded.
+Call log:
+[2m  - waiting for locator('#game-viewer-iframe').contentFrame().getByRole('status').filter({ hasText: 'Beto to play — Blue' }) to be visible[22m
+
+    at checkYTournament (/tmp/crjm-fix-review/app/.review/classroom-ui-smoke.js:5754:14)
+    at async main (/tmp/crjm-fix-review/app/.review/classroom-ui-smoke.js:7288:7) {
+  name: 'TimeoutError'
+}

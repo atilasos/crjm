@@ -1,0 +1,11 @@
+{
+  "pass": true,
+  "baseUrl": "http://127.0.0.1:4391",
+  "checks": {
+    "health": true,
+    "homepage": true,
+    "anonymousLearnerSession": true,
+    "runtimeConfig": true,
+    "workerAssets": 8
+  }
+}

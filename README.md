@@ -2,28 +2,38 @@
 
 Produto final de treino para o **Campeonato Regional de Jogos Matemáticos da Madeira** (CRJM).
 
-O repositório inclui os **6 jogos oficiais** do campeonato, um **modo campeonato online**, perfil com progresso e uma camada pedagógica comum com tutor visual, hints graduais e revisão pós-jogo.
+A seleção por defeito é o **11.º CRJM — 2026/27**, com seis jogos atuais e dois no **Arquivo jogável**. Os oito jogos incluem modos locais, IA, torneios online, tutor, revisão, Laboratório e progresso persistente.
 
-![Homepage](docs/screenshots/homepage.png)
+![Homepage do 11.º CRJM](artifacts/11crjm/issue-38/home-desktop.png)
 
 ## Estado atual do produto
 
-- **Jogos oficiais completos:** Gatos & Cães, Dominório, Quelhas, Produto, Atari Go e Nex
-- **Cobertura pedagógica nos 6 jogos:** hints H1/H2/H3, contexto visual de turno, top jogadas e alertas de ameaça
+- **Jogos atuais:** Dominório, Faísca, Quelhas, Produto, Atari Go e Y
+- **Arquivo jogável:** Gatos & Cães e Nex, com acesso explícito no início, no Laboratório e na criação de torneios. As ligações antigas e o progresso dos alunos mantêm-se.
+- **Cobertura pedagógica nos oito jogos:** hints H1/H2/H3, contexto visual de turno, top jogadas e alertas de ameaça
 - **Revisão e progresso:** quick review/turning point pós-jogo com XP, missões, conquistas e perfil persistido via bootstrap técnico de sessão no learner-core V1
 - **Competição escolar:** modo campeonato com dupla eliminação e cliente/servidor dedicados
 - **Estado técnico atual:** Dominório e Atari Go estão em nível de **piloto maduro**; Quelhas, Gatos & Cães, Produto e Nex estão **consolidados** segundo a matriz em [`docs/agents/ALL-GAMES-MATURITY-MATRIX.md`](docs/agents/ALL-GAMES-MATURITY-MATRIX.md)
 
-### Jogos disponíveis
+### Jogos da edição atual — 11.º CRJM (2026/27)
 
 | Jogo | Ciclos | Descrição |
 |------|--------|-----------|
-| 🐱🐶 **Gatos & Cães** | 1.º | Coloca peças sem que gatos fiquem ao lado de cães. Ganha quem fizer a última jogada! |
-| 🁓 **Dominório** | 1.º, 2.º | Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça! |
+| 🁓 **Dominório** | 1.º | Coloca dominós no tabuleiro: um joga na vertical, outro na horizontal. Ganha quem colocar a última peça! |
+| ➤ **Faísca** | 1.º, 2.º | Coloca na casa obrigatória e aponta para um destino vazio. Perde quem ficar sem jogada. |
 | ▮ **Quelhas** | 1.º, 2.º, 3.º | Coloca segmentos no tabuleiro. **MISÈRE**: perde quem fizer a última jogada! |
 | ✖️ **Produto** | 2.º, 3.º, Sec. | Maximiza a pontuação dos teus grupos num tabuleiro hexagonal. Sabota o adversário unindo os grupos dele! |
 | ⚫⚪ **Atari Go** | 3.º, Sec. | Variante simplificada do Go. A primeira captura vence o jogo! |
-| 🔗 **Nex** | Sec. | Jogo de conexão com peças neutras. Liga as tuas margens opostas antes do adversário! |
+| **Y** | Sec. | Liga os três lados com um único grupo. O segundo participante pode trocar de cores na primeira oportunidade. |
+
+### Arquivo jogável
+
+- **Gatos & Cães** — [ligação antiga](https://crjmai.infantinho.xyz/#/gatos-caes), modalidade anteriormente do 1.º ciclo.
+- **Nex** — [ligação antiga](https://crjmai.infantinho.xyz/#/nex), modalidade anteriormente do secundário.
+
+O perfil conserva os dados dos oito jogos, sem dividir ou reiniciar o progresso por edição. Faísca e Y têm dois níveis locais avaliados (N1 Explorar e N2 Antecipar), sem dependência de um serviço remoto de IA.
+
+Evidência da atualização local: [verificação da issue #38](docs/agents/reviews/issue38-edition.md), [arena de Faísca](artifacts/faisca-arena/seed-3002026.json), [arena de Y](artifacts/y-arena/seed-3002026.json) e [conferência do tabuleiro de Y](docs/design/y-board-validation.md).
 
 ## Screenshots do produto
 
@@ -31,14 +41,14 @@ O repositório inclui os **6 jogos oficiais** do campeonato, um **modo campeonat
 <tr>
 <td width="50%">
 
-**Gatos & Cães** (1.º Ciclo)
+**Gatos & Cães** (Arquivo)
 
 ![Gatos & Cães](docs/screenshots/gatos-caes.png)
 
 </td>
 <td width="50%">
 
-**Dominório** (1.º, 2.º Ciclo)
+**Dominório** (1.º Ciclo)
 
 ![Dominório](docs/screenshots/dominorio.png)
 
@@ -70,7 +80,7 @@ O repositório inclui os **6 jogos oficiais** do campeonato, um **modo campeonat
 </td>
 <td width="50%">
 
-**Nex** (Secundário)
+**Nex** (Arquivo)
 
 ![Nex](docs/screenshots/nex.png)
 
@@ -88,12 +98,12 @@ Sistema de torneios online com dupla eliminação para competições escolares.
 
 - Jogar contra o **computador** (IA com heurísticas específicas para cada jogo)
 - Jogar com **2 jogadores** no mesmo computador
-- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (suporta os **6 jogos oficiais**)
+- **Modo Campeonato**: Torneios online com sistema de dupla eliminação (suporta os **oito jogos**, atuais e arquivados)
 - **Tutor visual por turno** com highlights no tabuleiro, contexto de leitura e top jogadas
 - **Perfil do jogador** com XP, streak, missões, conquistas e barras de progresso por jogo
 - **Caminhos de evolução** por jogo e revisão pós-jogo com recompensa
 - Regras oficiais do CRJM
-- Interface em **Português de Portugal** (PT-PT)
+- Interface em **Português de Portugal** (PT-PT), **inglês** e **nepalês**
 - Responsivo para computador, tablet e mobile
 
 ## Pedagogia
@@ -205,13 +215,15 @@ Resumo operacional atualizado a partir de [`docs/agents/ALL-GAMES-MATURITY-MATRI
 
 O projeto inclui um servidor de torneios que permite organizar campeonatos online com sistema de dupla eliminação.
 
-Atualmente, o servidor e a UI do modo campeonato suportam **todos os 6 jogos**:
-- **Gatos & Cães**
+O servidor e a UI do modo campeonato suportam **os oito jogos**. A criação apresenta os seis jogos atuais e permite escolher o Arquivo:
+- **Gatos & Cães** (Arquivo)
+- **Faísca**
+- **Y**
 - **Dominório**
 - **Quelhas**
 - **Produto**
 - **Atari Go**
-- **Nex**
+- **Nex** (Arquivo)
 
 ### Iniciar o Servidor
 
@@ -273,12 +285,12 @@ Para um guia detalhado sobre como organizar um torneio, consulta o ficheiro [`TO
 
 ## 📦 Publicar no GitHub Pages
 
-Este repositório já inclui um workflow em `.github/workflows/deploy.yml` que faz build e publica para GitHub Pages.
+O workflow `.github/workflows/deploy.yml` executa testes e build completo com os cinco motores WASM nas pull requests e nos pushes para `main`. A publicação no GitHub Pages exige execução manual do workflow e só avança depois da validação passar.
 
 ### Opção 1: GitHub Actions (recomendado)
 
 1. Ativar GitHub Pages nas definições do repositório (Source: **GitHub Actions**)
-2. Fazer push para `main` (ou correr manualmente via `workflow_dispatch`)
+2. Em **Actions**, abrir **Validate and deploy to GitHub Pages** e escolher **Run workflow** (`workflow_dispatch`) na referência que se pretende publicar. Pushes e merges em `main` apenas validam; não publicam.
 
 ### Opção 2: Manualmente
 
@@ -349,12 +361,12 @@ src/
 │   ├── RulesPanel.tsx
 │   └── WinnerAnnouncement.tsx
 ├── games/
-│   ├── gatos-caes/       # Jogo Gatos & Cães (1.º Ciclo)
+│   ├── gatos-caes/       # Gatos & Cães (Arquivo)
 │   │   ├── types.ts
 │   │   ├── logic.ts
 │   │   ├── logic.test.ts
 │   │   └── GatosCaesGame.tsx
-│   ├── dominorio/        # Jogo Dominório (1.º, 2.º Ciclo)
+│   ├── dominorio/        # Jogo Dominório (1.º Ciclo)
 │   │   ├── types.ts
 │   │   ├── logic.ts
 │   │   ├── logic.test.ts
@@ -374,7 +386,9 @@ src/
 │   │   ├── logic.ts
 │   │   ├── logic.test.ts
 │   │   └── AtariGoGame.tsx
-│   └── nex/              # Jogo Nex (Secundário)
+│   ├── faisca/           # Faísca (1.º, 2.º Ciclo), regras e IA local
+│   ├── y/                # Y (Secundário), grafo oficial e IA local
+│   └── nex/              # Nex (Arquivo)
 │       ├── types.ts
 │       ├── logic.ts
 │       ├── logic.test.ts

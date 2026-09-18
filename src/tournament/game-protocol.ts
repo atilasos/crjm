@@ -1,9 +1,12 @@
+import type { YState, YMove } from '../games/y/types';
+import { NOS } from '../games/y/board';
 /**
  * Tipos de GameMove e GameState de rede conforme CLIENT-INTEGRATION_NEW.md
  * e funções de conversão entre formatos de rede e locais (UI).
  */
 
 import type { GameId } from './protocol';
+import type { FaiscaState, Jogada as FaiscaMove, Direcao } from '../games/faisca/types';
 
 // Tipos locais (UI)
 import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
@@ -688,7 +691,79 @@ export function fromNetworkNexState(
 // Generic converters by GameId
 // ============================================================================
 
+// Faísca uses the same complete state on the server and client. No derived
+// turn, inventory or result is accepted as part of a submitted move.
+export type NetworkFaiscaState = FaiscaState;
+export interface NetworkFaiscaMove {
+  row: number;
+  col: number;
+  distance: 1 | 2 | 3;
+  direction: 'up' | 'right' | 'down' | 'left';
+}
+const FAISCA_DIRECTIONS = { up: 'cima', right: 'direita', down: 'baixo', left: 'esquerda' } as const;
+const FAISCA_NETWORK_DIRECTIONS: Record<Direcao, NetworkFaiscaMove['direction']> = {
+  cima: 'up', direita: 'right', baixo: 'down', esquerda: 'left',
+};
+
+export function toNetworkFaiscaMove(move: FaiscaMove): NetworkFaiscaMove {
+  return { row: move.casa.linha, col: move.casa.coluna, distance: move.distancia, direction: FAISCA_NETWORK_DIRECTIONS[move.direcao] };
+}
+
+export function fromNetworkFaiscaMove(value: unknown): FaiscaMove | null {
+  if (!value || typeof value !== 'object') return null;
+  const move = value as Record<string, unknown>;
+  if (typeof move.row !== 'number' || !Number.isInteger(move.row)
+    || typeof move.col !== 'number' || !Number.isInteger(move.col)
+    || (move.distance !== 1 && move.distance !== 2 && move.distance !== 3)
+    || (move.direction !== 'up' && move.direction !== 'right' && move.direction !== 'down' && move.direction !== 'left')) return null;
+  return { casa: { linha: move.row, coluna: move.col }, distancia: move.distance, direcao: FAISCA_DIRECTIONS[move.direction] };
+}
+
+// Y keeps participant identities independent from their current colours.
+export type NetworkYState = YState;
+export type NetworkYMove = YMove;
+
+export function fromNetworkYMove(value: unknown): YMove | null {
+  if (!value || typeof value !== 'object' || !('type' in value)) return null;
+  if (value.type === 'swap') return { type: 'swap' };
+  if (value.type === 'place' && 'node' in value && typeof value.node === 'string') {
+    return { type: 'place', node: value.node };
+  }
+  return null;
+}
+
+export function fromNetworkYState(value: unknown): YState {
+  if (!value || typeof value !== 'object'
+    || !('tabuleiro' in value) || !value.tabuleiro || typeof value.tabuleiro !== 'object'
+    || !('cores' in value) || !value.cores || typeof value.cores !== 'object'
+    || !('jogador1' in value.cores) || !('jogador2' in value.cores)
+    || (value.cores.jogador1 !== 'azul' && value.cores.jogador1 !== 'vermelho')
+    || (value.cores.jogador2 !== 'azul' && value.cores.jogador2 !== 'vermelho')
+    || value.cores.jogador1 === value.cores.jogador2
+    || !('jogadorAtual' in value) || (value.jogadorAtual !== 'jogador1' && value.jogadorAtual !== 'jogador2')
+    || !('podeTrocar' in value) || typeof value.podeTrocar !== 'boolean'
+    || !('colocacoes' in value) || typeof value.colocacoes !== 'number' || !Number.isInteger(value.colocacoes)
+    || value.colocacoes < 0 || value.colocacoes > NOS.length
+    || !('estado' in value) || (value.estado !== 'a-jogar' && value.estado !== 'vitoria-jogador1' && value.estado !== 'vitoria-jogador2')) {
+    throw new Error('Invalid Y state');
+  }
+  const board = new Map(Object.entries(value.tabuleiro));
+  const tabuleiro: YState['tabuleiro'] = {};
+  for (const { id } of NOS) {
+    const colour: unknown = board.get(id);
+    if (colour !== null && colour !== 'azul' && colour !== 'vermelho') throw new Error('Invalid Y intersection');
+    tabuleiro[id] = colour;
+  }
+  return {
+    tabuleiro, cores: { jogador1: value.cores.jogador1, jogador2: value.cores.jogador2 },
+    jogadorAtual: value.jogadorAtual, podeTrocar: value.podeTrocar, colocacoes: value.colocacoes,
+    estado: value.estado,
+  };
+}
+
 export type NetworkGameState =
+  | NetworkYState
+  | NetworkFaiscaState
   | NetworkGatosCaesState
   | NetworkDominorioState
   | NetworkQuelhasState
@@ -697,6 +772,8 @@ export type NetworkGameState =
   | NetworkNexState;
 
 export type NetworkGameMove =
+  | NetworkYMove
+  | NetworkFaiscaMove
   | NetworkGatosCaesMove
   | NetworkDominorioMove
   | NetworkQuelhasMove
@@ -705,6 +782,8 @@ export type NetworkGameMove =
   | NetworkNexMove;
 
 export type LocalGameState =
+  | YState
+  | FaiscaState
   | GatosCaesState
   | DominorioState
   | QuelhasState
@@ -717,6 +796,10 @@ export type LocalGameState =
  */
 export function fromNetworkGameState(gameId: GameId, state: unknown): LocalGameState {
   switch (gameId) {
+    case 'y':
+      return fromNetworkYState(state);
+    case 'faisca':
+      return structuredClone(state as FaiscaState);
     case 'gatos-caes':
       return fromNetworkGatosCaesState(state as NetworkGatosCaesState);
     case 'dominorio':
@@ -739,6 +822,10 @@ export function fromNetworkGameState(gameId: GameId, state: unknown): LocalGameS
  */
 export function toNetworkGameState(gameId: GameId, state: LocalGameState): NetworkGameState {
   switch (gameId) {
+    case 'y':
+      return fromNetworkYState(state);
+    case 'faisca':
+      return structuredClone(state as FaiscaState);
     case 'gatos-caes':
       return toNetworkGatosCaesState(state as GatosCaesState);
     case 'dominorio':

@@ -27,6 +27,41 @@ afterEach(async () => {
 });
 
 describe('learner core HTTP routes', () => {
+  test.each([['faisca', 'faisca:proxima-casa'], ['y', 'y:tres-lados']])('%s conserva ajuda e regista cada revisão uma vez, mesmo após nova sessão', async (gameId, patternId) => {
+    await withTempDb();
+    const server = {} as Parameters<typeof handleAppRequest>[1];
+    const session = await handleAppRequest(new Request('http://localhost/api/auth/session'), server);
+    const cookie = session.headers.get('set-cookie')!;
+    const command = async (path: string, body: unknown) => {
+      const response = await handleAppRequest(new Request(`http://localhost/api/learner/events/${path}`, {
+        method: 'POST', headers: { cookie, 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+      }), server);
+      expect(response.status).toBe(200);
+      return response.json();
+    };
+    await command('game-completed', { gameId: 'nex', won: true });
+    await command('pattern-progress', { gameId, patternId, evidence: 'used_with_help', contextId: 'turn-1' });
+    const first = await command('review-completed', { gameId, contextId: 'match-1' });
+    const retry = await command('review-completed', { gameId, contextId: 'match-1' });
+    expect(retry.sessionXpDelta).toBe(0);
+    expect(retry.dashboard.profile.totalXp).toBe(first.dashboard.profile.totalXp);
+    expect(retry.dashboard.gameProgress[gameId!].reviews).toBe(1);
+    expect(retry.dashboard.gameProgress.nex.played).toBe(1);
+    expect(retry.dashboard.patterns[patternId!]).toMatchObject({ state: 'used_with_help', soloContextIds: [] });
+    const reopened = await handleAppRequest(new Request('http://localhost/api/learner/dashboard', { headers: { cookie } }), server);
+    expect((await reopened.json()).patterns[patternId!].state).toBe('used_with_help');
+    const next = await command('review-completed', { gameId, contextId: 'match-2' });
+    expect(next.dashboard.gameProgress[gameId!].reviews).toBe(2);
+    const otherSession = await handleAppRequest(new Request('http://localhost/api/auth/session'), server);
+    const other = await handleAppRequest(new Request('http://localhost/api/learner/events/review-completed', {
+      method: 'POST', headers: { cookie: otherSession.headers.get('set-cookie')!, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ gameId, contextId: 'match-1' }),
+    }), server);
+    const otherResult = await other.json();
+    expect(otherResult.dashboard.gameProgress[gameId!].reviews).toBe(1);
+    expect(otherResult.dashboard.patterns).toEqual({});
+  });
+
   test('bootstraps a session cookie and returns dashboard data', async () => {
     await withTempDb();
     const server = {} as Parameters<typeof handleAppRequest>[1];

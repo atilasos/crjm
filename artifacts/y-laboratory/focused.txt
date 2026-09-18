@@ -1,0 +1,67 @@
+bun test v1.3.14 (0d9b296a)
+
+src/components/PuzzleDiagramView.test.tsx:
+(pass) PuzzleDiagramView > renderiza pedras, destaques e casas candidatas numeradas [6.31ms]
+(pass) PuzzleDiagramView > Y learning uses the championship graph and accessible stone identities [7.88ms]
+(pass) PuzzleDiagramView > as linhas hexagonais recebem deslocamento progressivo [0.31ms]
+
+src/i18n/translate.test.ts:
+(pass) Presentation in every supported language > defaults to Portugal Portuguese without browser-language detection [0.06ms]
+(pass) Presentation in every supported language > preserves meaningful whitespace and leaves unknown/user text untouched [0.74ms]
+(pass) Presentation in every supported language > updates complete hints and preserves whitespace around inline elements [0.14ms]
+(pass) Presentation in every supported language > every puzzle, path, achievement and mission has content in all languages [2.01ms]
+(pass) Presentation in every supported language > faisca choices, predictions and feedback are translated for every situation [10.39ms]
+(pass) Presentation in every supported language > y choices, predictions and feedback are translated for every situation [2.62ms]
+(pass) Presentation in every supported language > all languages have exactly the same keys and interpolation slots [11.38ms]
+(pass) Presentation in every supported language > the catalogue contract rejects missing locales, messages and incorrect slots [0.11ms]
+(pass) Presentation in every supported language > whole messages support different word order without changing pupil names [0.16ms]
+
+src/i18n/format.test.ts:
+(pass) formats decimals and duration plurals for the chosen language [5.58ms]
+(pass) Nepali uses the same 0–9 digits as the school boards [0.44ms]
+
+src/games/catalog.test.ts:
+(pass) seleção de jogos por percurso > faisca disponibiliza apenas capacidades implementadas na integração [0.16ms]
+(pass) seleção de jogos por percurso > y disponibiliza apenas capacidades implementadas na integração [0.03ms]
+(pass) seleção de jogos por percurso > mantém os seis jogos públicos em todos os percursos atuais [0.05ms]
+(pass) seleção de jogos por percurso > um percurso em integração só é visível na pré-visualização explícita [0.12ms]
+
+src/ai-core/puzzles.test.ts:
+(pass) catálogo de puzzles estratégicos > oferece o catálogo completo de puzzles válidos por jogo [0.54ms]
+(pass) catálogo de puzzles estratégicos > devolve feedback explicativo para resposta certa e desconhecida [0.07ms]
+(pass) apresentação dos puzzles > o baralhamento preserva as três opções e cobre todas as posições [1.89ms]
+(pass) apresentação dos puzzles > a ordem é reproduzível quando o gerador aleatório é injetado [0.19ms]
+(pass) apresentação dos puzzles > os diagramas são retangulares e usam apenas símbolos conhecidos [0.43ms]
+
+src/ai-core/training-paths.test.ts:
+(pass) percursos de treino para o campeonato > cada jogo tem quatro etapas com o desenho Descobrir→Campeonato [0.08ms]
+(pass) percursos de treino para o campeonato > os puzzleIds das etapas existem e pertencem ao jogo certo, cobrindo todos os puzzles [0.11ms]
+(pass) avaliação dos desafios por nível > sem objetivos ou sem dados devolve estado honesto [0.14ms]
+(pass) avaliação dos desafios por nível > vitórias em níveis superiores contam para objetivos inferiores [0.04ms]
+(pass) avaliação dos desafios por nível > sequências e meta de 50% avaliam pelos contadores certos [0.05ms]
+(pass) avaliação dos desafios por nível > faisca uses only the two verified local difficulties [0.05ms]
+(pass) avaliação dos desafios por nível > y uses only the two verified local difficulties
+(pass) avaliação dos desafios por nível > objetivos múltiplos exigem todos cumpridos [0.02ms]
+
+src/server/learner-core/strategy-service.test.ts:
+(pass) strategy practice: evidence survives real learner operations > Y teaches the drawn adjacency and preserves the first error after reload [3.76ms]
+(pass) strategy practice: evidence survives real learner operations > Y solutions follow the official drawing, and immediate repetitions add no autonomy [45.11ms]
+(pass) strategy practice: evidence survives real learner operations > Faísca offers a choice with a verifiable opening consequence [1.16ms]
+(pass) strategy practice: evidence survives real learner operations > does not send hints, answers or explanations before an attempt [0.98ms]
+(pass) strategy practice: evidence survives real learner operations > atari-go: a saved hint survives a reload and cannot count as solo evidence [3.08ms]
+(pass) strategy practice: evidence survives real learner operations > faisca: a saved hint survives a reload and cannot count as solo evidence [0.99ms]
+(pass) strategy practice: evidence survives real learner operations > y: a saved hint survives a reload and cannot count as solo evidence [0.90ms]
+(pass) strategy practice: evidence survives real learner operations > first wrong answer remains practice after resubmission, no duplicated attempt [0.96ms]
+(pass) strategy practice: evidence survives real learner operations > a copied decision with an incorrect consequence does not advance [1.77ms]
+(pass) strategy practice: evidence survives real learner operations > does not accept another learner’s attempts or forged answer fields [1.04ms]
+(pass) strategy practice: evidence survives real learner operations > all available games can progress, and retention requires a later day [220.55ms]
+(pass) strategy practice: evidence survives real learner operations > nex: an assisted catalogue can be learned later, without an immediate retry shortcut [35.03ms]
+(pass) strategy practice: evidence survives real learner operations > faisca: an assisted catalogue can be learned later, without an immediate retry shortcut [28.45ms]
+(pass) strategy practice: evidence survives real learner operations > y: an assisted catalogue can be learned later, without an immediate retry shortcut [10.66ms]
+(pass) strategy practice: evidence survives real learner operations > Faísca preserves errors across reloads and mirrors do not add families [16.06ms]
+(pass) strategy practice: evidence survives real learner operations > cosmetic variants and repeated copies cannot fill the three-family goal [0.16ms]
+
+ 47 pass
+ 0 fail
+ 9509 expect() calls
+Ran 47 tests across 7 files. [508.00ms]

@@ -1,0 +1,706 @@
+bun test v1.3.14 (0d9b296a)
+
+src/navigation-guard.test.ts:
+(pass) navigation-guard > sem bloqueio registado, a navegação está livre [0.04ms]
+(pass) navigation-guard > com bloqueio ativo, a navegação fica bloqueada [0.05ms]
+(pass) navigation-guard > o bloqueio consulta a condição em cada verificação [0.03ms]
+(pass) navigation-guard > remover um bloqueio antigo não apaga um bloqueio mais recente [0.03ms]
+
+scripts/ai-latency.test.ts:
+(pass) ai-latency helpers > calcula percentis sem alterar as amostras [0.58ms]
+(pass) ai-latency helpers > falha o gate quando há ilegalidade ou excede 2×budget + 100ms [0.07ms]
+
+scripts/ai-ladder.test.ts:
+(pass) ai-ladder helpers > usa os gates distintos das duas famílias [0.05ms]
+(pass) ai-ladder helpers > não classifica como monotónico um par abaixo do gate [0.11ms]
+(pass) ai-ladder helpers > ilegalidade bloqueia o par mesmo com vitórias suficientes [0.02ms]
+
+scripts/ai-benchmark-cli.test.ts:
+(pass) AI benchmark CLI parsing > não confunde argv[0] com output quando a flag não existe [0.04ms]
+(pass) AI benchmark CLI parsing > lê apenas o valor que segue a flag [0.01ms]
+
+scripts/atari-go-ladder-baseline.test.ts:
+(pass) atari-go-ladder-baseline script > generates JSON summary with N-C2/N-C3 consistency fields [24707.41ms]
+
+src/components/PerfilPage.test.tsx:
+(pass) PerfilPage > organiza conquistas e explica streak, escudo e histórico [13.94ms]
+
+src/components/DifficultySelector.test.tsx:
+(pass) DifficultySelector > torna os cinco níveis e o orçamento selecionado explícitos [2.14ms]
+(pass) DifficultySelector > mostra a recomendação sem a aplicar silenciosamente durante a partida [0.69ms]
+
+src/components/PuzzlePage.test.tsx:
+(pass) PuzzlePage > apresenta um laboratório acessível com seis jogos e três respostas [3.10ms]
+
+src/components/EvalChart.test.tsx:
+(pass) EvalChart (F4) > marca o ponto de viragem e explica em pt-PT [0.60ms]
+(pass) EvalChart (F4) > sem viragem, mensagem depende do resultado [0.18ms]
+(pass) EvalChart (F4) > não renderiza com menos de 3 amostras [0.05ms]
+
+src/components/PuzzleDiagramView.test.tsx:
+(pass) PuzzleDiagramView > renderiza pedras, destaques e casas candidatas numeradas [1.99ms]
+(pass) PuzzleDiagramView > as linhas hexagonais recebem deslocamento progressivo [0.27ms]
+
+src/i18n/translate.test.ts:
+(pass) Presentation in every supported language > defaults to Portugal Portuguese without browser-language detection [0.07ms]
+(pass) Presentation in every supported language > preserves meaningful whitespace and leaves unknown/user text untouched [0.13ms]
+(pass) Presentation in every supported language > updates complete hints and preserves whitespace around inline elements [0.09ms]
+(pass) Presentation in every supported language > every puzzle, path, achievement and mission has content in all languages [1.81ms]
+(pass) Presentation in every supported language > all languages have exactly the same keys and interpolation slots [9.52ms]
+(pass) Presentation in every supported language > the catalogue contract rejects missing locales, messages and incorrect slots [0.11ms]
+(pass) Presentation in every supported language > whole messages support different word order without changing pupil names [0.15ms]
+
+src/i18n/format.test.ts:
+(pass) formats decimals and duration plurals for the chosen language [5.26ms]
+(pass) Nepali uses the same 0–9 digits as the school boards [0.51ms]
+
+src/server/tournament-engine.test.ts:
+(pass) Tournament Engine - Bracket Generation > 4 players - basic bracket creation [0.71ms]
+(pass) Tournament Engine - Bracket Generation > 3 players - one bye in first round [0.18ms]
+(pass) Tournament Engine - Bracket Generation > 5 players - two byes to make even brackets [0.09ms]
+(pass) Tournament Engine - Bracket Generation > 4 players - full tournament flow [0.29ms]
+(pass) Tournament Engine - Bracket Generation > Grand Final should NOT be created while losers matches are in progress [0.15ms]
+(pass) Tournament Engine - Bracket Generation > Grand Final Reset when losers champion wins [0.09ms]
+(pass) Tournament Engine - Bracket Generation > 2 players - simplest tournament [0.05ms]
+(pass) Tournament Engine - Bracket Generation > 8 players - power of 2, no byes [0.08ms]
+(pass) Tournament Engine - Bracket Generation > Players lose count correctly through brackets [0.11ms]
+(pass) Tournament Engine - Edge Cases > Cannot start tournament with less than 2 players [0.02ms]
+(pass) Tournament Engine - Edge Cases > Cannot add players after tournament starts [0.02ms]
+(pass) Tournament Engine - Edge Cases > Cannot start tournament twice [0.02ms]
+(pass) Tournament Engine - Restart Functions > restartCurrentGame - preserves match score, resets game state [0.11ms]
+(pass) Tournament Engine - Restart Functions > restartMatch - resets score to 0-0 and game to 1 [0.09ms]
+(pass) Tournament Engine - Restart Functions > restart fails on finished match [0.04ms]
+(pass) Tournament Engine - Restart Functions > restart fails when tournament not running [0.02ms]
+(pass) Tournament Engine - Restart Functions > restartMatch preserves bracket position [0.04ms]
+(pass) Tournament Engine - Spectator Functions > getActiveMatchesWithGameState returns playing matches with game state [0.11ms]
+(pass) Tournament Engine - Spectator Functions > getActiveMatchesWithGameState excludes matches without game state [0.03ms]
+
+src/server/atari-go-ai-proxy.test.ts:
+(pass) proxy da IA N6 do Atari Go > encaminha apenas GET /health e preserva query/status/content-type [0.49ms]
+(pass) proxy da IA N6 do Atari Go > rejeita caminhos e métodos que não fazem parte da superfície pública [0.09ms]
+(pass) proxy da IA N6 do Atari Go > rejeita o corpo acima de 8 KiB antes de contactar a GPU [1.74ms]
+(pass) proxy da IA N6 do Atari Go > aplica o rate limit por sessão assinada, sem misturar alunos no mesmo IP [0.82ms]
+(pass) proxy da IA N6 do Atari Go > trata cookie forjado com assinatura multibyte como sessão anónima, sem lançar [0.27ms]
+(pass) proxy da IA N6 do Atari Go > converte falhas e timeouts do upstream em 503 para ativar o fallback N5 [0.24ms]
+
+src/server/class-store.test.ts:
+(pass) ClassStore > começa vazio quando o ficheiro não existe [0.24ms]
+(pass) ClassStore > começa vazio quando o ficheiro tem JSON inválido [0.10ms]
+(pass) ClassStore > criar turma gera códigos únicos sem caracteres ambíguos [0.37ms]
+(pass) ClassStore > criar turma ignora nomes vazios e faz trim [0.09ms]
+(pass) ClassStore > criar turma com nome vazio lança erro [0.05ms]
+(pass) ClassStore > findByCode é case-insensitive e tolera espaços/hífens [0.14ms]
+(pass) ClassStore > findByCode devolve null para código inexistente [0.06ms]
+(pass) ClassStore > persiste dados entre instâncias do store [0.09ms]
+(pass) ClassStore > deleteClass remove turma existente e persiste [0.09ms]
+(pass) ClassStore > deleteClass devolve false para turma inexistente [0.02ms]
+(pass) ClassStore > addStudents adiciona alunos a turma existente com códigos únicos [0.15ms]
+(pass) ClassStore > addStudents devolve null para turma inexistente [0.03ms]
+(pass) ClassStore > removeStudent remove aluno existente e persiste [0.11ms]
+(pass) ClassStore > removeStudent devolve false para turma ou aluno inexistente [0.06ms]
+(pass) ClassStore > language follows a pupil code after reloading and does not change classmates [0.16ms]
+
+src/server/game-adapter.test.ts:
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should validate and apply a move in network format (placements) [0.74ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should validate second placement in network format [0.55ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should NOT allow placing opponent color in the first move [0.06ms]
+(pass) Game Adapters - Network Move Handling > Produto Adapter > should stay in the same player turn after placing only 1 of 2 pieces [0.24ms]
+(pass) Game Adapters - Network Move Handling > Atari Go Adapter > should validate and apply a move in network format (row, col) [1.04ms]
+(pass) Game Adapters - Network Move Handling > Nex Adapter > should validate and apply a "place" move in network format [0.40ms]
+(pass) Game Adapters - Network Move Handling > Nex Adapter > should validate and apply a "swap" move in network format [0.04ms]
+
+src/server/admin-auth.test.ts:
+(pass) admin auth helpers > accepts legacy bearer token access [0.07ms]
+(pass) admin auth helpers > accepts basic auth for admin user [0.06ms]
+(pass) admin auth helpers > rejects invalid credentials [0.02ms]
+(pass) admin auth helpers > accepts signed admin cookie [0.12ms]
+(pass) admin auth helpers > adds basic auth challenge header [0.03ms]
+(pass) admin auth helpers > marks admin cookie secure in production [0.02ms]
+
+src/games/catalog.test.ts:
+(pass) seleção de jogos por percurso > faisca disponibiliza apenas capacidades implementadas na integração [0.17ms]
+(pass) seleção de jogos por percurso > y disponibiliza apenas capacidades implementadas na integração [0.03ms]
+(pass) seleção de jogos por percurso > mantém os seis jogos públicos em todos os percursos atuais [0.05ms]
+(pass) seleção de jogos por percurso > um percurso em integração só é visível na pré-visualização explícita [0.10ms]
+
+src/utils/student-session.test.ts:
+(pass) student-session storage > loadStudentSession devolve null sem sessão guardada [0.05ms]
+(pass) student-session storage > saveStudentSession seguido de loadStudentSession devolve a sessão [0.09ms]
+(pass) student-session storage > clearStudentSession remove a sessão guardada [0.03ms]
+(pass) student-session storage > loadStudentSession tolera JSON inválido [0.03ms]
+(pass) student-session storage > loadStudentSession rejeita conteúdo sem os campos obrigatórios [0.02ms]
+(pass) loginStudent > em sucesso constrói a sessão, guarda-a e envia o código normalizado [0.36ms]
+(pass) loginStudent > com 404 lança mensagem de código inválido e não guarda sessão [0.11ms]
+(pass) loginStudent > com 400 lança mensagem de código inválido [0.05ms]
+(pass) loginStudent > com rede indisponível lança mensagem de servidor inacessível [0.10ms]
+(pass) loginStudent > com resposta sem estudante lança erro de resposta inesperada [0.06ms]
+
+src/utils/class-admin-api.test.ts:
+(pass) fetchClasses > em sucesso converte o endereço ws→http, envia a chave e devolve as turmas [0.39ms]
+(pass) fetchClasses > com 401 lança erro de chave errada [0.13ms]
+(pass) fetchClasses > com rede indisponível lança erro de servidor inacessível [0.11ms]
+(pass) fetchClasses > com erro 500 lança erro inesperado do servidor [0.06ms]
+(pass) fetchClasses > com payload sem lista de turmas lança erro de resposta inválida [0.06ms]
+(pass) fetchClasses > ignora entradas malformadas na lista de turmas [0.07ms]
+(pass) createClass > em sucesso envia POST com nome e alunos e devolve a turma criada [0.14ms]
+(pass) createClass > com 401 lança erro de chave errada [0.05ms]
+(pass) createClass > com resposta sem turma lança erro de resposta inválida [0.04ms]
+(pass) deleteClass > envia DELETE para o caminho da turma com o id codificado [0.07ms]
+(pass) deleteClass > com rede indisponível lança erro de servidor inacessível [0.05ms]
+(pass) addStudents > em sucesso envia POST com os nomes e devolve os alunos criados [0.14ms]
+(pass) addStudents > com resposta sem alunos lança erro de resposta inválida [0.06ms]
+(pass) removeStudent > envia DELETE para o caminho do aluno [0.10ms]
+(pass) removeStudent > com 401 lança erro de chave errada [0.04ms]
+
+src/ai-core/review-patterns.test.ts:
+(pass) selectReviewPattern > provides a concrete starter card for every game [0.16ms]
+(pass) selectReviewPattern > uses tutor evidence to choose a more specific card [0.05ms]
+(pass) translated or edited explanations never change recorded evidence [0.03ms]
+
+src/ai-core/puzzles.test.ts:
+(pass) catálogo de puzzles estratégicos > oferece o catálogo completo de puzzles válidos por jogo [0.21ms]
+(pass) catálogo de puzzles estratégicos > devolve feedback explicativo para resposta certa e desconhecida [0.06ms]
+(pass) apresentação dos puzzles > o baralhamento preserva as três opções e cobre todas as posições [1.55ms]
+(pass) apresentação dos puzzles > a ordem é reproduzível quando o gerador aleatório é injetado [0.18ms]
+(pass) apresentação dos puzzles > os diagramas são retangulares e usam apenas símbolos conhecidos [0.40ms]
+
+src/ai-core/eval-trace.test.ts:
+(pass) traço de avaliação (F4) > normaliza para a perspetiva do humano em [-1, 1] [0.05ms]
+(pass) traço de avaliação (F4) > encontra a maior queda na perspetiva do humano [0.02ms]
+(pass) traço de avaliação (F4) > sem queda relevante devolve null [0.01ms]
+
+src/ai-core/difficulty.test.ts:
+(pass) dificuldade — nível 6 (Mestre) apenas no Atari Go > perfil 6 existe com budget de 2000 ms [0.03ms]
+(pass) dificuldade — nível 6 (Mestre) apenas no Atari Go > máximo por jogo: 6 no atari-go e quelhas, 5 nos restantes [0.03ms]
+(pass) dificuldade — nível 6 (Mestre) apenas no Atari Go > clamp clássico continua limitado a 5 [0.03ms]
+(pass) dificuldade — nível 6 (Mestre) apenas no Atari Go > clamp por jogo permite 6 no atari-go e quelhas [0.03ms]
+(pass) dificuldade — nível 6 (Mestre) apenas no Atari Go > getDifficultyProfile respeita o jogo [0.02ms]
+
+src/ai-core/gamification.test.ts:
+(pass) gamification foundations > includes starter achievements and missions for progression planning [0.11ms]
+
+src/ai-core/tutor-context.test.ts:
+(pass) buildTutorContextItems > emits confidence, engine, and threat chips when available [0.13ms]
+(pass) buildTutorContextItems > prefers opening-book label over fallback chip [0.04ms]
+(pass) reporting only the searched move does not imply a forced line [0.03ms]
+
+src/ai-core/adaptive-difficulty.test.ts:
+(pass) recommendDifficulty > acumula apenas evidência pedagógica mínima da sessão [0.08ms]
+(pass) recommendDifficulty > mantém o nível dentro da zona-alvo de 40–60% [0.10ms]
+(pass) recommendDifficulty > sobe apenas um nível quando o desafio está fácil e não houve ajuda [0.02ms]
+(pass) recommendDifficulty > não sobe quando o sucesso dependeu de pistas [0.01ms]
+(pass) recommendDifficulty > desce apenas um nível quando o desafio está demasiado difícil [0.01ms]
+(pass) recommendDifficulty > um sinal de frustração recomenda apoio adicional [0.01ms]
+(pass) recommendDifficulty > não muda uma segunda vez na mesma sessão [0.01ms]
+(pass) recommendDifficulty > espera por evidência suficiente e respeita os limites N1–N5 [0.03ms]
+
+src/ai-core/learner-gamification.test.ts:
+(pass) pedagogical gamification > keeps reflection worth more than the victory bonus [0.55ms]
+(pass) pedagogical gamification > does not award a game-specific achievement without evidence of its pattern [0.10ms]
+(pass) pedagogical gamification > awards a puzzle once and records concrete learning activity [0.15ms]
+(pass) pedagogical gamification > does not award XP twice for the same puzzle [0.06ms]
+(pass) pedagogical gamification > uses one automatic streak shield per UTC week [0.15ms]
+(pass) pedagogical gamification > progresses a pattern monotonically and requires three distinct solo contexts for mastery [0.29ms]
+(pass) pedagogical gamification > unlocks a pattern achievement only after independent use [0.11ms]
+(pass) pedagogical gamification > unlocks the complete game-specific catalog from independent pattern evidence [0.60ms]
+(pass) pedagogical gamification > provides evidence-backed paths for every transversal learning achievement [0.34ms]
+(pass) pedagogical gamification > derives all eight individual missions from activity evidence [0.75ms]
+(pass) pedagogical gamification > claims a completed mission reward at most once per period [0.21ms]
+
+src/ai-core/training-paths.test.ts:
+(pass) percursos de treino para o campeonato > cada jogo tem quatro etapas com o desenho Descobrir→Campeonato [0.07ms]
+(pass) percursos de treino para o campeonato > os puzzleIds das etapas existem e pertencem ao jogo certo, cobrindo todos os puzzles [0.11ms]
+(pass) avaliação dos desafios por nível > sem objetivos ou sem dados devolve estado honesto [0.04ms]
+(pass) avaliação dos desafios por nível > vitórias em níveis superiores contam para objetivos inferiores [0.03ms]
+(pass) avaliação dos desafios por nível > sequências e meta de 50% avaliam pelos contadores certos [0.04ms]
+(pass) avaliação dos desafios por nível > objetivos múltiplos exigem todos cumpridos [0.02ms]
+
+src/ai-core/thinking-tutor.test.ts:
+(pass) requested tutor support > a new turn never inherits revealed answers [0.05ms]
+(pass) requested tutor support > Produto preserves hint exposure through both placements and cancellation [0.34ms]
+
+src/tournament/game-protocol.test.ts:
+(pass) Gatos & Cães Conversions > toNetworkGatosCaesMove converts local position to network format [0.03ms]
+(pass) Gatos & Cães Conversions > fromNetworkGatosCaesMove converts network position to local format [0.02ms]
+(pass) Gatos & Cães Conversions > Network state has correct cell values [0.03ms]
+(pass) Gatos & Cães Conversions > fromNetworkGatosCaesState converts network state to local format [0.10ms]
+(pass) Dominório Conversions > toNetworkDominorioMove converts domino to network format [0.03ms]
+(pass) Dominório Conversions > fromNetworkDominorioMove converts network to domino with correct orientation [0.03ms]
+(pass) Quelhas Conversions > toNetworkQuelhasMove converts segment to cells array [0.05ms]
+(pass) Quelhas Conversions > toNetworkQuelhasMove handles vertical segments [0.02ms]
+(pass) Quelhas Conversions > toNetworkQuelhasMove includes swap flag
+(pass) Quelhas Conversions > fromNetworkQuelhasMove reconstructs segment [0.04ms]
+(pass) Produto Conversions > toNetworkProdutoMove converts double placement [0.04ms]
+(pass) Produto Conversions > toNetworkProdutoMove handles single placement (first move)
+(pass) Produto Conversions > fromNetworkProdutoMove converts back correctly [0.04ms]
+(pass) Atari Go Conversions > toNetworkAtariGoMove converts position [0.03ms]
+(pass) Atari Go Conversions > toNetworkAtariGoMove handles pass [0.01ms]
+(pass) Atari Go Conversions > fromNetworkAtariGoMove converts back [0.02ms]
+(pass) Nex Conversions > toNetworkNexMove converts place action [0.05ms]
+(pass) Nex Conversions > toNetworkNexMove converts convert action [0.03ms]
+(pass) Nex Conversions > toNetworkNexMove converts swap action
+(pass) Nex Conversions > fromNetworkNexMove converts place back [0.04ms]
+(pass) Nex Conversions > fromNetworkNexMove converts swap back
+(pass) Generic fromNetworkGameState > routes to correct converter based on gameId [0.04ms]
+
+src/tournament/server-config.test.ts:
+(pass) tournament server config helpers > normalizes whitespace and trailing slash [0.02ms]
+(pass) tournament server config helpers > maps websocket urls to browser-safe admin urls [0.02ms]
+(pass) tournament server config helpers > builds admin endpoints from tournament server urls [0.02ms]
+(pass) tournament server config helpers > defaults to no external tournament server when unconfigured [0.02ms]
+
+src/tournament/protocol.test.ts:
+(pass) Protocol Types > Player type matches NEW spec with isOnline and isBot [0.03ms]
+(pass) Protocol Types > Player type supports bot players [0.01ms]
+(pass) Protocol Types > TournamentState uses tournamentId and championName [0.02ms]
+(pass) Protocol Types > MatchSummary has correct structure [0.02ms]
+(pass) Server Messages > WelcomeMessage includes playerName and tournamentId [0.02ms]
+(pass) Server Messages > TournamentStateUpdateMessage has flat structure [0.03ms]
+(pass) Server Messages > MatchAssignedMessage includes opponentName [0.02ms]
+(pass) Server Messages > SpectatorGameStateMessage carries gameId for board selection [0.02ms]
+(pass) Server Messages > ActiveGamesListMessage carries gameId per active match [0.01ms]
+(pass) Server Messages > GameStartMessage includes yourRole [0.02ms]
+(pass) Server Messages > GameStateUpdateMessage includes lastMoveBy [0.01ms]
+(pass) Server Messages > GameEndMessage includes winnerRole, isDraw, and matchScore [0.02ms]
+(pass) Server Messages > GameEndMessage handles draw [0.01ms]
+(pass) Server Messages > MatchEndMessage includes winnerName and eliminatedFromTournament [0.01ms]
+(pass) Server Messages > MatchEndMessage supports nextMatchId [0.01ms]
+(pass) Server Messages > TournamentEndMessage includes tournamentId and finalStandings format [0.02ms]
+(pass) tournamentStateFromUpdate > converts TournamentStateUpdateMessage to TournamentState [0.03ms]
+
+src/components/gamification/gamification-state.test.ts:
+(pass) gamification state > awards xp and unlocks starter achievements on first game/review [0.49ms]
+(pass) gamification state > derives mission progress from recent events [0.22ms]
+
+src/components/gamification/backend-client.test.ts:
+(pass) backend gamification client > bootstraps from API and attempts import when local profile exists [0.55ms]
+(pass) backend gamification client > skips import when dashboard already has an import fingerprint [0.14ms]
+(pass) backend gamification client > does not mark legacy profile as consumed when import fails but dashboard still loads [0.12ms]
+(pass) backend gamification client > consumes legacy profile after conflict when a refreshed dashboard shows import fingerprint [0.13ms]
+(pass) backend gamification client > maps command payloads into popups and client profile [0.35ms]
+(pass) backend gamification client > posts pedagogical evidence to the dedicated endpoints [0.26ms]
+
+src/components/gamification/command-gate.test.ts:
+(pass) command gate > waits for bootstrap before running commands [0.54ms]
+(pass) command gate > serializes commands even when one finishes later [0.12ms]
+(pass) command gate > continues after a rejected command [0.09ms]
+
+src/server/learner-core/service.test.ts:
+(pass) learner core service > bootstraps learner profile with required ADR-003 fields [9.46ms]
+(pass) learner core service > returns the stored supported locale and safely defaults older unknown values [16.10ms]
+(pass) learner core service > persiste o progresso por nível de dificuldade com streaks [24.23ms]
+(pass) learner core service > records game and review events with derivation parity [17.07ms]
+(pass) learner core service > persists puzzles, pattern evidence, and idempotent mission claims [21.33ms]
+(pass) learner core service > rolls back learner events when snapshot sync fails [15.23ms]
+(pass) learner core service > conserva o perfil persistido dos seis jogos e continua o Arquivo após reabrir a sessão [41.01ms]
+(pass) learner core service > guarda uma partida local de Faísca sem alterar os seis jogos e recupera-a noutra sessão [25.39ms]
+(pass) learner core service > Faísca conserva resultados por dificuldade e por aluno após reabrir a sessão [19.64ms]
+(pass) learner core service > Y guarda a vitória do participante após troca=%s e recupera o perfil sem alterar outros jogos [27.30ms]
+(pass) learner core service > Y guarda a vitória do participante após troca=%s e recupera o perfil sem alterar outros jogos [27.89ms]
+(pass) learner core service > imports a legacy profile idempotently while keeping the V1 core strict [16.66ms]
+
+src/server/learner-core/strategy-service.test.ts:
+(pass) strategy practice: evidence survives real learner operations > does not send hints, answers or explanations before an attempt [1.91ms]
+(pass) strategy practice: evidence survives real learner operations > a saved hint survives a reload and cannot count as solo evidence [2.70ms]
+(pass) strategy practice: evidence survives real learner operations > first wrong answer remains practice after resubmission, no duplicated attempt [1.01ms]
+(pass) strategy practice: evidence survives real learner operations > a copied decision with an incorrect consequence does not advance [1.57ms]
+(pass) strategy practice: evidence survives real learner operations > does not accept another learner’s attempts or forged answer fields [1.16ms]
+(pass) strategy practice: evidence survives real learner operations > all six games can progress, and retention requires a later day [203.23ms]
+(pass) strategy practice: evidence survives real learner operations > an assisted catalogue can be learned later, without an immediate retry shortcut [38.33ms]
+(pass) strategy practice: evidence survives real learner operations > cosmetic variants and repeated copies cannot fill the three-family goal [0.18ms]
+
+src/server/learner-core/api.test.ts:
+(pass) learner core HTTP routes > faisca conserva ajuda e regista cada revisão uma vez, mesmo após nova sessão [4.97ms]
+(pass) learner core HTTP routes > y conserva ajuda e regista cada revisão uma vez, mesmo após nova sessão [3.64ms]
+(pass) learner core HTTP routes > bootstraps a session cookie and returns dashboard data [1.57ms]
+(pass) learner core HTTP routes > rejects tampered session cookies and issues a fresh signed session [1.46ms]
+(pass) learner core HTTP routes > bootstraps an HTTP classroom session in production without forcing Secure [1.45ms]
+(pass) learner core HTTP routes > marks the session cookie Secure when HTTPS deployment opts in [1.11ms]
+(pass) learner core HTTP routes > accepts pedagogical gamification commands through the learner API [3.89ms]
+
+src/games/quelhas/logic.test.ts:
+(pass) Quelhas - Tabuleiro Inicial > deve criar tabuleiro 10x10 [0.05ms]
+(pass) Quelhas - Tabuleiro Inicial > tabuleiro inicial deve estar todo vazio [0.04ms]
+(pass) Quelhas - Estado Inicial > jogador 1 deve começar [0.17ms]
+(pass) Quelhas - Estado Inicial > estado deve ser 'a-jogar' [0.05ms]
+(pass) Quelhas - Estado Inicial > deve ter jogadas válidas no início [0.03ms]
+(pass) Quelhas - Estado Inicial > orientações iniciais devem ser vertical/horizontal [0.03ms]
+(pass) Quelhas - Estado Inicial > troca não deve estar disponível no início [0.02ms]
+(pass) Quelhas - Jogadas Válidas > jogador 1 deve ter apenas segmentos verticais (orientação inicial) [0.08ms]
+(pass) Quelhas - Jogadas Válidas > segmentos devem ter comprimento mínimo de 2 [0.06ms]
+(pass) Quelhas - Jogadas Válidas > após jogada, jogador 2 deve ter segmentos horizontais [0.18ms]
+(pass) Quelhas - Jogadas Válidas > calcularJogadasValidas deve gerar apenas segmentos na orientação indicada [0.17ms]
+(pass) Quelhas - Regra de Troca > troca deve ficar disponível após primeira jogada do jogador1 [0.06ms]
+(pass) Quelhas - Regra de Troca > troca deve ficar indisponível após primeira jogada do jogador2 (se não usada) [0.06ms]
+(pass) Quelhas - Regra de Troca > trocarOrientacoes deve trocar as orientações dos jogadores e passar o turno [0.10ms]
+(pass) Quelhas - Regra de Troca > trocarOrientacoes deve recalcular jogadas válidas para o próximo jogador [0.16ms]
+(pass) Quelhas - Regra de Troca > sequência de turnos com troca: J1 vertical -> J2 troca -> J1 horizontal -> J2 vertical [0.20ms]
+(pass) Quelhas - Regra de Troca > recusarTroca deve desativar a troca sem trocar orientações [0.06ms]
+(pass) Quelhas - Regra de Troca > decidirTrocaComputador deve retornar booleano [45.34ms]
+(pass) Quelhas - Seleção de Segmentos > criarSegmentoEntrePosicoes deve criar segmento vertical válido [0.09ms]
+(pass) Quelhas - Seleção de Segmentos > criarSegmentoEntrePosicoes deve normalizar início para menor valor [0.03ms]
+(pass) Quelhas - Seleção de Segmentos > criarSegmentoEntrePosicoes deve retornar null para posições desalinhadas [0.02ms]
+(pass) Quelhas - Seleção de Segmentos > criarSegmentoEntrePosicoes deve retornar null para comprimento < 2 [0.02ms]
+(pass) Quelhas - Seleção de Segmentos > isPosicaoInicioValida deve retornar true para posição em segmento válido [0.06ms]
+(pass) Quelhas - Condição de Vitória Misère > se um jogador não tem jogadas, esse jogador GANHA (misère) [0.02ms]
+(pass) Quelhas - Colocação de Segmentos > colocar segmento deve ocupar células [0.06ms]
+(pass) Quelhas - Colocação de Segmentos > após jogada, turno muda para o próximo jogador [0.03ms]
+(pass) Quelhas - Colocação de Segmentos > primeiraJogada deve ficar false após primeira jogada [0.02ms]
+(pass) Quelhas - Intervalos de Jogadas (Heurística Min/Max) > calcularIntervalosJogadas deve retornar estrutura válida [0.05ms]
+(pass) Quelhas - Intervalos de Jogadas (Heurística Min/Max) > intervalos devem ter min <= max [0.02ms]
+(pass) Quelhas - Intervalos de Jogadas (Heurística Min/Max) > tabuleiro vazio permite 10 a 50 turnos por orientação [0.03ms]
+(pass) Quelhas - Intervalos de Jogadas (Heurística Min/Max) > tabuleiro parcialmente preenchido deve ter menos jogadas [0.03ms]
+(pass) Quelhas - Avaliação Misère > avaliarPosicaoMisere deve penalizar fortemente se adversário sem jogadas [0.29ms]
+(pass) Quelhas - Avaliação Misère > avaliarPosicaoMisere deve dar pontuação alta quando IA sem jogadas mas adversário com jogadas [0.02ms]
+(pass) Quelhas - Avaliação Misère > avaliarPosicaoMisere cenários normais devem ter pontuação válida [0.06ms]
+(pass) Quelhas - Avaliação Misère > avaliarPosicaoMisere deve usar métricas estruturais [0.06ms]
+(pass) Quelhas - IA Misère Comportamento > IA deve evitar jogadas que deixem adversário sem jogadas [0.10ms]
+(pass) Quelhas - IA Misère Comportamento > jogadaComputador deve retornar estado válido [2503.06ms]
+(pass) Quelhas - IA Misère Comportamento > IA deve fazer jogada mesmo com poucas opções [0.10ms]
+(pass) Quelhas - IA Misère Comportamento > IA não deve crashar com estado de fim de jogo [0.36ms]
+(pass) Quelhas - Extração de Blocos > extrairBlocos deve encontrar blocos verticais em tabuleiro vazio [0.05ms]
+(pass) Quelhas - Extração de Blocos > extrairBlocos deve encontrar blocos horizontais em tabuleiro vazio [0.02ms]
+(pass) Quelhas - Extração de Blocos > extrairBlocos deve ignorar blocos de comprimento < 2 [0.04ms]
+(pass) Quelhas - Extração de Blocos > extrairBlocos deve encontrar múltiplos blocos na mesma coluna [0.02ms]
+(pass) Quelhas - Classificação Exclusivo/Partilhado > blocos sem sobreposição devem ser exclusivos [0.04ms]
+(pass) Quelhas - Classificação Exclusivo/Partilhado > blocos com sobreposição devem ser partilhados [0.03ms]
+(pass) Quelhas - Cálculo de Métricas > calcularMetricasDeBlocos deve calcular min/max corretamente [0.03ms]
+(pass) Quelhas - Cálculo de Métricas > calcularMetricasCompletas deve retornar métricas para ambos os jogadores [0.03ms]
+(pass) Quelhas - Parse de Tabuleiro ASCII > parseTabuleiroASCII deve converter corretamente [0.30ms]
+(pass) Quelhas - Parse de Tabuleiro ASCII > parseTabuleiroASCII deve marcar ocupadas corretamente [0.03ms]
+(pass) Quelhas - Exemplo do Utilizador (Vertical Ganha) > deve parsear o tabuleiro do exemplo corretamente [0.03ms]
+(pass) Quelhas - Exemplo do Utilizador (Vertical Ganha) > vertical deve ter vantagem em exclusivas no exemplo [0.04ms]
+(pass) Quelhas - Exemplo do Utilizador (Vertical Ganha) > horizontal deve ter min=max no exemplo (blocos fixos) [0.03ms]
+(pass) Quelhas - Exemplo do Utilizador (Vertical Ganha) > avaliação deve favorecer vertical no exemplo [0.07ms]
+(pass) Quelhas - Geração de Candidatos > gerarCandidatos deve incluir segmentos de tamanho 2 nas extremidades [0.51ms]
+(pass) Quelhas - Geração de Candidatos > gerarCandidatos deve incluir segmento máximo [0.27ms]
+(pass) Quelhas - Geração de Candidatos > gerarCandidatos deve reduzir número de jogadas vs calcularJogadasValidas [0.08ms]
+(pass) Quelhas - IA Forte (Alpha-Beta) > IA nunca deve deixar adversário sem jogadas quando há alternativas [2499.98ms]
+(pass) Quelhas - IA Forte (Alpha-Beta) > jogadaComputador deve completar em tempo razoável [2500.10ms]
+
+src/games/produto/logic.test.ts:
+(pass) Produto - Tabuleiro Hexagonal > deve gerar 61 posições válidas para hexágono de lado 5 [0.06ms]
+(pass) Produto - Tabuleiro Hexagonal > posições devem ser únicas e mapeáveis para índices [0..60] [0.15ms]
+(pass) Produto - Tabuleiro Hexagonal > tabuleiro inicial deve ter 61 casas vazias [0.11ms]
+(pass) Produto - Tabuleiro Hexagonal > centro do tabuleiro deve existir (0,0) [0.04ms]
+(pass) Produto - Estado Inicial > jogador 1 (Pretas) deve começar [0.07ms]
+(pass) Produto - Estado Inicial > estado deve ser 'a-jogar' [0.03ms]
+(pass) Produto - Estado Inicial > primeira jogada deve estar ativa [0.03ms]
+(pass) Produto - Estado Inicial > pontuações iniciais devem ser zero [0.04ms]
+(pass) Produto - Grupos e Pontuação > encontrar grupo isolado [0.03ms]
+(pass) Produto - Grupos e Pontuação > encontrar grupos conectados [0.03ms]
+(pass) Produto - Grupos e Pontuação > encontrar múltiplos grupos separados [0.02ms]
+(pass) Produto - Grupos e Pontuação > calcular pontuação com 2 grupos [0.07ms]
+(pass) Produto - Grupos e Pontuação > pontuação é 0 com apenas 1 grupo [0.03ms]
+(pass) Produto - Grupos e Pontuação > pontuação é 0 sem peças [0.03ms]
+(pass) Produto - Exceção de Abertura > primeira jogada coloca apenas 1 peça [0.08ms]
+(pass) Produto - Jogada Dupla > jogador deve colocar 2 peças após a abertura [0.15ms]
+(pass) Produto - Jogada Dupla > pode colocar peças de qualquer cor [0.15ms]
+(pass) Produto - Cancelar Jogada > cancelar jogada em curso deve remover primeira peça [0.15ms]
+(pass) Produto - Sabotagem (Unificação) > unir grupos do adversário reduz pontuação a 0 [0.06ms]
+(pass) Produto - IA > IA deve fazer jogada válida na abertura [0.22ms]
+(pass) Produto - IA > IA deve fazer jogada dupla após abertura [60.97ms]
+(pass) Produto - Fim de Jogo > jogo termina quando tabuleiro está cheio [2.24ms]
+
+src/games/atari-go/logic.test.ts:
+(pass) Atari Go - Tabuleiro Inicial > deve criar tabuleiro 9x9 [0.03ms]
+(pass) Atari Go - Tabuleiro Inicial > tabuleiro inicial deve estar todo vazio [0.04ms]
+(pass) Atari Go - Estado Inicial > jogador 1 (Pretas) deve começar [0.12ms]
+(pass) Atari Go - Estado Inicial > estado deve ser 'a-jogar' [0.10ms]
+(pass) Atari Go - Estado Inicial > deve ter 81 jogadas válidas no início (9×9) [0.10ms]
+(pass) Atari Go - Estado Inicial > nenhuma pedra capturada no início [0.10ms]
+(pass) Atari Go - Grupos e Liberdades > encontrar grupo de uma pedra isolada [0.03ms]
+(pass) Atari Go - Grupos e Liberdades > encontrar grupo de pedra no canto [0.01ms]
+(pass) Atari Go - Grupos e Liberdades > encontrar grupo conectado [0.02ms]
+(pass) Atari Go - Grupos e Liberdades > encontrar todos grupos de uma cor [0.10ms]
+(pass) Atari Go - Grupos e Liberdades > grupo rodeado tem 0 liberdades [0.02ms]
+(pass) Atari Go - Atari (1 liberdade) > encontrar grupos em atari [0.04ms]
+(pass) Atari Go - Colocação de Pedras > colocar pedra deve ocupar célula [0.25ms]
+(pass) Atari Go - Colocação de Pedras > após jogada, turno muda para jogador 2 (Brancas) [0.21ms]
+(pass) Atari Go - Colocação de Pedras > célula ocupada não é jogada válida [0.22ms]
+(pass) Atari Go - Captura > captura simples de pedra isolada [0.44ms]
+(pass) Atari Go - Captura > vitória na primeira captura [0.20ms]
+(pass) Atari Go - Regra de Suicídio > suicídio é proibido [0.13ms]
+(pass) Atari Go - Regra de Suicídio > suicídio permitido se captura [0.11ms]
+(pass) Atari Go - IA > IA deve fazer jogada válida [1.28ms]
+(pass) Atari Go - IA > IA deve capturar se possível (vitória imediata) [0.64ms]
+(pass) Atari Go - IA > IA deve defender grupo em atari [1.17ms]
+
+src/games/faisca/logic.test.ts:
+(pass) partida local de Faísca > Azul abre numa casa livre, consome uma peça e indica a casa de Vermelho [0.28ms]
+(pass) partida local de Faísca > recusa abertura fora do tabuleiro, casa errada e destino ocupado sem alterar turno ou reservas [0.08ms]
+(pass) partida local de Faísca > reproduz o exemplo do regulamento, com saltos, alvo b3 e reservas finais [0.28ms]
+(pass) partida local de Faísca > perde quem não tem peças e não se pode jogar após o resultado [0.04ms]
+(pass) partida local de Faísca > perde quem não pode apontar para uma casa livre mesmo tendo peças [0.07ms]
+
+src/games/y/logic.test.ts:
+(pass) coloca numa intersecção livre, recusa ocupadas e conserva a peça inicial depois da troca [0.18ms]
+(pass) recusa a troca depois de o segundo participante colocar a sua peça [0.04ms]
+(pass) um grupo liga o canto ao lado oposto; a vitória segue o participante após troca [0.98ms]
+(pass) três grupos separados nos lados não vencem, nem dois cantos desligados [0.07ms]
+(pass) a ligação desenhada D3–E3 une o grupo, mas a proximidade E3–E2 não é uma ligação [0.62ms]
+(pass) o tabuleiro do anexo conserva lados, cantos e as cinco ligações de E3 [0.31ms]
+(pass) o grupo vermelho vence ligando o canto inferior ao lado superior [0.53ms]
+
+src/games/nex/logic.test.ts:
+(pass) Nex - Vizinhos Hexagonais > célula central (5,5) tem 6 vizinhos corretos [0.05ms]
+(pass) Nex - Vizinhos Hexagonais > (5,5) NÃO tem (6,6) como vizinho - (+1,+1) não é válido [0.01ms]
+(pass) Nex - Vizinhos Hexagonais > (5,5) NÃO tem (4,4) como vizinho - (-1,-1) não é válido [0.01ms]
+(pass) Nex - Vizinhos Hexagonais > célula de canto (0,0) tem apenas 2 vizinhos válidos [0.01ms]
+(pass) Nex - Vizinhos Hexagonais > célula de borda (0,5) tem 4 vizinhos válidos [0.01ms]
+(pass) Nex - Tabuleiro Inicial > deve criar tabuleiro 11x11 [0.01ms]
+(pass) Nex - Tabuleiro Inicial > tabuleiro inicial deve estar todo vazio [0.03ms]
+(pass) Nex - Estado Inicial > jogador 1 (Pretas) deve começar [0.01ms]
+(pass) Nex - Estado Inicial > estado deve ser 'a-jogar'
+(pass) Nex - Estado Inicial > swap não disponível no início
+(pass) Nex - Estado Inicial > primeira jogada deve estar ativa
+(pass) Nex - Verificação de Vitória > vitória das pretas (conexão y=0 a y=10 - Noroeste a Sudeste) [0.06ms]
+(pass) Nex - Verificação de Vitória > vitória das brancas (conexão x=0 a x=10 - Sudoeste a Nordeste) [0.04ms]
+(pass) Nex - Verificação de Vitória > sem vitória se caminho incompleto [0.01ms]
+(pass) Nex - Verificação de Vitória > vitória das pretas com caminho diagonal (usando vizinho (+1,-1)) [0.02ms]
+(pass) Nex - Verificação de Vitória > vitória das pretas com caminho usando vizinho (-1,+1) [0.02ms]
+(pass) Nex - Verificação de Vitória > vitória das brancas com caminho diagonal (usando vizinho (+1,-1)) [0.02ms]
+(pass) Nex - Verificação de Vitória > SEM vitória se caminho usa (+1,+1) que NÃO é vizinho válido [0.01ms]
+(pass) Nex - Verificação de Vitória > SEM vitória se caminho usa (-1,-1) que NÃO é vizinho válido [0.04ms]
+(pass) Nex - Ação de Colocação > colocação deve adicionar peça própria e neutra [0.04ms]
+(pass) Nex - Ação de Colocação > após primeira jogada, swap deve ficar disponível [0.02ms]
+(pass) Nex - Ação de Substituição > substituição deve trocar neutras por próprias e própria por neutra [0.04ms]
+(pass) Nex - Ação de Substituição > podeSubstituir retorna false sem neutras suficientes [0.05ms]
+(pass) Nex - Ação de Substituição > podeSubstituir retorna true com condições corretas [0.02ms]
+(pass) Nex - Regra de Swap > swap deve trocar cores dos jogadores [0.03ms]
+(pass) Nex - Regra de Swap > após swap, as cores dos jogadores ficam invertidas [0.03ms]
+(pass) Nex - Regra de Swap > recusar swap deve desativar opção [0.03ms]
+(pass) Nex - Construção de Ação > selecionar tipo de ação [0.03ms]
+(pass) Nex - Construção de Ação > adicionar posições para colocação [0.06ms]
+(pass) Nex - Construção de Ação > executar ação completa [0.02ms]
+(pass) Nex - Construção de Ação > cancelar ação deve limpar estado [0.02ms]
+(pass) Nex - IA > IA deve fazer jogada válida [424.69ms]
+(pass) Nex - IA > IA deve vencer se possível [0.92ms]
+(pass) Nex - Verificações Gerais > podeColocar retorna true com tabuleiro vazio [0.05ms]
+(pass) Nex - Verificações Gerais > podeColocar retorna false com menos de 2 casas vazias [0.03ms]
+(pass) Nex - Convenções raras de fim > com uma casa vazia e sem neutras, o jogador atual coloca apenas a sua peça [0.19ms]
+(pass) Nex - Convenções raras de fim > com uma neutra e sem casas vazias, o jogador atual converte essa peça [0.12ms]
+(pass) Nex - Convenções raras de fim > com uma vazia e uma neutra, o jogador atual ocupa a vazia e o adversário converte a neutra [0.10ms]
+(pass) Nex - Convenções raras de fim > não intervém enquanto uma ação normal continua disponível [0.01ms]
+
+src/games/gatos-caes/logic.test.ts:
+(pass) Gatos & Cães - Tabuleiro Inicial > deve criar tabuleiro 8x8 [0.04ms]
+(pass) Gatos & Cães - Tabuleiro Inicial > tabuleiro inicial deve estar todo vazio [0.03ms]
+(pass) Gatos & Cães - Estado Inicial > jogador 1 (Gatos) deve começar [0.12ms]
+(pass) Gatos & Cães - Estado Inicial > estado deve ser 'a-jogar' [0.01ms]
+(pass) Gatos & Cães - Estado Inicial > primeiro gato não foi colocado [0.01ms]
+(pass) Gatos & Cães - Estado Inicial > primeiro cão não foi colocado
+(pass) Gatos & Cães - Primeiro Gato > primeiro gato só pode ser colocado nas 4 casas centrais [0.04ms]
+(pass) Gatos & Cães - Primeiro Gato > após colocar primeiro gato, turno passa para cães [0.27ms]
+(pass) Gatos & Cães - Primeiro Cão > primeiro cão deve ser colocado fora das casas centrais [0.13ms]
+(pass) Gatos & Cães - Primeiro Cão > primeiro cão não pode ser adjacente ao gato [0.11ms]
+(pass) Gatos & Cães - Regra de Adjacência > gato não pode ser colocado adjacente a cão [0.13ms]
+(pass) Gatos & Cães - Condição de Vitória Normal Play > estado inicial permite continuar a jogar [0.02ms]
+
+src/games/dominorio/logic.test.ts:
+(pass) Dominório - Tabuleiro Inicial > deve criar tabuleiro 8x8 [0.04ms]
+(pass) Dominório - Tabuleiro Inicial > tabuleiro inicial deve estar vazio [0.04ms]
+(pass) Dominório - Estado Inicial > jogador 1 (Vertical) deve começar [0.11ms]
+(pass) Dominório - Estado Inicial > estado deve ser 'a-jogar' [0.03ms]
+(pass) Dominório - Estado Inicial > deve ter jogadas válidas no início [0.02ms]
+(pass) Dominório - Jogadas Válidas > jogador 1 deve ter jogadas verticais [0.05ms]
+(pass) Dominório - Jogadas Válidas > tabuleiro 8x8 vazio deve ter 56 jogadas verticais [0.02ms]
+(pass) Dominório - Colocação de Dominós > colocar dominó deve ocupar 2 casas [0.11ms]
+(pass) Dominório - Colocação de Dominós > após jogada, turno muda para jogador 2 [0.02ms]
+(pass) Dominório - Colocação de Dominós > jogador 2 deve ter jogadas horizontais [0.04ms]
+(pass) Dominório - Condição de Vitória Normal Play > estado inicial permite continuar a jogar [0.01ms]
+(pass) Dominório - Condição de Vitória Normal Play > jogador ganha quando adversário fica sem jogadas (conceptual) [0.01ms]
+
+src/games/quelhas/ai/ai-client.test.ts:
+(pass) Quelhas request lifecycle > cancelling actually interrupts the worker before the next turn [0.53ms]
+(pass) Quelhas request lifecycle > N6 sends the orientation after swap and aborts a cancelled server request [0.69ms]
+(pass) Quelhas request lifecycle > N6 resolves an independent long-strip final before asking the network [0.52ms]
+
+src/games/quelhas/ai/pedagogy-mvp.test.ts:
+(pass) Quelhas pedagogy MVP > prefers the suggested hint level when present [0.08ms]
+(pass) Quelhas pedagogy MVP > falls back to current level when no hint is suggested [0.01ms]
+(pass) Quelhas pedagogy MVP > builds a compact quick review from weakest + latest moments [0.10ms]
+
+src/games/quelhas/ai/engine.tempo.test.ts:
+(pass) Quelhas: count future turns, then control the last move > counts turns rather than overlapping legal placements [0.07ms]
+(pass) Quelhas: count future turns, then control the last move > even a one-ply search takes the immediate forced win with a long segment [1.12ms]
+(pass) TS search and tempo proofs preserve every winning 3x3 endgame [113.08ms]
+(pass) the exact solver counts turns even when a long strip offers 45 overlapping placements [0.37ms]
+
+src/games/quelhas/ai/v1-adapter.test.ts:
+(pass) QuelhasV1Adapter > maps state into AIResponseV1-style payload with mandatory fields [0.57ms]
+(pass) QuelhasV1Adapter > reports no-move states as a misère win and returns no top moves [0.16ms]
+(pass) QuelhasV1Adapter > explains a long winning move with both turn intervals [0.13ms]
+(pass) QuelhasV1Adapter > maps each core level to a distinct search preset [0.03ms]
+(pass) QuelhasV1Adapter > forwards the common N1-N5 classroom budget [0.14ms]
+(pass) QuelhasV1Adapter > emits high-severity threat when only one legal move remains [0.13ms]
+
+src/games/quelhas/ai/engine.misere.test.ts:
+(pass) Quelhas AI (misère) > N3–N5 conservam o resultado da pesquisa, com orçamentos crescentes [0.03ms]
+(pass) Quelhas AI (misère) > N1 não preserva a melhor variante numa posição com alternativas [15.24ms]
+(pass) Quelhas AI (misère) > mantém uma jogada legal mesmo quando o orçamento acaba antes da profundidade um [4.32ms]
+(pass) Quelhas AI (misère) > rollout: se o adversário não tem jogadas, raiz perde [0.08ms]
+(pass) solver exato de finais > numa posição misère contada, escolhe a jogada que empurra o adversário para a última [0.07ms]
+(pass) solver exato de finais > devolve null em posições grandes (fora do orçamento de final) [0.04ms]
+
+src/games/produto/ai/pedagogy-mvp.test.ts:
+(pass) Produto pedagogy MVP > prefers suggested hint level when available [0.12ms]
+(pass) Produto pedagogy MVP > falls back to current level when suggestion is absent [0.03ms]
+(pass) Produto pedagogy MVP > builds a compact quick review from weakest + latest moments [0.09ms]
+
+src/games/produto/ai/v1-adapter.test.ts:
+(pass) ProdutoV1Adapter > maps packed worker output into AIResponseV1 with top moves [0.91ms]
+(pass) ProdutoV1Adapter > maps difficulty levels onto existing produto presets [0.01ms]
+(pass) ProdutoV1Adapter > forwards the common N1-N5 classroom budget [0.22ms]
+
+src/games/produto/ai/fallback-engine.test.ts:
+(pass) Produto fallback engine > lookahead assumes the opponent chooses the worst reply for us [0.46ms]
+(pass) Produto fallback engine > terminal scoring applies the official fewer-pieces tiebreak [0.05ms]
+(pass) Produto fallback engine > lookahead inspects the strongest opponent replies first [0.04ms]
+(pass) Produto fallback engine > prefers central opening control on first move [17.06ms]
+(pass) Produto fallback engine > respects a short classroom budget [30.53ms]
+(pass) Produto fallback engine > can sabotage the opponent by merging white groups into one product-zero chain [58.19ms]
+
+src/games/atari-go/ai/ai-client.test.ts:
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > nível 6 usa a jogada do servidor e regista engine server-nn [1.15ms]
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > nível 6 com fetch a falhar cai silenciosamente no caminho local (N5) [101.55ms]
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > nível 6 com health-check 503 cai no caminho local [99.97ms]
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > nível 6 com jogada ilegal do servidor cai no caminho local [104.89ms]
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > cancelamento durante o fetch N6 aborta o pedido e não inicia fallback tardio [0.41ms]
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > timeout total reserva o orçamento completo para o fallback N5 [0.02ms]
+(pass) AtariGoAIClient — nível 6 (servidor) e fallback > níveis 1..5 nunca contactam o servidor [102.19ms]
+
+src/games/atari-go/ai/v1-adapter.test.ts:
+(pass) AtariGoV1Adapter > maps state into AIResponseV1 mandatory fields [33.26ms]
+(pass) AtariGoV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [0.17ms]
+(pass) AtariGoV1Adapter > emits critical threat and turning point when opponent has immediate capture [32.35ms]
+(pass) AtariGoV1Adapter > maps core levels to legacy difficulty buckets [0.04ms]
+(pass) AtariGoV1Adapter > forwards separated difficulty buckets for N2 and N3 [68.69ms]
+(pass) AtariGoV1Adapter > forwards optional seed and time budget to the AI client [33.47ms]
+(pass) AtariGoV1Adapter > uses the common level budget when no override is supplied [33.30ms]
+
+src/games/atari-go/ai/fallback-engine.test.ts:
+(pass) Atari Go fallback engine > devolve uma jogada legal quando o worker não está disponível [2.07ms]
+(pass) Atari Go fallback engine > N1 e N5 têm políticas de pesquisa realmente distintas [0.04ms]
+(pass) Atari Go fallback engine > respeita um orçamento curto sem perder legalidade [19.76ms]
+
+src/games/faisca/ai/engine.test.ts:
+(pass) N2 escolhe a vitória imediata e N1 repete a escolha com a mesma seed [0.57ms]
+(pass) pedidos de IA completam partidas legais nos dois lados sem alterar o estado recebido [95.43ms]
+
+src/games/y/ai/engine.test.ts:
+(pass) o pedido local devolve uma ação legal reproduzível sem alterar a posição [0.48ms]
+(pass) a IA conclui a ligação vencedora para o participante que recebeu azul na troca [6.01ms]
+(pass) o computador pode trocar ou colocar e completa partidas legais em ambos os lados [127.38ms]
+
+src/games/nex/ai/pedagogy-mvp.test.ts:
+(pass) Nex pedagogy MVP > prefers suggested hint level when available [0.08ms]
+(pass) Nex pedagogy MVP > falls back to current level when suggestion is absent [0.01ms]
+(pass) Nex pedagogy MVP > builds a compact quick review from weakest + latest moments [0.06ms]
+
+src/games/nex/ai/v1-adapter.test.ts:
+(pass) NexV1Adapter > maps AI actions into AIResponseV1 fields [4.49ms]
+(pass) NexV1Adapter > marks swap turns as critical tutor decisions [0.70ms]
+(pass) NexV1Adapter > reserva o preset champion para N5 [0.02ms]
+(pass) NexV1Adapter > forwards the common N1-N5 classroom budget [3.50ms]
+
+src/games/nex/ai/fallback-engine.test.ts:
+(pass) Nex fallback engine > returns a valid placement action on the opening [7.29ms]
+(pass) Nex fallback engine > finds an immediate winning placement for black [1.25ms]
+(pass) Nex fallback engine > keeps a legal substitution fallback at N1 when placement is unavailable [0.17ms]
+
+src/games/gatos-caes/ai/ai-client.test.ts:
+(pass) GatosCaesAIClient > runs search in a worker and forwards the requested time limit [0.38ms]
+(pass) GatosCaesAIClient > uses the same time limit in the inline fallback [0.09ms]
+(pass) GatosCaesAIClient > cancels pending work without leaving a promise unresolved [0.14ms]
+
+src/games/gatos-caes/ai/pedagogy-mvp.test.ts:
+(pass) Gatos & Cães pedagogy MVP > prefers suggested hint level when available [0.49ms]
+(pass) Gatos & Cães pedagogy MVP > falls back to current level when suggestion is absent [0.02ms]
+(pass) Gatos & Cães pedagogy MVP > builds a compact quick review from weakest + latest moments [0.05ms]
+
+src/games/gatos-caes/ai/v1-adapter.test.ts:
+(pass) GatosCaesV1Adapter > uses the common N1-N5 budgets and preserves an explicit request budget [0.05ms]
+(pass) GatosCaesV1Adapter > maps an initial state into AIResponseV1 mandatory fields [504.42ms]
+(pass) GatosCaesV1Adapter > returns no move when no legal houses exist [0.14ms]
+
+src/games/gatos-caes/ai/engine.test.ts:
+(pass) Gatos & Cães AI Engine > computeBestMove > returns a valid move for initial state [3002.00ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > returns a move from central squares for first cat [3001.65ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > works at difficulty level 1 [62.79ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > works at difficulty level 2 [1501.05ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > keeps a legal fallback when the deadline expires before depth one [1.92ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > higher difficulty searches deeper [1564.97ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > returns null when no valid moves exist [0.21ms]
+(pass) Gatos & Cães AI Engine > computeBestMove > finds winning moves quickly [3001.55ms]
+(pass) Gatos & Cães AI Engine > toCompactBoard > converts empty board correctly [0.23ms]
+(pass) Gatos & Cães AI Engine > toCompactBoard > tracks piece placement [0.18ms]
+(pass) Gatos & Cães AI Engine > search statistics > reports meaningful statistics [3001.50ms]
+(pass) Gatos & Cães AI Engine > search statistics > transposition table provides cache hits [1501.33ms]
+(pass) Gatos & Cães AI Engine > AI quality > avoids losing when possible [455.84ms]
+(pass) Gatos & Cães AI Engine > AI quality > normal difficulty plays better than easy [1562.75ms]
+
+src/games/dominorio/ai/pedagogy-mvp.test.ts:
+(pass) dominorio pedagogy MVP > escalates hint level when struggle streak and low confidence are present [0.11ms]
+(pass) dominorio pedagogy MVP > de-escalates hint level when learner is stable and confident [0.04ms]
+(pass) dominorio pedagogy MVP > builds a lightweight review with at most two moments [0.13ms]
+
+src/games/dominorio/ai/difficulty-policy.test.ts:
+(pass) Dominório beginner policy > prefere uma jogada periférica e previsível no N1 [0.08ms]
+
+src/games/dominorio/ai/v1-adapter.test.ts:
+(pass) DominorioV1Adapter > maps initial state into AIResponseV1 with mandatory fields [2.86ms]
+[DominorioAI] Falling back to inline engine: worker-error
+[DominorioAI] Falling back to inline engine: worker-error
+(pass) DominorioV1Adapter > returns null bestMove and empty topMoves when no legal moves exist [2.13ms]
+[DominorioAI] Falling back to inline engine: worker-error
+(pass) DominorioV1Adapter > emits a minimal critical threat on low-mobility positions [1.91ms]
+[DominorioAI] Falling back to inline engine: worker-error
+(pass) DominorioV1Adapter > classifies endgame instability as E-DO-03 [2.29ms]
+(pass) DominorioV1Adapter > flags opening-book decisions as trust signals without vague wording [0.63ms]
+(pass) DominorioV1Adapter > maps core levels to legacy difficulty buckets [0.11ms]
+(pass) DominorioV1Adapter > mantém erro controlado em N4 e pesquisa máxima em N5 [0.02ms]
+(pass) DominorioV1Adapter > uses the common N1-N5 classroom budgets [0.03ms]
+(pass) DominorioV1Adapter > keeps explicit request time budget when provided [0.01ms]
+(pass) DominorioV1Adapter > keeps non-top levels unchanged for stability policy [0.03ms]
+(pass) DominorioV1Adapter > inflates top-level ply count to skip early opening-book randomness [0.03ms]
+
+src/games/dominorio/ai/bitboard.test.ts:
+[DominorioAI] Falling back to inline engine: worker-error
+(pass) Bit Operations > squareIndex converts row/col to bit index correctly [0.04ms]
+(pass) Bit Operations > indexToSquare converts bit index to row/col correctly [0.03ms]
+(pass) Bit Operations > setBit and getBit work correctly for low bits [0.03ms]
+(pass) Bit Operations > setBit and getBit work correctly for high bits [0.03ms]
+(pass) Bit Operations > popCount counts bits correctly [0.04ms]
+(pass) Move Generation > empty board has 56 vertical moves [0.02ms]
+(pass) Move Generation > empty board has 56 horizontal moves
+(pass) Move Generation > countMoves matches generateMoves length [0.07ms]
+(pass) Move Generation > vertical moves have correct anchor positions [0.05ms]
+(pass) Move Generation > horizontal moves have correct anchor positions [0.04ms]
+(pass) Move Generation > placing a domino reduces available moves [0.02ms]
+(pass) Move Generation > applyMove sets correct bits for vertical move [0.03ms]
+(pass) Move Generation > applyMove sets correct bits for horizontal move [0.02ms]
+(pass) Consistency with Original Game Logic > bitboard move count matches calcularJogadasValidas [0.05ms]
+(pass) Consistency with Original Game Logic > bitboard move count matches after several moves [0.21ms]
+(pass) Consistency with Original Game Logic > boardToBitboard conversion is correct [0.07ms]
+(pass) Consistency with Original Game Logic > anchorToDomino creates correct Domino structure [0.03ms]
+(pass) Consistency with Original Game Logic > playerToSide converts correctly
+(pass) Game Over Detection > empty board is not game over [0.02ms]
+(pass) Game Over Detection > full board is game over for both sides [0.01ms]
+(pass) Game Over Detection > game ends when current player has no moves [0.03ms]
+(pass) Evaluation > empty board evaluation is reasonable [0.03ms]
+(pass) Evaluation > evaluation is symmetric [0.02ms]
+(pass) Evaluation > winning position has high score [0.02ms]
+(pass) Evaluation > losing position has low score [0.03ms]
+(pass) Evaluation > countSafeMoves returns correct count [0.01ms]
+(pass) Move Ordering > orderMoves returns all moves [0.10ms]
+(pass) Move Ordering > winning move is ordered first [0.12ms]
+(pass) Edge Cases > moves on board edges are valid [0.03ms]
+(pass) Edge Cases > bottom row anchors not in vertical moves [0.03ms]
+(pass) Edge Cases > rightmost column anchors not in horizontal moves [0.02ms]
+(pass) Edge Cases > applying move near boundaries works [0.04ms]
+
+ 553 pass
+ 0 fail
+ 16078 expect() calls
+Ran 553 tests across 71 files. [53.82s]

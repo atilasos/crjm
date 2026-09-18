@@ -1,3 +1,4 @@
+import { isIntegrationPreview } from '../games/catalog';
 import { isLocale, localeOrDefault } from '../i18n/locale';
 /**
  * Servidor de torneios WebSocket usando Bun.
@@ -162,6 +163,7 @@ function sendActiveGamesListToSocket(socket: ServerWebSocket<ClientData>, tourna
 
   sendToSocket(socket, {
     type: 'active_games_list',
+    gameId: tournament.gameId,
     games,
   });
 }
@@ -392,7 +394,10 @@ function handleRejoinTournament(
 
   // Reativar jogador
   const socketId = `${Date.now()}-${Math.random()}`;
-  const { resumedMatchId } = reactivatePlayer(foundTournament, foundPlayer.id, socketId);
+  const reactivated = reactivatePlayer(foundTournament, foundPlayer.id, socketId);
+  const resumedMatchId = reactivated.resumedMatchId
+    ?? findActiveMatchForPlayer(foundTournament, foundPlayer.id)?.id
+    ?? null;
 
   // Associar socket ao jogador (e remover do set de espectadores)
   socket.data.playerId = foundPlayer.id;
@@ -447,6 +452,17 @@ function handleRejoinTournament(
           yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
           opponentName: opponent?.name ?? 'Adversário desconectado',
         });
+
+        // Recovery also returns the board while waiting for the other device.
+        if (match.phase === 'playing' && match.gameState) {
+          sendToSocket(socket, {
+            type: 'game_state_update',
+            matchId: resumedMatchId,
+            gameNumber: match.currentGame,
+            gameState: match.gameState,
+            yourTurn: false,
+          });
+        }
 
         log({
           type: 'match',
@@ -687,6 +703,11 @@ function handleSubmitMove(
     return;
   }
 
+  if (match.phase !== 'playing' || match.isPaused) {
+    sendToSocket(socket, { type: 'error', code: 'MATCH_NOT_PLAYING', message: 'A partida não está em curso.' });
+    return;
+  }
+
   const expectedTurn = match.whoseTurn;
   const actualTurn = isPlayer1 ? 'player1' : 'player2';
 
@@ -772,8 +793,11 @@ function handleSubmitMove(
     // Determinar o winnerRole (seat) para enviar aos clientes
     const winnerRole: 'player1' | 'player2' = winnerId === match.player1!.id ? 'player1' : 'player2';
 
+    // Preserve the final board and game number before endGame prepares the next game.
+    const completedGame = { ...match, whoseTurn: null };
     // Terminar o jogo
     const { matchEnded, matchWinnerId } = endGame(match, winnerId);
+    broadcastSpectatorGameState(tournament, completedGame);
 
     // Obter o nome do vencedor corretamente
     const winnerName = winnerId === match.player1!.id ? match.player1?.name : match.player2?.name;
@@ -1081,6 +1105,9 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
 
   const playerId = socket.data.playerId;
 
+  // A replaced connection may close after its successor has already rejoined.
+  if (playerId && playerSockets.get(playerId) !== socket) return;
+
   if (playerId) {
     // Encontrar torneio e marcar jogador como suspenso (pode reconectar)
     for (const tournament of tournaments.values()) {
@@ -1184,7 +1211,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     });
     headers.append('Set-Cookie', adminSessionCookie(ADMIN_KEY));
 
-    return new Response(getAdminPageHtml(), {
+    return new Response(getAdminPageHtml(isIntegrationPreview(url.search), localeOrDefault(url.searchParams.get('lang'))), {
       headers,
     });
   }

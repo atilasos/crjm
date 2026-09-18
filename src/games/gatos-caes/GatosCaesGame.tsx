@@ -354,7 +354,7 @@ export function GatosCaesGame({ onVoltar }: GatosCaesGameProps) {
   const difficultyRecommendation = getDifficultyRecommendation('gatos-caes', difficulty);
 
   return (
-    <GameLayout titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
+    <GameLayout gameId="gatos-caes" titulo="Gatos & Cães" regras={REGRAS} onVoltar={onVoltar}>
       <div className="flex flex-col gap-4">
         {/* Controlos de pré-jogo — em mobile ficam depois do tabuleiro */}
         <div className="order-2 lg:order-1 flex flex-col gap-4">

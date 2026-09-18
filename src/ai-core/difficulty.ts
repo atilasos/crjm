@@ -73,6 +73,7 @@ export const DEFAULT_MAX_DIFFICULTY_LEVEL: ExtendedDifficultyLevel = 5;
 export const MAX_DIFFICULTY_LEVEL_BY_GAME: Partial<Record<GameId, ExtendedDifficultyLevel>> = {
   'atari-go': 6,
   quelhas: 6,
+  faisca: 2,
 };
 
 export function getMaxDifficultyLevel(gameId?: GameId): ExtendedDifficultyLevel {

@@ -1,5 +1,6 @@
 import { PATTERN_CARDS, type PatternCardDefinition } from './gamification';
-import type { GameId } from './types';
+import type { GameWithCapability } from '../games/catalog';
+type GameId = GameWithCapability<'review'>;
 
 export interface ReviewPatternSignals {
   reviewPatternId?: string;
@@ -10,6 +11,8 @@ export interface ReviewPatternSignals {
 }
 
 const DEFAULT_PATTERN: Record<GameId, string> = {
+  faisca: 'faisca:proxima-casa',
+  y: 'y:tres-lados',
   'gatos-caes': 'gatos-caes:centro',
   dominorio: 'dominorio:paridade',
   quelhas: 'quelhas:misere-final',

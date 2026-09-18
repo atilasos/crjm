@@ -1,0 +1,3 @@
+Y tournament: 1440px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 1024px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 390px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed

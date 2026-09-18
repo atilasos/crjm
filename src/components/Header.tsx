@@ -7,9 +7,10 @@ import { ThemeToggle } from './ThemeToggle';
 interface HeaderProps {
   titulo?: string;
   onVoltar?: () => void;
+  voltarLabel?: string;
 }
 
-export function Header({ titulo, onVoltar }: HeaderProps) {
+export function Header({ titulo, onVoltar, voltarLabel }: HeaderProps) {
   const { t } = useTranslation();
   const [session, setSession] = useState<StudentSession | null>(() => loadStudentSession());
 
@@ -31,7 +32,7 @@ export function Header({ titulo, onVoltar }: HeaderProps) {
             type="button"
             onClick={onVoltar}
             className="flex shrink-0 items-center gap-1 rounded-lg py-1 pr-1 transition-colors [color:var(--tinta-suave)] hover:[color:var(--tinta)]"
-            aria-label={t("Voltar à página inicial")}
+            aria-label={t(voltarLabel ?? 'Voltar à página inicial')}
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

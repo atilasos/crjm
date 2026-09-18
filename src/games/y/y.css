@@ -1,0 +1,15 @@
+.y-game { min-width: 0; color: var(--tinta); background: var(--painel); }
+.y-profile { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0; }
+.y-profile select { min-height: 44px; padding: 6px; background: var(--painel); color: var(--tinta); border: 1px solid var(--linha); border-radius: 6px; }
+.y-identities { display: flex; flex-wrap: wrap; gap: 8px 24px; font-weight: bold; }
+.y-board-viewport { overflow-x: auto; max-width: 100%; border: 1px solid var(--linha); border-radius: 8px; background: var(--papel); color: var(--tinta-no-papel); }
+.y-board { position: relative; width: 100%; min-width: 680px; aspect-ratio: 1; }
+.y-board svg { position: absolute; width: 100%; height: 100%; pointer-events: none; }
+.y-node { position: absolute; transform: translate(-50%, -50%); width: 44px; height: 44px; border: 1px solid currentColor; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: var(--papel); color: var(--tinta-no-papel); line-height: 1; }
+.y-node small { font-size: 11px; }
+.y-node[data-color="azul"] { background: #164b99; color: white; }
+.y-node[data-color="vermelho"] { background: #a32c38; color: white; }
+.y-node:disabled { opacity: 1; cursor: default; }
+.y-node:not(:disabled):hover { outline: 3px solid var(--tinta-no-papel); }
+.y-game :focus-visible { outline: 3px solid var(--tinta); outline-offset: 3px; }
+.y-board-viewport :focus-visible { outline-color: var(--tinta-no-papel); z-index: 1; }

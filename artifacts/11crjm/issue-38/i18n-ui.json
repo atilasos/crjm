@@ -1,0 +1,29 @@
+{
+  "pass": true,
+  "checks": [
+    "1440px gatos-caes: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1440px dominorio: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1440px quelhas: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1440px produto: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1440px atari-go: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1440px nex: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1440px puzzles: answer, hint and feedback preserved",
+    "1024px gatos-caes: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1024px dominorio: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1024px quelhas: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1024px produto: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1024px atari-go: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1024px nex: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "1024px puzzles: answer, hint and feedback preserved",
+    "390px gatos-caes: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "390px dominorio: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "390px quelhas: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "390px produto: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "390px atari-go: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "390px nex: state preserved in PT/EN/NE and both themes; English and Nepali rules visible",
+    "390px puzzles: answer, hint and feedback preserved",
+    "Offline profile save leaves the selected language usable; explicit retry succeeds",
+    "Live championship WebSocket and reconnection code preserved; existing messages retranslated",
+    "Pupil language recovered on a second device; name unchanged; sign-out restores guest default"
+  ]
+}

@@ -1,0 +1,56 @@
+bun test v1.3.14 (0d9b296a)
+
+src/i18n/translate.test.ts:
+(pass) Presentation in every supported language > defaults to Portugal Portuguese without browser-language detection [0.13ms]
+(pass) Presentation in every supported language > preserves meaningful whitespace and leaves unknown/user text untouched [1.11ms]
+(pass) Presentation in every supported language > updates complete hints and preserves whitespace around inline elements [0.21ms]
+(pass) Presentation in every supported language > every puzzle, path, achievement and mission has content in all languages [2.15ms]
+(pass) Presentation in every supported language > Faísca choices, predictions and feedback are translated for every situation [10.49ms]
+(pass) Presentation in every supported language > all languages have exactly the same keys and interpolation slots [10.54ms]
+(pass) Presentation in every supported language > the catalogue contract rejects missing locales, messages and incorrect slots [0.11ms]
+(pass) Presentation in every supported language > whole messages support different word order without changing pupil names [0.14ms]
+
+src/i18n/format.test.ts:
+(pass) formats decimals and duration plurals for the chosen language [5.68ms]
+(pass) Nepali uses the same 0–9 digits as the school boards [0.51ms]
+
+src/games/catalog.test.ts:
+(pass) seleção de jogos por percurso > faisca disponibiliza apenas capacidades implementadas na integração [0.22ms]
+(pass) seleção de jogos por percurso > y disponibiliza apenas capacidades implementadas na integração [0.04ms]
+(pass) seleção de jogos por percurso > mantém os seis jogos públicos em todos os percursos atuais [0.05ms]
+(pass) seleção de jogos por percurso > um percurso em integração só é visível na pré-visualização explícita [0.12ms]
+
+src/ai-core/puzzles.test.ts:
+(pass) catálogo de puzzles estratégicos > oferece o catálogo completo de puzzles válidos por jogo [0.53ms]
+(pass) catálogo de puzzles estratégicos > devolve feedback explicativo para resposta certa e desconhecida [0.08ms]
+(pass) apresentação dos puzzles > o baralhamento preserva as três opções e cobre todas as posições [1.84ms]
+(pass) apresentação dos puzzles > a ordem é reproduzível quando o gerador aleatório é injetado [0.21ms]
+(pass) apresentação dos puzzles > os diagramas são retangulares e usam apenas símbolos conhecidos [0.40ms]
+
+src/ai-core/training-paths.test.ts:
+(pass) percursos de treino para o campeonato > cada jogo tem quatro etapas com o desenho Descobrir→Campeonato [0.11ms]
+(pass) percursos de treino para o campeonato > os puzzleIds das etapas existem e pertencem ao jogo certo, cobrindo todos os puzzles [0.13ms]
+(pass) avaliação dos desafios por nível > sem objetivos ou sem dados devolve estado honesto [0.15ms]
+(pass) avaliação dos desafios por nível > vitórias em níveis superiores contam para objetivos inferiores [0.03ms]
+(pass) avaliação dos desafios por nível > sequências e meta de 50% avaliam pelos contadores certos [0.06ms]
+(pass) avaliação dos desafios por nível > Faísca uses only the two verified local difficulties [0.05ms]
+(pass) avaliação dos desafios por nível > objetivos múltiplos exigem todos cumpridos [0.03ms]
+
+src/server/learner-core/strategy-service.test.ts:
+(pass) strategy practice: evidence survives real learner operations > Faísca offers a choice with a verifiable opening consequence [2.93ms]
+(pass) strategy practice: evidence survives real learner operations > does not send hints, answers or explanations before an attempt [1.05ms]
+(pass) strategy practice: evidence survives real learner operations > atari-go: a saved hint survives a reload and cannot count as solo evidence [3.60ms]
+(pass) strategy practice: evidence survives real learner operations > faisca: a saved hint survives a reload and cannot count as solo evidence [1.34ms]
+(pass) strategy practice: evidence survives real learner operations > first wrong answer remains practice after resubmission, no duplicated attempt [2.59ms]
+(pass) strategy practice: evidence survives real learner operations > a copied decision with an incorrect consequence does not advance [3.40ms]
+(pass) strategy practice: evidence survives real learner operations > does not accept another learner’s attempts or forged answer fields [1.25ms]
+(pass) strategy practice: evidence survives real learner operations > all available games can progress, and retention requires a later day [232.41ms]
+(pass) strategy practice: evidence survives real learner operations > nex: an assisted catalogue can be learned later, without an immediate retry shortcut [36.13ms]
+(pass) strategy practice: evidence survives real learner operations > faisca: an assisted catalogue can be learned later, without an immediate retry shortcut [30.28ms]
+(pass) strategy practice: evidence survives real learner operations > Faísca preserves errors across reloads and mirrors do not add families [16.42ms]
+(pass) strategy practice: evidence survives real learner operations > cosmetic variants and repeated copies cannot fill the three-family goal [0.16ms]
+
+ 38 pass
+ 0 fail
+ 8618 expect() calls
+Ran 38 tests across 6 files. [443.00ms]
