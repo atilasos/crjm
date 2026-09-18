@@ -61,8 +61,11 @@ export async function checkFaiscaTournament(browser: Browser, app: string, serve
           }
           await observer.getByText(t('Modo espectador - apenas a observar'), { exact: true }).waitFor();
           if (await observer.locator('.faisca button:enabled').count()) throw new Error('Spectator can act');
-          const controls = await blue.locator('.faisca-control').evaluateAll(elements => elements.map(el => el.getBoundingClientRect().height));
-          if (controls.some(height => height < 44)) throw new Error('Small tournament controls');
+          const controls = await blue.locator('.faisca-control, .faisca-cell, .faisca .btn').evaluateAll(elements => elements.map(element => {
+            const { width, height } = element.getBoundingClientRect();
+            return { width, height };
+          }));
+          if (controls.some(({ width, height }) => width < 48 || height < 48)) throw new Error('Tournament controls are smaller than 48×48px');
         }
       }
       for (const page of [blue, red, observer]) await page.locator('[data-language-selector]').selectOption('pt-PT');

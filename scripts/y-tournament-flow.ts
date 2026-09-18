@@ -59,6 +59,25 @@ export async function checkYTournament(browser: Browser, app: string, server: st
       let second = pupils[secondIndex]!;
       const firstName: string = participant(firstIndex).name;
       const secondName: string = participant(secondIndex).name;
+      // A fresh context prevents a saved spectator language from hiding a broken handoff.
+      for (const locale of ['en', 'ne', 'pt-PT'] as const) {
+        const localizedAdmin = await browser.newContext({ viewport: { width, height: 900 },
+          httpCredentials: { username: 'admin', password: adminKey } });
+        try {
+          const panel = await localizedAdmin.newPage();
+          monitor(panel);
+          await panel.goto(`${server}/admin?lang=${locale}`);
+          await panel.locator('.active-game-item').filter({ hasText: firstName }).click();
+          const spectator = panel.frameLocator('#game-viewer-iframe');
+          const t = (key: MessageKey) => catalogs[locale][key];
+          await spectator.getByRole('status').filter({
+            hasText: t('Vez de {0} — {1}').replace('{0}', firstName).replace('{1}', t('Azul')),
+          }).waitFor({ timeout: 5_000 });
+          if (await spectator.locator('[data-language-selector]').inputValue() !== locale) {
+            throw new Error(`Spectator did not inherit the admin language: ${locale}`);
+          }
+        } finally { await localizedAdmin.close(); }
+      }
       const swapButton = (page: Page) => page.getByRole('button', { name: 'Trocar de cores', exact: true });
       if (await swapButton(first).count()) throw new Error('Swap offered before opening');
       await first.getByRole('button', { name: /^A1:/ }).focus();

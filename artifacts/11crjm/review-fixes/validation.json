@@ -1,0 +1,227 @@
+{
+  "base": "9d8bfb0f0a341407eac769b3e60683e7dadf7c03",
+  "comparison": "working tree changes; no new commits",
+  "tests": {
+    "passed": 576,
+    "failed": 0,
+    "assertions": 24040
+  },
+  "build": {
+    "fullWithFiveWasm": "passed",
+    "finalCssRebuild": "passed"
+  },
+  "classroomHttp": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:4635",
+    "checks": {
+      "health": true,
+      "homepage": true,
+      "anonymousLearnerSession": true,
+      "runtimeConfig": true,
+      "workerAssets": 8
+    }
+  },
+  "classroomUi": {
+    "pass": true,
+    "baseUrl": "http://127.0.0.1:5049",
+    "checks": [
+      {
+        "viewport": "desktop/tablet/mobile",
+        "game": "Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop/tablet/mobile",
+        "game": "Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Espectador: alternância entre Y e Faísca simultâneos"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Arquivo: criação/administração, participantes e espectador reais"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Produto"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Nex"
+      },
+      {
+        "viewport": "desktop",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Produto"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Nex"
+      },
+      {
+        "viewport": "tablet",
+        "game": "Laboratório de Estratégias"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Gatos & Cães"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Dominório"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Quelhas"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Produto"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Atari Go"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Nex"
+      },
+      {
+        "viewport": "mobile",
+        "game": "Laboratório de Estratégias"
+      }
+    ]
+  },
+  "learnerCore": "passed",
+  "i18n": {
+    "passed": 11,
+    "assertions": 4336
+  },
+  "typecheck": {
+    "base": 704,
+    "final": 704,
+    "sameNormalizedDiagnostics": true
+  },
+  "tdd": {
+    "language": "red then green; fresh contexts PT-PT/EN/NE × 1440/1024/390",
+    "controls": "red then minimum48px; extra checks375/320"
+  },
+  "review": {
+    "standards": 0,
+    "spec": 0,
+    "workersRefactor": "deferred by user"
+  },
+  "sourceSha256": {
+    "src/server/admin-page.ts": "ca5a70256603da1f31d00a333914cdc64c0cddd5028fb5a862c1b149bcebf41f",
+    "src/games/faisca/faisca.css": "b1b0f3cf63d3b79d3b5b3202ea8de4a7920918cd0102f7cf79f0b8b2c0d19f6f",
+    "scripts/classroom-ui-smoke.ts": "74129f05abed0bb901e00f1e261cd13309d13a0778ed4148f8c3b0ec5f6330c4",
+    "scripts/faisca-tournament-flow.ts": "a72152e0dfce10ac239a12b21a721e66e8f0f034202e956c52f6fad21288e0e9",
+    "scripts/y-tournament-flow.ts": "cdb16183b7bec7dd7320c721413718341369826d83cc15d9c65c1d3a68bdc12c"
+  },
+  "preservation": {
+    "initialFiles": 993,
+    "intentionalChanges": [
+      "scripts/classroom-ui-smoke.ts",
+      "scripts/faisca-tournament-flow.ts",
+      "scripts/y-tournament-flow.ts",
+      "src/games/faisca/faisca.css",
+      "src/server/admin-page.ts"
+    ],
+    "unexpectedChanges": []
+  }
+}

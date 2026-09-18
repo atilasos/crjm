@@ -182,11 +182,12 @@ async function checkFaiscaCancellation(page: Page): Promise<void> {
     await page.getByLabel('Jogar como:', { exact: true }).selectOption('jogador2');
     await page.getByRole('status').filter({ hasText: 'Computador' }).waitFor();
     if (!await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).isDisabled()) throw new Error('Human can play during AI turn');
+    // Keyboard activation keeps smooth scrolling outside the cancellation deadline.
     if (action === 'restart') {
-      await page.getByRole('button', { name: 'Nova partida', exact: true }).click({ timeout: 500 });
-      await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).click({ timeout: 500 });
+      await page.getByRole('button', { name: 'Nova partida', exact: true }).press('Enter', { timeout: 500 });
+      await page.getByRole('button', { name: 'Dois jogadores no mesmo dispositivo', exact: true }).press('Enter', { timeout: 500 });
     } else {
-      await page.getByRole('button', { name: 'Voltar à página inicial', exact: true }).click({ timeout: 500 });
+      await page.getByRole('button', { name: 'Voltar à página inicial', exact: true }).press('Enter', { timeout: 500 });
       await page.locator('button.game-card').filter({ has: page.getByRole('heading', { name: 'Faísca', exact: true }) }).click();
     }
     await page.waitForTimeout(800); // Beyond the deliberately delayed old response.
@@ -243,9 +244,30 @@ async function checkFaisca(page: Page): Promise<void> {
       await page.getByRole('status').filter({ hasText: formatMessage('Vez de {0}', locale, [t('Vermelho')]) }).waitFor();
       await page.getByText(t('Níveis avaliados em Faísca; não equivalem aos de outros jogos.'), { exact: true }).waitFor();
       await assertViewport(page, `Faísca ${locale} ${theme}`, '.faisca-board');
+      const controls = await page.locator('.faisca-control, .faisca-cell').evaluateAll(elements => elements.map(element => {
+        const { width, height } = element.getBoundingClientRect();
+        return { width, height };
+      }));
+      if (controls.some(({ width, height }) => width < 48 || height < 48)) throw new Error('Faísca: controlos inferiores a 48×48px.');
       for (const label of ['Confirmar jogada', 'Nova partida'] as const) {
         const bounds = await page.getByRole('button', { name: t(label), exact: true }).boundingBox();
-        if (!bounds || bounds.height < 44 || bounds.width < 44) throw new Error(`Faísca: controlo ${label} demasiado pequeno.`);
+        if (!bounds || bounds.height < 48 || bounds.width < 48) throw new Error(`Faísca: controlo ${label} demasiado pequeno.`);
+      }
+      const viewport = page.viewportSize();
+      if (viewport?.width === 390 && locale === 'pt-PT' && theme === 'claro') {
+        try {
+          for (const width of [375, 320]) {
+            await page.setViewportSize({ ...viewport, width });
+            if (await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1)) {
+              throw new Error(`Faísca ${width}px: overflow horizontal.`);
+            }
+            const cells = await board.getByRole('button').evaluateAll(elements => elements.map(element => {
+              const { width, height } = element.getBoundingClientRect();
+              return { width, height };
+            }));
+            if (cells.some(({ width, height }) => width < 48 || height < 48)) throw new Error(`Faísca ${width}px: casas inferiores a 48×48px.`);
+          }
+        } finally { await page.setViewportSize(viewport); }
       }
       await playFaiscaLocalExample(page, text => t(text as keyof typeof pt));
       const review = page.getByRole('region', { name: t('Revisão rápida pós-jogo') });

@@ -1,0 +1,6 @@
+Y tournament: 1440px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 1024px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 390px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+[classroom-ui-smoke] Error: Tournament controls are smaller than 48×48px
+    at checkFaiscaTournament (file:///tmp/crjm-fix-review/app/.review/classroom-ui-smoke.js:5965:19)
+    at async main (file:///tmp/crjm-fix-review/app/.review/classroom-ui-smoke.js:7301:7)

@@ -1,0 +1,36 @@
+Y tournament: 1440px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 1024px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 390px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Faísca tournament: 1440px, PT/EN/NE, both themes, teacher/participants/spectator/reconnect/result/alternating roles passed
+Faísca tournament: 1024px, PT/EN/NE, both themes, teacher/participants/spectator/reconnect/result/alternating roles passed
+Faísca tournament: 390px, PT/EN/NE, both themes, teacher/participants/spectator/reconnect/result/alternating roles passed
+Spectator: Y/Faísca coexistence and repeated selection passed
+[classroom-ui-smoke] locator.click: Timeout 500ms exceeded.
+Call log:
+  - waiting for getByRole('button', { name: 'Nova partida', exact: true })
+    - locator resolved to <button type="button" class="btn btn-secondary">Nova partida</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is not stable
+    - retrying click action
+    - waiting 20ms
+    - waiting for element to be visible, enabled and stable
+    - element is not stable
+  - retrying click action
+    - waiting 100ms
+    - waiting for element to be visible, enabled and stable
+    - element is visible, enabled and stable
+    - scrolling into view if needed
+    - done scrolling
+    - element is outside of the viewport
+  - retrying click action
+    - waiting 100ms
+    - waiting for element to be visible, enabled and stable
+    - element is not stable
+  - retrying click action
+    - waiting 500ms
+
+    at checkFaiscaCancellation (/tmp/crjm-fix-review/app/.review/classroom-ui-smoke.js:6793:77)
+    at async main (/tmp/crjm-fix-review/app/.review/classroom-ui-smoke.js:7348:9) {
+  name: 'TimeoutError'
+}

@@ -26,7 +26,7 @@ export function getAdminPageHtml(includeIntegration = false, locale: Locale = 'p
     <p data-archive-description hidden>${t('Arquivo jogável: continua a jogar e a aprender, com todo o teu progresso.')}</p>
   </div>`;
   return `<!DOCTYPE html>
-<html lang="pt">
+<html lang="${locale}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
