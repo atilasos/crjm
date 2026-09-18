@@ -55,7 +55,10 @@ describe('proxy da IA N6 do Atari Go', () => {
   });
 
   test('rejeita caminhos e métodos que não fazem parte da superfície pública', async () => {
-    const fetchImpl = (async () => Response.json({ unexpected: true })) as typeof fetch;
+    const fetchImpl: typeof fetch = Object.assign(
+      async () => Response.json({ unexpected: true }),
+      { preconnect: () => {} },
+    );
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -72,10 +75,10 @@ describe('proxy da IA N6 do Atari Go', () => {
 
   test('rejeita o corpo acima de 8 KiB antes de contactar a GPU', async () => {
     let calls = 0;
-    const fetchImpl = (async () => {
+    const fetchImpl: typeof fetch = Object.assign(async () => {
       calls += 1;
       return Response.json({ move: 0 });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -96,10 +99,10 @@ describe('proxy da IA N6 do Atari Go', () => {
 
   test('aplica o rate limit por sessão assinada, sem misturar alunos no mesmo IP', async () => {
     let calls = 0;
-    const fetchImpl = (async () => {
+    const fetchImpl: typeof fetch = Object.assign(async () => {
       calls += 1;
       return Response.json({ move: 40 });
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -122,7 +125,10 @@ describe('proxy da IA N6 do Atari Go', () => {
   });
 
   test('trata cookie forjado com assinatura multibyte como sessão anónima, sem lançar', async () => {
-    const fetchImpl = (async () => Response.json({ move: 40 })) as typeof fetch;
+    const fetchImpl: typeof fetch = Object.assign(
+      async () => Response.json({ move: 40 }),
+      { preconnect: () => {} },
+    );
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -143,9 +149,9 @@ describe('proxy da IA N6 do Atari Go', () => {
   });
 
   test('converte falhas e timeouts do upstream em 503 para ativar o fallback N5', async () => {
-    const fetchImpl = (async () => {
+    const fetchImpl: typeof fetch = Object.assign(async () => {
       throw new Error('offline');
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
