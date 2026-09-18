@@ -1,0 +1,53 @@
+{
+  "base": "f49975c07fe5d1a1d9f0ba054da618a5e01872df",
+  "commands": [
+    {
+      "command": "HUB_CDP_URL=<hub> bun scripts/debug/cdp-runtime/minimal.mjs",
+      "exitCode": 1,
+      "purpose": "red: original Bun CDP timeout"
+    },
+    {
+      "command": "HUB_CDP_URL=<hub> bun run test:cdp",
+      "exitCode": 0
+    },
+    {
+      "command": "HUB_CDP_URL=<hub> bun run classroom:smoke",
+      "exitCode": 0,
+      "httpSmoke": true,
+      "uiChecks": 40,
+      "shortcuts": false
+    },
+    {
+      "command": "HUB_CDP_URL=<hub> bun run e2e:learner-core",
+      "exitCode": 0
+    },
+    {
+      "command": "bun run build",
+      "exitCode": 0,
+      "wasmModules": [
+        "dominorio",
+        "quelhas",
+        "produto",
+        "atari-go",
+        "nex"
+      ]
+    },
+    {
+      "command": "bun test",
+      "exitCode": 0,
+      "passed": 576,
+      "failed": 0,
+      "files": 72,
+      "expectCalls": 24030
+    }
+  ],
+  "hubSession": "cdp-node-implementation",
+  "hubProfile": "research",
+  "hubClosed": true,
+  "review": {
+    "standardsFindings": 0,
+    "specFindings": 0
+  },
+  "generatedScreenshotsRestored": true,
+  "generatedAtariGoBaselineRestored": true
+}

@@ -1,0 +1,282 @@
+$ bun run build.ts
+$ bun run scripts/i18n-check.ts && bun test src/i18n
+pt-PT, en, ne: 1884 messages each; catalogue parity, placeholders, JSX, accessible labels and game rules covered.
+bun test v1.3.4 (5eb2145b)
+
+src/i18n/translate.test.ts:
+(pass) Presentation in every supported language > defaults to Portugal Portuguese without browser-language detection
+(pass) Presentation in every supported language > preserves meaningful whitespace and leaves unknown/user text untouched [2.00ms]
+(pass) Presentation in every supported language > updates complete hints and preserves whitespace around inline elements
+(pass) Presentation in every supported language > every puzzle, path, achievement and mission has content in all languages [4.00ms]
+(pass) Presentation in every supported language > faisca choices, predictions and feedback are translated for every situation [13.00ms]
+(pass) Presentation in every supported language > y choices, predictions and feedback are translated for every situation [4.00ms]
+(pass) Presentation in every supported language > all languages have exactly the same keys and interpolation slots [13.00ms]
+(pass) Presentation in every supported language > the catalogue contract rejects missing locales, messages and incorrect slots
+(pass) Presentation in every supported language > whole messages support different word order without changing pupil names
+
+src/i18n/format.test.ts:
+(pass) formats decimals and duration plurals for the chosen language [6.00ms]
+(pass) Nepali uses the same 0–9 digits as the school boards [2.00ms]
+
+ 11 pass
+ 0 fail
+ 4336 expect() calls
+Ran 11 tests across 2 files. [105.00ms]
+
+🚀 Starting build process...
+
+🦀 Building Dominório AI WASM...
+   Compiling wasm-bindgen-shared v0.2.126
+   Compiling unicode-ident v1.0.24
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.46
+   Compiling rustversion v1.0.23
+   Compiling bumpalo v3.20.3
+   Compiling cfg-if v1.0.4
+   Compiling once_cell v1.21.4
+   Compiling slab v0.4.12
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-core v0.3.32
+   Compiling futures-task v0.3.32
+   Compiling futures-util v0.3.32
+   Compiling wasm-bindgen v0.2.126
+   Compiling syn v2.0.119
+   Compiling wasm-bindgen-macro-support v0.2.126
+   Compiling wasm-bindgen-macro v0.2.126
+   Compiling js-sys v0.3.103
+   Compiling console_error_panic_hook v0.1.7
+   Compiling getrandom v0.2.17
+   Compiling dominorio_ai v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/dominorio_ai)
+warning: variable `best_move` is assigned to, but never used
+   --> src/engine.rs:187:13
+    |
+187 |         let mut best_move = scored_moves[0].0;
+    |             ^^^^^^^^^^^^^
+    |
+    = note: consider using `_best_move` instead
+    = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: value assigned to `best_move` is never read
+   --> src/engine.rs:213:17
+    |
+213 |                 best_move = *mv;
+    |                 ^^^^^^^^^^^^^^^
+    |
+    = help: maybe it is overwritten before being read?
+    = note: `#[warn(unused_assignments)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `is_valid_move` is never used
+   --> src/bitboard.rs:103:8
+    |
+103 | pub fn is_valid_move(occupied: u64, anchor: u8, side: Side) -> bool {
+    |        ^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `anchor_to_coords` is never used
+   --> src/bitboard.rs:110:8
+    |
+110 | pub fn anchor_to_coords(anchor: u8) -> (u8, u8) {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: function `coords_to_anchor` is never used
+   --> src/bitboard.rs:116:8
+    |
+116 | pub fn coords_to_anchor(row: u8, col: u8) -> u8 {
+    |        ^^^^^^^^^^^^^^^^
+
+warning: `dominorio_ai` (lib) generated 5 warnings
+    Finished `release` profile [optimized] target(s) in 8.30s
+🔗 Running wasm-bindgen...
+🦀 Building Quelhas AI WASM...
+   Compiling wasm-bindgen-shared v0.2.126
+   Compiling unicode-ident v1.0.22
+   Compiling proc-macro2 v1.0.103
+   Compiling quote v1.0.42
+   Compiling rustversion v1.0.22
+   Compiling bumpalo v3.19.0
+   Compiling once_cell v1.21.3
+   Compiling quelhas-core v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/quelhas/quelhas-core)
+   Compiling cfg-if v1.0.4
+   Compiling quelhas-ai v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/quelhas/quelhas-ai)
+   Compiling wasm-bindgen v0.2.126
+   Compiling syn v2.0.111
+   Compiling wasm-bindgen-macro-support v0.2.126
+   Compiling wasm-bindgen-macro v0.2.126
+   Compiling quelhas_wasm v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/quelhas/quelhas-wasm)
+    Finished `release` profile [optimized] target(s) in 3.68s
+🔗 Running wasm-bindgen (Quelhas)...
+🦀 Building Produto AI WASM...
+   Compiling wasm-bindgen-shared v0.2.126
+   Compiling unicode-ident v1.0.24
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.46
+   Compiling rustversion v1.0.23
+   Compiling bumpalo v3.20.3
+   Compiling cfg-if v1.0.4
+   Compiling once_cell v1.21.4
+   Compiling slab v0.4.12
+   Compiling futures-core v0.3.32
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-task v0.3.32
+   Compiling futures-util v0.3.32
+   Compiling wasm-bindgen v0.2.126
+   Compiling syn v2.0.119
+   Compiling wasm-bindgen-macro-support v0.2.126
+   Compiling wasm-bindgen-macro v0.2.126
+   Compiling console_error_panic_hook v0.1.7
+   Compiling js-sys v0.3.103
+   Compiling produto_ai v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/produto_ai)
+warning: function `choose_move` is never used
+   --> src/core/ai.rs:730:8
+    |
+730 | pub fn choose_move(state: StateView, cfg: AiConfig, board: &Board, now_ms: impl Fn() -> f64) -> Move {
+    |        ^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `positions` is never read
+  --> src/core/board.rs:12:9
+   |
+11 | pub struct Board {
+   |            ----- field in this struct
+12 |     pub positions: [(i8, i8); CELLS],
+   |         ^^^^^^^^^
+   |
+   = note: `Board` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: function `is_empty` is never used
+  --> src/core/movegen.rs:30:8
+   |
+30 | pub fn is_empty(state: StateView, idx: usize) -> bool {
+   |        ^^^^^^^^
+
+warning: fields `top1` and `top2` are never read
+  --> src/core/scoring.rs:13:9
+   |
+12 | pub struct Score {
+   |            ----- fields in this struct
+13 |     pub top1: u8,
+   |         ^^^^
+14 |     pub top2: u8,
+   |         ^^^^
+   |
+   = note: `Score` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: `produto_ai` (lib) generated 4 warnings
+    Finished `release` profile [optimized] target(s) in 8.37s
+🔗 Running wasm-bindgen (Produto)...
+🦀 Building Atari Go AI WASM...
+   Compiling wasm-bindgen-shared v0.2.126
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.46
+   Compiling rustversion v1.0.23
+   Compiling bumpalo v3.20.3
+   Compiling once_cell v1.21.4
+   Compiling cfg-if v1.0.4
+   Compiling futures-core v0.3.32
+   Compiling futures-task v0.3.32
+   Compiling slab v0.4.12
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-util v0.3.32
+   Compiling wasm-bindgen v0.2.126
+   Compiling syn v2.0.119
+   Compiling wasm-bindgen-macro-support v0.2.126
+   Compiling wasm-bindgen-macro v0.2.126
+   Compiling js-sys v0.3.103
+   Compiling console_error_panic_hook v0.1.7
+   Compiling atari_go_ai v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/atari_go_ai)
+warning: method `rand_u32` is never used
+   --> src/core/engine.rs:155:12
+    |
+ 17 | impl Engine {
+    | ----------- method in this implementation
+...
+155 |     pub fn rand_u32(&mut self) -> u32 {
+    |            ^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `next_u32` is never used
+  --> src/core/rng.rs:19:12
+   |
+ 6 | impl SplitMix64 {
+   | --------------- method in this implementation
+...
+19 |     pub fn next_u32(&mut self) -> u32 {
+   |            ^^^^^^^^
+
+warning: field `best_move` is never read
+ --> src/core/tt.rs:7:9
+  |
+2 | pub struct TTEntry {
+  |            ------- field in this struct
+...
+7 |     pub best_move: i16, // 0..80 or -1
+  |         ^^^^^^^^^
+  |
+  = note: `TTEntry` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: method `clear` is never used
+  --> src/core/tt.rs:40:12
+   |
+29 | impl TranspositionTable {
+   | ----------------------- method in this implementation
+...
+40 |     pub fn clear(&mut self) {
+   |            ^^^^^
+
+warning: `atari_go_ai` (lib) generated 4 warnings
+    Finished `release` profile [optimized] target(s) in 8.09s
+🔗 Running wasm-bindgen (Atari Go)...
+🦀 Building Nex AI WASM...
+   Compiling wasm-bindgen-shared v0.2.126
+   Compiling proc-macro2 v1.0.106
+   Compiling unicode-ident v1.0.24
+   Compiling quote v1.0.46
+   Compiling rustversion v1.0.23
+   Compiling bumpalo v3.20.3
+   Compiling once_cell v1.21.4
+   Compiling cfg-if v1.0.4
+   Compiling slab v0.4.12
+   Compiling futures-core v0.3.32
+   Compiling futures-task v0.3.32
+   Compiling pin-project-lite v0.2.17
+   Compiling futures-util v0.3.32
+   Compiling wasm-bindgen v0.2.126
+   Compiling syn v2.0.119
+   Compiling wasm-bindgen-macro-support v0.2.126
+   Compiling wasm-bindgen-macro v0.2.126
+   Compiling js-sys v0.3.103
+   Compiling console_error_panic_hook v0.1.7
+   Compiling nex_ai v0.1.0 (/home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/wasm/nex_ai)
+    Finished `release` profile [optimized] target(s) in 8.71s
+🔗 Running wasm-bindgen (Nex)...
+✅ WASM built successfully
+
+✅ Quelhas WASM built successfully
+
+✅ Produto WASM built successfully
+
+✅ Atari Go WASM built successfully
+
+✅ Nex WASM built successfully
+
+🗑️ Cleaning previous build at /home/proteu/.t3/worktrees/crjm/investigate-cdp-bun-node/dist
+📄 Building main app (index.html)
+
+📄 Building admin spectator page
+
+┌───┬─────────────────────────────────────────────────┬─────────────┬───────────┐
+│   │ File                                            │ Type        │ Size      │
+├───┼─────────────────────────────────────────────────┼─────────────┼───────────┤
+│ 0 │ dist/chunk-bd4d3abs.js                          │ entry-point │ 1.33 MB   │
+│ 1 │ dist/index.html                                 │ entry-point │ 640.00 B  │
+│ 2 │ dist/chunk-ehmt3y6f.css                         │ asset       │ 182.97 KB │
+│ 3 │ dist/chunk-bd4d3abs.js.map                      │ sourcemap   │ 2.35 MB   │
+│ 4 │ dist/favicon-q5ydnt4w.svg                       │ asset       │ 482.00 B  │
+│ 5 │ dist/noto-sans-devanagari-variable-fkmkryab.ttf │ asset       │ 305.84 KB │
+└───┴─────────────────────────────────────────────────┴─────────────┴───────────┘
+
+✅ Build completed in 299.80ms

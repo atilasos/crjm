@@ -1,0 +1,235 @@
+$ bun run build -- --skip-wasm && bun run scripts/classroom-smoke.ts && bun build scripts/classroom-ui-smoke.ts --target=node --packages=external --outfile=.cache/classroom-ui-smoke.mjs && node .cache/classroom-ui-smoke.mjs
+$ bun run build.ts --skip-wasm
+$ bun run scripts/i18n-check.ts && bun test src/i18n
+pt-PT, en, ne: 1884 messages each; catalogue parity, placeholders, JSX, accessible labels and game rules covered.
+bun test v1.3.4 (5eb2145b)
+
+src/i18n/translate.test.ts:
+(pass) Presentation in every supported language > defaults to Portugal Portuguese without browser-language detection [1.00ms]
+(pass) Presentation in every supported language > preserves meaningful whitespace and leaves unknown/user text untouched [1.00ms]
+(pass) Presentation in every supported language > updates complete hints and preserves whitespace around inline elements
+(pass) Presentation in every supported language > every puzzle, path, achievement and mission has content in all languages [2.00ms]
+(pass) Presentation in every supported language > faisca choices, predictions and feedback are translated for every situation [9.00ms]
+(pass) Presentation in every supported language > y choices, predictions and feedback are translated for every situation [4.00ms]
+(pass) Presentation in every supported language > all languages have exactly the same keys and interpolation slots [13.00ms]
+(pass) Presentation in every supported language > the catalogue contract rejects missing locales, messages and incorrect slots
+(pass) Presentation in every supported language > whole messages support different word order without changing pupil names
+
+src/i18n/format.test.ts:
+(pass) formats decimals and duration plurals for the chosen language [6.00ms]
+(pass) Nepali uses the same 0–9 digits as the school boards [2.00ms]
+
+ 11 pass
+ 0 fail
+ 4336 expect() calls
+Ran 11 tests across 2 files. [116.00ms]
+
+🚀 Starting build process...
+
+⏭️  Skipping WASM build (--skip-wasm flag)
+
+📄 Building main app (index.html)
+
+📄 Building admin spectator page
+
+┌───┬─────────────────────────────────────────────────┬─────────────┬───────────┐
+│   │ File                                            │ Type        │ Size      │
+├───┼─────────────────────────────────────────────────┼─────────────┼───────────┤
+│ 0 │ dist/chunk-bd4d3abs.js                          │ entry-point │ 1.33 MB   │
+│ 1 │ dist/index.html                                 │ entry-point │ 640.00 B  │
+│ 2 │ dist/chunk-ehmt3y6f.css                         │ asset       │ 182.97 KB │
+│ 3 │ dist/chunk-bd4d3abs.js.map                      │ sourcemap   │ 2.35 MB   │
+│ 4 │ dist/favicon-q5ydnt4w.svg                       │ asset       │ 482.00 B  │
+│ 5 │ dist/noto-sans-devanagari-variable-fkmkryab.ttf │ asset       │ 305.84 KB │
+└───┴─────────────────────────────────────────────────┴─────────────┴───────────┘
+
+✅ Build completed in 307.77ms
+
+{
+  "pass": true,
+  "baseUrl": "http://127.0.0.1:4784",
+  "checks": {
+    "health": true,
+    "homepage": true,
+    "anonymousLearnerSession": true,
+    "runtimeConfig": true,
+    "workerAssets": 8
+  }
+}
+Bundled 14 modules in 8ms
+
+  classroom-ui-smoke.mjs  0.78 MB  (entry point)
+
+Y tournament: 1440px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 1024px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Y tournament: 390px, PT/EN/NE, both themes, teacher/participants/spectator/swap/reconnect/result/alternating roles passed
+Faísca tournament: 1440px, PT/EN/NE, both themes, teacher/participants/spectator/reconnect/result/alternating roles passed
+Faísca tournament: 1024px, PT/EN/NE, both themes, teacher/participants/spectator/reconnect/result/alternating roles passed
+Faísca tournament: 390px, PT/EN/NE, both themes, teacher/participants/spectator/reconnect/result/alternating roles passed
+Spectator: Y/Faísca coexistence and repeated selection passed
+{
+  "pass": true,
+  "baseUrl": "http://127.0.0.1:5170",
+  "checks": [
+    {
+      "viewport": "desktop/tablet/mobile",
+      "game": "Y: torneio real, troca, reconexão, espectador × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "desktop/tablet/mobile",
+      "game": "Faísca: torneio real, reconexão, espectador × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Espectador: alternância entre Y e Faísca simultâneos"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Arquivo: criação/administração, participantes e espectador reais"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "desktop",
+      "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Gatos & Cães"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Dominório"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Quelhas"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Produto"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Atari Go"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Nex"
+    },
+    {
+      "viewport": "desktop",
+      "game": "Laboratório de Estratégias"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "tablet",
+      "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Gatos & Cães"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Dominório"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Quelhas"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Produto"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Atari Go"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Nex"
+    },
+    {
+      "viewport": "tablet",
+      "game": "Laboratório de Estratégias"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Arquivo: navegação, Laboratório e torneios × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "mobile",
+      "game": "11.º CRJM: seleção pública, ciclos exatos e perfil dos oito jogos"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Laboratório Faísca: percurso, puzzles e escolhas por teclado × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Faísca: regras, abertura, recusa inválida e teclado × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Y: IA, tutor gradual, revisão, cancelamento, troca, teclado e perfil persistido × PT/EN/NE × claro/escuro"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Gatos & Cães"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Dominório"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Quelhas"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Produto"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Atari Go"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Nex"
+    },
+    {
+      "viewport": "mobile",
+      "game": "Laboratório de Estratégias"
+    }
+  ]
+}
