@@ -9,7 +9,7 @@ import {
   jogadaComputador,
   getCasasVazias,
 } from "./logic";
-import { gerarPosicoesValidas, posToKey, TOTAL_CASAS, Celula } from "./types";
+import { gerarPosicoesValidas, posToKey, TOTAL_CASAS, type Celula } from "./types";
 import { buildIndexMaps } from "./ai/types";
 
 describe("Produto - Tabuleiro Hexagonal", () => {

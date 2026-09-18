@@ -10,7 +10,7 @@ import {
   encontrarGruposEmAtari,
   jogadaComputador,
 } from "./logic";
-import { Celula, TAMANHO_TABULEIRO } from "./types";
+import { type Celula, TAMANHO_TABULEIRO } from "./types";
 
 describe("Atari Go - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 9x9", () => {

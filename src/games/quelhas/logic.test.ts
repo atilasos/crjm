@@ -22,7 +22,7 @@ import {
   parseTabuleiroASCII,
   gerarCandidatos,
 } from "./logic";
-import { Celula } from "./types";
+import type { Celula } from "./types";
 
 describe("Quelhas - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 10x10", () => {
