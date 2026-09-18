@@ -122,24 +122,28 @@ describe('loginStudent', () => {
   });
 
   test('com 404 lança mensagem de código inválido e não guarda sessão', async () => {
-    globalComStorage.fetch = (async () =>
-      new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 404 })) as typeof fetch;
+    globalComStorage.fetch = Object.assign(
+      async () => new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 404 }),
+      { preconnect: () => {} },
+    );
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ZZZ999')).rejects.toThrow(/Código inválido/);
     expect(loadStudentSession()).toBeNull();
   });
 
   test('com 400 lança mensagem de código inválido', async () => {
-    globalComStorage.fetch = (async () =>
-      new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 400 })) as typeof fetch;
+    globalComStorage.fetch = Object.assign(
+      async () => new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 400 }),
+      { preconnect: () => {} },
+    );
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ZZZ999')).rejects.toThrow(/Código inválido/);
   });
 
   test('com rede indisponível lança mensagem de servidor inacessível', async () => {
-    globalComStorage.fetch = (async () => {
+    globalComStorage.fetch = Object.assign(async () => {
       throw new TypeError('fetch failed');
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ABC123')).rejects.toThrow(
       /Não foi possível contactar o servidor/,
@@ -148,8 +152,10 @@ describe('loginStudent', () => {
   });
 
   test('com resposta sem estudante lança erro de resposta inesperada', async () => {
-    globalComStorage.fetch = (async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 200 })) as typeof fetch;
+    globalComStorage.fetch = Object.assign(
+      async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
+      { preconnect: () => {} },
+    );
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ABC123')).rejects.toThrow(
       /não foi possível interpretar/,

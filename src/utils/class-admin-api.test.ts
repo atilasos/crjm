@@ -83,9 +83,9 @@ describe('fetchClasses', () => {
   });
 
   test('com rede indisponível lança erro de servidor inacessível', async () => {
-    globalComFetch.fetch = (async () => {
+    globalComFetch.fetch = Object.assign(async () => {
       throw new TypeError('fetch failed');
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     const promessa = fetchClasses('https://torneios.exemplo.pt', 'chave');
     await expect(promessa).rejects.toThrow(/Não foi possível contactar o servidor/);
@@ -162,9 +162,9 @@ describe('deleteClass', () => {
   });
 
   test('com rede indisponível lança erro de servidor inacessível', async () => {
-    globalComFetch.fetch = (async () => {
+    globalComFetch.fetch = Object.assign(async () => {
       throw new TypeError('fetch failed');
-    }) as typeof fetch;
+    }, { preconnect: () => {} });
 
     await expect(deleteClass('https://torneios.exemplo.pt', 'chave', 'turma-5a')).rejects.toThrow(
       /Não foi possível contactar o servidor/,
