@@ -44,3 +44,17 @@ bun run build                 # completo com os 5 WASM; `-- --skip-wasm` para s�
   `docs/deployment/servidor-casa-crjmai.md`.
 - Desenho pedagógico (Laboratório, percursos, F1–F4):
   `docs/PERCURSOS-CAMPEONATO.md`.
+
+## Agent skills
+
+### Issue tracker
+
+Para ler ou publicar issues e especificações, usar GitHub Issues em `atilasos/crjm`; consultar [issue-tracker.md](docs/agents/issue-tracker.md).
+
+### Triage labels
+
+Para classificar pedidos, usar as cinco etiquetas padrão; consultar [triage-labels.md](docs/agents/triage-labels.md).
+
+### Domain docs
+
+Antes de explorar ou modelar o domínio, consultar [domain.md](docs/agents/domain.md): contexto único, glossário na raiz e ADRs relevantes.
