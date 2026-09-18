@@ -1,0 +1,16 @@
+{
+  "command": "./node_modules/.bin/tsc --noEmit",
+  "beforeExitCode": 2,
+  "afterExitCode": 2,
+  "diagnosticsUnchanged": true,
+  "diagnosticCount": 714,
+  "diagnosticsInCdpScripts": false,
+  "finalAfterWasmBuildExitCode": 2,
+  "finalAfterWasmBuildDiagnosticCount": 704,
+  "wasmBuildRemovedMissingModuleDiagnostics": 13,
+  "wasmBuildExposedExistingWorkerCasts": [
+    "src/games/atari-go/ai/atari-go.worker.ts(23,24): error TS2352: Conversion of type 'typeof import(\"<WORKTREE>/src/games/atari-go/ai/wasm/pkg/atari_go_ai\")' to type 'WasmModule' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
+    "src/games/nex/ai/nex.worker.ts(21,24): error TS2352: Conversion of type 'typeof import(\"<WORKTREE>/src/games/nex/ai/wasm/pkg/nex_ai\")' to type 'WasmModule' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.",
+    "src/games/produto/ai/produto.worker.ts(22,24): error TS2352: Conversion of type 'typeof import(\"<WORKTREE>/src/games/produto/ai/wasm/pkg/produto_ai\")' to type 'WasmModule' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first."
+  ]
+}

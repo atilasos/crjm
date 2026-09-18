@@ -1,0 +1,6 @@
+$ bun build scripts/debug/cdp-runtime/smoke.ts --target=node --packages=external --outfile=.cache/cdp-smoke.mjs && node .cache/cdp-smoke.mjs
+Bundled 2 modules in 2ms
+
+  cdp-smoke.mjs  1.19 KB  (entry point)
+
+{"runtime":"node 24.18.0","connected":true,"typescriptBundle":true,"projectRoot":true,"newContext":true,"domClick":true}

@@ -1,0 +1,6 @@
+$ bun test
+
+576 pass
+ 0 fail
+ 24030 expect() calls
+Ran 576 tests across 72 files. [65.39s]

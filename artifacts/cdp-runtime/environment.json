@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-18",
+  "baseCommit": "f49975c07fe5d1a1d9f0ba054da618a5e01872df",
+  "branch": "investigation/cdp-bun-node",
+  "platform": "Linux",
+  "release": "7.0.0-31-generic",
+  "arch": "x86_64",
+  "node": "v24.18.0",
+  "bun": "1.3.14",
+  "playwright": "1.57.0",
+  "hubCommit": "73948af313a2c289f2ce02dd8da1ebd303551acc",
+  "protectedPRs": {
+    "40": "a8153728fc11b6095deaaeff67798b2a4be7051d",
+    "49": "9abc21c7083529ce881b53f2e5b635b6840c5484"
+  },
+  "sessions": [
+    "cdp-bun-node-investigation",
+    "cdp-bun-node-confirmation"
+  ],
+  "profile": "research"
+}
