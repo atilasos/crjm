@@ -18,7 +18,7 @@ import {
   getVizinhos,
   resolverFinalRaro,
 } from "./logic";
-import { Celula, LADO_TABULEIRO } from "./types";
+import { type Celula, LADO_TABULEIRO } from "./types";
 
 describe("Nex - Vizinhos Hexagonais", () => {
   test("célula central (5,5) tem 6 vizinhos corretos", () => {
