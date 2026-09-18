@@ -10,7 +10,7 @@ import {
   encontrarGruposEmAtari,
   jogadaComputador,
 } from "./logic";
-import { type Celula, TAMANHO_TABULEIRO } from "./types";
+import { type AtariGoState, type Celula, TAMANHO_TABULEIRO } from "./types";
 
 describe("Atari Go - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 9x9", () => {
@@ -276,7 +276,7 @@ describe("Atari Go - IA", () => {
     tabuleiro[1][0] = 'branca';
     // Branca joga em 0,1 para capturar
     
-    let estado = {
+    let estado: AtariGoState = {
       ...criarEstadoInicial('vs-computador'),
       tabuleiro,
       jogadorAtual: 'jogador2', // Brancas (IA)
@@ -298,7 +298,7 @@ describe("Atari Go - IA", () => {
     tabuleiro[4][3] = 'preta';
     // Única liberdade em 4,5
     
-    let estado = {
+    let estado: AtariGoState = {
       ...criarEstadoInicial('vs-computador'),
       tabuleiro,
       jogadorAtual: 'jogador2', // Brancas (IA)
