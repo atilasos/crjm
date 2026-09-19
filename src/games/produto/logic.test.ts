@@ -273,12 +273,14 @@ describe("Produto - Fim de Jogo", () => {
     const posicoes = gerarPosicoesValidas();
 
     // Primeira jogada
+    assert.ok(posicoes[0]);
     estado = colocarPeca(estado, posicoes[0], 'preta');
 
     // Preencher resto alternando
     let idx = 1;
     while (estado.casasVazias.length > 0 && estado.estado === 'a-jogar') {
       const pos = estado.casasVazias[0];
+      assert.ok(pos);
       const cor: 'preta' | 'branca' = idx % 4 < 2 ? 'preta' : 'branca';
       estado = colocarPeca(estado, pos, cor);
       idx++;
