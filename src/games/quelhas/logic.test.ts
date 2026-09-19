@@ -827,9 +827,6 @@ describe("Quelhas - Geração de Candidatos", () => {
     
     // Para cada coluna, deve haver segmento de tamanho 2 no início (linha 0)
     for (let col = 0; col < 10; col++) {
-      const temInicioTam2 = candidatos.some(
-        c => c.indic && c.inicio.coluna === col && c.inicio.linha === 0 && c.comprimento === 2
-      );
       // Corrigido: verificar propriedades corretas
       const candidatoInicio = candidatos.find(
         c => c.inicio.coluna === col && c.inicio.linha === 0 && c.comprimento === 2
