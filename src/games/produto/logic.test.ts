@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import {
   criarEstadoInicial,
   criarTabuleiroInicial,
@@ -77,6 +78,7 @@ describe("Produto - Grupos e Pontuação", () => {
     const grupos = encontrarGrupos(tabuleiro, 'preta');
 
     expect(grupos.length).toBe(1);
+    assert.ok(grupos[0]);
     expect(grupos[0].celulas.length).toBe(1);
   });
 
@@ -90,6 +92,7 @@ describe("Produto - Grupos e Pontuação", () => {
     const grupos = encontrarGrupos(tabuleiro, 'preta');
 
     expect(grupos.length).toBe(1);
+    assert.ok(grupos[0]);
     expect(grupos[0].celulas.length).toBe(3);
   });
 
