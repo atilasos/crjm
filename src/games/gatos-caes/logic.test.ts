@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
@@ -65,6 +66,7 @@ describe("Gatos & Cães - Primeiro Gato", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarPeca(estado, jogada);
     
     expect(estado.jogadorAtual).toBe('jogador2');
@@ -78,6 +80,7 @@ describe("Gatos & Cães - Primeiro Cão", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     
     // Colocar primeiro gato
+    assert.ok(estado.jogadasValidas[0]);
     estado = colocarPeca(estado, estado.jogadasValidas[0]);
     
     // Verificar jogadas do cão
