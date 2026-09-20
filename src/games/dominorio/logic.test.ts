@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
@@ -74,6 +75,7 @@ describe("Dominório - Colocação de Dominós", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarDomino(estado, jogada);
     
     expect(estado.jogadorAtual).toBe('jogador2');
@@ -83,6 +85,7 @@ describe("Dominório - Colocação de Dominós", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarDomino(estado, jogada);
     
     for (const j of estado.jogadasValidas) {
