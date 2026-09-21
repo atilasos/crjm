@@ -9,12 +9,12 @@ import type { GameId } from './protocol';
 import type { FaiscaState, Jogada as FaiscaMove, Direcao } from '../games/faisca/types';
 
 // Tipos locais (UI)
-import type { GatosCaesState, Posicao as GatosCaesPosicao } from '../games/gatos-caes/types';
+import type { GatosCaesState, Posicao as GatosCaesPosicao, Celula as GatosCaesCelula } from '../games/gatos-caes/types';
 import type { DominorioState, Domino, Posicao as DominorioPosicao } from '../games/dominorio/types';
 import type { QuelhasState, Segmento, Posicao as QuelhasPosicao } from '../games/quelhas/types';
-import type { ProdutoState, Posicao as ProdutoPosicao, JogadaDupla } from '../games/produto/types';
-import type { AtariGoState, Posicao as AtariGoPosicao } from '../games/atari-go/types';
-import type { NexState, Posicao as NexPosicao, Acao as NexAcao, AcaoColocacao, AcaoSubstituicao } from '../games/nex/types';
+import type { ProdutoState, Posicao as ProdutoPosicao, JogadaDupla, Celula as ProdutoCelula } from '../games/produto/types';
+import type { AtariGoState, Posicao as AtariGoPosicao, Celula as AtariGoCelula } from '../games/atari-go/types';
+import type { NexState, Posicao as NexPosicao, Acao as NexAcao, AcaoColocacao, AcaoSubstituicao, Celula as NexCelula } from '../games/nex/types';
 import { calcularJogadasValidas as calcularJogadasValidasQuelhas } from '../games/quelhas/logic';
 import { calcularPontuacao as calcularPontuacaoProduto } from '../games/produto/logic';
 
@@ -50,7 +50,7 @@ export function fromNetworkGatosCaesMove(move: NetworkGatosCaesMove): GatosCaesP
 }
 
 export function toNetworkGatosCaesState(state: GatosCaesState): NetworkGatosCaesState {
-  const celulaMap: Record<string, NetworkGatosCaesCelula> = {
+  const celulaMap: Record<GatosCaesCelula, NetworkGatosCaesCelula> = {
     'vazia': 'empty',
     'gato': 'cat',
     'cao': 'dog',
@@ -350,7 +350,7 @@ export interface NetworkProdutoState {
 
 // Conversões Produto
 export function toNetworkProdutoMove(move: JogadaDupla): NetworkProdutoMove {
-  const colorMap: Record<string, 'black' | 'white'> = {
+  const colorMap: Record<JogadaDupla['cor1'], 'black' | 'white'> = {
     'preta': 'black',
     'branca': 'white',
   };
@@ -389,7 +389,7 @@ export function fromNetworkProdutoMove(move: NetworkProdutoMove): JogadaDupla {
 }
 
 export function toNetworkProdutoState(state: ProdutoState): NetworkProdutoState {
-  const celulaMap: Record<string, NetworkProdutoCelula> = {
+  const celulaMap: Record<ProdutoCelula, NetworkProdutoCelula> = {
     'vazia': 'empty',
     'preta': 'black',
     'branca': 'white',
@@ -497,7 +497,7 @@ export function fromNetworkAtariGoMove(move: NetworkAtariGoMove): { posicao: Ata
 }
 
 export function toNetworkAtariGoState(state: AtariGoState): NetworkAtariGoState {
-  const celulaMap: Record<string, NetworkAtariGoCelula> = {
+  const celulaMap: Record<AtariGoCelula, NetworkAtariGoCelula> = {
     'vazia': 'empty',
     'preta': 'black',
     'branca': 'white',
@@ -636,7 +636,7 @@ export function fromNetworkNexMove(move: NetworkNexMove): NexAcao | { tipo: 'swa
 }
 
 export function toNetworkNexState(state: NexState): NetworkNexState {
-  const celulaMap: Record<string, NetworkNexCelula> = {
+  const celulaMap: Record<NexCelula, NetworkNexCelula> = {
     'vazia': 'empty',
     'preta': 'black',
     'branca': 'white',
