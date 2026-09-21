@@ -335,7 +335,8 @@ describe('Tournament Engine - Restart Functions', () => {
     expect(match.score.player2Wins).toBe(0);
     expect(match.currentGame).toBe(2); // Same game number
     expect(match.gameState).toBeNull(); // Game state cleared
-    expect(match.phase).toBe('waiting'); // Back to waiting
+    const restartedMatch = match;
+    expect(restartedMatch.phase).toBe('waiting'); // Back to waiting
     expect(match.player1Ready).toBe(false);
     expect(match.player2Ready).toBe(false);
   });
@@ -371,7 +372,8 @@ describe('Tournament Engine - Restart Functions', () => {
     expect(match.score.player2Wins).toBe(0);
     expect(match.currentGame).toBe(1); // Back to game 1
     expect(match.gameState).toBeNull(); // Game state cleared
-    expect(match.phase).toBe('waiting'); // Back to waiting
+    const restartedMatch = match;
+    expect(restartedMatch.phase).toBe('waiting'); // Back to waiting
     expect(match.winnerId).toBeNull(); // No winner yet
   });
 

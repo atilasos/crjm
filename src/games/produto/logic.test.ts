@@ -28,7 +28,9 @@ describe("Produto - Tabuleiro Hexagonal", () => {
     expect(idxToPos.length).toBe(61);
     expect(keyToIdx.size).toBe(61);
     for (let i = 0; i < idxToPos.length; i++) {
-      expect(keyToIdx.get(posToKey(idxToPos[i]))).toBe(i);
+      const pos = idxToPos[i];
+      assert.ok(pos);
+      expect(keyToIdx.get(posToKey(pos))).toBe(i);
     }
   });
 

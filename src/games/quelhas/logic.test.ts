@@ -359,8 +359,12 @@ describe("Quelhas - Colocação de Segmentos", () => {
       estado = colocarSegmento(estado, segmento);
       
       // Verificar que as células estão ocupadas
-      expect(estado.tabuleiro[segmento.inicio.linha][segmento.inicio.coluna]).toBe('ocupada');
-      expect(estado.tabuleiro[segmento.inicio.linha + 1][segmento.inicio.coluna]).toBe('ocupada');
+      const linhaInicio = estado.tabuleiro[segmento.inicio.linha];
+      assert.ok(linhaInicio);
+      expect(linhaInicio[segmento.inicio.coluna]).toBe('ocupada');
+      const linhaSeguinte = estado.tabuleiro[segmento.inicio.linha + 1];
+      assert.ok(linhaSeguinte);
+      expect(linhaSeguinte[segmento.inicio.coluna]).toBe('ocupada');
     }
   });
 
@@ -420,7 +424,9 @@ describe("Quelhas - Intervalos de Jogadas (Heurística Min/Max)", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar primeira coluna inteira (bloqueia jogadas verticais nessa coluna)
     for (let i = 0; i < 10; i++) {
-      tabuleiro[i][0] = 'ocupada';
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      linha[0] = 'ocupada';
     }
     
     const jogadasVertical = calcularJogadasValidas(tabuleiro, 'vertical');
@@ -470,7 +476,9 @@ describe("Quelhas - Avaliação Misère", () => {
     // Preencher maior parte, deixando algumas linhas/colunas
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
-        tabuleiro[i][j] = 'ocupada';
+        const linha = tabuleiro[i];
+        assert.ok(linha);
+        linha[j] = 'ocupada';
       }
     }
     
@@ -536,7 +544,9 @@ describe("Quelhas - IA Misère Comportamento", () => {
       for (let j = 0; j < 10; j++) {
         // Deixar apenas coluna 9 vazia para jogadas verticais
         if (j !== 9) {
-          tabuleiro[i][j] = 'ocupada';
+          const linha = tabuleiro[i];
+          assert.ok(linha);
+          linha[j] = 'ocupada';
         }
       }
     }
@@ -605,7 +615,9 @@ describe("Quelhas - Extração de Blocos", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar alternadamente na coluna 0 para criar blocos de tamanho 1
     for (let i = 0; i < 10; i += 2) {
-      tabuleiro[i][0] = 'ocupada';
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      linha[0] = 'ocupada';
     }
     
     const blocos = extrairBlocos(tabuleiro, 'vertical');
@@ -756,7 +768,9 @@ describe("Quelhas - Parse de Tabuleiro ASCII", () => {
     
     // Diagonal deve estar ocupada
     for (let i = 0; i < 10; i++) {
-      expect(tabuleiro[i][i]).toBe('ocupada');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[i]).toBe('ocupada');
     }
     
     // Fora da diagonal deve estar vazia
@@ -787,18 +801,24 @@ describe("Quelhas - Exemplo do Utilizador (Vertical Ganha)", () => {
     
     // Coluna 0 deve estar toda vazia
     for (let i = 0; i < 10; i++) {
-      expect(tabuleiro[i][0]).toBe('vazia');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[0]).toBe('vazia');
     }
     
     // Coluna 1 deve estar toda ocupada
     for (let i = 0; i < 10; i++) {
-      expect(tabuleiro[i][1]).toBe('ocupada');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[1]).toBe('ocupada');
     }
     
     // Colunas 8-9, linhas 2-9 devem estar vazias
     for (let i = 2; i < 10; i++) {
-      expect(tabuleiro[i][8]).toBe('vazia');
-      expect(tabuleiro[i][9]).toBe('vazia');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[8]).toBe('vazia');
+      expect(linha[9]).toBe('vazia');
     }
   });
 

@@ -139,11 +139,18 @@ describe('ClassStore', () => {
     const studentId = created.students[0].id;
 
     expect(store.removeStudent(created.id, studentId)).toBe(true);
-    expect(store.listClasses()[0].students).toHaveLength(1);
-    expect(store.listClasses()[0].students[0].name).toBe('Bruno');
+    const remainingClass = store.listClasses()[0];
+    assert.ok(remainingClass);
+    expect(remainingClass.students).toHaveLength(1);
+    const remainingStudentClass = store.listClasses()[0];
+    assert.ok(remainingStudentClass);
+    assert.ok(remainingStudentClass.students[0]);
+    expect(remainingStudentClass.students[0].name).toBe('Bruno');
 
     const reloaded = new ClassStore(filePath);
-    expect(reloaded.listClasses()[0].students).toHaveLength(1);
+    const reloadedClass = reloaded.listClasses()[0];
+    assert.ok(reloadedClass);
+    expect(reloadedClass.students).toHaveLength(1);
   });
 
   test('removeStudent devolve false para turma ou aluno inexistente', () => {

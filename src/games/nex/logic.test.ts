@@ -127,7 +127,9 @@ describe("Nex - Verificação de Vitória", () => {
     
     // Criar caminho de brancas de x=0 (SW) a x=10 (NE)
     for (let x = 0; x < LADO_TABULEIRO; x++) {
-      tabuleiro[x][5] = 'branca';
+      const coluna = tabuleiro[x];
+      assert.ok(coluna);
+      coluna[5] = 'branca';
     }
     
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
@@ -526,7 +528,9 @@ describe("Nex - IA", () => {
     // Brancas conectam x=0 (SW) a x=10 (NE)
     // Caminho quase completo de x=0 a x=10
     for (let x = 0; x < LADO_TABULEIRO - 1; x++) {
-      estado.tabuleiro[x][5] = 'branca';
+      const coluna = estado.tabuleiro[x];
+      assert.ok(coluna);
+      coluna[5] = 'branca';
     }
     // Falta uma peça para vencer (x=10)
     
@@ -551,7 +555,9 @@ describe("Nex - Verificações Gerais", () => {
     // Preencher quase tudo
     for (let x = 0; x < LADO_TABULEIRO; x++) {
       for (let y = 0; y < LADO_TABULEIRO; y++) {
-        tabuleiro[x][y] = 'preta';
+        const coluna = tabuleiro[x];
+        assert.ok(coluna);
+        coluna[y] = 'preta';
       }
     }
     // Deixar apenas 1 vazia

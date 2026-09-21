@@ -69,8 +69,12 @@ describe("Dominório - Colocação de Dominós", () => {
     assert.ok(jogada);
     estado = colocarDomino(estado, jogada);
     
-    expect(estado.tabuleiro[jogada.pos1.linha][jogada.pos1.coluna]).toBe('ocupada-vertical');
-    expect(estado.tabuleiro[jogada.pos2.linha][jogada.pos2.coluna]).toBe('ocupada-vertical');
+    const linha1 = estado.tabuleiro[jogada.pos1.linha];
+    assert.ok(linha1);
+    expect(linha1[jogada.pos1.coluna]).toBe('ocupada-vertical');
+    const linha2 = estado.tabuleiro[jogada.pos2.linha];
+    assert.ok(linha2);
+    expect(linha2[jogada.pos2.coluna]).toBe('ocupada-vertical');
   });
 
   test("após jogada, turno muda para jogador 2", () => {
