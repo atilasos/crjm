@@ -1,3 +1,4 @@
+import { boardRow } from '../games/board-row';
 import type { YState, YMove } from '../games/y/types';
 import { NOS } from '../games/y/board';
 /**
@@ -148,6 +149,10 @@ export function fromNetworkDominorioMove(move: NetworkDominorioMove): Domino {
 }
 
 export function toNetworkDominorioState(state: DominorioState): NetworkDominorioState {
+  const lastDomino = state.dominosColocados.at(-1);
+  if (state.dominosColocados.length > 0 && lastDomino === undefined) {
+    throw new TypeError('Domino history is missing its last move');
+  }
   const board: NetworkDominorioCelula[][] = state.tabuleiro.map(row =>
     row.map(c => {
       if (c === 'vazia') return null;
@@ -158,9 +163,7 @@ export function toNetworkDominorioState(state: DominorioState): NetworkDominorio
   return {
     board,
     currentPlayer: state.jogadorAtual === 'jogador1' ? 'player1' : 'player2',
-    lastMove: state.dominosColocados.length > 0
-      ? toNetworkDominorioMove(state.dominosColocados[state.dominosColocados.length - 1])
-      : null,
+    lastMove: lastDomino === undefined ? null : toNetworkDominorioMove(lastDomino),
     winner: state.estado === 'vitoria-jogador1' ? 'player1'
       : state.estado === 'vitoria-jogador2' ? 'player2'
         : null,
@@ -187,7 +190,7 @@ export function fromNetworkDominorioState(
   for (const [linha, row] of tabuleiro.entries()) {
     for (const [coluna, celula] of row.entries()) {
       if (celula === 'vazia') {
-        if (orientacao === 'vertical' && linha + 1 < tabuleiro.length && tabuleiro[linha + 1][coluna] === 'vazia') {
+        if (orientacao === 'vertical' && linha + 1 < tabuleiro.length && boardRow(tabuleiro, linha + 1)[coluna] === 'vazia') {
           jogadasValidas.push({
             pos1: { linha, coluna },
             pos2: { linha: linha + 1, coluna },
@@ -260,6 +263,7 @@ export function fromNetworkQuelhasMove(move: NetworkQuelhasMove): { segmento: Se
 
   const first = move.cells[0];
   const last = move.cells[move.cells.length - 1];
+  if (first === undefined || last === undefined) throw new TypeError('Invalid Quelhas move: missing endpoint');
   const isVertical = first.col === last.col;
 
   return {
@@ -379,6 +383,7 @@ export function fromNetworkProdutoMove(move: NetworkProdutoMove): JogadaDupla {
 
   const first = move.placements[0];
   const second = move.placements[1];
+  if (first === undefined) throw new TypeError('Invalid Produto move: no first placement');
 
   return {
     pos1: { q: first.coord.q, r: first.coord.r },
@@ -438,6 +443,7 @@ export function fromNetworkProdutoState(
     tabuleiro[key] = celulaMap[value];
     if (value === 'empty') {
       const [q, r] = key.split(',').map(Number);
+      if (q === undefined || r === undefined) throw new TypeError('Invalid Produto board coordinate');
       casasVazias.push({ q, r });
     }
   }

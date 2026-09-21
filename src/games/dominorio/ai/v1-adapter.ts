@@ -147,7 +147,9 @@ export function applyTopLevelStabilityPolicy(
   let index = 0;
 
   while (dominosColocados.length <= OPENING_BOOK_MAX_PLY) {
-    dominosColocados.push(fillerPool[index % fillerPool.length]);
+    const filler = fillerPool[index % fillerPool.length];
+    if (filler === undefined) throw new TypeError('Opening stability filler is missing.');
+    dominosColocados.push(filler);
     index += 1;
   }
 
@@ -201,8 +203,11 @@ function buildTopMoves(
 
   scored.sort((a, b) => b.score - a.score);
 
-  const maxScore = scored[0].score;
-  const minScore = scored[scored.length - 1].score;
+  const first = scored[0];
+  const last = scored[scored.length - 1];
+  if (first === undefined || last === undefined) throw new TypeError('Scored anchors are empty.');
+  const maxScore = first.score;
+  const minScore = last.score;
   const seen = new Set<number>();
   const topAnchors: number[] = [];
 
@@ -316,6 +321,8 @@ function buildCriticalThreats(
   topMoves: AIMoveCandidate<Domino>[],
 ): AICriticalThreat<Domino>[] {
   if (topMoves.length <= 2 && topMoves.length > 0) {
+    const first = topMoves[0];
+    if (first === undefined) throw new TypeError('Critical threat candidate is missing.');
     return [
       {
         id: 'low-mobility',
@@ -325,7 +332,7 @@ function buildCriticalThreats(
           topMoves.length === 1
             ? 'Só tens uma jogada segura disponível neste turno.'
             : 'Tens poucas respostas fortes; escolhe uma das melhores opções.',
-        counterMove: topMoves[0].move,
+        counterMove: first.move,
       },
     ];
   }

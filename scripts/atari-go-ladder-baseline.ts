@@ -378,20 +378,22 @@ function chooseMove(
   const player = state.jogadorAtual;
   const policy = LEVEL_POLICY[level];
   const scored = scoreMoves(state, player, policy.evalCap);
-  if (scored.length === 0) return null;
+  const firstScored = scored[0];
+  if (firstScored === undefined) return null;
 
   if (policy.safetyLookahead === 0) {
     const targetRank = rankIndexForLevel(level, scored.length, random);
-    const targetScore = scored[targetRank]?.baseScore ?? scored[0].baseScore;
+    const targetScore = scored[targetRank]?.baseScore ?? firstScored.baseScore;
     const tiedCandidates = scored.filter((entry) => entry.baseScore === targetScore);
-    if (tiedCandidates.length === 0) {
-      return scored[targetRank]?.move ?? scored[0].move;
+    const firstTied = tiedCandidates[0];
+    if (firstTied === undefined) {
+      return scored[targetRank]?.move ?? firstScored.move;
     }
     const index = Math.floor(random() * tiedCandidates.length);
-    return tiedCandidates[index]?.move ?? tiedCandidates[0].move;
+    return tiedCandidates[index]?.move ?? firstTied.move;
   }
 
-  let best = scored[0];
+  let best = firstScored;
   let bestSafetyScore = Number.NEGATIVE_INFINITY;
   const frontier = scored.slice(0, Math.min(scored.length, level >= 5 ? 8 : 6));
 

@@ -49,7 +49,7 @@ function clampWorkerLevel(
   level: AIComputeOverrides['level'],
 ): 1 | 2 | 3 | 4 | 5 | undefined {
   if (level === undefined) return undefined;
-  return level >= SERVER_FALLBACK_LEVEL ? SERVER_FALLBACK_LEVEL : level;
+  return level === 6 ? SERVER_FALLBACK_LEVEL : level;
 }
 
 export class AtariGoAIClient {

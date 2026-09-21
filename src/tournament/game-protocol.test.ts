@@ -453,3 +453,14 @@ describe('Network board traversal', () => {
     }
   });
 });
+
+describe('malformed network move boundaries', () => {
+  test('Quelhas rejects missing endpoints in a sparse move', () => {
+    const move: NetworkQuelhasMove = { cells: [] };
+    move.cells.length = 2;
+    expect(() => fromNetworkQuelhasMove(move)).toThrow(TypeError);
+  });
+  test('Produto rejects a missing first placement', () => {
+    expect(() => fromNetworkProdutoMove({ placements: [] })).toThrow(TypeError);
+  });
+});

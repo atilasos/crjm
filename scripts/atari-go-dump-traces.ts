@@ -17,6 +17,7 @@
  * Uso: bun scripts/atari-go-dump-traces.ts [--games N] [--seed S] [--out caminho]
  */
 
+import { boardRow } from '../src/games/board-row';
 import { mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import {
@@ -43,9 +44,13 @@ function parseArgs(): { games: number; seed: number; out: string } {
   let seed = 20260717;
   let out = join(import.meta.dir, '..', 'training', 'traces', 'atari-go-traces.jsonl');
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === '--games') games = parseInt(argv[++i], 10);
-    else if (argv[i] === '--seed') seed = parseInt(argv[++i], 10);
-    else if (argv[i] === '--out') out = argv[++i];
+    const flag = argv[i];
+    if (flag !== '--games' && flag !== '--seed' && flag !== '--out') continue;
+    const value = argv[++i];
+    if (value === undefined) throw new Error(`Missing value for ${flag}`);
+    if (flag === '--games') games = parseInt(value, 10);
+    else if (flag === '--seed') seed = parseInt(value, 10);
+    else out = value;
   }
   if (!Number.isFinite(games) || games <= 0) throw new Error(`--games inválido: ${games}`);
   return { games, seed, out };
@@ -55,7 +60,7 @@ function boardToArray(tabuleiro: Celula[][]): number[] {
   const arr: number[] = new Array(81);
   for (let l = 0; l < TAMANHO_TABULEIRO; l++) {
     for (let c = 0; c < TAMANHO_TABULEIRO; c++) {
-      const cel = tabuleiro[l][c];
+      const cel = boardRow(tabuleiro, l)[c];
       arr[l * 9 + c] = cel === 'vazia' ? 0 : cel === 'preta' ? 1 : 2;
     }
   }
@@ -91,6 +96,7 @@ function main() {
       }
 
       const escolha = state.jogadasValidas[Math.floor(rng() * state.jogadasValidas.length)];
+      if (escolha === undefined) throw new TypeError('Selected legal move is missing.');
       const capturasAntes = state.pedrasCapturadas.pretas + state.pedrasCapturadas.brancas;
       const novoState = colocarPedra(state, escolha);
       if (novoState === state) {

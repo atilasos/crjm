@@ -42,7 +42,9 @@ export function computeHash(gatos: bigint, caes: bigint, isGatosMove: boolean): 
   let bits = gatos;
   while (bits !== 0n) {
     const sq = ctz64(bits);
-    hash ^= ZOBRIST_GATO[sq];
+    const key = ZOBRIST_GATO[sq];
+    if (key === undefined) throw new TypeError('Missing gato Zobrist key for board square.');
+    hash ^= key;
     bits &= bits - 1n;
   }
 
@@ -50,7 +52,9 @@ export function computeHash(gatos: bigint, caes: bigint, isGatosMove: boolean): 
   bits = caes;
   while (bits !== 0n) {
     const sq = ctz64(bits);
-    hash ^= ZOBRIST_CAO[sq];
+    const key = ZOBRIST_CAO[sq];
+    if (key === undefined) throw new TypeError('Missing cão Zobrist key for board square.');
+    hash ^= key;
     bits &= bits - 1n;
   }
 

@@ -10,7 +10,7 @@ import {
   jogadaComputador,
   getCasasVazias,
 } from "./logic";
-import { gerarPosicoesValidas, posToKey, TOTAL_CASAS, type Celula } from "./types";
+import { gerarPosicoesValidas, posToKey, keyToPos, TOTAL_CASAS, type Celula } from "./types";
 import { buildIndexMaps } from "./ai/types";
 
 describe("Produto - Tabuleiro Hexagonal", () => {
@@ -290,5 +290,21 @@ describe("Produto - Fim de Jogo", () => {
 
     // Jogo deve ter terminado
     expect(['vitoria-jogador1', 'vitoria-jogador2', 'empate']).toContain(estado.estado);
+  });
+});
+
+
+describe('coordinate key boundary', () => {
+  test('rejects a missing coordinate instead of returning an incomplete position', () => {
+    for (const key of ['', '3', '-2', 'abc']) {
+      expect(() => keyToPos(key)).toThrow(TypeError);
+    }
+  });
+
+  test('preserves existing numeric conversion and extra-coordinate behavior', () => {
+    expect(keyToPos('-2,3')).toEqual({ q: -2, r: 3 });
+    expect(keyToPos('2,')).toEqual({ q: 2, r: 0 });
+    expect(keyToPos('1,2,3')).toEqual({ q: 1, r: 2 });
+    expect(Number.isNaN(keyToPos('abc,2').q)).toBe(true);
   });
 });

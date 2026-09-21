@@ -98,14 +98,14 @@ describe('loginStudent', () => {
   test('em sucesso constrói a sessão, guarda-a e envia o código normalizado', async () => {
     let urlChamado = '';
     let bodyEnviado = '';
-    globalComStorage.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    globalComStorage.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
       urlChamado = String(input);
       bodyEnviado = String(init?.body);
       return new Response(
         JSON.stringify({ student: { id: 'aluno-1', name: 'Maria' }, class: { id: 'turma-5a', name: '5.º A' } }),
         { status: 200, headers: { 'Content-Type': 'application/json' } },
       );
-    }) as typeof fetch;
+    }, { preconnect: fetchOriginal.preconnect });
 
     const session = await loginStudent('wss://torneios.exemplo.pt/', ' abc123 ');
 
@@ -122,24 +122,24 @@ describe('loginStudent', () => {
   });
 
   test('com 404 lança mensagem de código inválido e não guarda sessão', async () => {
-    globalComStorage.fetch = (async () =>
-      new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 404 })) as typeof fetch;
+    globalComStorage.fetch = Object.assign(async () =>
+      new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 404 }), { preconnect: fetchOriginal.preconnect });
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ZZZ999')).rejects.toThrow(/Código inválido/);
     expect(loadStudentSession()).toBeNull();
   });
 
   test('com 400 lança mensagem de código inválido', async () => {
-    globalComStorage.fetch = (async () =>
-      new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 400 })) as typeof fetch;
+    globalComStorage.fetch = Object.assign(async () =>
+      new Response(JSON.stringify({ error: 'codigo_invalido' }), { status: 400 }), { preconnect: fetchOriginal.preconnect });
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ZZZ999')).rejects.toThrow(/Código inválido/);
   });
 
   test('com rede indisponível lança mensagem de servidor inacessível', async () => {
-    globalComStorage.fetch = (async () => {
+    globalComStorage.fetch = Object.assign(async () => {
       throw new TypeError('fetch failed');
-    }) as typeof fetch;
+    }, { preconnect: fetchOriginal.preconnect });
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ABC123')).rejects.toThrow(
       /Não foi possível contactar o servidor/,
@@ -148,8 +148,8 @@ describe('loginStudent', () => {
   });
 
   test('com resposta sem estudante lança erro de resposta inesperada', async () => {
-    globalComStorage.fetch = (async () =>
-      new Response(JSON.stringify({ ok: true }), { status: 200 })) as typeof fetch;
+    globalComStorage.fetch = Object.assign(async () =>
+      new Response(JSON.stringify({ ok: true }), { status: 200 }), { preconnect: fetchOriginal.preconnect });
 
     await expect(loginStudent('https://torneios.exemplo.pt', 'ABC123')).rejects.toThrow(
       /não foi possível interpretar/,

@@ -1,3 +1,4 @@
+import { boardRow } from '../board-row';
 import type { QuelhasState, Celula, Posicao, Segmento, Orientacao } from './types';
 import type { GameMode, GameStatus, Player } from '../../types';
 import { analyzeTurnCounts, searchBestMove } from './ai/engine';
@@ -53,7 +54,7 @@ export function extrairBlocos(tabuleiro: Celula[][], orientacao: Orientacao): Bl
     for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
       let inicio = -1;
       for (let linha = 0; linha <= TAMANHO_TABULEIRO; linha++) {
-        const vazia = linha < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        const vazia = linha < TAMANHO_TABULEIRO && boardRow(tabuleiro, linha)[coluna] === 'vazia';
         if (vazia && inicio === -1) {
           inicio = linha;
         } else if (!vazia && inicio !== -1) {
@@ -76,7 +77,7 @@ export function extrairBlocos(tabuleiro: Celula[][], orientacao: Orientacao): Bl
     for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
       let inicio = -1;
       for (let coluna = 0; coluna <= TAMANHO_TABULEIRO; coluna++) {
-        const vazia = coluna < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        const vazia = coluna < TAMANHO_TABULEIRO && boardRow(tabuleiro, linha)[coluna] === 'vazia';
         if (vazia && inicio === -1) {
           inicio = coluna;
         } else if (!vazia && inicio !== -1) {
@@ -111,9 +112,9 @@ function construirMascaraJogavel(blocos: Bloco[]): boolean[][] {
   for (const bloco of blocos) {
     for (let i = 0; i < bloco.comprimento; i++) {
       if (bloco.orientacao === 'vertical') {
-        mascara[bloco.inicio + i][bloco.indiceFixo] = true;
+        boardRow(mascara, bloco.inicio + i)[bloco.indiceFixo] = true;
       } else {
-        mascara[bloco.indiceFixo][bloco.inicio + i] = true;
+        boardRow(mascara, bloco.indiceFixo)[bloco.inicio + i] = true;
       }
     }
   }
@@ -142,7 +143,7 @@ export function classificarBlocos(
         linha = bloco.indiceFixo;
         coluna = bloco.inicio + i;
       }
-      if (mascaraAdv[linha][coluna]) {
+      if (boardRow(mascaraAdv, linha)[coluna]) {
         exclusivo = false;
       }
     }
@@ -246,7 +247,7 @@ export function calcularJogadasValidas(tabuleiro: Celula[][], orientacao: Orient
       let inicioSegmento = -1;
       
       for (let linha = 0; linha <= TAMANHO_TABULEIRO; linha++) {
-        const celulaVazia = linha < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        const celulaVazia = linha < TAMANHO_TABULEIRO && boardRow(tabuleiro, linha)[coluna] === 'vazia';
         
         if (celulaVazia && inicioSegmento === -1) {
           inicioSegmento = linha;
@@ -274,7 +275,7 @@ export function calcularJogadasValidas(tabuleiro: Celula[][], orientacao: Orient
       let inicioSegmento = -1;
       
       for (let coluna = 0; coluna <= TAMANHO_TABULEIRO; coluna++) {
-        const celulaVazia = coluna < TAMANHO_TABULEIRO && tabuleiro[linha][coluna] === 'vazia';
+        const celulaVazia = coluna < TAMANHO_TABULEIRO && boardRow(tabuleiro, linha)[coluna] === 'vazia';
         
         if (celulaVazia && inicioSegmento === -1) {
           inicioSegmento = coluna;
@@ -342,9 +343,9 @@ export function colocarSegmento(state: QuelhasState, segmento: Segmento): Quelha
   // Marcar células como ocupadas
   for (let i = 0; i < segmento.comprimento; i++) {
     if (segmento.orientacao === 'vertical') {
-      novoTabuleiro[segmento.inicio.linha + i][segmento.inicio.coluna] = 'ocupada';
+      boardRow(novoTabuleiro, segmento.inicio.linha + i)[segmento.inicio.coluna] = 'ocupada';
     } else {
-      novoTabuleiro[segmento.inicio.linha][segmento.inicio.coluna + i] = 'ocupada';
+      boardRow(novoTabuleiro, segmento.inicio.linha)[segmento.inicio.coluna + i] = 'ocupada';
     }
   }
 
@@ -414,7 +415,7 @@ export function getSegmentoParaPosicao(state: QuelhasState, pos: Posicao): Segme
 
   // Retornar o menor segmento que inclui esta posição
   segmentosPossiveis.sort((a, b) => a.comprimento - b.comprimento);
-  return segmentosPossiveis[0];
+  return segmentosPossiveis[0] ?? null;
 }
 
 // Verificar se uma posição pode ser início de um segmento válido
@@ -592,7 +593,7 @@ function gerarChaveTabuleiro(tabuleiro: Celula[][], orientacaoAtual: Orientacao)
   for (let i = 0; i < TAMANHO_TABULEIRO; i++) {
     let row = 0;
     for (let j = 0; j < TAMANHO_TABULEIRO; j++) {
-      if (tabuleiro[i][j] === 'ocupada') {
+      if (boardRow(tabuleiro, i)[j] === 'ocupada') {
         row |= (1 << j);
       }
     }
@@ -1216,7 +1217,9 @@ export function jogadaComputador(state: QuelhasState): QuelhasState {
 
   // Se só há uma jogada, jogar imediatamente
   if (jogadas.length === 1) {
-    return colocarSegmento(state, jogadas[0]);
+    const unicaJogada = jogadas[0];
+    if (unicaJogada === undefined) throw new TypeError('Only move is missing.');
+    return colocarSegmento(state, unicaJogada);
   }
 
   const melhorJogada = escolherMelhorJogadaIA(
@@ -1230,6 +1233,7 @@ export function jogadaComputador(state: QuelhasState): QuelhasState {
     // Fallback heurístico rápido
     const candidatos = gerarCandidatos(state.tabuleiro, minhaOrientacao);
     const jogadaFallback = candidatos.length > 0 ? candidatos[0] : jogadas[0];
+    if (jogadaFallback === undefined) throw new TypeError('Fallback move is missing.');
     return colocarSegmento(state, jogadaFallback);
   }
 
@@ -1256,7 +1260,7 @@ function calcularDensidadeLocal(tabuleiro: Celula[][], segmento: Segmento): numb
         const nl = linha + dl;
         const nc = coluna + dc;
         if (nl >= 0 && nl < TAMANHO_TABULEIRO && nc >= 0 && nc < TAMANHO_TABULEIRO) {
-          if (tabuleiro[nl][nc] === 'ocupada') {
+          if (boardRow(tabuleiro, nl)[nc] === 'ocupada') {
             ocupadas++;
           }
         }
@@ -1280,9 +1284,9 @@ function aplicarSegmentoTabuleiro(tabuleiro: Celula[][], segmento: Segmento): Ce
   const novoTabuleiro = tabuleiro.map(linha => [...linha]);
   for (let i = 0; i < segmento.comprimento; i++) {
     if (segmento.orientacao === 'vertical') {
-      novoTabuleiro[segmento.inicio.linha + i][segmento.inicio.coluna] = 'ocupada';
+      boardRow(novoTabuleiro, segmento.inicio.linha + i)[segmento.inicio.coluna] = 'ocupada';
     } else {
-      novoTabuleiro[segmento.inicio.linha][segmento.inicio.coluna + i] = 'ocupada';
+      boardRow(novoTabuleiro, segmento.inicio.linha)[segmento.inicio.coluna + i] = 'ocupada';
     }
   }
   return novoTabuleiro;

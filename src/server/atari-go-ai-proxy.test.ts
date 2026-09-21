@@ -33,10 +33,10 @@ afterEach(() => {
 describe('proxy da IA N6 do Atari Go', () => {
   test('encaminha apenas GET /health e preserva query/status/content-type', async () => {
     const calls: Array<{ url: string; method: string }> = [];
-    const fetchImpl = (async (input: string | URL | Request, init?: RequestInit) => {
+    const fetchImpl = Object.assign(async (input: string | URL | Request, init?: RequestInit) => {
       calls.push({ url: String(input), method: init?.method ?? 'GET' });
       return Response.json({ status: 'ok' }, { status: 201 });
-    }) as typeof fetch;
+    }, { preconnect: originalFetch.preconnect });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100/',
       sessionCookieName: COOKIE_NAME,
@@ -55,7 +55,7 @@ describe('proxy da IA N6 do Atari Go', () => {
   });
 
   test('rejeita caminhos e métodos que não fazem parte da superfície pública', async () => {
-    const fetchImpl = (async () => Response.json({ unexpected: true })) as typeof fetch;
+    const fetchImpl = Object.assign(async () => Response.json({ unexpected: true }), { preconnect: originalFetch.preconnect });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -72,10 +72,10 @@ describe('proxy da IA N6 do Atari Go', () => {
 
   test('rejeita o corpo acima de 8 KiB antes de contactar a GPU', async () => {
     let calls = 0;
-    const fetchImpl = (async () => {
+    const fetchImpl = Object.assign(async () => {
       calls += 1;
       return Response.json({ move: 0 });
-    }) as typeof fetch;
+    }, { preconnect: originalFetch.preconnect });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -96,10 +96,10 @@ describe('proxy da IA N6 do Atari Go', () => {
 
   test('aplica o rate limit por sessão assinada, sem misturar alunos no mesmo IP', async () => {
     let calls = 0;
-    const fetchImpl = (async () => {
+    const fetchImpl = Object.assign(async () => {
       calls += 1;
       return Response.json({ move: 40 });
-    }) as typeof fetch;
+    }, { preconnect: originalFetch.preconnect });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -122,7 +122,7 @@ describe('proxy da IA N6 do Atari Go', () => {
   });
 
   test('trata cookie forjado com assinatura multibyte como sessão anónima, sem lançar', async () => {
-    const fetchImpl = (async () => Response.json({ move: 40 })) as typeof fetch;
+    const fetchImpl = Object.assign(async () => Response.json({ move: 40 }), { preconnect: originalFetch.preconnect });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,
@@ -143,9 +143,9 @@ describe('proxy da IA N6 do Atari Go', () => {
   });
 
   test('converte falhas e timeouts do upstream em 503 para ativar o fallback N5', async () => {
-    const fetchImpl = (async () => {
+    const fetchImpl = Object.assign(async () => {
       throw new Error('offline');
-    }) as typeof fetch;
+    }, { preconnect: originalFetch.preconnect });
     const proxy = createAtariGoAiProxy({
       upstreamBaseUrl: 'http://127.0.0.1:8100',
       sessionCookieName: COOKIE_NAME,

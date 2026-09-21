@@ -94,7 +94,9 @@ function getPostGameTurningPoint(
   history: Array<AIResponseV1<Posicao, AtariGoState>>,
 ): NonNullable<AIResponseV1<Posicao, AtariGoState>['turningPoints']>[number] | null {
   for (let i = history.length - 1; i >= 0; i--) {
-    const point = history[i].turningPoints?.[0];
+    const response = history[i];
+    if (response === undefined) throw new TypeError('Tutor history is missing a response.');
+    const point = response.turningPoints?.[0];
     if (point) return point;
   }
   return null;
@@ -373,7 +375,9 @@ export function AtariGoGame({ onVoltar }: AtariGoGameProps) {
 
   // Renderizar uma interseção do tabuleiro
   const renderIntersecao = (linha: number, coluna: number) => {
-    const celula = state.tabuleiro[linha][coluna];
+    const row = state.tabuleiro[linha];
+    if (row === undefined) throw new TypeError('Atari Go board is missing a row.');
+    const celula = row[coluna];
     const ultimaJogada = isUltimaJogada(linha, coluna);
     const jogadaValida = isJogadaValidaPos(linha, coluna);
     const isVezDoHumano = state.modo === 'dois-jogadores' || state.jogadorAtual === humanPlayer;

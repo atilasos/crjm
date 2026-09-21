@@ -82,6 +82,7 @@ export function posToKey(pos: Posicao): string {
 // Converter chave string para posição
 export function keyToPos(key: string): Posicao {
   const [q, r] = key.split(',').map(Number);
+  if (q === undefined || r === undefined) throw new TypeError('Position key requires two coordinates.');
   return { q, r };
 }
 

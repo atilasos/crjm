@@ -309,6 +309,9 @@ export class LearnerCoreService {
 
     const progress = after.patterns[input.patternId];
     this.runInTransaction(() => {
+      if (progress === undefined) {
+        throw new TypeError('Changed pattern profile is missing its progress.');
+      }
       this.db.query(
         `INSERT INTO learner_pattern_progress (
           user_id, pattern_id, game_id, state, solo_context_ids_json, updated_at

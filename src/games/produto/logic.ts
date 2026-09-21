@@ -94,7 +94,7 @@ export function calcularPontuacao(tabuleiro: Record<string, Celula>, cor: 'preta
   if (grupos.length < 2) {
     // Menos de 2 grupos = pontuação 0
     return {
-      maiorGrupo: grupos.length > 0 ? grupos[0].celulas.length : 0,
+      maiorGrupo: grupos[0]?.celulas.length ?? 0,
       segundoMaiorGrupo: 0,
       produto: 0,
       totalPecas,
@@ -104,10 +104,12 @@ export function calcularPontuacao(tabuleiro: Record<string, Celula>, cor: 'preta
   // Ordenar grupos por tamanho (decrescente)
   const tamanhos = grupos.map(g => g.celulas.length).sort((a, b) => b - a);
 
+  const [maiorGrupo = 0, segundoMaiorGrupo = 0] = tamanhos;
+
   return {
-    maiorGrupo: tamanhos[0],
-    segundoMaiorGrupo: tamanhos[1],
-    produto: tamanhos[0] * tamanhos[1],
+    maiorGrupo,
+    segundoMaiorGrupo,
+    produto: maiorGrupo * segundoMaiorGrupo,
     totalPecas,
   };
 }
@@ -259,6 +261,7 @@ export function jogadaComputador(state: ProdutoState): ProdutoState {
     }
     // Senão, escolher aleatoriamente
     const posAleatoria = casasVazias[Math.floor(Math.random() * casasVazias.length)];
+    if (posAleatoria === undefined) throw new TypeError('Selected empty position is missing.');
     return colocarPeca(state, posAleatoria, corJogador);
   }
 
@@ -325,6 +328,7 @@ export function jogadaComputador(state: ProdutoState): ProdutoState {
   // Fallback: jogada aleatória
   const pos1 = casasVazias[0];
   const pos2 = casasVazias[1];
+  if (pos1 === undefined) throw new TypeError('First empty position is missing.');
   let novoState = colocarPeca(state, pos1, corJogador);
   if (pos2) {
     novoState = colocarPeca(novoState, pos2, corJogador);

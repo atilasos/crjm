@@ -6,13 +6,7 @@ function post(msg: AIResponse) {
   self.postMessage(msg);
 }
 
-type WasmModule = {
-  default: (opts: { module_or_path: URL | string }) => Promise<void>;
-  init: (seed: number) => void;
-  set_position: (board: Uint8Array, toPlay: number) => void;
-  best_move: (timeMs: number, level: number) => number;
-  stats: () => any;
-};
+type WasmModule = typeof import('./wasm/pkg/atari_go_ai.js');
 
 let wasm: WasmModule | null = null;
 let useWasm = false;
@@ -20,7 +14,7 @@ let initDone = false;
 
 async function init(): Promise<void> {
   try {
-    const wasmModule = (await import('./wasm/pkg/atari_go_ai.js')) as WasmModule;
+    const wasmModule = (await import('./wasm/pkg/atari_go_ai.js'));
     const wasmUrl = new URL('./wasm/pkg/atari_go_ai_bg.wasm', import.meta.url);
     await wasmModule.default({ module_or_path: wasmUrl });
     wasmModule.init((Date.now() >>> 0) as number);
