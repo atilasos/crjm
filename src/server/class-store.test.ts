@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -61,6 +62,7 @@ describe('ClassStore', () => {
   test('findByCode é case-insensitive e tolera espaços/hífens', () => {
     const store = new ClassStore(filePath);
     const schoolClass = store.createClass('4.º A', ['Ana']);
+    assert.ok(schoolClass.students[0]);
     const code = schoolClass.students[0].code;
 
     const spaced = `${code.slice(0, 3)} ${code.slice(3)}`.toLowerCase();
@@ -87,6 +89,7 @@ describe('ClassStore', () => {
     const classes = reloaded.listClasses();
 
     expect(classes).toHaveLength(1);
+    assert.ok(classes[0]);
     expect(classes[0].id).toBe(created.id);
     expect(classes[0].students.map((s) => s.name)).toEqual(['Ana', 'Bruno']);
     expect(classes[0].students.map((s) => s.code)).toEqual(created.students.map((s) => s.code));
@@ -117,6 +120,7 @@ describe('ClassStore', () => {
     expect(added?.map((s) => s.name)).toEqual(['Bruno', 'Carla']);
 
     const classes = store.listClasses();
+    assert.ok(classes[0]);
     expect(classes[0].students).toHaveLength(3);
 
     const allCodes = classes[0].students.map((s) => s.code);
@@ -131,6 +135,7 @@ describe('ClassStore', () => {
   test('removeStudent remove aluno existente e persiste', () => {
     const store = new ClassStore(filePath);
     const created = store.createClass('4.º A', ['Ana', 'Bruno']);
+    assert.ok(created.students[0]);
     const studentId = created.students[0].id;
 
     expect(store.removeStudent(created.id, studentId)).toBe(true);
@@ -145,6 +150,7 @@ describe('ClassStore', () => {
     const store = new ClassStore(filePath);
     const created = store.createClass('4.º A', ['Ana']);
 
+    assert.ok(created.students[0]);
     expect(store.removeStudent('inexistente', created.students[0].id)).toBe(false);
     expect(store.removeStudent(created.id, 'inexistente')).toBe(false);
   });

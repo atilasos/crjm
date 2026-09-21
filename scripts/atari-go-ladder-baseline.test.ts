@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -46,6 +47,7 @@ describe('atari-go-ladder-baseline script', () => {
     expect(baseline.ladder.length).toBe(4);
     expect(Object.keys(baseline.t2ByLevel)).toEqual(['1', '2', '3', '4', '5']);
 
+    assert.ok(baseline.t2ByLevel['3']);
     expect(typeof baseline.t2ByLevel['3'].p95).toBe('number');
     expect(typeof baseline.t2ByLevel['3'].budgetMs).toBe('number');
 
@@ -59,6 +61,7 @@ describe('atari-go-ladder-baseline script', () => {
     expect(typeof baseline.nC3.passAll).toBe('boolean');
 
     const firstLadderPair = baseline.ladder[0];
+    assert.ok(firstLadderPair);
     expect(firstLadderPair.strongerLevel).toBe(2);
     expect(firstLadderPair.weakerLevel).toBe(1);
     expect(firstLadderPair.t1Pass).toBe(firstLadderPair.strongerWinrate >= 0.62);

@@ -1,6 +1,7 @@
 import { criarEstadoInicial as criarY, aplicarJogada as aplicarY } from '../games/y/logic';
 import { toNetworkFaiscaMove, toNetworkGameState, fromNetworkGameState } from '../tournament/game-protocol';
 import { describe, it, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { getGameAdapter } from './game-adapter';
 import type { ProdutoState } from '../games/produto/types';
 import type { AtariGoState } from '../games/atari-go/types';
@@ -103,6 +104,7 @@ describe('Game Adapters - Network Move Handling', () => {
             expect(adapter.isValidMove(state, move)).toBe(true);
             const nextState = adapter.applyMove(state, move) as AtariGoState;
             expect(nextState).not.toBeNull();
+            assert.ok(nextState.tabuleiro[3]);
             expect(nextState.tabuleiro[3][5]).toBe('preta');
         });
     });
@@ -121,6 +123,7 @@ describe('Game Adapters - Network Move Handling', () => {
             expect(adapter.isValidMove(state, move)).toBe(true);
             const nextState = adapter.applyMove(state, move) as NexState;
             expect(nextState).not.toBeNull();
+            assert.ok(nextState.tabuleiro[5]);
             expect(nextState.tabuleiro[5][5]).toBe('preta');
             expect(nextState.tabuleiro[5][6]).toBe('neutra');
         });

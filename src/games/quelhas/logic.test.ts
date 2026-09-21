@@ -29,6 +29,7 @@ describe("Quelhas - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 10x10", () => {
     const tabuleiro = criarTabuleiroInicial();
     expect(tabuleiro.length).toBe(10);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(10);
   });
 
@@ -616,6 +617,7 @@ describe("Quelhas - Extração de Blocos", () => {
   test("extrairBlocos deve encontrar múltiplos blocos na mesma coluna", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar linha 4 da coluna 0 para dividir em dois blocos
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][0] = 'ocupada';
     
     const blocos = extrairBlocos(tabuleiro, 'vertical');
@@ -623,7 +625,9 @@ describe("Quelhas - Extração de Blocos", () => {
     
     // Deve haver 2 blocos na coluna 0: linhas 0-3 (comp 4) e linhas 5-9 (comp 5)
     expect(blocosColuna0.length).toBe(2);
+    assert.ok(blocosColuna0[0]);
     expect(blocosColuna0[0].comprimento).toBe(4);
+    assert.ok(blocosColuna0[1]);
     expect(blocosColuna0[1].comprimento).toBe(5);
   });
 });
@@ -633,6 +637,7 @@ describe("Quelhas - Classificação Exclusivo/Partilhado", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar toda a primeira linha exceto coluna 0
     // Assim horizontal não consegue jogar na linha 0
+    assert.ok(tabuleiro[0]);
     for (let j = 1; j < 10; j++) {
       tabuleiro[0][j] = 'ocupada';
     }
@@ -723,6 +728,7 @@ describe("Quelhas - Parse de Tabuleiro ASCII", () => {
     const tabuleiro = parseTabuleiroASCII(ascii);
     
     expect(tabuleiro.length).toBe(10);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(10);
     
     for (const linha of tabuleiro) {
@@ -754,7 +760,9 @@ describe("Quelhas - Parse de Tabuleiro ASCII", () => {
     }
     
     // Fora da diagonal deve estar vazia
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0][1]).toBe('vazia');
+    assert.ok(tabuleiro[1]);
     expect(tabuleiro[1][0]).toBe('vazia');
   });
 });

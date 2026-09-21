@@ -7,6 +7,7 @@ import { fromNetworkYState } from './game-protocol';
  */
 
 import { describe, test, expect } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   // Gatos & Cães
   toNetworkGatosCaesMove,
@@ -78,6 +79,7 @@ describe('Gatos & Cães Conversions', () => {
       isFirstDogPlaced: true,
     };
     
+    assert.ok(networkState.board[0]);
     expect(networkState.board[0][0]).toBe('empty');
     expect(networkState.board[0][1]).toBe('cat');
     expect(networkState.board[0][2]).toBe('dog');
@@ -100,6 +102,8 @@ describe('Gatos & Cães Conversions', () => {
     
     const local = fromNetworkGatosCaesState(network);
     
+    assert.ok(local.tabuleiro[0]);
+    assert.ok(local.tabuleiro[1]);
     expect(local.tabuleiro[0][0]).toBe('vazia');
     expect(local.tabuleiro[0][1]).toBe('gato');
     expect(local.tabuleiro[1][0]).toBe('cao');
@@ -205,6 +209,8 @@ describe('Produto Conversions', () => {
     const network = toNetworkProdutoMove(jogada);
     
     expect(network.placements).toHaveLength(2);
+    assert.ok(network.placements[0]);
+    assert.ok(network.placements[1]);
     expect(network.placements[0].coord).toEqual({ q: 0, r: 0 });
     expect(network.placements[0].color).toBe('black');
     expect(network.placements[1].coord).toEqual({ q: 1, r: -1 });

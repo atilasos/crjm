@@ -1,4 +1,5 @@
 import { describe, test, expect } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   createTournament,
   addPlayer,
@@ -76,6 +77,8 @@ describe('Tournament Engine - Bracket Generation', () => {
 
     // Round 1 Winners: Match 1 and Match 2
     const [match1, match2] = tournament.winnersMatches;
+    assert.ok(match1);
+    assert.ok(match2);
     const m1Winner = match1.player1!.id;
     const m1Loser = match1.player2!.id;
     const m2Winner = match2.player1!.id;
@@ -124,6 +127,8 @@ describe('Tournament Engine - Bracket Generation', () => {
     startTournament(tournament);
 
     const [match1, match2] = tournament.winnersMatches;
+    assert.ok(match1);
+    assert.ok(match2);
     const m1Winner = match1.player1!.id;
     const m1Loser = match1.player2!.id;
     const m2Winner = match2.player1!.id;
@@ -177,6 +182,7 @@ describe('Tournament Engine - Bracket Generation', () => {
 
     // Only 1 match in winners bracket
     const match = tournament.winnersMatches[0];
+    assert.ok(match);
     const winnersChamp = match.player1!.id;
     const losersChamp = match.player2!.id;
 
@@ -211,6 +217,7 @@ describe('Tournament Engine - Bracket Generation', () => {
     expect(tournament.winnersMatches.length).toBe(1);
 
     const match = tournament.winnersMatches[0];
+    assert.ok(match);
     const winner = match.player1!.id;
 
     processMatchResult(tournament, match.id, winner);
@@ -235,6 +242,8 @@ describe('Tournament Engine - Bracket Generation', () => {
     startTournament(tournament);
 
     const [match1, match2] = tournament.winnersMatches;
+    assert.ok(match1);
+    assert.ok(match2);
     const loserId = match1.player2!.id;
 
     // Before any match
@@ -303,6 +312,7 @@ describe('Tournament Engine - Restart Functions', () => {
     startTournament(tournament);
 
     const match = tournament.winnersMatches[0];
+    assert.ok(match);
     const p1Id = match.player1!.id;
     const p2Id = match.player2!.id;
 
@@ -337,6 +347,7 @@ describe('Tournament Engine - Restart Functions', () => {
     startTournament(tournament);
 
     const match = tournament.winnersMatches[0];
+    assert.ok(match);
     const p1Id = match.player1!.id;
     const p2Id = match.player2!.id;
 
@@ -373,6 +384,7 @@ describe('Tournament Engine - Restart Functions', () => {
     const match = tournament.winnersMatches[0];
     
     // Mark match as finished
+    assert.ok(match);
     match.phase = 'finished';
     match.winnerId = match.player1!.id;
 
@@ -409,6 +421,7 @@ describe('Tournament Engine - Restart Functions', () => {
     startTournament(tournament);
 
     const match = tournament.winnersMatches[0];
+    assert.ok(match);
     const originalBracket = match.bracket;
     const originalRound = match.round;
     const originalP1 = match.player1;
@@ -444,6 +457,7 @@ describe('Tournament Engine - Spectator Functions', () => {
 
     // Start first match
     const match1 = tournament.winnersMatches[0];
+    assert.ok(match1);
     const p1Id = match1.player1!.id;
     const p2Id = match1.player2!.id;
 
@@ -454,11 +468,13 @@ describe('Tournament Engine - Spectator Functions', () => {
     // Now should have 1 active match
     active = getActiveMatchesWithGameState(tournament);
     expect(active.length).toBe(1);
+    assert.ok(active[0]);
     expect(active[0].match.id).toBe(match1.id);
     expect(active[0].gameState).toEqual({ board: 'test-state' });
 
     // Start second match
     const match2 = tournament.winnersMatches[1];
+    assert.ok(match2);
     const p3Id = match2.player1!.id;
     const p4Id = match2.player2!.id;
 
@@ -480,6 +496,7 @@ describe('Tournament Engine - Spectator Functions', () => {
     const match = tournament.winnersMatches[0];
     
     // Set phase to playing but no game state
+    assert.ok(match);
     match.phase = 'playing';
     match.gameState = null;
 

@@ -6,6 +6,7 @@
  */
 
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import {
   generateMoves,
   countMoves,
@@ -196,6 +197,7 @@ describe("Consistency with Original Game Logic", () => {
       if (jogadas.length === 0) break;
       
       const jogada = jogadas[Math.floor(Math.random() * jogadas.length)];
+      assert.ok(jogada);
       state = colocarDomino(state, jogada);
       
       const [low, high] = boardToBitboard(state.tabuleiro);
@@ -214,8 +216,11 @@ describe("Consistency with Original Game Logic", () => {
     );
     
     // Place some pieces
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'ocupada-vertical';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][0] = 'ocupada-vertical';
+    assert.ok(tabuleiro[3]);
     tabuleiro[3][3] = 'ocupada-horizontal';
     tabuleiro[3][4] = 'ocupada-horizontal';
     

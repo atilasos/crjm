@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { criarEstadoInicial } from '../logic';
 import type { GatosCaesState, Posicao } from '../types';
 import type { SearchStats, WorkerMessage, WorkerResponse } from './types';
@@ -53,6 +54,7 @@ describe('GatosCaesAIClient', () => {
     const pending = client.computeMove(state, 4, { timeLimitMs: 73 });
     const request = worker.messages[0];
 
+    assert.ok(request);
     expect(request).toMatchObject({
       type: 'compute_move',
       difficulty: 4,
@@ -61,6 +63,7 @@ describe('GatosCaesAIClient', () => {
     if (request.type !== 'compute_move') throw new Error('expected compute request');
 
     const move = state.jogadasValidas[0];
+    assert.ok(move);
     worker.emit({
       type: 'move_result',
       requestId: request.requestId,
