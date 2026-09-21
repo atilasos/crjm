@@ -18,14 +18,14 @@ import { HintLegend } from '../../components/tutor/HintLegend';
 import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import type { AIRequestV1, AIResponseV1, DifficultyLevel } from '../../ai-core';
-import { AtariGoState, Posicao, TAMANHO_TABULEIRO } from './types';
+import { type AtariGoState, type Posicao, TAMANHO_TABULEIRO } from './types';
 import {
   criarEstadoInicial,
   colocarPedra,
   isJogadaValida,
   jogadaComputador,
 } from './logic';
-import { GameMode, Player } from '../../types';
+import type { GameMode, Player } from '../../types';
 import {
   AtariGoAIClient,
   SERVER_AI_WITH_FALLBACK_TIMEOUT_MS,

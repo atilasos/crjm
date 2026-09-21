@@ -1,4 +1,4 @@
-import { GameMode, Player, GameStatus } from '../../types';
+import type { GameMode, Player, GameStatus } from '../../types';
 
 // Dominório - Jogo de dominós (normal play - último a jogar ganha)
 // - Tabuleiro 8×8

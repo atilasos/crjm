@@ -1,4 +1,4 @@
-import { GameMode, Player, GameStatus } from '../../types';
+import type { GameMode, Player, GameStatus } from '../../types';
 
 // Gatos & Cães - Jogo de colocação (normal play - último a jogar ganha)
 // - Tabuleiro 8×8

@@ -5,7 +5,7 @@
  * Stores search results to avoid re-computing the same positions.
  */
 
-import { TTEntry, TTFlag } from './types';
+import { type TTEntry, TTFlag } from './types';
 
 // Zobrist hash keys (pre-generated random 64-bit values)
 // We need: 64 squares × 2 piece types + 1 for side to move

@@ -23,7 +23,7 @@ import {
   criarEstadoInicial,
   colocarPedra,
 } from '../src/games/atari-go/logic';
-import { AtariGoState, Celula, Posicao, TAMANHO_TABULEIRO } from '../src/games/atari-go/types';
+import { type AtariGoState, type Celula, type Posicao, TAMANHO_TABULEIRO } from '../src/games/atari-go/types';
 
 // RNG determinístico (mulberry32)
 function mulberry32(seed: number): () => number {

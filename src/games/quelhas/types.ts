@@ -1,4 +1,4 @@
-import { GameMode, Player, GameStatus } from '../../types';
+import type { GameMode, Player, GameStatus } from '../../types';
 
 // Quelhas - Jogo de segmentos (variante misère)
 // - Tabuleiro 10×10

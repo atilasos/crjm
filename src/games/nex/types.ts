@@ -1,4 +1,4 @@
-import { GameMode, Player, GameStatus } from '../../types';
+import type { GameMode, Player, GameStatus } from '../../types';
 
 // Nex - Jogo de conexão com peças neutras
 // - Grelha hexagonal em formato de losango horizontal (11 casas de lado)
