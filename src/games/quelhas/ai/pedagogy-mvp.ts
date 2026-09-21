@@ -26,7 +26,9 @@ export function buildQuickReviewItems(
   const latest = history[history.length - 1];
   const unique = new Map<string, AIResponseV1<Segmento, QuelhasState>>();
 
+  if (weakest === undefined) throw new TypeError('Quick review history has no weakest response.');
   unique.set(weakest.requestId, weakest);
+  if (latest === undefined) throw new TypeError('Quick review history has no latest response.');
   unique.set(latest.requestId, latest);
 
   return [...unique.values()].slice(0, 2).map((entry, index) => ({

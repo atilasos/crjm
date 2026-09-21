@@ -77,7 +77,7 @@ function verifiedSessionId(
   return timingSafeEqual(signatureBytes, expectedBytes) ? sessionId : null;
 }
 
-async function readLimitedBody(request: Request, timeoutMs: number): Promise<Uint8Array> {
+async function readLimitedBody(request: Request, timeoutMs: number): Promise<Uint8Array<ArrayBuffer>> {
   const contentLength = Number(request.headers.get('content-length'));
   if (Number.isFinite(contentLength) && contentLength > ATARI_GO_AI_PROXY_MAX_BODY_BYTES) {
     throw new AiProxyRequestError(413, 'payload-too-large');

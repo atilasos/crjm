@@ -65,7 +65,9 @@ export function buildQuickReviewItems(
   const latest = history[history.length - 1];
   const dedup = new Map<string, AIResponseV1<Domino, DominorioState>>();
 
+  if (weakest === undefined) throw new TypeError('Quick review history has no weakest response.');
   dedup.set(weakest.requestId, weakest);
+  if (latest === undefined) throw new TypeError('Quick review history has no latest response.');
   dedup.set(latest.requestId, latest);
 
   return [...dedup.values()].slice(0, 2).map((entry, idx) => ({

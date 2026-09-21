@@ -92,7 +92,7 @@ function getThreatClasses(severity: 'low' | 'medium' | 'high'): string {
 
 function getPostGameTurningPoint(
   history: Array<AIResponseV1<Posicao, AtariGoState>>,
-): AIResponseV1<Posicao, AtariGoState>['turningPoints'][number] | null {
+): NonNullable<AIResponseV1<Posicao, AtariGoState>['turningPoints']>[number] | null {
   for (let i = history.length - 1; i >= 0; i--) {
     const point = history[i].turningPoints?.[0];
     if (point) return point;
