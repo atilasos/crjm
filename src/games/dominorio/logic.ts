@@ -1,3 +1,4 @@
+import { boardRow } from '../board-row';
 import type { DominorioState, Celula, Posicao, Domino } from './types';
 import type { GameMode, GameStatus, Player } from '../../types';
 
@@ -31,7 +32,7 @@ export function calcularJogadasValidas(tabuleiro: Celula[][], jogador: Player): 
     for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
       const pos1: Posicao = { linha, coluna };
       
-      if (tabuleiro[linha][coluna] !== 'vazia') continue;
+      if (boardRow(tabuleiro, linha)[coluna] !== 'vazia') continue;
 
       let pos2: Posicao;
       
@@ -42,7 +43,7 @@ export function calcularJogadasValidas(tabuleiro: Celula[][], jogador: Player): 
       }
 
       if (!dentroDoTabuleiro(pos2)) continue;
-      if (tabuleiro[pos2.linha][pos2.coluna] !== 'vazia') continue;
+      if (boardRow(tabuleiro, pos2.linha)[pos2.coluna] !== 'vazia') continue;
 
       jogadas.push({ pos1, pos2, orientacao });
     }
@@ -121,8 +122,8 @@ export function colocarDomino(state: DominorioState, domino: Domino): DominorioS
     ? 'ocupada-vertical' 
     : 'ocupada-horizontal';
 
-  novoTabuleiro[domino.pos1.linha][domino.pos1.coluna] = tipoCelula;
-  novoTabuleiro[domino.pos2.linha][domino.pos2.coluna] = tipoCelula;
+  boardRow(novoTabuleiro, domino.pos1.linha)[domino.pos1.coluna] = tipoCelula;
+  boardRow(novoTabuleiro, domino.pos2.linha)[domino.pos2.coluna] = tipoCelula;
 
   const proximoJogador: Player = state.jogadorAtual === 'jogador1' ? 'jogador2' : 'jogador1';
 
@@ -170,8 +171,8 @@ export function jogadaComputador(state: DominorioState): DominorioState {
     const tipoCelula: Celula = jogada.orientacao === 'vertical' 
       ? 'ocupada-vertical' 
       : 'ocupada-horizontal';
-    novoTabuleiro[jogada.pos1.linha][jogada.pos1.coluna] = tipoCelula;
-    novoTabuleiro[jogada.pos2.linha][jogada.pos2.coluna] = tipoCelula;
+    boardRow(novoTabuleiro, jogada.pos1.linha)[jogada.pos1.coluna] = tipoCelula;
+    boardRow(novoTabuleiro, jogada.pos2.linha)[jogada.pos2.coluna] = tipoCelula;
 
     // Contar jogadas de cada lado após esta jogada
     const jogadasAdversario = calcularJogadasValidas(novoTabuleiro, 
@@ -209,7 +210,9 @@ export function jogadaComputador(state: DominorioState): DominorioState {
   jogadasAvaliadas.sort((a, b) => b.pontuacao - a.pontuacao);
 
   // Escolher a melhor jogada
-  const melhorJogada = jogadasAvaliadas[0].jogada;
+  const melhorAvaliacao = jogadasAvaliadas[0];
+  if (melhorAvaliacao === undefined) throw new TypeError('Evaluated move is missing.');
+  const melhorJogada = melhorAvaliacao.jogada;
 
   return colocarDomino(state, melhorJogada);
 }

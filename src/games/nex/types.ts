@@ -67,5 +67,6 @@ export function posToKey(pos: Posicao): string {
 
 export function keyToPos(key: string): Posicao {
   const [x, y] = key.split(',').map(Number);
+  if (x === undefined || y === undefined) throw new TypeError('Position key requires two coordinates.');
   return { x, y };
 }

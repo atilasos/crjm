@@ -4,6 +4,7 @@
  * Implementa a interface TournamentClient usando WebSocket do browser.
  */
 
+import { tournamentStateFromUpdate } from './protocol';
 import type {
   ClientMessage,
   ServerMessage,
@@ -181,7 +182,7 @@ export class TournamentWebSocketClient implements TournamentClient {
         break;
 
       case 'tournament_state_update':
-        this._tournamentState = message.tournamentState;
+        this._tournamentState = tournamentStateFromUpdate(message);
         break;
     }
 

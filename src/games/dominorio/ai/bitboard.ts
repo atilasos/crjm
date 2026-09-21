@@ -1,3 +1,4 @@
+import { boardRow } from '../../board-row';
 /**
  * Dominório Bitboard Implementation (TypeScript reference)
  * 
@@ -346,8 +347,9 @@ export function boardToBitboard(tabuleiro: Celula[][]): [number, number] {
   let high = 0;
   
   for (let row = 0; row < 8; row++) {
+    const cells = boardRow(tabuleiro, row);
     for (let col = 0; col < 8; col++) {
-      if (tabuleiro[row][col] !== 'vazia') {
+      if (cells[col] !== 'vazia') {
         const index = squareIndex(row, col);
         if (index < 32) {
           low |= (1 << index);

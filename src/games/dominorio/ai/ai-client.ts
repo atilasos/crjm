@@ -197,7 +197,9 @@ export class DominorioAIClient {
     
     if (entries && entries.length > 0) {
       const idx = Math.floor(random() * entries.length);
-      return entries[idx];
+      const selectedMove = entries[idx];
+      if (selectedMove === undefined) throw new TypeError('Opening book selection is missing.');
+      return selectedMove;
     }
     
     return null;
@@ -317,6 +319,7 @@ export class DominorioAIClient {
       let alpha = -INF;
       const beta = INF;
       let currentBest = orderedMoves[0];
+      if (currentBest === undefined) throw new TypeError('Ordered root moves are empty.');
       
       for (const mv of orderedMoves) {
         const [newLow, newHigh] = bitboard.applyMove(occupiedLow, occupiedHigh, mv, side);
@@ -353,13 +356,19 @@ export class DominorioAIClient {
       scoredMoves.sort((a, b) => b.score - a.score);
       
       const candidates = scoredMoves.filter(
-        s => scoredMoves[0].score - s.score <= scoreDelta
+        s => {
+          const first = scoredMoves[0];
+          if (first === undefined) throw new TypeError('Scored moves are empty.');
+          return first.score - s.score <= scoreDelta;
+        }
       );
       
       if (candidates.length > 1) {
         const idx = Math.floor(random() * candidates.length);
-        bestMove = candidates[idx].move;
-        bestScore = candidates[idx].score;
+        const selected = candidates[idx];
+        if (selected === undefined) throw new TypeError('Random move candidate is missing.');
+        bestMove = selected.move;
+        bestScore = selected.score;
       }
     }
     

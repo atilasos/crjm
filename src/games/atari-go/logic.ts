@@ -1,3 +1,4 @@
+import { boardRow } from '../board-row';
 import { type AtariGoState, type Celula, type Posicao, type Grupo, TAMANHO_TABULEIRO } from './types';
 import type { GameMode, GameStatus, Player } from '../../types';
 
@@ -37,7 +38,7 @@ function getCorAdversario(jogador: Player): 'preta' | 'branca' {
 
 // Encontrar o grupo que contém uma pedra específica usando flood fill
 export function encontrarGrupo(tabuleiro: Celula[][], pos: Posicao): Grupo | null {
-  const cor = tabuleiro[pos.linha][pos.coluna];
+  const cor = boardRow(tabuleiro, pos.linha)[pos.coluna];
   if (cor === 'vazia') return null;
 
   const pedras: Posicao[] = [];
@@ -54,14 +55,14 @@ export function encontrarGrupo(tabuleiro: Celula[][], pos: Posicao): Grupo | nul
     if (visitadas.has(key)) continue;
     visitadas.add(key);
 
-    const celulaAtual = tabuleiro[atual.linha][atual.coluna];
+    const celulaAtual = boardRow(tabuleiro, atual.linha)[atual.coluna];
     
     if (celulaAtual === cor) {
       pedras.push(atual);
       
       // Verificar vizinhos
       for (const vizinho of getVizinhos(atual)) {
-        const vizinhoCelula = tabuleiro[vizinho.linha][vizinho.coluna];
+        const vizinhoCelula = boardRow(tabuleiro, vizinho.linha)[vizinho.coluna];
         const vizinhoKey = posKey(vizinho);
         
         if (vizinhoCelula === 'vazia' && !liberdades.some(l => posKey(l) === vizinhoKey)) {
@@ -84,7 +85,7 @@ export function encontrarTodosGrupos(tabuleiro: Celula[][], cor: 'preta' | 'bran
 
   for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
     for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
-      if (tabuleiro[linha][coluna] === cor) {
+      if (boardRow(tabuleiro, linha)[coluna] === cor) {
         const pos = { linha, coluna };
         if (!visitadas.has(posKey(pos))) {
           const grupo = encontrarGrupo(tabuleiro, pos);
@@ -109,11 +110,11 @@ function verificarCapturas(tabuleiro: Celula[][], pos: Posicao, corJogador: 'pre
 
   // Simular colocação da pedra
   const tabuleiroTemp = tabuleiro.map(linha => [...linha]);
-  tabuleiroTemp[pos.linha][pos.coluna] = corJogador;
+  boardRow(tabuleiroTemp, pos.linha)[pos.coluna] = corJogador;
 
   // Verificar grupos adversários adjacentes
   for (const vizinho of getVizinhos(pos)) {
-    if (tabuleiroTemp[vizinho.linha][vizinho.coluna] === corAdversario) {
+    if (boardRow(tabuleiroTemp, vizinho.linha)[vizinho.coluna] === corAdversario) {
       if (!verificadas.has(posKey(vizinho))) {
         const grupo = encontrarGrupo(tabuleiroTemp, vizinho);
         if (grupo && grupo.liberdades.length === 0) {
@@ -133,7 +134,7 @@ function verificarCapturas(tabuleiro: Celula[][], pos: Posicao, corJogador: 'pre
 function isSuicidio(tabuleiro: Celula[][], pos: Posicao, corJogador: 'preta' | 'branca'): boolean {
   // Simular colocação
   const tabuleiroTemp = tabuleiro.map(linha => [...linha]);
-  tabuleiroTemp[pos.linha][pos.coluna] = corJogador;
+  boardRow(tabuleiroTemp, pos.linha)[pos.coluna] = corJogador;
 
   // Verificar se captura algo (se sim, não é suicídio)
   const capturas = verificarCapturas(tabuleiro, pos, corJogador);
@@ -151,7 +152,7 @@ export function calcularJogadasValidas(tabuleiro: Celula[][], jogador: Player): 
 
   for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
     for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
-      if (tabuleiro[linha][coluna] === 'vazia') {
+      if (boardRow(tabuleiro, linha)[coluna] === 'vazia') {
         const pos = { linha, coluna };
         if (!isSuicidio(tabuleiro, pos, corJogador)) {
           jogadas.push(pos);
@@ -194,14 +195,14 @@ export function colocarPedra(state: AtariGoState, pos: Posicao): AtariGoState {
   const corJogador = getCorJogador(state.jogadorAtual);
   
   // Colocar a pedra
-  novoTabuleiro[pos.linha][pos.coluna] = corJogador;
+  boardRow(novoTabuleiro, pos.linha)[pos.coluna] = corJogador;
 
   // Verificar e executar capturas
   const pedrasCapturadas = verificarCapturas(state.tabuleiro, pos, corJogador);
   
   // Remover pedras capturadas do tabuleiro
   for (const pedra of pedrasCapturadas) {
-    novoTabuleiro[pedra.linha][pedra.coluna] = 'vazia';
+    boardRow(novoTabuleiro, pedra.linha)[pedra.coluna] = 'vazia';
   }
 
   // Atualizar contadores de capturas
@@ -275,8 +276,10 @@ export function jogadaComputador(state: AtariGoState): AtariGoState {
     for (const grupo of gruposNossosEmAtari) {
       // Se esta jogada é adjacente ao grupo e aumenta liberdades, é boa
       const tabuleiroTemp = state.tabuleiro.map(linha => [...linha]);
-      tabuleiroTemp[jogada.linha][jogada.coluna] = corJogador;
-      const grupoAtualizado = encontrarGrupo(tabuleiroTemp, grupo.pedras[0]);
+      boardRow(tabuleiroTemp, jogada.linha)[jogada.coluna] = corJogador;
+      const primeiraPedra = grupo.pedras[0];
+      if (primeiraPedra === undefined) throw new TypeError('Group stone is missing.');
+      const grupoAtualizado = encontrarGrupo(tabuleiroTemp, primeiraPedra);
       
       if (grupoAtualizado && grupoAtualizado.liberdades.length > 1) {
         // Esta jogada salva um grupo em atari
@@ -286,7 +289,7 @@ export function jogadaComputador(state: AtariGoState): AtariGoState {
 
     // 3. ALTA PRIORIDADE: Colocar grupos adversários em atari
     const tabuleiroSimulado = state.tabuleiro.map(linha => [...linha]);
-    tabuleiroSimulado[jogada.linha][jogada.coluna] = corJogador;
+    boardRow(tabuleiroSimulado, jogada.linha)[jogada.coluna] = corJogador;
     const gruposAdversariosEmAtari = encontrarGruposEmAtari(tabuleiroSimulado, corAdversario);
     pontuacao += gruposAdversariosEmAtari.length * 200;
 
@@ -310,7 +313,7 @@ export function jogadaComputador(state: AtariGoState): AtariGoState {
 
     // 7. Conectividade: preferir jogar adjacente às próprias pedras
     for (const vizinho of getVizinhos(jogada)) {
-      if (state.tabuleiro[vizinho.linha][vizinho.coluna] === corJogador) {
+      if (boardRow(state.tabuleiro, vizinho.linha)[vizinho.coluna] === corJogador) {
         pontuacao += 15;
       }
     }
@@ -320,9 +323,9 @@ export function jogadaComputador(state: AtariGoState): AtariGoState {
     let vizinhosVazios = 0;
     let vizinhosAmigos = 0;
     for (const vizinho of getVizinhos(jogada)) {
-      if (state.tabuleiro[vizinho.linha][vizinho.coluna] === 'vazia') {
+      if (boardRow(state.tabuleiro, vizinho.linha)[vizinho.coluna] === 'vazia') {
         vizinhosVazios++;
-      } else if (state.tabuleiro[vizinho.linha][vizinho.coluna] === corJogador) {
+      } else if (boardRow(state.tabuleiro, vizinho.linha)[vizinho.coluna] === corJogador) {
         vizinhosAmigos++;
       }
     }
@@ -341,7 +344,9 @@ export function jogadaComputador(state: AtariGoState): AtariGoState {
   jogadasAvaliadas.sort((a, b) => b.pontuacao - a.pontuacao);
 
   // Escolher a melhor jogada
-  const melhorJogada = jogadasAvaliadas[0].jogada;
+  const melhorAvaliacao = jogadasAvaliadas[0];
+  if (melhorAvaliacao === undefined) throw new TypeError('Evaluated move is missing.');
+  const melhorJogada = melhorAvaliacao.jogada;
 
   return colocarPedra(state, melhorJogada);
 }

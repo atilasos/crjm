@@ -93,6 +93,7 @@ function shouldUseLearnerApi(): boolean {
 function buildOfflineBootstrap(localProfile: unknown): {
   profile: GamificationProfile;
   missions: MissionProgress[];
+  levelProgress?: undefined;
 } {
   const profile = sanitizeProfile(localProfile);
   return {
@@ -137,7 +138,7 @@ export function GamificationProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
         setProfile({ ...result.profile, sessionXp: 0 });
         setMissions(result.missions);
-        if ('levelProgress' in result) setLevelProgress(result.levelProgress);
+        if (result.levelProgress !== undefined) setLevelProgress(result.levelProgress);
         if (learnerApiEnabled && legacyProfile && 'legacyImportConsumed' in result && result.legacyImportConsumed) {
           clearLegacyProfile();
         }

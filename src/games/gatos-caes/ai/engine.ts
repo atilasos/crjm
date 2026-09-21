@@ -1,3 +1,4 @@
+import { boardRow } from '../../board-row';
 /**
  * Gatos & Cães AI Engine
  *
@@ -29,8 +30,9 @@ export function toCompactBoard(state: GatosCaesState): CompactBoard {
   let caes = 0n;
 
   for (let row = 0; row < 8; row++) {
+    const cells = boardRow(state.tabuleiro, row);
     for (let col = 0; col < 8; col++) {
-      const cell = state.tabuleiro[row][col];
+      const cell = cells[col];
       const bit = 1n << BigInt(row * 8 + col);
       if (cell === 'gato') gatos |= bit;
       else if (cell === 'cao') caes |= bit;
@@ -132,7 +134,7 @@ function updateKillerMove(move: number, depth: number): void {
 function updateHistory(board: CompactBoard, move: number, depth: number): void {
   const colorIdx = board.sideToMove === 'jogador1' ? 0 : 1;
   if (!historyTable[colorIdx]) historyTable[colorIdx] = new Array(64).fill(0);
-  historyTable[colorIdx][move] += depth * depth;
+  historyTable[colorIdx][move] = Number(historyTable[colorIdx][move]) + depth * depth;
 }
 
 /**
@@ -284,7 +286,9 @@ function iterativeDeepening(
 
   if (rootMoves.length === 1) {
     // Only one move, return it immediately
-    return { bestMove: rootMoves[0], score: 0, depth: 0 };
+    const onlyMove = rootMoves[0];
+    if (onlyMove === undefined) throw new TypeError('Generated single move is missing.');
+    return { bestMove: onlyMove, score: 0, depth: 0 };
   }
 
   // Always keep a legal root fallback. With a very short classroom budget,
@@ -439,7 +443,9 @@ export function computeBestMove(
     if (allMoves.length > 1 && Math.random() < config.randomFactor) {
       // Sometimes pick a random move from top N
       const shuffled = allMoves.sort(() => Math.random() - 0.5);
-      finalMove = shuffled[Math.floor(Math.random() * Math.min(config.topN, shuffled.length))];
+      const selectedMove = shuffled[Math.floor(Math.random() * Math.min(config.topN, shuffled.length))];
+      if (selectedMove === undefined) throw new TypeError('Random move index is outside the generated moves.');
+      finalMove = selectedMove;
     }
   }
 

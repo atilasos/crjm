@@ -1,3 +1,4 @@
+import { boardRow } from '../board-row';
 import { type GatosCaesState, type Celula, type Posicao, CASAS_CENTRAIS } from './types';
 import type { GameMode, GameStatus, Player } from '../../types';
 
@@ -37,7 +38,7 @@ function violaAdjacencia(tabuleiro: Celula[][], pos: Posicao, tipoPeca: 'gato' |
   const tipoProibido = tipoPeca === 'gato' ? 'cao' : 'gato';
   const vizinhos = getVizinhosOrtogonais(pos);
   
-  return vizinhos.some(v => tabuleiro[v.linha][v.coluna] === tipoProibido);
+  return vizinhos.some(v => boardRow(tabuleiro, v.linha)[v.coluna] === tipoProibido);
 }
 
 // Calcular jogadas válidas para o jogador atual
@@ -53,7 +54,7 @@ export function calcularJogadasValidas(
   // Primeiro Gato: só nas casas centrais
   if (jogador === 'jogador1' && !primeiroGatoColocado) {
     for (const pos of CASAS_CENTRAIS) {
-      if (tabuleiro[pos.linha][pos.coluna] === 'vazia') {
+      if (boardRow(tabuleiro, pos.linha)[pos.coluna] === 'vazia') {
         jogadas.push(pos);
       }
     }
@@ -65,7 +66,7 @@ export function calcularJogadasValidas(
     for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
       for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
         const pos = { linha, coluna };
-        if (tabuleiro[linha][coluna] === 'vazia' && 
+        if (boardRow(tabuleiro, linha)[coluna] === 'vazia' &&
             !isCasaCentral(pos) &&
             !violaAdjacencia(tabuleiro, pos, 'cao')) {
           jogadas.push(pos);
@@ -78,7 +79,7 @@ export function calcularJogadasValidas(
   // Jogadas normais: qualquer casa vazia sem violar adjacência
   for (let linha = 0; linha < TAMANHO_TABULEIRO; linha++) {
     for (let coluna = 0; coluna < TAMANHO_TABULEIRO; coluna++) {
-      if (tabuleiro[linha][coluna] === 'vazia' &&
+      if (boardRow(tabuleiro, linha)[coluna] === 'vazia' &&
           !violaAdjacencia(tabuleiro, { linha, coluna }, tipoPeca)) {
         jogadas.push({ linha, coluna });
       }
@@ -120,7 +121,7 @@ export function colocarPeca(state: GatosCaesState, pos: Posicao): GatosCaesState
   const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
   const tipoPeca = state.jogadorAtual === 'jogador1' ? 'gato' : 'cao';
   
-  novoTabuleiro[pos.linha][pos.coluna] = tipoPeca;
+  boardRow(novoTabuleiro, pos.linha)[pos.coluna] = tipoPeca;
 
   const novosPrimeiroGato = state.jogadorAtual === 'jogador1' ? true : state.primeiroGatoColocado;
   const novosPrimeiroCao = state.jogadorAtual === 'jogador2' ? true : state.primeiroCaoColocado;
@@ -169,7 +170,7 @@ export function jogadaComputador(state: GatosCaesState): GatosCaesState {
   const jogadasAvaliadas = jogadas.map(jogada => {
     // Simular a jogada
     const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
-    novoTabuleiro[jogada.linha][jogada.coluna] = tipoPeca;
+    boardRow(novoTabuleiro, jogada.linha)[jogada.coluna] = tipoPeca;
 
     const novosPrimeiroGato = state.jogadorAtual === 'jogador1' ? true : state.primeiroGatoColocado;
     const novosPrimeiroCao = state.jogadorAtual === 'jogador2' ? true : state.primeiroCaoColocado;
@@ -222,7 +223,9 @@ export function jogadaComputador(state: GatosCaesState): GatosCaesState {
   jogadasAvaliadas.sort((a, b) => b.pontuacao - a.pontuacao);
 
   // Escolher a melhor jogada
-  const melhorJogada = jogadasAvaliadas[0].jogada;
+  const melhorAvaliacao = jogadasAvaliadas[0];
+  if (melhorAvaliacao === undefined) throw new TypeError('Evaluated move is missing.');
+  const melhorJogada = melhorAvaliacao.jogada;
 
   return colocarPeca(state, melhorJogada);
 }
@@ -233,7 +236,7 @@ function contarCasasBloqueadas(tabuleiro: Celula[][], pos: Posicao, tipoPeca: 'g
   let bloqueadas = 0;
   
   for (const v of vizinhos) {
-    if (tabuleiro[v.linha][v.coluna] === 'vazia') {
+    if (boardRow(tabuleiro, v.linha)[v.coluna] === 'vazia') {
       // Verificar se esta casa vazia agora fica bloqueada para o tipo oposto
       const tipoOposto = tipoPeca === 'gato' ? 'cao' : 'gato';
       // Como acabámos de colocar uma peça, a casa vizinha fica bloqueada para o tipo oposto

@@ -6,11 +6,7 @@ function post(msg: AIResponse) {
   self.postMessage(msg);
 }
 
-type WasmModule = {
-  default: (opts: { module_or_path: URL | string }) => Promise<void>;
-  choose_move: (board: Uint8Array, toPlay: number, flags: number, msBudget: number, level: number, seed: number) => any;
-  debug_eval?: (board: Uint8Array, toPlay: number, flags: number) => any;
-};
+type WasmModule = typeof import('./wasm/pkg/nex_ai.js');
 
 let wasm: WasmModule | null = null;
 let useWasm = false;
@@ -18,7 +14,7 @@ let initDone = false;
 
 async function init(): Promise<void> {
   try {
-    const wasmModule = (await import('./wasm/pkg/nex_ai.js')) as WasmModule;
+    const wasmModule = (await import('./wasm/pkg/nex_ai.js'));
     const wasmUrl = new URL('./wasm/pkg/nex_ai_bg.wasm', import.meta.url);
     await wasmModule.default({ module_or_path: wasmUrl });
     wasm = wasmModule;

@@ -14,12 +14,13 @@ import {
   selecionarTipoAcao,
   adicionarPosicaoAcao,
   isAcaoCompleta,
+  converterAcaoEmCurso,
   executarAcao,
   cancelarAcao,
   getVizinhos,
   resolverFinalRaro,
 } from "./logic";
-import { type Celula, LADO_TABULEIRO } from "./types";
+import { type Celula, LADO_TABULEIRO, keyToPos } from "./types";
 
 describe("Nex - Vizinhos Hexagonais", () => {
   test("célula central (5,5) tem 6 vizinhos corretos", () => {
@@ -667,5 +668,39 @@ describe("Nex - Limites dos percursos do tabuleiro", () => {
     expect(podeSubstituir(estado.tabuleiro, 'jogador1')).toBe(false);
     expect(podeColocar(estado.tabuleiro)).toBe(false);
     expect(resolverFinalRaro(estado)).toBeNull();
+  });
+});
+
+
+describe("Nex - conversão de ação incompleta", () => {
+  test("uma substituição esparsa não se torna uma ação executável", () => {
+    for (const indiceAusente of [0, 1]) {
+      let estado = criarEstadoInicial('dois-jogadores');
+      estado = selecionarTipoAcao(estado, 'substituicao');
+      estado = adicionarPosicaoAcao(estado, { x: 0, y: 0 }, 'neutra');
+      estado = adicionarPosicaoAcao(estado, { x: 1, y: 0 }, 'neutra');
+      estado = adicionarPosicaoAcao(estado, { x: 2, y: 0 }, 'propria');
+      delete estado.acaoEmCurso.neutrasParaProprias[indiceAusente];
+
+      expect(estado.acaoEmCurso.neutrasParaProprias.length).toBe(2);
+      expect(converterAcaoEmCurso(estado.acaoEmCurso)).toBeNull();
+      expect(executarAcao(estado)).toBe(estado);
+    }
+  });
+});
+
+
+describe('coordinate key boundary', () => {
+  test('rejects a missing coordinate instead of returning an incomplete position', () => {
+    for (const key of ['', '3', '-2', 'abc']) {
+      expect(() => keyToPos(key)).toThrow(TypeError);
+    }
+  });
+
+  test('preserves existing numeric conversion and extra-coordinate behavior', () => {
+    expect(keyToPos('-2,3')).toEqual({ x: -2, y: 3 });
+    expect(keyToPos('2,')).toEqual({ x: 2, y: 0 });
+    expect(keyToPos('1,2,3')).toEqual({ x: 1, y: 2 });
+    expect(Number.isNaN(keyToPos('abc,2').x)).toBe(true);
   });
 });

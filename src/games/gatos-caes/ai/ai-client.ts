@@ -16,7 +16,7 @@ export interface AIComputeOverrides {
 
 interface WorkerLike {
   onmessage: ((event: MessageEvent<WorkerResponse>) => void) | null;
-  onerror: ((event: Event) => void) | null;
+  onerror: Worker['onerror'];
   postMessage(message: WorkerMessage): void;
   terminate(): void;
 }

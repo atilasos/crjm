@@ -305,11 +305,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     setPosicaoInicial(null);
   }, [state.jogadorAtual]);
 
-  const handleCellClick = useCallback((pos: Posicao) => {
+  const handleCellClick = useCallback((pos: Posicao, celula: Celula) => {
     if (state.estado !== 'a-jogar') return;
     if (!isVezDoHumano()) return;
     if (state.trocaDisponivel) return; // Aguardar decisão de troca
-    if (state.tabuleiro[pos.linha][pos.coluna] === 'ocupada') return;
+    if (celula === 'ocupada') return;
 
     if (posicaoInicial === null) {
       // Primeiro clique: definir posição inicial
@@ -341,11 +341,11 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
     }
   }, [state, posicaoInicial, isVezDoHumano, tutorResponse, recordAdaptiveDecision, thinking.usedHint, tutorPosition, tutorTurn, tutorLoading]);
 
-  const handleMouseEnter = useCallback((pos: Posicao) => {
+  const handleMouseEnter = useCallback((pos: Posicao, celula: Celula) => {
     if (state.estado !== 'a-jogar') return;
     if (!isVezDoHumano()) return;
     if (state.trocaDisponivel) return;
-    if (state.tabuleiro[pos.linha][pos.coluna] === 'ocupada') return;
+    if (celula === 'ocupada') return;
 
     if (posicaoInicial) {
       // Mostrar preview do segmento entre posição inicial e atual
@@ -577,8 +577,8 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
                 linha.map((celula, colunaIdx) => (
                   <button
                     key={`${linhaIdx}-${colunaIdx}`}
-                    onClick={() => handleCellClick({ linha: linhaIdx, coluna: colunaIdx })}
-                    onMouseEnter={() => handleMouseEnter({ linha: linhaIdx, coluna: colunaIdx })}
+                    onClick={() => handleCellClick({ linha: linhaIdx, coluna: colunaIdx }, celula)}
+                    onMouseEnter={() => handleMouseEnter({ linha: linhaIdx, coluna: colunaIdx }, celula)}
                     className={getCelulaClasses(linhaIdx, colunaIdx, celula)}
                     disabled={celula === 'ocupada'}
                   />

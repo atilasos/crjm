@@ -41,6 +41,13 @@ function initAdjacentMasks(): void {
 
 initAdjacentMasks();
 
+/** The mask table is populated for every square on the 8×8 board. */
+function adjacentMask(square: number): bigint {
+  const mask = ADJACENT_MASKS[square];
+  if (mask === undefined) throw new TypeError('Missing adjacency mask for board square.');
+  return mask;
+}
+
 // Central squares mask
 const CENTER_MASK = CASAS_CENTRAIS.reduce(
   (acc, pos) => acc | (1n << BigInt(pos.linha * 8 + pos.coluna)),
@@ -74,7 +81,7 @@ export function countLegalMoves(
       const bit = 1n << BigInt(sq);
 
       // Check if adjacent to any cao
-      const adjMask = ADJACENT_MASKS[sq];
+      const adjMask = adjacentMask(sq);
       if ((adjMask & board.caes) === 0n) {
         count++;
       }
@@ -90,7 +97,7 @@ export function countLegalMoves(
 
       while (empty !== 0n) {
         const sq = ctz64(empty);
-        const adjMask = ADJACENT_MASKS[sq];
+        const adjMask = adjacentMask(sq);
         if ((adjMask & board.gatos) === 0n) {
           count++;
         }
@@ -105,7 +112,7 @@ export function countLegalMoves(
 
     while (empty !== 0n) {
       const sq = ctz64(empty);
-      const adjMask = ADJACENT_MASKS[sq];
+      const adjMask = adjacentMask(sq);
       if ((adjMask & board.gatos) === 0n) {
         count++;
       }
@@ -143,7 +150,7 @@ export function generateMoves(
     let empty = ~occupied & 0xFFFFFFFFFFFFFFFFn;
     while (empty !== 0n) {
       const sq = ctz64(empty);
-      const adjMask = ADJACENT_MASKS[sq];
+      const adjMask = adjacentMask(sq);
       if ((adjMask & board.caes) === 0n) {
         moves.push(sq);
       }
@@ -155,7 +162,7 @@ export function generateMoves(
       let empty = ~occupied & ~CENTER_MASK & 0xFFFFFFFFFFFFFFFFn;
       while (empty !== 0n) {
         const sq = ctz64(empty);
-        const adjMask = ADJACENT_MASKS[sq];
+        const adjMask = adjacentMask(sq);
         if ((adjMask & board.gatos) === 0n) {
           moves.push(sq);
         }
@@ -168,7 +175,7 @@ export function generateMoves(
     let empty = ~occupied & 0xFFFFFFFFFFFFFFFFn;
     while (empty !== 0n) {
       const sq = ctz64(empty);
-      const adjMask = ADJACENT_MASKS[sq];
+      const adjMask = adjacentMask(sq);
       if ((adjMask & board.gatos) === 0n) {
         moves.push(sq);
       }
@@ -269,7 +276,7 @@ function countExclusiveTerritory(board: CompactBoard, forGatos: boolean): number
   let empty = ~occupied & 0xFFFFFFFFFFFFFFFFn;
   while (empty !== 0n) {
     const sq = ctz64(empty);
-    const adjMask = ADJACENT_MASKS[sq];
+    const adjMask = adjacentMask(sq);
 
     // Check if blocked for opponent but not for us
     const blockedForOpp = (adjMask & (forGatos ? board.gatos : board.caes)) !== 0n;
@@ -296,7 +303,7 @@ function countSafeMoves(board: CompactBoard, forGatos: boolean): number {
   let empty = ~occupied & 0xFFFFFFFFFFFFFFFFn;
   while (empty !== 0n) {
     const sq = ctz64(empty);
-    const adjMask = ADJACENT_MASKS[sq];
+    const adjMask = adjacentMask(sq);
 
     // Is this square legal for us?
     if ((adjMask & blockedBy) === 0n) {
@@ -306,7 +313,7 @@ function countSafeMoves(board: CompactBoard, forGatos: boolean): number {
 
       while (neighbors !== 0n) {
         const nsq = ctz64(neighbors);
-        const nAdjMask = ADJACENT_MASKS[nsq];
+        const nAdjMask = adjacentMask(nsq);
         // After placing our piece at sq, is nsq still legal?
         // For gatos: nsq can't be adj to caes (unchanged) or our new piece (doesn't matter)
         // The key is whether it's adj to opponent

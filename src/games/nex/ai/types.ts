@@ -1,3 +1,4 @@
+import { boardRow } from '../../board-row';
 import type { NexState, Posicao } from '../types';
 import { LADO_TABULEIRO, posToKey } from '../types';
 import { getCorJogador, podeColocar, podeSubstituir } from '../logic';
@@ -81,8 +82,9 @@ function dentro(pos: Posicao): boolean {
 export function packState(state: NexState): NexPackedState {
   const board = new Uint8Array(LADO_TABULEIRO * LADO_TABULEIRO);
   for (let x = 0; x < LADO_TABULEIRO; x++) {
+    const column = boardRow(state.tabuleiro, x);
     for (let y = 0; y < LADO_TABULEIRO; y++) {
-      const v = state.tabuleiro[x][y];
+      const v = column[y];
       const idx = x * LADO_TABULEIRO + y;
       board[idx] = v === 'vazia' ? 0 : v === 'preta' ? 1 : v === 'branca' ? 2 : 3;
     }
@@ -116,7 +118,7 @@ export function isValidAiAction(state: NexState, action: NexAiAction | null): ac
     if (!podeColocar(state.tabuleiro)) return false;
     if (!dentro(action.own) || !dentro(action.neutral)) return false;
     if (posToKey(action.own) === posToKey(action.neutral)) return false;
-    return state.tabuleiro[action.own.x][action.own.y] === 'vazia' && state.tabuleiro[action.neutral.x][action.neutral.y] === 'vazia';
+    return boardRow(state.tabuleiro, action.own.x)[action.own.y] === 'vazia' && boardRow(state.tabuleiro, action.neutral.x)[action.neutral.y] === 'vazia';
   }
 
   if (action.type === 'substituir') {
@@ -125,9 +127,9 @@ export function isValidAiAction(state: NexState, action: NexAiAction | null): ac
     if (posToKey(action.n1) === posToKey(action.n2)) return false;
     const cor = getCorJogador(state, state.jogadorAtual);
     return (
-      state.tabuleiro[action.n1.x][action.n1.y] === 'neutra' &&
-      state.tabuleiro[action.n2.x][action.n2.y] === 'neutra' &&
-      state.tabuleiro[action.sacrifice.x][action.sacrifice.y] === cor
+      boardRow(state.tabuleiro, action.n1.x)[action.n1.y] === 'neutra' &&
+      boardRow(state.tabuleiro, action.n2.x)[action.n2.y] === 'neutra' &&
+      boardRow(state.tabuleiro, action.sacrifice.x)[action.sacrifice.y] === cor
     );
   }
 

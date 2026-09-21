@@ -20,7 +20,7 @@ interface ChamadaRegistada {
 
 function instalarFetchFalso(responder: (chamada: ChamadaRegistada) => Response): ChamadaRegistada[] {
   const chamadas: ChamadaRegistada[] = [];
-  globalComFetch.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+  globalComFetch.fetch = Object.assign(async (input: RequestInfo | URL, init?: RequestInit) => {
     const chamada: ChamadaRegistada = {
       url: String(input),
       method: init?.method ?? 'GET',
@@ -29,7 +29,7 @@ function instalarFetchFalso(responder: (chamada: ChamadaRegistada) => Response):
     };
     chamadas.push(chamada);
     return responder(chamada);
-  }) as typeof fetch;
+  }, { preconnect: fetchOriginal.preconnect });
   return chamadas;
 }
 
@@ -83,9 +83,9 @@ describe('fetchClasses', () => {
   });
 
   test('com rede indisponível lança erro de servidor inacessível', async () => {
-    globalComFetch.fetch = (async () => {
+    globalComFetch.fetch = Object.assign(async () => {
       throw new TypeError('fetch failed');
-    }) as typeof fetch;
+    }, { preconnect: fetchOriginal.preconnect });
 
     const promessa = fetchClasses('https://torneios.exemplo.pt', 'chave');
     await expect(promessa).rejects.toThrow(/Não foi possível contactar o servidor/);
@@ -162,9 +162,9 @@ describe('deleteClass', () => {
   });
 
   test('com rede indisponível lança erro de servidor inacessível', async () => {
-    globalComFetch.fetch = (async () => {
+    globalComFetch.fetch = Object.assign(async () => {
       throw new TypeError('fetch failed');
-    }) as typeof fetch;
+    }, { preconnect: fetchOriginal.preconnect });
 
     await expect(deleteClass('https://torneios.exemplo.pt', 'chave', 'turma-5a')).rejects.toThrow(
       /Não foi possível contactar o servidor/,

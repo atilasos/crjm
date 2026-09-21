@@ -84,7 +84,9 @@ function randomBotName(usedNames: Set<string>): string {
   if (available.length === 0) {
     return `Bot${Math.floor(Math.random() * 1000)}`;
   }
-  return available[Math.floor(Math.random() * available.length)];
+  const selected = available[Math.floor(Math.random() * available.length)];
+  if (selected === undefined) throw new TypeError('Selected bot name is missing.');
+  return selected;
 }
 
 function generateId(): string {
@@ -289,6 +291,7 @@ export class TournamentClientMock implements TournamentClient {
 
     this._tournamentState.phase = 'running';
     const [me, bot] = this._tournamentState.players;
+    if (me === undefined || bot === undefined) throw new TypeError('Mock tournament requires two players.');
 
     // Sorteia quem começa (quem é player1 no match)
     const euSouPlayer1 = Math.random() < 0.5;
@@ -304,6 +307,7 @@ export class TournamentClientMock implements TournamentClient {
       winnerId: null,
       currentGame: 1,
       bestOf: 3,
+      whoStartsCurrentGame: 'player1',
     };
 
     // Convert to MatchSummary for tournament state
@@ -348,6 +352,9 @@ export class TournamentClientMock implements TournamentClient {
         score: match.score,
         phase: match.phase,
         winnerId: match.winnerId,
+        currentGame: match.currentGame,
+        bestOf: match.bestOf,
+        whoStartsCurrentGame: match.whoStartsCurrentGame,
       },
       yourRole: this._myRole,
       opponentName: opponent?.name ?? 'Desconhecido',
@@ -402,6 +409,7 @@ export class TournamentClientMock implements TournamentClient {
     // Quem começa é sempre jogador1 do jogo (quem tem Gatos em Gatos & Cães)
     // Que em jogos ímpares é player1 do match, e em jogos pares é player2 do match
     const matchPlayerWhoStarts = this._gameRoleMapping.jogador1;
+    this._currentMatch.whoStartsCurrentGame = matchPlayerWhoStarts;
     const youStart = matchPlayerWhoStarts === this._mySeatInMatch;
     this._iHaveToPlay = youStart;
 
@@ -432,7 +440,7 @@ export class TournamentClientMock implements TournamentClient {
   }
 
   private async handleSubmitMove(matchId: string, gameNumber: number, move: unknown): Promise<void> {
-    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameState || !this._gameId || !this._myRole) {
+    if (!this._currentMatch || this._currentMatch.id !== matchId || !this._gameState || !this._gameId || !this._myRole || !this._mySeatInMatch) {
       this.emit({
         type: 'error',
         code: 'INVALID_MATCH',

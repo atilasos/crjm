@@ -1,3 +1,4 @@
+import { boardRow } from '../board-row';
 import { 
   type NexState, type Celula, type Posicao, type Acao, type AcaoColocacao, type AcaoSubstituicao, 
   type AcaoEmCurso, type TipoAcao, LADO_TABULEIRO, posToKey 
@@ -94,7 +95,7 @@ export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca')
     // Preto: conecta Noroeste (y=0) a Sudeste (y=10)
     posicoesInicio = [];
     for (let x = 0; x < LADO_TABULEIRO; x++) {
-      if (tabuleiro[x][0] === cor) {
+      if (boardRow(tabuleiro, x)[0] === cor) {
         posicoesInicio.push({ x, y: 0 });
       }
     }
@@ -103,7 +104,7 @@ export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca')
     // Branco: conecta Sudoeste (x=0) a Nordeste (x=10)
     posicoesInicio = [];
     for (let y = 0; y < LADO_TABULEIRO; y++) {
-      if (tabuleiro[0][y] === cor) {
+      if (boardRow(tabuleiro, 0)[y] === cor) {
         posicoesInicio.push({ x: 0, y });
       }
     }
@@ -125,7 +126,7 @@ export function verificarVitoria(tabuleiro: Celula[][], cor: 'preta' | 'branca')
     
     for (const vizinho of getVizinhos(atual)) {
       const key = posToKey(vizinho);
-      if (!visitadas.has(key) && tabuleiro[vizinho.x][vizinho.y] === cor) {
+      if (!visitadas.has(key) && boardRow(tabuleiro, vizinho.x)[vizinho.y] === cor) {
         visitadas.add(key);
         fila.push(vizinho);
       }
@@ -140,8 +141,8 @@ export function executarColocacao(state: NexState, acao: AcaoColocacao): NexStat
   const corJogador = getCorJogador(state, state.jogadorAtual);
   const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
   
-  novoTabuleiro[acao.posPropria.x][acao.posPropria.y] = corJogador;
-  novoTabuleiro[acao.posNeutra.x][acao.posNeutra.y] = 'neutra';
+  boardRow(novoTabuleiro, acao.posPropria.x)[acao.posPropria.y] = corJogador;
+  boardRow(novoTabuleiro, acao.posNeutra.x)[acao.posNeutra.y] = 'neutra';
   
   return finalizarTurno(state, novoTabuleiro);
 }
@@ -152,11 +153,11 @@ export function executarSubstituicao(state: NexState, acao: AcaoSubstituicao): N
   const novoTabuleiro = state.tabuleiro.map(linha => [...linha]);
   
   // 2 neutras viram próprias
-  novoTabuleiro[acao.neutrasParaProprias[0].x][acao.neutrasParaProprias[0].y] = corJogador;
-  novoTabuleiro[acao.neutrasParaProprias[1].x][acao.neutrasParaProprias[1].y] = corJogador;
+  boardRow(novoTabuleiro, acao.neutrasParaProprias[0].x)[acao.neutrasParaProprias[0].y] = corJogador;
+  boardRow(novoTabuleiro, acao.neutrasParaProprias[1].x)[acao.neutrasParaProprias[1].y] = corJogador;
   
   // 1 própria vira neutra
-  novoTabuleiro[acao.propriaParaNeutra.x][acao.propriaParaNeutra.y] = 'neutra';
+  boardRow(novoTabuleiro, acao.propriaParaNeutra.x)[acao.propriaParaNeutra.y] = 'neutra';
   
   return finalizarTurno(state, novoTabuleiro);
 }
@@ -284,9 +285,11 @@ export function converterAcaoEmCurso(acao: AcaoEmCurso): Acao | null {
       posNeutra: acao.posNeutra!,
     };
   } else if (acao.tipo === 'substituicao') {
+    const [primeiraNeutra, segundaNeutra] = acao.neutrasParaProprias;
+    if (primeiraNeutra === undefined || segundaNeutra === undefined) return null;
     return {
       tipo: 'substituicao',
-      neutrasParaProprias: [acao.neutrasParaProprias[0], acao.neutrasParaProprias[1]],
+      neutrasParaProprias: [primeiraNeutra, segundaNeutra],
       propriaParaNeutra: acao.propriaParaNeutra!,
     };
   }
@@ -382,11 +385,13 @@ export function resolverFinalRaro(state: NexState): NexState | null {
   const corAdversario = getCorJogador(state, adversario);
   const tabuleiro = state.tabuleiro.map(linha => [...linha]);
 
-  if (vazias.length === 1) {
-    tabuleiro[vazias[0].x][vazias[0].y] = corAtual;
+  const primeiraVazia = vazias[0];
+  const primeiraNeutra = neutras[0];
+  if (vazias.length === 1 && primeiraVazia !== undefined) {
+    boardRow(tabuleiro, primeiraVazia.x)[primeiraVazia.y] = corAtual;
   }
-  if (neutras.length === 1) {
-    tabuleiro[neutras[0].x][neutras[0].y] =
+  if (neutras.length === 1 && primeiraNeutra !== undefined) {
+    boardRow(tabuleiro, primeiraNeutra.x)[primeiraNeutra.y] =
       vazias.length === 1 ? corAdversario : corAtual;
   }
 
@@ -445,7 +450,7 @@ function calcularDistanciaMinima(tabuleiro: Celula[][], cor: 'preta' | 'branca')
   // Inicializar com posições de início
   const fila: Array<{ pos: Posicao; custo: number }> = [];
   for (const pos of posicoesInicio) {
-    const celula = tabuleiro[pos.x][pos.y];
+    const celula = boardRow(tabuleiro, pos.x)[pos.y];
     let custoInicial = 0;
     if (celula === cor) custoInicial = 0;
     else if (celula === 'vazia' || celula === 'neutra') custoInicial = 1;
@@ -473,7 +478,7 @@ function calcularDistanciaMinima(tabuleiro: Celula[][], cor: 'preta' | 'branca')
       const vizinhoKey = posToKey(vizinho);
       if (visitadas.has(vizinhoKey)) continue;
       
-      const celula = tabuleiro[vizinho.x][vizinho.y];
+      const celula = boardRow(tabuleiro, vizinho.x)[vizinho.y];
       let custoPasso = 0;
       if (celula === cor) custoPasso = 0;
       else if (celula === 'vazia' || celula === 'neutra') custoPasso = 1;
@@ -519,7 +524,7 @@ export function jogadaComputador(state: NexState): NexState {
   const vazias: Posicao[] = [];
   for (let x = 0; x < LADO_TABULEIRO; x++) {
     for (let y = 0; y < LADO_TABULEIRO; y++) {
-      if (state.tabuleiro[x][y] === 'vazia') {
+      if (boardRow(state.tabuleiro, x)[y] === 'vazia') {
         vazias.push({ x, y });
       }
     }
@@ -530,7 +535,7 @@ export function jogadaComputador(state: NexState): NexState {
     for (const posPropria of vazias) {
       // Simular colocação apenas da peça própria para verificar vitória
       const tabTemp = state.tabuleiro.map(l => [...l]);
-      tabTemp[posPropria.x][posPropria.y] = corJogador;
+      boardRow(tabTemp, posPropria.x)[posPropria.y] = corJogador;
       
       if (verificarVitoria(tabTemp, corJogador)) {
         // Encontrar qualquer posição vazia para a neutra
@@ -560,8 +565,8 @@ export function jogadaComputador(state: NexState): NexState {
         
         // Simular
         const tabTemp = state.tabuleiro.map(l => [...l]);
-        tabTemp[posPropria.x][posPropria.y] = corJogador;
-        tabTemp[posNeutra.x][posNeutra.y] = 'neutra';
+        boardRow(tabTemp, posPropria.x)[posPropria.y] = corJogador;
+        boardRow(tabTemp, posNeutra.x)[posNeutra.y] = 'neutra';
         
         const distMinha = calcularDistanciaMinima(tabTemp, corJogador);
         const distAdv = calcularDistanciaMinima(tabTemp, corAdversario);
@@ -596,8 +601,8 @@ export function jogadaComputador(state: NexState): NexState {
     
     for (let x = 0; x < LADO_TABULEIRO; x++) {
       for (let y = 0; y < LADO_TABULEIRO; y++) {
-        if (state.tabuleiro[x][y] === 'neutra') neutras.push({ x, y });
-        if (state.tabuleiro[x][y] === corJogador) proprias.push({ x, y });
+        if (boardRow(state.tabuleiro, x)[y] === 'neutra') neutras.push({ x, y });
+        if (boardRow(state.tabuleiro, x)[y] === corJogador) proprias.push({ x, y });
       }
     }
     
@@ -611,9 +616,9 @@ export function jogadaComputador(state: NexState): NexState {
           
           // Simular
           const tabTemp = state.tabuleiro.map(l => [...l]);
-          tabTemp[n1.x][n1.y] = corJogador;
-          tabTemp[n2.x][n2.y] = corJogador;
-          tabTemp[propria.x][propria.y] = 'neutra';
+          boardRow(tabTemp, n1.x)[n1.y] = corJogador;
+          boardRow(tabTemp, n2.x)[n2.y] = corJogador;
+          boardRow(tabTemp, propria.x)[propria.y] = 'neutra';
           
           // Verificar vitória
           if (verificarVitoria(tabTemp, corJogador)) {
@@ -653,11 +658,12 @@ export function jogadaComputador(state: NexState): NexState {
   }
   
   // Fallback: colocação aleatória (usando o array vazias já calculado)
-  if (vazias.length >= 2) {
+  const [primeiraVazia, segundaVazia] = vazias;
+  if (primeiraVazia !== undefined && segundaVazia !== undefined) {
     return executarColocacao(state, {
       tipo: 'colocacao',
-      posPropria: vazias[0],
-      posNeutra: vazias[1],
+      posPropria: primeiraVazia,
+      posNeutra: segundaVazia,
     });
   }
   

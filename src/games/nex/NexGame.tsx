@@ -366,7 +366,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
     if (state.modo === 'vs-computador' && state.jogadorAtual !== humanPlayer) return;
     if (state.swapDisponivel) return; // Deve decidir swap primeiro
 
-    const celula = state.tabuleiro[pos.x][pos.y];
+    const column = state.tabuleiro[pos.x];
+    if (column === undefined) throw new TypeError('Nex board is missing a column.');
+    const celula = column[pos.y];
     const acao = state.acaoEmCurso;
     const corJogador = getCorJogador(state, state.jogadorAtual);
 
@@ -523,9 +525,11 @@ export function NexGame({ onVoltar }: NexGameProps) {
     }
     if (e.touches.length === 1) {
       setIsDragging(true);
+      const touch = e.touches.item(0);
+      if (touch === null) throw new TypeError('Touch list is missing its first touch.');
       setDragStart({
-        x: e.touches[0].clientX - panOffset.x,
-        y: e.touches[0].clientY - panOffset.y
+        x: touch.clientX - panOffset.x,
+        y: touch.clientY - panOffset.y
       });
     }
   }, [panOffset]);
@@ -538,9 +542,11 @@ export function NexGame({ onVoltar }: NexGameProps) {
       return;
     }
     e.preventDefault();
+    const touch = e.touches.item(0);
+    if (touch === null) throw new TypeError('Touch list is missing its first touch.');
     setPanOffset({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y,
+      x: touch.clientX - dragStart.x,
+      y: touch.clientY - dragStart.y,
     });
   }, [isDragging, dragStart]);
 
@@ -919,7 +925,9 @@ export function NexGame({ onVoltar }: NexGameProps) {
                     const cy = pos.y;
 
                     // Note: tabuleiro usa [col][row] (x, y)
-                    const celula = state.tabuleiro[col][row];
+                    const column = state.tabuleiro[col];
+                    if (column === undefined) throw new TypeError('Nex board is missing a column.');
+                    const celula = column[row];
                     const posicao = { x: col, y: row };
                     const selecionada = isPosicaoSelecionada(posicao);
                     const recomendada = showTutorSolution && actionTouchesPos(tutorResponse?.bestMove, posicao);

@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { parseBuildArgs } from "./scripts/build-args";
 import plugin from "bun-plugin-tailwind";
 import { existsSync } from "fs";
 import { rm, mkdir, copyFile, cp } from "fs/promises";
@@ -37,65 +38,6 @@ Example:
 // Gate every build entry point, including direct `bun run build.ts` and CI.
 const i18nCheck = Bun.spawn([process.execPath, 'run', 'i18n:check'], { stdout: 'inherit', stderr: 'inherit' });
 if (await i18nCheck.exited !== 0) process.exit(1);
-
-const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => g.charAt(1).toUpperCase());
-
-const parseValue = (value: string): any => {
-  if (value === "true") return true;
-  if (value === "false") return false;
-
-  if (/^\d+$/.test(value)) return parseInt(value, 10);
-  if (/^\d*\.\d+$/.test(value)) return parseFloat(value);
-
-  if (value.includes(",")) return value.split(",").map(v => v.trim());
-
-  return value;
-};
-
-function parseArgs(): Partial<Bun.BuildConfig> & { skipWasm?: boolean } {
-  const config: Partial<Bun.BuildConfig> & { skipWasm?: boolean } = {};
-  const args = process.argv.slice(2);
-
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    if (arg === undefined) continue;
-    if (!arg.startsWith("--")) continue;
-
-    if (arg.startsWith("--no-")) {
-      const key = toCamelCase(arg.slice(5));
-      config[key] = false;
-      continue;
-    }
-
-    if (!arg.includes("=") && (i === args.length - 1 || args[i + 1]?.startsWith("--"))) {
-      const key = toCamelCase(arg.slice(2));
-      config[key] = true;
-      continue;
-    }
-
-    let key: string;
-    let value: string;
-
-    if (arg.includes("=")) {
-      [key, value] = arg.slice(2).split("=", 2) as [string, string];
-    } else {
-      key = arg.slice(2);
-      value = args[++i] ?? "";
-    }
-
-    key = toCamelCase(key);
-
-    if (key.includes(".")) {
-      const [parentKey, childKey] = key.split(".");
-      config[parentKey] = config[parentKey] || {};
-      config[parentKey][childKey] = parseValue(value);
-    } else {
-      config[key] = parseValue(value);
-    }
-  }
-
-  return config;
-}
 
 const formatFileSize = (bytes: number): string => {
   const units = ["B", "KB", "MB", "GB"];
@@ -636,11 +578,12 @@ async function buildNexWasm(): Promise<WasmBuildResult> {
 
 console.log("\n🚀 Starting build process...\n");
 
-const cliConfig = parseArgs();
+const cliConfig = parseBuildArgs(process.argv.slice(2));
 const skipWasm = cliConfig.skipWasm || false;
 delete cliConfig.skipWasm;
 
 const outdir = cliConfig.outdir || path.join(process.cwd(), "dist");
+if (typeof outdir !== "string") throw new TypeError("Build outdir must be a string");
 
 // Build WASM first (if not skipped)
 if (!skipWasm) {

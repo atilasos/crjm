@@ -121,7 +121,10 @@ function shuffle<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
+    const left = result.slice(i, i + 1);
+    const right = result.slice(j, j + 1);
+    result.splice(i, 1, ...right);
+    result.splice(j, 1, ...left);
   }
   return result;
 }
@@ -360,6 +363,7 @@ function planBracket(tournament: Tournament): void {
   // Rondas seguintes do Winners (R2 até final do winners)
   for (let round = 2; round <= winnersRounds; round++) {
     const prevRoundMatches = winnersMatchesByRound[round - 2];
+    if (prevRoundMatches === undefined) throw new TypeError('Previous winners round is missing.');
     const thisRound: TournamentMatch[] = [];
 
     for (let i = 0; i < prevRoundMatches.length; i += 2) {
@@ -399,9 +403,9 @@ function planBracket(tournament: Tournament): void {
   // Rastrear match ímpar do Winners R1 (sem par no Losers R1)
   let oddWinnersR1Match: TournamentMatch | null = null;
 
-  if (winnersMatchesByRound[0].length >= 2) {
+  if (winnersR1.length >= 2) {
     const losersR1: TournamentMatch[] = [];
-    const winnersR1Matches = winnersMatchesByRound[0].filter(m => m.result !== 'bye');
+    const winnersR1Matches = winnersR1.filter(m => m.result !== 'bye');
 
     for (let i = 0; i < winnersR1Matches.length; i += 2) {
       const source1 = winnersR1Matches[i];
@@ -409,6 +413,7 @@ function planBracket(tournament: Tournament): void {
 
       if (!source2) {
         // Número ímpar de matches - rastrear para configurar nextMatchIfLose depois
+        if (source1 === undefined) throw new TypeError('Winners match is missing.');
         oddWinnersR1Match = source1;
         continue;
       }
@@ -442,8 +447,8 @@ function planBracket(tournament: Tournament): void {
 
   while (winnersRoundForDropdown <= winnersRounds || losersMatchesByRound.length > 0) {
     // Ronda de entrada de perdedores do Winners
-    if (winnersRoundForDropdown <= winnersRounds && winnersMatchesByRound[winnersRoundForDropdown - 1]) {
-      const winnersDropping = winnersMatchesByRound[winnersRoundForDropdown - 1];
+    const winnersDropping = winnersMatchesByRound[winnersRoundForDropdown - 1];
+    if (winnersRoundForDropdown <= winnersRounds && winnersDropping) {
       const prevLosersMatches = losersMatchesByRound[losersMatchesByRound.length - 1] || [];
       const thisRound: TournamentMatch[] = [];
 
@@ -656,7 +661,10 @@ function generateSeedOrder(size: number): number[] {
   // Intercalar as duas metades
   const result: number[] = [];
   for (let i = 0; i < halfSize; i++) {
-    result.push(topHalf[i], bottomHalf[halfSize - 1 - i]);
+    const top = topHalf[i];
+    const bottom = bottomHalf[halfSize - 1 - i];
+    if (top === undefined || bottom === undefined) throw new TypeError('Seed order is incomplete.');
+    result.push(top, bottom);
   }
   return result;
 }
