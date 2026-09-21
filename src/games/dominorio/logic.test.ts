@@ -11,6 +11,7 @@ describe("Dominório - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 8x8", () => {
     const tabuleiro = criarTabuleiroInicial();
     expect(tabuleiro.length).toBe(8);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(8);
   });
 
@@ -65,10 +66,15 @@ describe("Dominório - Colocação de Dominós", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarDomino(estado, jogada);
     
-    expect(estado.tabuleiro[jogada.pos1.linha][jogada.pos1.coluna]).toBe('ocupada-vertical');
-    expect(estado.tabuleiro[jogada.pos2.linha][jogada.pos2.coluna]).toBe('ocupada-vertical');
+    const linha1 = estado.tabuleiro[jogada.pos1.linha];
+    assert.ok(linha1);
+    expect(linha1[jogada.pos1.coluna]).toBe('ocupada-vertical');
+    const linha2 = estado.tabuleiro[jogada.pos2.linha];
+    assert.ok(linha2);
+    expect(linha2[jogada.pos2.coluna]).toBe('ocupada-vertical');
   });
 
   test("após jogada, turno muda para jogador 2", () => {

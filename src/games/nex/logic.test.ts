@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
@@ -71,6 +72,7 @@ describe("Nex - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 11x11", () => {
     const tabuleiro = criarTabuleiroInicial();
     expect(tabuleiro.length).toBe(11);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(11);
   });
 
@@ -111,6 +113,7 @@ describe("Nex - Verificação de Vitória", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
     // Criar caminho de pretas de y=0 (NW) a y=10 (SE)
+    assert.ok(tabuleiro[5]);
     for (let y = 0; y < LADO_TABULEIRO; y++) {
       tabuleiro[5][y] = 'preta';
     }
@@ -124,7 +127,9 @@ describe("Nex - Verificação de Vitória", () => {
     
     // Criar caminho de brancas de x=0 (SW) a x=10 (NE)
     for (let x = 0; x < LADO_TABULEIRO; x++) {
-      tabuleiro[x][5] = 'branca';
+      const coluna = tabuleiro[x];
+      assert.ok(coluna);
+      coluna[5] = 'branca';
     }
     
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
@@ -135,6 +140,7 @@ describe("Nex - Verificação de Vitória", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     
     // Caminho incompleto para pretas (y=0 a y=10)
+    assert.ok(tabuleiro[5]);
     for (let y = 0; y < 5; y++) {
       tabuleiro[5][y] = 'preta';
     }
@@ -148,16 +154,27 @@ describe("Nex - Verificação de Vitória", () => {
     // Caminho diagonal puro usando apenas (+1,-1)
     // Pretas conectam y=0 (NW) a y=10 (SE)
     // De (10,0) até (0,10) - diagonal perfeita
+    assert.ok(tabuleiro[10]);
     tabuleiro[10][0] = 'preta';
+    assert.ok(tabuleiro[9]);
     tabuleiro[9][1] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[8]);
     tabuleiro[8][2] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[7]);
     tabuleiro[7][3] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[6]);
     tabuleiro[6][4] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][5] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][6] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[3]);
     tabuleiro[3][7] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[2]);
     tabuleiro[2][8] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][9] = 'preta';   // vizinho via (-1,+1)
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][10] = 'preta';  // vizinho via (-1,+1)
     
     expect(verificarVitoria(tabuleiro, 'preta')).toBe(true);
@@ -169,9 +186,11 @@ describe("Nex - Verificação de Vitória", () => {
     // Caminho que usa especificamente o vizinho (-1,+1)
     // Pretas conectam y=0 (NW) a y=10 (SE)
     // (5,0) -> (5,1) -> (5,2) -> (4,3) -> (5,3) -> (5,4) -> ... -> (5,10)
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][0] = 'preta';
     tabuleiro[5][1] = 'preta';   // (0,+1) de (5,0)
     tabuleiro[5][2] = 'preta';   // (0,+1) de (5,1)
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][3] = 'preta';   // (-1,+1) de (5,2) - testa esta direção!
     tabuleiro[5][3] = 'preta';   // (+1,0) de (4,3)
     tabuleiro[5][4] = 'preta';
@@ -191,16 +210,27 @@ describe("Nex - Verificação de Vitória", () => {
     // Caminho diagonal para brancas (x=0 a x=10)
     // Brancas conectam SW (x=0) a NE (x=10)
     // De (0,10) até (10,0) usando (+1,-1)
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][10] = 'branca';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][9] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[2]);
     tabuleiro[2][8] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[3]);
     tabuleiro[3][7] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][6] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][5] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[6]);
     tabuleiro[6][4] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[7]);
     tabuleiro[7][3] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[8]);
     tabuleiro[8][2] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[9]);
     tabuleiro[9][1] = 'branca';   // vizinho via (+1,-1)
+    assert.ok(tabuleiro[10]);
     tabuleiro[10][0] = 'branca';  // vizinho via (+1,-1)
     
     expect(verificarVitoria(tabuleiro, 'branca')).toBe(true);
@@ -212,16 +242,27 @@ describe("Nex - Verificação de Vitória", () => {
     // Este caminho tenta usar (+1,+1) como vizinho, mas NÃO é válido
     // Pretas precisam conectar y=0 a y=10
     // (0,0) -> (1,1) -> (2,2) -> ... -> (10,10) NÃO é caminho válido!
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'preta';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][1] = 'preta';   // (+1,+1) de (0,0) - NÃO É VIZINHO!
+    assert.ok(tabuleiro[2]);
     tabuleiro[2][2] = 'preta';
+    assert.ok(tabuleiro[3]);
     tabuleiro[3][3] = 'preta';
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][4] = 'preta';
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][5] = 'preta';
+    assert.ok(tabuleiro[6]);
     tabuleiro[6][6] = 'preta';
+    assert.ok(tabuleiro[7]);
     tabuleiro[7][7] = 'preta';
+    assert.ok(tabuleiro[8]);
     tabuleiro[8][8] = 'preta';
+    assert.ok(tabuleiro[9]);
     tabuleiro[9][9] = 'preta';
+    assert.ok(tabuleiro[10]);
     tabuleiro[10][10] = 'preta';
     
     // Pretas vão de y=0 a y=10, MAS o caminho não é conexo!
@@ -234,17 +275,27 @@ describe("Nex - Verificação de Vitória", () => {
     
     // Brancas precisam conectar x=0 a x=10
     // Vamos criar um caminho quebrado
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][5] = 'branca';
     // Saltar para (2,3) usando "(-1,-1)" que não é vizinho
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][4] = 'branca';   // (+1,-1) - este É válido
+    assert.ok(tabuleiro[2]);
     tabuleiro[2][3] = 'branca';   // (+1,-1) - este É válido
     // Agora vamos quebrar o caminho
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][3] = 'branca';   // (4,3) NÃO é vizinho de (2,3)! Salto de 2 casas em x
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][3] = 'branca';
+    assert.ok(tabuleiro[6]);
     tabuleiro[6][3] = 'branca';
+    assert.ok(tabuleiro[7]);
     tabuleiro[7][3] = 'branca';
+    assert.ok(tabuleiro[8]);
     tabuleiro[8][3] = 'branca';
+    assert.ok(tabuleiro[9]);
     tabuleiro[9][3] = 'branca';
+    assert.ok(tabuleiro[10]);
     tabuleiro[10][3] = 'branca';
     
     // Este caminho está quebrado porque (2,3) e (4,3) não são vizinhos
@@ -262,7 +313,9 @@ describe("Nex - Ação de Colocação", () => {
       posNeutra: { x: 6, y: 5 },
     });
     
+    assert.ok(estado.tabuleiro[5]);
     expect(estado.tabuleiro[5][5]).toBe('preta');
+    assert.ok(estado.tabuleiro[6]);
     expect(estado.tabuleiro[6][5]).toBe('neutra');
     expect(estado.jogadorAtual).toBe('jogador2');
   });
@@ -286,8 +339,11 @@ describe("Nex - Ação de Substituição", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     
     // Preparar tabuleiro com neutras e peça própria
+    assert.ok(estado.tabuleiro[0]);
     estado.tabuleiro[0][0] = 'preta';
+    assert.ok(estado.tabuleiro[1]);
     estado.tabuleiro[1][0] = 'neutra';
+    assert.ok(estado.tabuleiro[2]);
     estado.tabuleiro[2][0] = 'neutra';
     
     estado = executarSubstituicao(estado, {
@@ -296,14 +352,19 @@ describe("Nex - Ação de Substituição", () => {
       propriaParaNeutra: { x: 0, y: 0 },
     });
     
+    assert.ok(estado.tabuleiro[0]);
     expect(estado.tabuleiro[0][0]).toBe('neutra');
+    assert.ok(estado.tabuleiro[1]);
     expect(estado.tabuleiro[1][0]).toBe('preta');
+    assert.ok(estado.tabuleiro[2]);
     expect(estado.tabuleiro[2][0]).toBe('preta');
   });
 
   test("podeSubstituir retorna false sem neutras suficientes", () => {
     const estado = criarEstadoInicial('dois-jogadores');
+    assert.ok(estado.tabuleiro[0]);
     estado.tabuleiro[0][0] = 'preta';
+    assert.ok(estado.tabuleiro[1]);
     estado.tabuleiro[1][0] = 'neutra'; // Apenas 1 neutra
     
     expect(podeSubstituir(estado.tabuleiro, 'jogador1')).toBe(false);
@@ -311,8 +372,11 @@ describe("Nex - Ação de Substituição", () => {
 
   test("podeSubstituir retorna true com condições corretas", () => {
     const estado = criarEstadoInicial('dois-jogadores');
+    assert.ok(estado.tabuleiro[0]);
     estado.tabuleiro[0][0] = 'preta';
+    assert.ok(estado.tabuleiro[1]);
     estado.tabuleiro[1][0] = 'neutra';
+    assert.ok(estado.tabuleiro[2]);
     estado.tabuleiro[2][0] = 'neutra';
     
     expect(podeSubstituir(estado.tabuleiro, 'jogador1')).toBe(true);
@@ -331,12 +395,14 @@ describe("Nex - Regra de Swap", () => {
     });
     
     expect(estado.swapDisponivel).toBe(true);
+    assert.ok(estado.tabuleiro[5]);
     expect(estado.tabuleiro[5][5]).toBe('preta');
     
     // Executar swap
     estado = executarSwap(estado);
     
     // Pie rule: o tabuleiro não muda; muda a cor atribuída aos jogadores e o turno é consumido
+    assert.ok(estado.tabuleiro[5]);
     expect(estado.tabuleiro[5][5]).toBe('preta');
     expect(estado.jogadorAtual).toBe('jogador1'); // swap consome o turno do jogador2
     expect(estado.swapDisponivel).toBe(false);
@@ -363,6 +429,7 @@ describe("Nex - Regra de Swap", () => {
       posNeutra: { x: 1, y: 0 },
     });
 
+    assert.ok(estado.tabuleiro[0]);
     expect(estado.tabuleiro[0][0]).toBe('branca');
   });
 
@@ -414,7 +481,9 @@ describe("Nex - Construção de Ação", () => {
     
     estado = executarAcao(estado);
     
+    assert.ok(estado.tabuleiro[5]);
     expect(estado.tabuleiro[5][5]).toBe('preta');
+    assert.ok(estado.tabuleiro[6]);
     expect(estado.tabuleiro[6][5]).toBe('neutra');
     expect(estado.jogadorAtual).toBe('jogador2');
   });
@@ -459,7 +528,9 @@ describe("Nex - IA", () => {
     // Brancas conectam x=0 (SW) a x=10 (NE)
     // Caminho quase completo de x=0 a x=10
     for (let x = 0; x < LADO_TABULEIRO - 1; x++) {
-      estado.tabuleiro[x][5] = 'branca';
+      const coluna = estado.tabuleiro[x];
+      assert.ok(coluna);
+      coluna[5] = 'branca';
     }
     // Falta uma peça para vencer (x=10)
     
@@ -484,10 +555,13 @@ describe("Nex - Verificações Gerais", () => {
     // Preencher quase tudo
     for (let x = 0; x < LADO_TABULEIRO; x++) {
       for (let y = 0; y < LADO_TABULEIRO; y++) {
-        tabuleiro[x][y] = 'preta';
+        const coluna = tabuleiro[x];
+        assert.ok(coluna);
+        coluna[y] = 'preta';
       }
     }
     // Deixar apenas 1 vazia
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'vazia';
     
     expect(podeColocar(tabuleiro)).toBe(false);
@@ -500,12 +574,15 @@ describe("Nex - Convenções raras de fim", () => {
     estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () =>
       Array<Celula>(LADO_TABULEIRO).fill('branca'),
     );
+    assert.ok(estado.tabuleiro[5]);
     estado.tabuleiro[5][5] = 'vazia';
     estado.jogadorAtual = 'jogador1';
     estado.primeiraJogada = false;
 
     const final = resolverFinalRaro(estado);
 
+    assert.ok(final);
+    assert.ok(final.tabuleiro[5]);
     expect(final?.tabuleiro[5][5]).toBe('preta');
     expect(final?.estado).not.toBe('a-jogar');
   });
@@ -515,12 +592,15 @@ describe("Nex - Convenções raras de fim", () => {
     estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () =>
       Array<Celula>(LADO_TABULEIRO).fill('branca'),
     );
+    assert.ok(estado.tabuleiro[4]);
     estado.tabuleiro[4][4] = 'neutra';
     estado.jogadorAtual = 'jogador1';
     estado.primeiraJogada = false;
 
     const final = resolverFinalRaro(estado);
 
+    assert.ok(final);
+    assert.ok(final.tabuleiro[4]);
     expect(final?.tabuleiro[4][4]).toBe('preta');
     expect(final?.estado).not.toBe('a-jogar');
   });
@@ -530,14 +610,19 @@ describe("Nex - Convenções raras de fim", () => {
     estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () =>
       Array<Celula>(LADO_TABULEIRO).fill('preta'),
     );
+    assert.ok(estado.tabuleiro[3]);
     estado.tabuleiro[3][3] = 'vazia';
+    assert.ok(estado.tabuleiro[7]);
     estado.tabuleiro[7][7] = 'neutra';
     estado.jogadorAtual = 'jogador1';
     estado.primeiraJogada = false;
 
     const final = resolverFinalRaro(estado);
 
+    assert.ok(final);
+    assert.ok(final.tabuleiro[3]);
     expect(final?.tabuleiro[3][3]).toBe('preta');
+    assert.ok(final.tabuleiro[7]);
     expect(final?.tabuleiro[7][7]).toBe('branca');
     expect(final?.estado).not.toBe('a-jogar');
   });

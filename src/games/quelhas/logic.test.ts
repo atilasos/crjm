@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
@@ -28,6 +29,7 @@ describe("Quelhas - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 10x10", () => {
     const tabuleiro = criarTabuleiroInicial();
     expect(tabuleiro.length).toBe(10);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(10);
   });
 
@@ -93,6 +95,7 @@ describe("Quelhas - Jogadas Válidas", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const primeiraJogada = estado.jogadasValidas[0];
     
+    assert.ok(primeiraJogada);
     estado = colocarSegmento(estado, primeiraJogada);
     
     expect(estado.jogadorAtual).toBe('jogador2');
@@ -122,6 +125,7 @@ describe("Quelhas - Regra de Troca", () => {
     expect(estado.trocaDisponivel).toBe(false);
     
     const primeiraJogada = estado.jogadasValidas[0];
+    assert.ok(primeiraJogada);
     estado = colocarSegmento(estado, primeiraJogada);
     
     expect(estado.trocaDisponivel).toBe(true);
@@ -133,11 +137,13 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     expect(estado.trocaDisponivel).toBe(true);
     
     // Jogada do jogador2 sem usar a troca
     const jogada2 = estado.jogadasValidas[0];
+    assert.ok(jogada2);
     estado = colocarSegmento(estado, jogada2);
     
     expect(estado.trocaDisponivel).toBe(false);
@@ -149,6 +155,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1 para ativar troca
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     expect(estado.orientacaoJogador1).toBe('vertical');
@@ -172,6 +179,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     // Antes da troca: jogador2 (horizontal) tem jogadas horizontais
@@ -199,6 +207,7 @@ describe("Quelhas - Regra de Troca", () => {
     expect(estado.jogadorAtual).toBe('jogador1');
     expect(getOrientacaoJogador(estado, 'jogador1')).toBe('vertical');
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     // Após jogada de J1, é a vez de J2 e troca está disponível
@@ -219,6 +228,7 @@ describe("Quelhas - Regra de Troca", () => {
       expect(jogada.orientacao).toBe('horizontal');
     }
     const jogada2 = estado.jogadasValidas[0];
+    assert.ok(jogada2);
     estado = colocarSegmento(estado, jogada2);
     
     // Após jogada de J1, é a vez de J2
@@ -236,6 +246,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     expect(estado.trocaDisponivel).toBe(true);
     
@@ -252,6 +263,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     const decisao = decidirTrocaComputador(estado);
@@ -347,8 +359,12 @@ describe("Quelhas - Colocação de Segmentos", () => {
       estado = colocarSegmento(estado, segmento);
       
       // Verificar que as células estão ocupadas
-      expect(estado.tabuleiro[segmento.inicio.linha][segmento.inicio.coluna]).toBe('ocupada');
-      expect(estado.tabuleiro[segmento.inicio.linha + 1][segmento.inicio.coluna]).toBe('ocupada');
+      const linhaInicio = estado.tabuleiro[segmento.inicio.linha];
+      assert.ok(linhaInicio);
+      expect(linhaInicio[segmento.inicio.coluna]).toBe('ocupada');
+      const linhaSeguinte = estado.tabuleiro[segmento.inicio.linha + 1];
+      assert.ok(linhaSeguinte);
+      expect(linhaSeguinte[segmento.inicio.coluna]).toBe('ocupada');
     }
   });
 
@@ -356,6 +372,7 @@ describe("Quelhas - Colocação de Segmentos", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarSegmento(estado, jogada);
     
     expect(estado.jogadorAtual).toBe('jogador2');
@@ -366,6 +383,7 @@ describe("Quelhas - Colocação de Segmentos", () => {
     expect(estado.primeiraJogada).toBe(true);
     
     const jogada = estado.jogadasValidas[0];
+    assert.ok(jogada);
     estado = colocarSegmento(estado, jogada);
     
     expect(estado.primeiraJogada).toBe(false);
@@ -406,7 +424,9 @@ describe("Quelhas - Intervalos de Jogadas (Heurística Min/Max)", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar primeira coluna inteira (bloqueia jogadas verticais nessa coluna)
     for (let i = 0; i < 10; i++) {
-      tabuleiro[i][0] = 'ocupada';
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      linha[0] = 'ocupada';
     }
     
     const jogadasVertical = calcularJogadasValidas(tabuleiro, 'vertical');
@@ -456,7 +476,9 @@ describe("Quelhas - Avaliação Misère", () => {
     // Preencher maior parte, deixando algumas linhas/colunas
     for (let i = 0; i < 8; i++) {
       for (let j = 0; j < 8; j++) {
-        tabuleiro[i][j] = 'ocupada';
+        const linha = tabuleiro[i];
+        assert.ok(linha);
+        linha[j] = 'ocupada';
       }
     }
     
@@ -479,6 +501,7 @@ describe("Quelhas - IA Misère Comportamento", () => {
       if (estado.jogadasValidas.length === 0) break;
       
       const jogada = estado.jogadasValidas[0];
+      assert.ok(jogada);
       estado = colocarSegmento(estado, jogada);
       
       // Se troca disponível, recusar para simplificar teste
@@ -496,6 +519,7 @@ describe("Quelhas - IA Misère Comportamento", () => {
     
     // Simular primeira jogada do humano
     const jogadaHumano = estado.jogadasValidas[0];
+    assert.ok(jogadaHumano);
     estado = colocarSegmento(estado, jogadaHumano);
     
     // Recusar troca para simplificar
@@ -520,7 +544,9 @@ describe("Quelhas - IA Misère Comportamento", () => {
       for (let j = 0; j < 10; j++) {
         // Deixar apenas coluna 9 vazia para jogadas verticais
         if (j !== 9) {
-          tabuleiro[i][j] = 'ocupada';
+          const linha = tabuleiro[i];
+          assert.ok(linha);
+          linha[j] = 'ocupada';
         }
       }
     }
@@ -542,6 +568,7 @@ describe("Quelhas - IA Misère Comportamento", () => {
       if (estado.jogadasValidas.length === 0) break;
       
       const jogada = estado.jogadasValidas[0];
+      assert.ok(jogada);
       estado = colocarSegmento(estado, jogada);
       
       if (estado.trocaDisponivel) {
@@ -588,7 +615,9 @@ describe("Quelhas - Extração de Blocos", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar alternadamente na coluna 0 para criar blocos de tamanho 1
     for (let i = 0; i < 10; i += 2) {
-      tabuleiro[i][0] = 'ocupada';
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      linha[0] = 'ocupada';
     }
     
     const blocos = extrairBlocos(tabuleiro, 'vertical');
@@ -600,6 +629,7 @@ describe("Quelhas - Extração de Blocos", () => {
   test("extrairBlocos deve encontrar múltiplos blocos na mesma coluna", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar linha 4 da coluna 0 para dividir em dois blocos
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][0] = 'ocupada';
     
     const blocos = extrairBlocos(tabuleiro, 'vertical');
@@ -607,7 +637,9 @@ describe("Quelhas - Extração de Blocos", () => {
     
     // Deve haver 2 blocos na coluna 0: linhas 0-3 (comp 4) e linhas 5-9 (comp 5)
     expect(blocosColuna0.length).toBe(2);
+    assert.ok(blocosColuna0[0]);
     expect(blocosColuna0[0].comprimento).toBe(4);
+    assert.ok(blocosColuna0[1]);
     expect(blocosColuna0[1].comprimento).toBe(5);
   });
 });
@@ -617,6 +649,7 @@ describe("Quelhas - Classificação Exclusivo/Partilhado", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Ocupar toda a primeira linha exceto coluna 0
     // Assim horizontal não consegue jogar na linha 0
+    assert.ok(tabuleiro[0]);
     for (let j = 1; j < 10; j++) {
       tabuleiro[0][j] = 'ocupada';
     }
@@ -707,6 +740,7 @@ describe("Quelhas - Parse de Tabuleiro ASCII", () => {
     const tabuleiro = parseTabuleiroASCII(ascii);
     
     expect(tabuleiro.length).toBe(10);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(10);
     
     for (const linha of tabuleiro) {
@@ -734,11 +768,15 @@ describe("Quelhas - Parse de Tabuleiro ASCII", () => {
     
     // Diagonal deve estar ocupada
     for (let i = 0; i < 10; i++) {
-      expect(tabuleiro[i][i]).toBe('ocupada');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[i]).toBe('ocupada');
     }
     
     // Fora da diagonal deve estar vazia
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0][1]).toBe('vazia');
+    assert.ok(tabuleiro[1]);
     expect(tabuleiro[1][0]).toBe('vazia');
   });
 });
@@ -763,18 +801,24 @@ describe("Quelhas - Exemplo do Utilizador (Vertical Ganha)", () => {
     
     // Coluna 0 deve estar toda vazia
     for (let i = 0; i < 10; i++) {
-      expect(tabuleiro[i][0]).toBe('vazia');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[0]).toBe('vazia');
     }
     
     // Coluna 1 deve estar toda ocupada
     for (let i = 0; i < 10; i++) {
-      expect(tabuleiro[i][1]).toBe('ocupada');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[1]).toBe('ocupada');
     }
     
     // Colunas 8-9, linhas 2-9 devem estar vazias
     for (let i = 2; i < 10; i++) {
-      expect(tabuleiro[i][8]).toBe('vazia');
-      expect(tabuleiro[i][9]).toBe('vazia');
+      const linha = tabuleiro[i];
+      assert.ok(linha);
+      expect(linha[8]).toBe('vazia');
+      expect(linha[9]).toBe('vazia');
     }
   });
 
@@ -869,6 +913,7 @@ describe("Quelhas - IA Forte (Alpha-Beta)", () => {
     for (let i = 0; i < 3; i++) {
       if (estado.estado !== 'a-jogar') break;
       const jogada = estado.jogadasValidas[0];
+      assert.ok(jogada);
       estado = colocarSegmento(estado, jogada);
       if (estado.trocaDisponivel) {
         estado = recusarTroca(estado);

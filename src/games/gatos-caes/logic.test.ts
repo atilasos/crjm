@@ -13,6 +13,7 @@ describe("Gatos & Cães - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 8x8", () => {
     const tabuleiro = criarTabuleiroInicial();
     expect(tabuleiro.length).toBe(8);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(8);
   });
 

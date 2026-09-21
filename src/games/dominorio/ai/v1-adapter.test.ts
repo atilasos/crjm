@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import type { AIRequestV1, DifficultyLevel } from '../../../ai-core';
 import { criarEstadoInicial } from '../logic';
 import type { Celula, DominorioState, Domino } from '../types';
@@ -40,6 +41,7 @@ describe('DominorioV1Adapter', () => {
     expect(response.bestMove).not.toBeNull();
     expect(response.topMoves.length).toBeGreaterThan(0);
     expect(response.topMoves.length).toBeLessThanOrEqual(3);
+    assert.ok(response.topMoves[0]);
     expect(response.topMoves[0].rank).toBe(1);
     expect(response.explainText.length).toBeGreaterThan(0);
     expect(response.explainText.length).toBeLessThanOrEqual(160);
@@ -87,7 +89,9 @@ describe('DominorioV1Adapter', () => {
     const board: Celula[][] = Array.from({ length: 8 }, () =>
       Array(8).fill('ocupada-horizontal' as const),
     );
+    assert.ok(board[0]);
     board[0][0] = 'vazia';
+    assert.ok(board[1]);
     board[1][0] = 'vazia';
 
     const lowMobilityState: DominorioState = {
@@ -105,6 +109,8 @@ describe('DominorioV1Adapter', () => {
 
     expect(response.topMoves.length).toBe(1);
     expect(response.criticalThreats?.length).toBe(1);
+    assert.ok(response.criticalThreats?.[0]);
+    assert.ok(response.topMoves[0]);
     expect(response.criticalThreats?.[0].id).toBe('low-mobility');
     expect(response.criticalThreats?.[0].severity).toBe('high');
     expect(response.criticalThreats?.[0].counterMove).toEqual(response.topMoves[0].move);
@@ -118,12 +124,16 @@ describe('DominorioV1Adapter', () => {
     const board: Celula[][] = Array.from({ length: 8 }, () =>
       Array(8).fill('ocupada-vertical' as const),
     );
+    assert.ok(board[0]);
     board[0][0] = 'vazia';
     board[0][1] = 'vazia';
+    assert.ok(board[1]);
     board[1][0] = 'vazia';
     board[1][1] = 'vazia';
+    assert.ok(board[2]);
     board[2][0] = 'vazia';
     board[2][1] = 'vazia';
+    assert.ok(board[3]);
     board[3][0] = 'vazia';
     board[3][1] = 'vazia';
 
