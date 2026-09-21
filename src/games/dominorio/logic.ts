@@ -1,5 +1,5 @@
-import { DominorioState, Celula, Posicao, Domino } from './types';
-import { GameMode, GameStatus, Player } from '../../types';
+import type { DominorioState, Celula, Posicao, Domino } from './types';
+import type { GameMode, GameStatus, Player } from '../../types';
 
 const TAMANHO_TABULEIRO = 8;
 

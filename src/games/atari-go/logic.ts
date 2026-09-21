@@ -1,5 +1,5 @@
-import { AtariGoState, Celula, Posicao, Grupo, TAMANHO_TABULEIRO } from './types';
-import { GameMode, GameStatus, Player } from '../../types';
+import { type AtariGoState, type Celula, type Posicao, type Grupo, TAMANHO_TABULEIRO } from './types';
+import type { GameMode, GameStatus, Player } from '../../types';
 
 // Criar tabuleiro inicial vazio
 export function criarTabuleiroInicial(): Celula[][] {

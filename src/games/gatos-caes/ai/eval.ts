@@ -9,7 +9,7 @@
  * - Safe moves (guaranteed future moves)
  */
 
-import { CompactBoard } from './types';
+import type { CompactBoard } from './types';
 import { CASAS_CENTRAIS } from '../types';
 
 // Constants for evaluation

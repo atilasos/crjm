@@ -1,5 +1,5 @@
-import { GatosCaesState, Celula, Posicao, CASAS_CENTRAIS } from './types';
-import { GameMode, GameStatus, Player } from '../../types';
+import { type GatosCaesState, type Celula, type Posicao, CASAS_CENTRAIS } from './types';
+import type { GameMode, GameStatus, Player } from '../../types';
 
 const TAMANHO_TABULEIRO = 8;
 

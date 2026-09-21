@@ -1,4 +1,4 @@
-import { GameMode, Player, GameStatus } from '../../types';
+import type { GameMode, Player, GameStatus } from '../../types';
 
 // Atari Go (Capture Go) - Variante simplificada do Go
 // - Tabuleiro 9×9 (joga-se nas interseções)

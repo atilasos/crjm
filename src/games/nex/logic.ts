@@ -1,8 +1,8 @@
 import { 
-  NexState, Celula, Posicao, Acao, AcaoColocacao, AcaoSubstituicao, 
-  AcaoEmCurso, TipoAcao, LADO_TABULEIRO, posToKey 
+  type NexState, type Celula, type Posicao, type Acao, type AcaoColocacao, type AcaoSubstituicao, 
+  type AcaoEmCurso, type TipoAcao, LADO_TABULEIRO, posToKey 
 } from './types';
-import { GameMode, GameStatus, Player } from '../../types';
+import type { GameMode, GameStatus, Player } from '../../types';
 
 // Direções dos 6 vizinhos hexagonais para grelha losango em coordenadas axiais
 // Neste sistema (usado no rendering), os vizinhos são constantes para todas as células:

@@ -5,7 +5,7 @@
  * transposition table, killer moves, and history heuristic.
  */
 
-import { CompactBoard, Move, SearchStats, AIConfig, TTFlag, DIFFICULTY_CONFIGS } from './types';
+import { type CompactBoard, type Move, type SearchStats, type AIConfig, TTFlag, DIFFICULTY_CONFIGS } from './types';
 import { TranspositionTable, computeHash } from './tt';
 import { evaluate, generateMoves, countLegalMoves, INFINITY, WIN_SCORE, ADJACENT_MASKS, popcount, ctz64 } from './eval';
 import type { GatosCaesState, Posicao, Celula } from '../types';
