@@ -76,8 +76,8 @@ export interface IndexMaps {
 export function buildIndexMaps(gerarPosicoesValidas: () => Posicao[], posToKey: (p: Posicao) => string): IndexMaps {
   const idxToPos = gerarPosicoesValidas();
   const keyToIdx = new Map<string, number>();
-  for (let i = 0; i < idxToPos.length; i++) {
-    keyToIdx.set(posToKey(idxToPos[i]), i);
+  for (const [i, pos] of idxToPos.entries()) {
+    keyToIdx.set(posToKey(pos), i);
   }
   return { idxToPos, keyToIdx };
 }

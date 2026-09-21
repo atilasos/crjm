@@ -84,9 +84,9 @@ export function fromNetworkGatosCaesState(
   // Calculate jogadasValidas based on board state
   const jogadasValidas: GatosCaesPosicao[] = [];
   // (simplified - the real validation should use game logic)
-  for (let linha = 0; linha < tabuleiro.length; linha++) {
-    for (let coluna = 0; coluna < tabuleiro[linha].length; coluna++) {
-      if (tabuleiro[linha][coluna] === 'vazia') {
+  for (const [linha, row] of tabuleiro.entries()) {
+    for (const [coluna, celula] of row.entries()) {
+      if (celula === 'vazia') {
         jogadasValidas.push({ linha, coluna });
       }
     }
@@ -184,9 +184,9 @@ export function fromNetworkDominorioState(
   const jogadasValidas: Domino[] = [];
   const orientacao = net.currentPlayer === 'player1' ? 'vertical' : 'horizontal';
 
-  for (let linha = 0; linha < tabuleiro.length; linha++) {
-    for (let coluna = 0; coluna < tabuleiro[linha].length; coluna++) {
-      if (tabuleiro[linha][coluna] === 'vazia') {
+  for (const [linha, row] of tabuleiro.entries()) {
+    for (const [coluna, celula] of row.entries()) {
+      if (celula === 'vazia') {
         if (orientacao === 'vertical' && linha + 1 < tabuleiro.length && tabuleiro[linha + 1][coluna] === 'vazia') {
           jogadasValidas.push({
             pos1: { linha, coluna },
@@ -194,7 +194,7 @@ export function fromNetworkDominorioState(
             orientacao: 'vertical',
           });
         }
-        if (orientacao === 'horizontal' && coluna + 1 < tabuleiro[linha].length && tabuleiro[linha][coluna + 1] === 'vazia') {
+        if (orientacao === 'horizontal' && coluna + 1 < row.length && row[coluna + 1] === 'vazia') {
           jogadasValidas.push({
             pos1: { linha, coluna },
             pos2: { linha, coluna: coluna + 1 },
@@ -533,9 +533,9 @@ export function fromNetworkAtariGoState(
 
   // Calculate jogadasValidas (simplified - empty cells)
   const jogadasValidas: AtariGoPosicao[] = [];
-  for (let linha = 0; linha < tabuleiro.length; linha++) {
-    for (let coluna = 0; coluna < tabuleiro[linha].length; coluna++) {
-      if (tabuleiro[linha][coluna] === 'vazia') {
+  for (const [linha, row] of tabuleiro.entries()) {
+    for (const [coluna, celula] of row.entries()) {
+      if (celula === 'vazia') {
         jogadasValidas.push({ linha, coluna });
       }
     }

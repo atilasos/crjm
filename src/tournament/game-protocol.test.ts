@@ -19,6 +19,8 @@ import {
   // Dominório
   toNetworkDominorioMove,
   fromNetworkDominorioMove,
+  fromNetworkDominorioState,
+  type NetworkDominorioState,
   type NetworkDominorioMove,
   // Quelhas
   toNetworkQuelhasMove,
@@ -31,6 +33,8 @@ import {
   // Atari Go
   toNetworkAtariGoMove,
   fromNetworkAtariGoMove,
+  fromNetworkAtariGoState,
+  type NetworkAtariGoState,
   type NetworkAtariGoMove,
   // Nex
   toNetworkNexMove,
@@ -367,6 +371,85 @@ describe('Y network state', () => {
       { ...state, jogadorAtual: 'player1' }, { ...state, colocacoes: -1 },
       { ...state, podeTrocar: 'true' }, { ...state, estado: 'finished' }]) {
       expect(() => fromNetworkYState(value)).toThrow();
+    }
+  });
+});
+
+
+describe('Network board traversal', () => {
+  function raggedBoard<T>(empty: T, occupied: T): T[][] {
+    const sparse = new Array<T>(4);
+    sparse[0] = empty;
+    sparse[2] = empty;
+    sparse[3] = occupied;
+    return [[], [empty, occupied, empty], sparse, [empty, empty, empty, empty, empty]];
+  }
+
+  const players: ('player1' | 'player2')[] = ['player1', 'player2'];
+  const emptyPositions = [
+    { linha: 1, coluna: 0 }, { linha: 1, coluna: 2 },
+    { linha: 2, coluna: 0 }, { linha: 2, coluna: 2 },
+    { linha: 3, coluna: 0 }, { linha: 3, coluna: 1 }, { linha: 3, coluna: 2 },
+    { linha: 3, coluna: 3 }, { linha: 3, coluna: 4 },
+  ];
+
+  test('Gatos e Cães preserves row order, ragged dimensions and sparse cells for both players', () => {
+    for (const currentPlayer of players) {
+      const net: NetworkGatosCaesState = {
+        board: raggedBoard<NetworkGatosCaesState['board'][number][number]>('empty', 'cat'),
+        currentPlayer, catCount: 2, dogCount: 0, lastMove: null, winner: null,
+        isFirstCatPlaced: true, isFirstDogPlaced: false,
+      };
+      const before = structuredClone(net);
+      const result = fromNetworkGatosCaesState(net);
+      expect(result.jogadasValidas).toEqual(emptyPositions);
+      expect(result.tabuleiro.map(row => row.length)).toEqual([0, 3, 4, 5]);
+      assert.ok(result.tabuleiro[2]);
+      expect(1 in result.tabuleiro[2]).toBe(false);
+      expect(net).toEqual(before);
+    }
+  });
+
+  test('Atari Go preserves row order, ragged dimensions and sparse cells for both players', () => {
+    for (const currentPlayer of players) {
+      const net: NetworkAtariGoState = {
+        board: raggedBoard<NetworkAtariGoState['board'][number][number]>('empty', 'black'),
+        currentPlayer, blackCaptures: 2, whiteCaptures: 1, lastMove: null, winner: null, passCount: 0,
+      };
+      const before = structuredClone(net);
+      const result = fromNetworkAtariGoState(net);
+      expect(result.jogadasValidas).toEqual(emptyPositions);
+      expect(result.tabuleiro.map(row => row.length)).toEqual([0, 3, 4, 5]);
+      assert.ok(result.tabuleiro[2]);
+      expect(1 in result.tabuleiro[2]).toBe(false);
+      expect(net).toEqual(before);
+    }
+  });
+
+  test('Dominório preserves ordered vertical and horizontal moves across ragged and sparse rows', () => {
+    for (const currentPlayer of players) {
+      const net: NetworkDominorioState = {
+        board: raggedBoard<NetworkDominorioState['board'][number][number]>(null, 'player1'),
+        currentPlayer, lastMove: null, winner: null, movesCount: 2,
+      };
+      const before = structuredClone(net);
+      const result = fromNetworkDominorioState(net);
+      const expected: Domino[] = currentPlayer === 'player1' ? [
+        { pos1: { linha: 1, coluna: 0 }, pos2: { linha: 2, coluna: 0 }, orientacao: 'vertical' },
+        { pos1: { linha: 1, coluna: 2 }, pos2: { linha: 2, coluna: 2 }, orientacao: 'vertical' },
+        { pos1: { linha: 2, coluna: 0 }, pos2: { linha: 3, coluna: 0 }, orientacao: 'vertical' },
+        { pos1: { linha: 2, coluna: 2 }, pos2: { linha: 3, coluna: 2 }, orientacao: 'vertical' },
+      ] : [
+        { pos1: { linha: 3, coluna: 0 }, pos2: { linha: 3, coluna: 1 }, orientacao: 'horizontal' },
+        { pos1: { linha: 3, coluna: 1 }, pos2: { linha: 3, coluna: 2 }, orientacao: 'horizontal' },
+        { pos1: { linha: 3, coluna: 2 }, pos2: { linha: 3, coluna: 3 }, orientacao: 'horizontal' },
+        { pos1: { linha: 3, coluna: 3 }, pos2: { linha: 3, coluna: 4 }, orientacao: 'horizontal' },
+      ];
+      expect(result.jogadasValidas).toEqual(expected);
+      expect(result.tabuleiro.map(row => row.length)).toEqual([0, 3, 4, 5]);
+      assert.ok(result.tabuleiro[2]);
+      expect(1 in result.tabuleiro[2]).toBe(false);
+      expect(net).toEqual(before);
     }
   });
 });
