@@ -94,6 +94,7 @@ describe("Quelhas - Jogadas Válidas", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const primeiraJogada = estado.jogadasValidas[0];
     
+    assert.ok(primeiraJogada);
     estado = colocarSegmento(estado, primeiraJogada);
     
     expect(estado.jogadorAtual).toBe('jogador2');
@@ -123,6 +124,7 @@ describe("Quelhas - Regra de Troca", () => {
     expect(estado.trocaDisponivel).toBe(false);
     
     const primeiraJogada = estado.jogadasValidas[0];
+    assert.ok(primeiraJogada);
     estado = colocarSegmento(estado, primeiraJogada);
     
     expect(estado.trocaDisponivel).toBe(true);
@@ -152,6 +154,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1 para ativar troca
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     expect(estado.orientacaoJogador1).toBe('vertical');
@@ -175,6 +178,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     // Antes da troca: jogador2 (horizontal) tem jogadas horizontais
@@ -202,6 +206,7 @@ describe("Quelhas - Regra de Troca", () => {
     expect(estado.jogadorAtual).toBe('jogador1');
     expect(getOrientacaoJogador(estado, 'jogador1')).toBe('vertical');
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     // Após jogada de J1, é a vez de J2 e troca está disponível
@@ -222,6 +227,7 @@ describe("Quelhas - Regra de Troca", () => {
       expect(jogada.orientacao).toBe('horizontal');
     }
     const jogada2 = estado.jogadasValidas[0];
+    assert.ok(jogada2);
     estado = colocarSegmento(estado, jogada2);
     
     // Após jogada de J1, é a vez de J2
@@ -239,6 +245,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     expect(estado.trocaDisponivel).toBe(true);
     
@@ -255,6 +262,7 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     
     const decisao = decidirTrocaComputador(estado);
@@ -359,6 +367,7 @@ describe("Quelhas - Colocação de Segmentos", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarSegmento(estado, jogada);
     
     expect(estado.jogadorAtual).toBe('jogador2');
@@ -369,6 +378,7 @@ describe("Quelhas - Colocação de Segmentos", () => {
     expect(estado.primeiraJogada).toBe(true);
     
     const jogada = estado.jogadasValidas[0];
+    assert.ok(jogada);
     estado = colocarSegmento(estado, jogada);
     
     expect(estado.primeiraJogada).toBe(false);
@@ -482,6 +492,7 @@ describe("Quelhas - IA Misère Comportamento", () => {
       if (estado.jogadasValidas.length === 0) break;
       
       const jogada = estado.jogadasValidas[0];
+      assert.ok(jogada);
       estado = colocarSegmento(estado, jogada);
       
       // Se troca disponível, recusar para simplificar teste
@@ -499,6 +510,7 @@ describe("Quelhas - IA Misère Comportamento", () => {
     
     // Simular primeira jogada do humano
     const jogadaHumano = estado.jogadasValidas[0];
+    assert.ok(jogadaHumano);
     estado = colocarSegmento(estado, jogadaHumano);
     
     // Recusar troca para simplificar
@@ -545,6 +557,7 @@ describe("Quelhas - IA Misère Comportamento", () => {
       if (estado.jogadasValidas.length === 0) break;
       
       const jogada = estado.jogadasValidas[0];
+      assert.ok(jogada);
       estado = colocarSegmento(estado, jogada);
       
       if (estado.trocaDisponivel) {
@@ -872,6 +885,7 @@ describe("Quelhas - IA Forte (Alpha-Beta)", () => {
     for (let i = 0; i < 3; i++) {
       if (estado.estado !== 'a-jogar') break;
       const jogada = estado.jogadasValidas[0];
+      assert.ok(jogada);
       estado = colocarSegmento(estado, jogada);
       if (estado.trocaDisponivel) {
         estado = recusarTroca(estado);

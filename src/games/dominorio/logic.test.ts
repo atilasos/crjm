@@ -65,6 +65,7 @@ describe("Dominório - Colocação de Dominós", () => {
     let estado = criarEstadoInicial('dois-jogadores');
     const jogada = estado.jogadasValidas[0];
     
+    assert.ok(jogada);
     estado = colocarDomino(estado, jogada);
     
     expect(estado.tabuleiro[jogada.pos1.linha][jogada.pos1.coluna]).toBe('ocupada-vertical');

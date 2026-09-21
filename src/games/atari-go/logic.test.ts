@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
@@ -16,6 +17,7 @@ describe("Atari Go - Tabuleiro Inicial", () => {
   test("deve criar tabuleiro 9x9", () => {
     const tabuleiro = criarTabuleiroInicial();
     expect(tabuleiro.length).toBe(9);
+    assert.ok(tabuleiro[0]);
     expect(tabuleiro[0].length).toBe(9);
   });
 
@@ -55,6 +57,7 @@ describe("Atari Go - Estado Inicial", () => {
 describe("Atari Go - Grupos e Liberdades", () => {
   test("encontrar grupo de uma pedra isolada", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][4] = 'preta';
     
     const grupo = encontrarGrupo(tabuleiro, { linha: 4, coluna: 4 });
@@ -67,6 +70,7 @@ describe("Atari Go - Grupos e Liberdades", () => {
 
   test("encontrar grupo de pedra no canto", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'preta';
     
     const grupo = encontrarGrupo(tabuleiro, { linha: 0, coluna: 0 });
@@ -77,8 +81,10 @@ describe("Atari Go - Grupos e Liberdades", () => {
 
   test("encontrar grupo conectado", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][4] = 'preta';
     tabuleiro[4][5] = 'preta';
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][4] = 'preta';
     
     const grupo = encontrarGrupo(tabuleiro, { linha: 4, coluna: 4 });
@@ -91,9 +97,11 @@ describe("Atari Go - Grupos e Liberdades", () => {
   test("encontrar todos grupos de uma cor", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Grupo 1
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'preta';
     tabuleiro[0][1] = 'preta';
     // Grupo 2 (separado)
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][5] = 'preta';
     
     const grupos = encontrarTodosGrupos(tabuleiro, 'preta');
@@ -104,9 +112,12 @@ describe("Atari Go - Grupos e Liberdades", () => {
   test("grupo rodeado tem 0 liberdades", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Pedra preta no centro
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][4] = 'preta';
     // Rodeada por brancas
+    assert.ok(tabuleiro[3]);
     tabuleiro[3][4] = 'branca';
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][4] = 'branca';
     tabuleiro[4][3] = 'branca';
     tabuleiro[4][5] = 'branca';
@@ -122,16 +133,21 @@ describe("Atari Go - Atari (1 liberdade)", () => {
   test("encontrar grupos em atari", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Pedra preta com apenas 1 liberdade
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'preta';
     tabuleiro[0][1] = 'branca';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][0] = 'branca';
     // Deixa apenas diagonal que não conta
     
     // Espera: a preta em 0,0 deveria estar em atari? Não, está capturada (0 liberdades)
     // Vamos fazer um caso com 1 liberdade
     const tabuleiro2: Celula[][] = criarTabuleiroInicial();
+    assert.ok(tabuleiro2[4]);
     tabuleiro2[4][4] = 'preta';
+    assert.ok(tabuleiro2[3]);
     tabuleiro2[3][4] = 'branca';
+    assert.ok(tabuleiro2[5]);
     tabuleiro2[5][4] = 'branca';
     tabuleiro2[4][3] = 'branca';
     // 4,5 está vazia - única liberdade
@@ -139,6 +155,7 @@ describe("Atari Go - Atari (1 liberdade)", () => {
     const gruposEmAtari = encontrarGruposEmAtari(tabuleiro2, 'preta');
     
     expect(gruposEmAtari.length).toBe(1);
+    assert.ok(gruposEmAtari[0]);
     expect(gruposEmAtari[0].liberdades.length).toBe(1);
   });
 });
@@ -150,6 +167,7 @@ describe("Atari Go - Colocação de Pedras", () => {
     
     estado = colocarPedra(estado, pos);
     
+    assert.ok(estado.tabuleiro[4]);
     expect(estado.tabuleiro[4][4]).toBe('preta');
     expect(estado.ultimaJogada).toEqual(pos);
   });
@@ -178,7 +196,9 @@ describe("Atari Go - Captura", () => {
     
     // Pretas cercam uma branca no canto
     // Colocar branca primeiro (simulando estado)
+    assert.ok(estado.tabuleiro[0]);
     estado.tabuleiro[0][1] = 'branca';
+    assert.ok(estado.tabuleiro[1]);
     estado.tabuleiro[1][0] = 'preta';
     estado.jogadorAtual = 'jogador1';
     estado.jogadasValidas = calcularJogadasValidas(estado.tabuleiro, 'jogador1');
@@ -187,7 +207,9 @@ describe("Atari Go - Captura", () => {
     // Para capturar 0,1, precisamos cercar: 0,0, 0,2 e 1,1
     // Vamos simplificar: branca no canto, preta fecha
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'branca';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][0] = 'preta'; // Já colocada
     // Preta precisa jogar em 0,1 para capturar
     
@@ -201,13 +223,16 @@ describe("Atari Go - Captura", () => {
     estado = colocarPedra(estado, { linha: 0, coluna: 1 });
     
     // A branca em 0,0 deve ter sido capturada
+    assert.ok(estado.tabuleiro[0]);
     expect(estado.tabuleiro[0][0]).toBe('vazia');
     expect(estado.pedrasCapturadas.brancas).toBe(1);
   });
 
   test("vitória na primeira captura", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'branca';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][0] = 'preta';
     
     let estado: typeof criarEstadoInicial extends (m: any) => infer R ? R : never = {
@@ -227,7 +252,9 @@ describe("Atari Go - Regra de Suicídio", () => {
   test("suicídio é proibido", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Criar situação onde jogar em 0,0 seria suicídio para pretas
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][1] = 'branca';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][0] = 'branca';
     
     const jogadasValidas = calcularJogadasValidas(tabuleiro, 'jogador1');
@@ -241,8 +268,10 @@ describe("Atari Go - Regra de Suicídio", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Situação: jogar em 0,0 seria "suicídio" mas captura pedra branca
     // Branca em 0,1 com apenas liberdade em 0,0
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][1] = 'branca';
     tabuleiro[0][2] = 'preta';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][1] = 'preta';
     // Pretas rodeiam a branca, falta 0,0
     // Se preta jogar em 0,0, captura a branca (não é suicídio)
@@ -272,7 +301,9 @@ describe("Atari Go - IA", () => {
   test("IA deve capturar se possível (vitória imediata)", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Branca pode capturar preta com uma jogada
+    assert.ok(tabuleiro[0]);
     tabuleiro[0][0] = 'preta';
+    assert.ok(tabuleiro[1]);
     tabuleiro[1][0] = 'branca';
     // Branca joga em 0,1 para capturar
     
@@ -292,8 +323,11 @@ describe("Atari Go - IA", () => {
   test("IA deve defender grupo em atari", () => {
     const tabuleiro: Celula[][] = criarTabuleiroInicial();
     // Branca tem grupo em atari
+    assert.ok(tabuleiro[4]);
     tabuleiro[4][4] = 'branca';
+    assert.ok(tabuleiro[3]);
     tabuleiro[3][4] = 'preta';
+    assert.ok(tabuleiro[5]);
     tabuleiro[5][4] = 'preta';
     tabuleiro[4][3] = 'preta';
     // Única liberdade em 4,5
