@@ -1,4 +1,5 @@
 import { test, expect, describe } from "bun:test";
+import assert from "node:assert/strict";
 import { 
   criarEstadoInicial, 
   criarTabuleiroInicial,
@@ -133,11 +134,13 @@ describe("Quelhas - Regra de Troca", () => {
     
     // Jogada do jogador1
     const jogada1 = estado.jogadasValidas[0];
+    assert.ok(jogada1);
     estado = colocarSegmento(estado, jogada1);
     expect(estado.trocaDisponivel).toBe(true);
     
     // Jogada do jogador2 sem usar a troca
     const jogada2 = estado.jogadasValidas[0];
+    assert.ok(jogada2);
     estado = colocarSegmento(estado, jogada2);
     
     expect(estado.trocaDisponivel).toBe(false);
