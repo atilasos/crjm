@@ -25,7 +25,7 @@ import type {
 
 export type PlayerStatus = 'active' | 'suspended' | 'eliminated';
 
-export interface TournamentPlayer extends Player {
+export interface TournamentPlayer extends Omit<Player, 'isOnline'> {
   losses: number; // 0, 1 ou 2 (eliminado)
   isConnected: boolean;
   socketId: string | null;

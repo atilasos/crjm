@@ -54,8 +54,8 @@ export interface MatchSummary {
   id: string;
   round: number;
   bracket: BracketType;
-  player1: { id: string; name: string } | null;
-  player2: { id: string; name: string } | null;
+  player1: Pick<Player, 'id' | 'name' | 'classId'> | null;
+  player2: Pick<Player, 'id' | 'name' | 'classId'> | null;
   score: MatchScore;
   phase: MatchPhase;
   winnerId: string | null;
@@ -63,7 +63,7 @@ export interface MatchSummary {
   matchNumber?: number;           // Número sequencial da partida (Jogo #1, #2, etc.)
   sourceLabel1?: string;          // "Vencedor do Jogo #X" ou "Vencedor: Maria vs Joana"
   sourceLabel2?: string;          // Idem para jogador 2
-  result?: 'normal' | 'bye';      // 'bye' indica vitória automática
+  result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
 }
 
 /** Match completo (usado em match_assigned) */
@@ -71,8 +71,8 @@ export interface Match {
   id: string;
   round: number;
   bracket: BracketType;
-  player1: { id: string; name: string } | null;
-  player2: { id: string; name: string } | null;
+  player1: Pick<Player, 'id' | 'name' | 'classId'> | null;
+  player2: Pick<Player, 'id' | 'name' | 'classId'> | null;
   score: MatchScore;
   bestOf: number;
   currentGame: number;
@@ -81,13 +81,13 @@ export interface Match {
   winnerId: string | null;
   // Campos para brackets pré-planeados
   matchNumber?: number;           // Número sequencial da partida
-  sourceMatch1?: number;          // Partida de origem do jogador 1
-  sourceMatch2?: number;          // Partida de origem do jogador 2
+  sourceMatch1?: number | null;          // Partida de origem do jogador 1
+  sourceMatch2?: number | null;          // Partida de origem do jogador 2
   sourceLabel1?: string;          // "Vencedor do Jogo #X" ou "Vencedor: Maria vs Joana"
   sourceLabel2?: string;          // Idem para jogador 2
-  nextMatchIfWin?: number;        // Próxima partida se ganhar
-  nextMatchIfLose?: number;       // Próxima partida se perder (losers bracket)
-  result?: 'normal' | 'bye';      // 'bye' indica vitória automática
+  nextMatchIfWin?: number | null;        // Próxima partida se ganhar
+  nextMatchIfLose?: number | null;       // Próxima partida se perder (losers bracket)
+  result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
 }
 
 /** Estado do torneio conforme CLIENT-INTEGRATION_NEW */

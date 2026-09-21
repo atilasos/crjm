@@ -117,7 +117,7 @@ async function playNex(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Neutra', exact: true }).click();
   await cells.nth(1).click();
   await page.waitForFunction(() => {
-    const occupied = [...document.querySelectorAll<SVGPolygonElement>('.game-container svg g > polygon:first-child')]
+    const occupied = Array.from(document.querySelectorAll<SVGPolygonElement>('.game-container svg g > polygon:first-child'))
       .filter((polygon) => polygon.getAttribute('fill') !== '#fef3c7');
     return occupied.length >= 2;
   });

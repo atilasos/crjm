@@ -57,4 +57,47 @@ describe('Nex pedagogy MVP', () => {
     expect(review).toHaveLength(2);
     expect(review[1]?.insight).toBe('Usa a neutra para fechar a ponte central.');
   });
+
+  test('returns no review moments for an empty history', () => {
+    expect(buildQuickReviewItems([])).toEqual([]);
+  });
+
+  test('returns a single moment when weakest and latest are the same response', () => {
+    expect(buildQuickReviewItems([makeResponse({ explainText: 'Único momento.' })])).toEqual([
+      { title: 'Momento 1', insight: 'Único momento.' },
+    ]);
+  });
+
+  test('keeps the first confidence tie and the latest response without reordering history', () => {
+    const history = [
+      makeResponse({ requestId: 'first', confidence: 0.3, explainText: 'Primeiro empate.' }),
+      makeResponse({ requestId: 'second', confidence: 0.3, explainText: 'Segundo empate.' }),
+      makeResponse({ requestId: 'last', confidence: 0.8, explainText: 'Último momento.' }),
+    ];
+    const originalOrder = [...history];
+
+    expect(buildQuickReviewItems(history)).toEqual([
+      { title: 'Momento 1', insight: 'Primeiro empate.' },
+      { title: 'Momento 2', insight: 'Último momento.' },
+    ]);
+    expect(history).toEqual(originalOrder);
+  });
+
+  test('keeps the latest content when selected responses share a request ID', () => {
+    expect(buildQuickReviewItems([
+      makeResponse({ requestId: 'same', confidence: 0.2, explainText: 'Conteúdo antigo.' }),
+      makeResponse({ requestId: 'other', confidence: 0.6, explainText: 'Outro momento.' }),
+      makeResponse({ requestId: 'same', confidence: 0.9, explainText: 'Conteúdo recente.' }),
+    ])).toEqual([{ title: 'Momento 1', insight: 'Conteúdo recente.' }]);
+  });
+
+  test('rejects a nonempty history with a missing selected response', () => {
+    const emptySlots = new Array<ReturnType<typeof makeResponse>>(1);
+    const missingLatest = [makeResponse()];
+    missingLatest.length = 2;
+
+    expect(() => buildQuickReviewItems(emptySlots)).toThrow(TypeError);
+    expect(() => buildQuickReviewItems(missingLatest)).toThrow(TypeError);
+  });
+
 });

@@ -264,7 +264,7 @@ function scoreMoves(
     }
     const simulation = simulateMove(state, move, player);
     const baseScore =
-      simulation.isWinningCapture * 1000 +
+      Number(simulation.isWinningCapture) * 1000 +
       simulation.capturedCount * 350 +
       simulation.opponentAtariCount * 40 +
       simulation.ownLiberties * 6 -

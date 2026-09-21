@@ -4,6 +4,7 @@
 
 import type { Celula, Posicao, GatosCaesState } from '../types';
 import type { Player } from '../../../types';
+import type { DifficultyLevel } from '../../../ai-core/types';
 
 // Compact board representation for efficient hashing and manipulation
 export interface CompactBoard {
@@ -62,7 +63,7 @@ export interface AIConfig {
 }
 
 // Difficulty presets
-export const DIFFICULTY_CONFIGS: Record<number, AIConfig> = {
+export const DIFFICULTY_CONFIGS: Record<number, AIConfig> & Record<DifficultyLevel, AIConfig> = {
   1: { maxDepth: 2,  timeLimit: 500,   ttSize: 65536,   topN: 8, randomFactor: 0.85 },
   2: { maxDepth: 6,  timeLimit: 1500,  ttSize: 131072,  topN: 2, randomFactor: 0.15 },
   3: { maxDepth: 8,  timeLimit: 3000,  ttSize: 262144,  topN: 1, randomFactor: 0 },

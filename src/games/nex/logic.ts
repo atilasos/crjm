@@ -596,11 +596,12 @@ export function jogadaComputador(state: NexState): NexState {
     }
     
     // Amostrar combinações
-    for (let i = 0; i < Math.min(neutras.length, 10); i++) {
-      for (let j = i + 1; j < Math.min(neutras.length, 10); j++) {
+    for (const [i, n1] of neutras.entries()) {
+      if (i >= 10) break;
+      for (const [j, n2] of neutras.entries()) {
+        if (j >= 10) break;
+        if (j <= i) continue;
         for (const propria of proprias.slice(0, 5)) {
-          const n1 = neutras[i];
-          const n2 = neutras[j];
           
           // Simular
           const tabTemp = state.tabuleiro.map(l => [...l]);

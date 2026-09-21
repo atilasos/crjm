@@ -38,7 +38,7 @@ Example:
 const i18nCheck = Bun.spawn([process.execPath, 'run', 'i18n:check'], { stdout: 'inherit', stderr: 'inherit' });
 if (await i18nCheck.exited !== 0) process.exit(1);
 
-const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => g[1].toUpperCase());
+const toCamelCase = (str: string): string => str.replace(/-([a-z])/g, g => g.charAt(1).toUpperCase());
 
 const parseValue = (value: string): any => {
   if (value === "true") return true;
