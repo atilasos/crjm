@@ -59,6 +59,7 @@ import {
 import { getAdminPageHtml } from './admin-page';
 import { adminChallengeHeaders, adminSessionCookie, isAdminAuthorized } from './admin-auth';
 import { ClassStore } from './class-store';
+import { requiredRouteCapture } from './route-captures';
 
 // ============================================================================
 // Configuração
@@ -1377,7 +1378,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     }
 
     const gameId = eliminateMatch[1] as GameId;
-    const playerId = eliminateMatch[2];
+    const playerId = requiredRouteCapture(eliminateMatch, 2);
     const tournament = tournaments.get(gameId);
 
     if (!tournament) {
@@ -1424,7 +1425,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     }
 
     const gameId = suspendMatch[1] as GameId;
-    const playerId = suspendMatch[2];
+    const playerId = requiredRouteCapture(suspendMatch, 2);
     const tournament = tournaments.get(gameId);
 
     if (!tournament) {
@@ -1484,7 +1485,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     }
 
     const gameId = codeMatch[1] as GameId;
-    const playerId = codeMatch[2];
+    const playerId = requiredRouteCapture(codeMatch, 2);
     const tournament = tournaments.get(gameId);
 
     if (!tournament) {
@@ -1691,7 +1692,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     }
 
     const gameId = restartGameMatch[1] as GameId;
-    const matchId = restartGameMatch[2];
+    const matchId = requiredRouteCapture(restartGameMatch, 2);
     const tournament = tournaments.get(gameId);
 
     if (!tournament) {
@@ -1755,7 +1756,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
     }
 
     const gameId = restartMatchPattern[1] as GameId;
-    const matchId = restartMatchPattern[2];
+    const matchId = requiredRouteCapture(restartMatchPattern, 2);
     const tournament = tournaments.get(gameId);
 
     if (!tournament) {
@@ -1865,7 +1866,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
-    const classId = deleteClassMatch[1];
+    const classId = requiredRouteCapture(deleteClassMatch, 1);
     const removed = classStore.deleteClass(classId);
     if (!removed) {
       return Response.json({ error: 'Turma não encontrada' }, { status: 404, headers: corsHeaders });
@@ -1884,7 +1885,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
-    const classId = addStudentsMatch[1];
+    const classId = requiredRouteCapture(addStudentsMatch, 1);
 
     try {
       const body = await req.json() as { names?: unknown };
@@ -1920,8 +1921,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       return Response.json({ error: 'Unauthorized' }, { status: 401, headers: adminChallengeHeaders(corsHeaders) });
     }
 
-    const classId = removeStudentMatch[1];
-    const studentId = removeStudentMatch[2];
+    const classId = requiredRouteCapture(removeStudentMatch, 1);
+    const studentId = requiredRouteCapture(removeStudentMatch, 2);
     const removed = classStore.removeStudent(classId, studentId);
     if (!removed) {
       return Response.json({ error: 'Turma ou aluno não encontrado' }, { status: 404, headers: corsHeaders });

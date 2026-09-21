@@ -631,3 +631,41 @@ describe("Nex - Convenções raras de fim", () => {
     expect(resolverFinalRaro(criarEstadoInicial('dois-jogadores'))).toBeNull();
   });
 });
+
+
+describe("Nex - Limites dos percursos do tabuleiro", () => {
+  test("percursos rejeitam colunas ausentes em tabuleiros curtos ou esparsos", () => {
+    for (const esparso of [false, true]) {
+      const estado = criarEstadoInicial('dois-jogadores');
+      if (esparso) delete estado.tabuleiro[5];
+      else estado.tabuleiro.pop();
+
+      expect(() => podeSubstituir(estado.tabuleiro, 'jogador1')).toThrow(TypeError);
+      expect(() => podeColocar(estado.tabuleiro)).toThrow(TypeError);
+      expect(() => resolverFinalRaro(estado)).toThrow(TypeError);
+    }
+  });
+
+  test("percursos mantêm células ausentes sem as tratar como casas vazias", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, () => []);
+
+    expect(podeSubstituir(estado.tabuleiro, 'jogador1')).toBe(false);
+    expect(podeColocar(estado.tabuleiro)).toBe(false);
+    expect(resolverFinalRaro(estado)).toBeNull();
+  });
+
+  test("percursos ignoram células e colunas além do lado do tabuleiro", () => {
+    const estado = criarEstadoInicial('dois-jogadores');
+    estado.tabuleiro = Array.from({ length: LADO_TABULEIRO }, (): Celula[] => [
+      ...Array<Celula>(LADO_TABULEIRO).fill('preta'),
+      'vazia', 'neutra',
+    ]);
+    estado.tabuleiro.push(Array<Celula>(LADO_TABULEIRO).fill('vazia'));
+    estado.tabuleiro.push(Array<Celula>(LADO_TABULEIRO).fill('neutra'));
+
+    expect(podeSubstituir(estado.tabuleiro, 'jogador1')).toBe(false);
+    expect(podeColocar(estado.tabuleiro)).toBe(false);
+    expect(resolverFinalRaro(estado)).toBeNull();
+  });
+});

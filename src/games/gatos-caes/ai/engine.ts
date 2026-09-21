@@ -13,7 +13,7 @@ import type { Player } from '../../../types';
 
 // Search state
 let tt: TranspositionTable;
-let killerMoves: number[][] = [];  // [depth][0..1]
+let killerMoves: [number, number][] = [];  // [depth][0..1]
 let historyTable: number[][] = [];  // [from_color][to_square]
 let nodes = 0;
 let cutoffs = 0;

@@ -324,9 +324,11 @@ export function podeSubstituir(tabuleiro: Celula[][], jogador: Player, swapEfetu
   let numProprias = 0;
   
   for (let x = 0; x < LADO_TABULEIRO; x++) {
+    const coluna = tabuleiro[x];
+    if (coluna === undefined) throw new TypeError('Nex board column is missing.');
     for (let y = 0; y < LADO_TABULEIRO; y++) {
-      if (tabuleiro[x][y] === 'neutra') numNeutras++;
-      if (tabuleiro[x][y] === corJogador) numProprias++;
+      if (coluna[y] === 'neutra') numNeutras++;
+      if (coluna[y] === corJogador) numProprias++;
     }
   }
   
@@ -337,8 +339,10 @@ export function podeSubstituir(tabuleiro: Celula[][], jogador: Player, swapEfetu
 function contarCasasVazias(tabuleiro: Celula[][]): number {
   let count = 0;
   for (let x = 0; x < LADO_TABULEIRO; x++) {
+    const coluna = tabuleiro[x];
+    if (coluna === undefined) throw new TypeError('Nex board column is missing.');
     for (let y = 0; y < LADO_TABULEIRO; y++) {
-      if (tabuleiro[x][y] === 'vazia') count++;
+      if (coluna[y] === 'vazia') count++;
     }
   }
   return count;
@@ -347,8 +351,10 @@ function contarCasasVazias(tabuleiro: Celula[][]): number {
 function getPosicoesComCelula(tabuleiro: Celula[][], celula: Celula): Posicao[] {
   const posicoes: Posicao[] = [];
   for (let x = 0; x < LADO_TABULEIRO; x++) {
+    const coluna = tabuleiro[x];
+    if (coluna === undefined) throw new TypeError('Nex board column is missing.');
     for (let y = 0; y < LADO_TABULEIRO; y++) {
-      if (tabuleiro[x][y] === celula) posicoes.push({ x, y });
+      if (coluna[y] === celula) posicoes.push({ x, y });
     }
   }
   return posicoes;

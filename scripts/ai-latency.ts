@@ -44,7 +44,9 @@ export function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const index = Math.min(sorted.length - 1, Math.max(0, Math.ceil(p * sorted.length) - 1));
-  return Number(sorted[index].toFixed(2));
+  const sample = sorted[index];
+  if (sample === undefined) throw new TypeError('Percentile has no sample at the selected index.');
+  return Number(sample.toFixed(2));
 }
 
 export function summarizeLevel(
@@ -210,7 +212,8 @@ export async function runLatencyHarness(profile = parseProfile()) {
 
   try {
     for (const probe of probes) {
-      games[probe.gameId] = {};
+      const gameLevels: Record<string, LevelLatencySummary & { engines: string[] }> = {};
+      games[probe.gameId] = gameLevels;
       for (const level of LEVELS) {
         const samples: number[] = [];
         let illegalMoves = 0;
@@ -221,7 +224,7 @@ export async function runLatencyHarness(profile = parseProfile()) {
           if (!result.legal) illegalMoves += 1;
           engines.add(result.engine);
         }
-        games[probe.gameId][`N${level}`] = {
+        gameLevels[`N${level}`] = {
           ...summarizeLevel(DIFFICULTY_PROFILES[level].timeBudgetMs, samples, illegalMoves),
           engines: [...engines],
         };

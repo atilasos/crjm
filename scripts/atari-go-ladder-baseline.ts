@@ -188,7 +188,9 @@ function percentile(values: number[], p: number): number {
   if (values.length === 0) return 0;
   const sorted = [...values].sort((a, b) => a - b);
   const idx = Math.min(sorted.length - 1, Math.max(0, Math.floor(p * (sorted.length - 1))));
-  return Number(sorted[idx].toFixed(2));
+  const sample = sorted[idx];
+  if (sample === undefined) throw new TypeError('Percentile has no sample at the selected index.');
+  return Number(sample.toFixed(2));
 }
 
 function getPlayerColor(player: AtariGoState['jogadorAtual']): 'preta' | 'branca' {

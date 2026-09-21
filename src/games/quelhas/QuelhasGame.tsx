@@ -15,7 +15,7 @@ import { TutorContextBar } from '../../components/tutor/TutorContextBar';
 import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { EvalChart } from '../../components/EvalChart';
 import { normalizeEngineScore } from '../../ai-core/eval-trace';
-import type { QuelhasState, Posicao } from './types';
+import type { QuelhasState, Posicao, Celula } from './types';
 import {
   criarEstadoInicial,
   colocarSegmento,
@@ -436,8 +436,7 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
   const orientacaoAtual = getOrientacaoJogador(state, state.jogadorAtual);
 
   // Obter classe CSS para cada célula
-  const getCelulaClasses = (linha: number, coluna: number): string => {
-    const celula = state.tabuleiro[linha][coluna];
+  const getCelulaClasses = (linha: number, coluna: number, celula: Celula): string => {
     const preview = isPreview(linha, coluna);
     const inicioSelecionado = isPosicaoInicialSelecionada(linha, coluna);
     const recommended = showTutorSolution && tutorResponse?.bestMove
@@ -575,13 +574,13 @@ export function QuelhasGame({ onVoltar }: QuelhasGameProps) {
               onMouseLeave={handleMouseLeave}
             >
               {state.tabuleiro.map((linha, linhaIdx) =>
-                linha.map((_, colunaIdx) => (
+                linha.map((celula, colunaIdx) => (
                   <button
                     key={`${linhaIdx}-${colunaIdx}`}
                     onClick={() => handleCellClick({ linha: linhaIdx, coluna: colunaIdx })}
                     onMouseEnter={() => handleMouseEnter({ linha: linhaIdx, coluna: colunaIdx })}
-                    className={getCelulaClasses(linhaIdx, colunaIdx)}
-                    disabled={state.tabuleiro[linhaIdx][colunaIdx] === 'ocupada'}
+                    className={getCelulaClasses(linhaIdx, colunaIdx, celula)}
+                    disabled={celula === 'ocupada'}
                   />
                 ))
               )}
