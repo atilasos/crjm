@@ -55,11 +55,12 @@ describe('partida local de Faísca', () => {
     expect(colocarPeca(state, move('b3', 'e3'))).toEqual(state);
   });
 
-  test('perde quem não tem peças e não se pode jogar após o resultado', () => {
+  test.each(['jogador1', 'jogador2'] as const)('vence %s quando o adversário não tem peças e bloqueia novas jogadas', jogador => {
     const state = criarEstadoInicial();
-    state.reservas.jogador2 = { 1: 0, 2: 0, 3: 0 };
+    state.jogadorAtual = jogador;
+    state.reservas[jogador === 'jogador1' ? 'jogador2' : 'jogador1'] = { 1: 0, 2: 0, 3: 0 };
     const finished = colocarPeca(state, move('a1', 'b1'));
-    expect(finished.estado).toBe('vitoria-jogador1');
+    expect(finished.estado).toBe(`vitoria-${jogador}`);
     expect(colocarPeca(finished, move('b1', 'c1'))).toEqual(finished);
   });
 

@@ -1,4 +1,5 @@
 import type { Page } from 'playwright';
+import { checkWinnerAnnouncement } from './winner-browser-check';
 import type { Player } from '../src/types';
 import { criarEstadoInicial, aplicarJogada } from '../src/games/y/logic';
 import { computeY, type YLevel } from '../src/games/y/ai/engine';
@@ -34,7 +35,9 @@ export async function playYAgainstComputer(page: Page, human: Player, level: YLe
       const color = state.cores[winner] === 'azul' ? 'Azul' : 'Vermelho';
       await page.getByRole('status').filter({ hasText: `Venceu Jogador ${winner === 'jogador1' ? 1 : 2} com ${color}!` }).waitFor();
       if (await page.locator('.y-node:enabled').count()) throw new Error('Finished Y match accepts moves');
-      return winner === human;
+      const won = winner === human;
+      await checkWinnerAnnouncement(page, won ? 'Ganhaste!' : 'O computador ganhou!');
+      return won;
     }
     if (state.jogadorAtual !== human) throw new Error('Wrong Y turn in browser');
     // Exercise human swap as second participant; A1 makes N2 exercise AI swap.
@@ -74,6 +77,7 @@ export async function playYLocalExample(page: Page, participant: Player, swap: b
   const path = ['B1', 'C1', 'D3', 'E3', 'E4', 'E5', 'E6', 'E7', 'D8', 'C7', 'B8', 'A9'];
   const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
   for (let i = 0; i < path.length; i++) { await place(replies[i]!); await place(path[i]!); }
+  await checkWinnerAnnouncement(page, t('{0} ganhou!').replace('{0}', t(swap ? 'Jogador 2' : 'Jogador 1')), t);
 }
 
 export async function checkYReview(page: Page, participant: Player, swap: boolean, t: (text: string) => string = text => text): Promise<void> {

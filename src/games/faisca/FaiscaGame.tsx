@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameLayout } from '../../components/GameLayout';
+import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { DifficultySelector } from '../../components/DifficultySelector';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { useTranslation } from '../../i18n/LanguageProvider';
@@ -27,6 +28,7 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
   const [matchId, setMatchId] = useState(() => crypto.randomUUID());
   const [decision, setDecision] = useState<FaiscaDecision | null>(null);
   const [state, setState] = useState(criarEstadoInicial);
+  const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [mode, setMode] = useState<'local' | 'ai'>('local');
   const [human, setHuman] = useState<Player>('jogador1');
   const [level, setLevel] = useState<FaiscaLevel>(1);
@@ -39,6 +41,7 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
   const applyMove = useCallback((next: FaiscaState) => {
     setState(next);
     if (next.estado !== 'a-jogar') {
+      setMostrarVencedor(true);
       const won = mode === 'ai' && next.estado === `vitoria-${human}`;
       recordGameCompleted('faisca', won, mode === 'ai' ? level : undefined);
     }
@@ -71,6 +74,7 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
 
   function novaPartida() {
     computation.current?.abort();
+    setMostrarVencedor(false);
     setState(criarEstadoInicial());
     setMatchId(crypto.randomUUID());
     setDecision(null);
@@ -109,5 +113,14 @@ export function FaiscaGame({ onVoltar }: { onVoltar: () => void }) {
         <button type="button" className="btn btn-secondary" onClick={novaPartida}>{t('Nova partida')}</button>
       </div>
     </div>
+    {mostrarVencedor && <WinnerAnnouncement
+      estado={state.estado}
+      modo={mode === 'ai' ? 'vs-computador' : 'dois-jogadores'}
+      nomeJogador1="Azul"
+      nomeJogador2="Vermelho"
+      humanoEhJogador1={human === 'jogador1'}
+      onFechar={() => setMostrarVencedor(false)}
+      onNovoJogo={novaPartida}
+    />}
   </GameLayout>;
 }

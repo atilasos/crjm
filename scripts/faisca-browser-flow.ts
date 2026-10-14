@@ -1,4 +1,5 @@
 import type { Page } from 'playwright';
+import { checkWinnerAnnouncement } from './winner-browser-check';
 import { criarEstadoInicial, colocarPeca } from '../src/games/faisca/logic';
 import { computeFaisca, type FaiscaLevel } from '../src/games/faisca/ai/engine';
 import type { Direcao, Distancia, Jogada } from '../src/games/faisca/types';
@@ -20,6 +21,7 @@ export async function playFaiscaLocalExample(page: Page, t: (text: string) => st
     await page.getByRole('group', { name: t('Direção da peça') }).getByRole('button', { name: new RegExp(t(direction)) }).click();
     await page.getByRole('button', { name: t('Confirmar jogada'), exact: true }).click();
   }
+  await checkWinnerAnnouncement(page, t('{0} ganhou!').replace('{0}', t('Vermelho')), t);
 }
 
 /** The tutor reveals moves only after three explicit requests. */
@@ -119,7 +121,9 @@ export async function playFaiscaAgainstComputer(page: Page, human: Player, level
       const winner = state.estado === 'vitoria-jogador1' ? 'Azul' : 'Vermelho';
       await page.getByRole('status').filter({ hasText: `Venceu ${winner}!` }).waitFor();
       if (!await page.getByRole('button', { name: 'Confirmar jogada', exact: true }).isDisabled()) throw new Error('Finished match accepts moves');
-      return state.estado === `vitoria-${human}`;
+      const won = state.estado === `vitoria-${human}`;
+      await checkWinnerAnnouncement(page, won ? 'Ganhaste!' : 'O computador ganhou!');
+      return won;
     }
     if (state.jogadorAtual !== human) throw new Error('Wrong turn in browser');
     const response = computeFaisca({ version: '1.0', gameId: 'faisca', requestId: `human-${turn}`, mode: 'competitive', state, level: 2, timeBudgetMs: 20, seed: turn + 300 });
