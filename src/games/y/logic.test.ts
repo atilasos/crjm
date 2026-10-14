@@ -78,14 +78,15 @@ test('o tabuleiro do anexo conserva lados, cantos e as cinco ligações de E3', 
   expect(neighbors.sort()).toEqual(['D3', 'D4', 'E4', 'F2', 'F3']);
 });
 
-test('o grupo vermelho vence ligando o canto inferior ao lado superior', () => {
+test.each([false, true])('o grupo vermelho liga o canto inferior ao lado superior e atribui a vitória após troca=%s', swap => {
   let state = criarEstadoInicial();
   const path = ['M1', 'L2', 'K3', 'J4', 'I5', 'H4', 'G4', 'F3', 'E3', 'D4', 'C3', 'B3', 'A3'];
   const blue = ['A1', 'D1', 'E1', 'G1', 'I1', 'J1', 'K1', 'L1', 'A9', 'D10', 'E9', 'G9', 'I9'];
+  if (swap) state = trocarCores(colocarPeca(state, 'A1'));
   for (let i = 0; i < path.length; i++) {
-    state = colocarPeca(state, blue[i]!);
+    if (!swap || i > 0) state = colocarPeca(state, blue[i]!);
     state = colocarPeca(state, path[i]!);
     if (i < path.length - 1) expect(state.estado).toBe('a-jogar');
   }
-  expect(state.estado).toBe('vitoria-jogador2');
+  expect(state.estado).toBe(swap ? 'vitoria-jogador1' : 'vitoria-jogador2');
 });

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { GameLayout } from '../../components/GameLayout';
+import { WinnerAnnouncement } from '../../components/WinnerAnnouncement';
 import { useGamification } from '../../components/gamification/GamificationProvider';
 import { useTranslation } from '../../i18n/LanguageProvider';
 import type { Player } from '../../types';
@@ -27,6 +28,7 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
   const [matchId, setMatchId] = useState(() => crypto.randomUUID());
   const [decision, setDecision] = useState<YDecision | null>(null);
   const [state, setState] = useState(criarEstadoInicial);
+  const [mostrarVencedor, setMostrarVencedor] = useState(false);
   const [participante, setParticipante] = useState<Player>('jogador1');
   const [mode, setMode] = useState<'local' | 'ai'>('local');
   const [level, setLevel] = useState<YLevel>(1);
@@ -44,6 +46,7 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
   const applyMove = useCallback((next: YState) => {
     setState(next);
     if (next.estado !== 'a-jogar') {
+      setMostrarVencedor(true);
       recordGameCompleted('y', next.estado === `vitoria-${participante}`, mode === 'ai' ? level : undefined);
     }
   }, [participante, mode, level, recordGameCompleted]);
@@ -75,6 +78,7 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
 
   function novaPartida() {
     computation.current?.abort();
+    setMostrarVencedor(false);
     setAiError(false);
     setState(criarEstadoInicial());
     setMatchId(crypto.randomUUID());
@@ -134,5 +138,12 @@ export function YGame({ onVoltar }: { onVoltar: () => void }) {
       {!terminou && isReady && state.jogadorAtual === participante && <YTutor key={turn} state={state} turn={turn} />}
       {terminou && decision && <YReview key={matchId} decision={decision} matchId={matchId} />}
     </div>
+    {mostrarVencedor && <WinnerAnnouncement
+      estado={state.estado}
+      modo={mode === 'ai' ? 'vs-computador' : 'dois-jogadores'}
+      humanoEhJogador1={participante === 'jogador1'}
+      onFechar={() => setMostrarVencedor(false)}
+      onNovoJogo={novaPartida}
+    />}
   </GameLayout>;
 }

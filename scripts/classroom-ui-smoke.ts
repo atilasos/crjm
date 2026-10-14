@@ -1,4 +1,5 @@
 import { checkYTournament, checkMixedTournamentSpectator } from './y-tournament-flow';
+import { checkWinnerAnnouncement } from './winner-browser-check';
 import { checkFaiscaTournament } from './faisca-tournament-flow';
 import { chromium, type Browser, type Locator, type Page } from 'playwright';
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -393,6 +394,7 @@ async function checkY(page: Page): Promise<void> {
       const replies = ['M1', 'L1', 'K1', 'J1', 'I1', 'G1', 'E1', 'D1', 'I9', 'J7', 'K5', 'L3'];
       for (let i = 0; i < path.length; i++) { await place(replies[i]!); await place(path[i]!); }
       await page.getByRole('status').filter({ hasText: `Venceu Jogador ${swap ? 2 : 1} com Azul!` }).waitFor();
+      await checkWinnerAnnouncement(page, `Jogador ${swap ? 2 : 1} ganhou!`);
       if (await board.locator('button:not(:disabled)').count()) throw new Error('Y: permite continuar após vitória.');
       await checkYReview(page, participant as 'jogador1' | 'jogador2', swap);
       played++;
