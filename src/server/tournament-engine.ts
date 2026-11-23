@@ -99,7 +99,7 @@ export interface TournamentMatch extends Match {
   sourceLabel2: string;
   nextMatchIfWin: number | null;
   nextMatchIfLose: number | null;
-  result: 'normal' | 'bye' | null; // 'bye' = vitória por falta/eliminação
+  result: 'normal' | 'bye' | 'forfeit' | null; // 'forfeit' = vitória por falta/eliminação
 }
 
 export interface Tournament {
@@ -541,7 +541,7 @@ export function processMatchResult(
 
   match.winnerId = winnerId;
   match.phase = 'finished';
-  match.result = options.forfeit ? 'bye' : 'normal';
+  match.result = options.forfeit ? 'forfeit' : 'normal';
   match.finishedAt = now;
   match.isPaused = false;
   match.pausedAt = null;
@@ -774,6 +774,11 @@ export function pauseMatch(tournament: Tournament, matchId: string, byPlayerId: 
   match.isPaused = true;
   match.pausedAt = new Date();
   match.pausedByPlayerId = byPlayerId;
+  // Um jogo por começar volta a pedir «Estou pronto» aos dois depois da pausa.
+  if (match.phase === 'waiting') {
+    match.player1Ready = false;
+    match.player2Ready = false;
+  }
 }
 
 export function resumeMatch(tournament: Tournament, matchId: string): void {
@@ -867,7 +872,6 @@ export function eliminatePlayer(
 
   const activeMatch = findActiveMatchForPlayer(tournament, playerId);
   eliminate(tournament, player);
-  player.isConnected = false;
   player.suspendedAt = null;
 
   if (activeMatch && activeMatch.player1 && activeMatch.player2) {
@@ -898,9 +902,13 @@ export function restartCurrentGame(tournament: Tournament, matchId: string): { s
   match.player1Ready = false;
   match.player2Ready = false;
   match.phase = 'waiting';
-  match.isPaused = false;
-  match.pausedAt = null;
-  match.pausedByPlayerId = null;
+  // Mantém a pausa se algum dos dois continuar desligado.
+  const offline = [match.player1?.id, match.player2?.id]
+    .map(id => id ? tournament.playerById.get(id) : undefined)
+    .find(player => player && !player.isConnected);
+  match.isPaused = Boolean(offline);
+  match.pausedAt = offline ? (match.pausedAt ?? new Date()) : null;
+  match.pausedByPlayerId = offline ? offline.id : null;
   return { success: true };
 }
 
@@ -922,9 +930,13 @@ export function restartMatch(tournament: Tournament, matchId: string): { success
   match.player2Ready = false;
   match.phase = 'waiting';
   match.winnerId = null;
-  match.isPaused = false;
-  match.pausedAt = null;
-  match.pausedByPlayerId = null;
+  // Mantém a pausa se algum dos dois continuar desligado.
+  const offline = [match.player1?.id, match.player2?.id]
+    .map(id => id ? tournament.playerById.get(id) : undefined)
+    .find(player => player && !player.isConnected);
+  match.isPaused = Boolean(offline);
+  match.pausedAt = offline ? (match.pausedAt ?? new Date()) : null;
+  match.pausedByPlayerId = offline ? offline.id : null;
   return { success: true };
 }
 
@@ -1168,8 +1180,9 @@ export function importTournament(data: TournamentExport): Tournament {
       gameStartedAt: fromIso(m.gameStartedAt),
       createdAt: new Date(m.createdAt),
       finishedAt: fromIso(m.finishedAt),
-      isPaused: m.isPaused ?? false,
-      pausedAt: fromIso(m.pausedAt),
+      // Ninguém está ligado depois de importar: confrontos por terminar ficam em pausa até voltarem os dois.
+      isPaused: m.phase !== 'finished' ? true : (m.isPaused ?? false),
+      pausedAt: m.phase !== 'finished' ? (fromIso(m.pausedAt) ?? new Date()) : fromIso(m.pausedAt),
       pausedByPlayerId: m.pausedByPlayerId ?? null,
       matchNumber: m.matchNumber,
       sourceMatch1: null,

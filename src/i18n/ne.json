@@ -1888,5 +1888,7 @@
   "{0} já está pronto! Carrega no botão para começar.": "{0} तयार छ! सुरु गर्न बटन थिच।",
   "{0} está desligado. O jogo começa quando voltar.": "{0} अफलाइन छ। फर्केपछि खेल सुरु हुन्छ।",
   "Final de desempate": "निर्णायक फाइनल",
-  "Vai haver uma final de desempate!": "अब निर्णायक फाइनल हुनेछ!"
+  "Vai haver uma final de desempate!": "अब निर्णायक फाइनल हुनेछ!",
+  "Foste eliminado do campeonato pelo professor.": "शिक्षकले तिमीलाई प्रतियोगिताबाट हटाउनुभयो।",
+  "O torneio foi restaurado pelo professor. Volta a entrar com o teu código.": "शिक्षकले प्रतियोगिता पुनर्स्थापित गर्नुभयो। आफ्नो कोड प्रयोग गरेर फेरि सामेल होऊ।"
 }

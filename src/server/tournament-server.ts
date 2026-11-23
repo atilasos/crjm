@@ -483,7 +483,8 @@ function handleRejoinTournament(
         match.isPaused = true;
         match.pausedAt = new Date();
         match.pausedByPlayerId = opponentId ?? null;
-        foundPlayer.suspendedMatchId = resumedMatchId;
+        // A pausa fica registada em quem falta, não em quem já voltou.
+        if (opponent && opponent.status !== 'eliminated') opponent.suspendedMatchId = resumedMatchId;
 
         sendToSocket(socket, {
           type: 'info',
@@ -598,7 +599,8 @@ function handleRejoinTournament(
 
 function handleReadyForMatch(
   socket: ServerWebSocket<ClientData>,
-  matchId: string
+  matchId: string,
+  gameNumber?: number
 ): void {
   const playerId = socket.data.playerId;
   if (!playerId) {
@@ -645,6 +647,12 @@ function handleReadyForMatch(
   // Depois de o jogo começar, cliques atrasados são ignorados em silêncio.
   if (match.phase !== 'waiting') return;
 
+  // Pedido atrasado de um jogo anterior: não conta para o próximo; ressincronizar quem clicou.
+  if (gameNumber !== undefined && gameNumber !== match.currentGame) {
+    sendToSocket(socket, readyStateMessage(match));
+    return;
+  }
+
   // Marcar jogador como pronto (idempotente)
   const { match: updatedMatch, changed } = setPlayerReady(tournament, matchId, playerId);
   if (!updatedMatch) return;
@@ -672,7 +680,10 @@ function startGameIfReady(tournament: Tournament, match: TournamentMatch): boole
   const gameState = createGameState(tournament.gameId);
   if (!gameState) {
     log({ type: 'error', tournamentId: tournament.id, matchId: match.id, message: 'Erro ao criar estado do jogo.' });
-    return false;
+    const error: ServerMessage = { type: 'error', code: 'GAME_ERROR', message: 'Erro ao criar estado do jogo.' };
+    sendToPlayer(match.player1.id, error);
+    sendToPlayer(match.player2.id, error);
+    return true; // não reenviar «à espera»: o professor tem de reiniciar o jogo
   }
 
   startGame(match, gameState);
@@ -1104,7 +1115,7 @@ function handleMessage(
       break;
 
     case 'ready_for_match':
-      handleReadyForMatch(socket, message.matchId);
+      handleReadyForMatch(socket, message.matchId, message.gameNumber);
       break;
 
     case 'submit_move':
@@ -1163,6 +1174,8 @@ function notifyOpponentOfPause(tournament: Tournament, pausedMatchId: string | n
       type: 'info',
       message: `O teu adversário ${playerName} desconectou. O jogo está pausado. A aguardar reconexão...`,
     });
+    // A pausa limpou a prontidão de um jogo por começar.
+    if (match.phase === 'waiting') sendToPlayer(opponentId, readyStateMessage(match));
   }
   log({
     type: 'match',
@@ -1409,6 +1422,10 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       return Response.json({ error: 'Player already eliminated' }, { status: 400, headers: corsHeaders });
     }
 
+    if (tournament.phase !== 'running') {
+      return Response.json({ error: 'Tournament is not running' }, { status: 409, headers: corsHeaders });
+    }
+
     // Eliminar jogador: o adversário do confronto em curso vence por falta.
     const elimination = eliminatePlayer(tournament, playerId);
     const forfeitedMatchIds = elimination.endedMatches.map(match => match.id);
@@ -1431,6 +1448,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       }
     }
     if (elimination.endedMatches.length === 0) {
+      // Estava à espera: avisar diretamente (o ecrã de eliminação vem pelo estado do torneio).
+      sendToPlayer(playerId, { type: 'info', message: 'Foste eliminado do campeonato pelo professor.' });
       dispatchMatches(elimination.newMatches);
       if (elimination.isTournamentEnd) announceTournamentEnd(tournament);
     }
@@ -1594,7 +1613,24 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       const imported = importTournament(body);
 
       // Substituir o torneio existente (ou adicionar se não existir)
+      const previous = tournaments.get(gameId);
       tournaments.set(gameId, imported);
+
+      // Ligações abertas ao torneio substituído deixam de valer: cada aluno volta a entrar
+      // com o seu código (até lá, os confrontos importados ficam em pausa).
+      const affectedIds = new Set([
+        ...(previous?.players ?? []).map(p => p.id),
+        ...imported.players.map(p => p.id),
+      ]);
+      for (const id of affectedIds) {
+        const stale = playerSockets.get(id);
+        if (!stale) continue;
+        playerSockets.delete(id);
+        stale.data.playerId = null;
+        stale.data.tournamentId = null;
+        sendToSocket(stale, { type: 'info', message: 'O torneio foi restaurado pelo professor. Volta a entrar com o teu código.' });
+        try { stale.close(4000, 'Torneio restaurado'); } catch { /* já fechado */ }
+      }
 
       log({
         type: 'info',

@@ -1663,7 +1663,7 @@ Pedro Costa"></textarea>
       // Match number header
       const matchNumberHeader = match.matchNumber
         ? '<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-align: center; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">' +
-            'Jogo #' + match.matchNumber + (isBye ? ' (BYE)' : '') +
+            'Jogo #' + match.matchNumber + (isBye ? ' (BYE)' : '') + (match.result === 'forfeit' ? ' (falta)' : '') +
           '</div>'
         : '';
 

@@ -8,6 +8,7 @@ import {
   importTournament,
   processMatchResult,
   reactivatePlayer,
+  restartMatch,
   scheduleMatches,
   startTournament,
   suspendPlayer,
@@ -298,6 +299,27 @@ describe('Dupla eliminação dinâmica — situações de aula', () => {
       expect(reactivatePlayer(other, d!.id, 'socket').resumedMatchId).toBeNull();
       expect(scheduleMatches(other)).toHaveLength(1);
       expect(other.grandFinal).not.toBeNull();
+    });
+  });
+
+  test('pausa limpa o «pronto» de um jogo por começar; reiniciar mantém a pausa com alguém desligado; falta fica registada', () => {
+    withRandom(seeded(8), () => {
+      const tournament = createTournament('dominorio');
+      for (const name of ['A', 'B', 'C']) addPlayer(tournament, name);
+      startTournament(tournament);
+      const match = openMatches(tournament)[0]!;
+      match.player1Ready = true;
+      const p1 = tournament.playerById.get(match.player1!.id)!;
+      const p2 = tournament.playerById.get(match.player2!.id)!;
+      suspendPlayer(tournament, p2.id);
+      expect(match.isPaused).toBe(true);
+      expect(match.player1Ready).toBe(false);
+      expect(restartMatch(tournament, match.id).success).toBe(true);
+      expect(match.isPaused).toBe(true);
+      expect(match.pausedByPlayerId).toBe(p2.id);
+      const result = eliminatePlayer(tournament, p2.id);
+      expect(result.endedMatches[0]!.result).toBe('forfeit');
+      expect(result.endedMatches[0]!.winnerId).toBe(p1.id);
     });
   });
 

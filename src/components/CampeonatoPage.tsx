@@ -172,6 +172,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [gameJustEnded, setGameJustEnded] = useState(false);
   // «Estou pronto»: pedido local (otimista) e confirmação do servidor para o jogo atual.
   const [readyRequested, setReadyRequested] = useState(false);
+  // Jogo para o qual o «Estou pronto» conta (o servidor ignora pedidos de jogos anteriores).
+  const [nextGameNumber, setNextGameNumber] = useState(1);
   // Estado de prontidão do servidor, associado ao confronto e ao jogo a que se refere.
   type ReadyFlags = { matchId: string | null; gameNumber: number; player1: boolean; player2: boolean };
   const NO_READY: ReadyFlags = { matchId: null, gameNumber: 0, player1: false, player2: false };
@@ -265,12 +267,17 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
           break;
         }
         setTournamentState(newState);
+        // Eliminado pelo professor enquanto esperava: mostrar o ecrã de fim.
+        if (newState.players.some(p => p.id === playerIdRef.current && p.status === 'eliminated')) {
+          setPhase(prev => (prev === 'lobby' ? 'finished' : prev));
+        }
         break;
       }
 
       case 'match_assigned':
         setCurrentMatch(message.match);
         setReadyRequested(false);
+        setNextGameNumber(message.match.currentGame || 1);
         setReadyFlags({
           matchId: message.match.id,
           gameNumber: message.match.currentGame || 1,
@@ -294,6 +301,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'game_start': {
         setIsMyTurn(message.youStart);
+        setNextGameNumber(message.gameNumber);
         setReadyRequested(false);
         setReadyFlags(NO_READY);
         setCurrentGameNumber(message.gameNumber);
@@ -361,6 +369,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
         // Ativar estado de anúncio de fim de partida
         setGameJustEnded(true);
+        setNextGameNumber(message.gameNumber + 1);
         setReadyRequested(false);
         setReadyFlags(NO_READY);
         setLastGameWinnerId(message.winnerId);
@@ -592,6 +601,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     clientRef.current.send({
       type: 'ready_for_match',
       matchId: currentMatch.id,
+      gameNumber: nextGameNumber,
     });
   };
 

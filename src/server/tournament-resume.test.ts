@@ -74,8 +74,11 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
     const p1 = clients.get(match.player1!.id)!;
     const p2 = clients.get(match.player2!.id)!;
 
+    // Um pedido atrasado de outro jogo não conta.
+    p1.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 2 });
+    expect((await p1.next('ready_state')).player1Ready).toBe(false);
     // «Pronto» é confirmado a ambos; um clique repetido é confirmado de novo a quem clicou.
-    p1.send({ type: 'ready_for_match', matchId: match.id });
+    p1.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 1 });
     expect((await p1.next('ready_state')).player1Ready).toBe(true);
     expect((await p2.next('ready_state')).player1Ready).toBe(true);
     p1.send({ type: 'ready_for_match', matchId: match.id });
@@ -95,10 +98,14 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
     const snapshot: TournamentExport = await api('tournaments/faisca/export');
     expect(snapshot.version).toBe(2);
 
-    // Importar substitui o torneio; todos começam desligados.
-    for (const client of sockets) client.socket.close();
-    await Bun.sleep(50);
+    // Importar com os alunos ainda ligados: as ligações antigas são fechadas e deixam de jogar.
+    const closed = [p1, p2].map(client => new Promise<void>(resolve => client.socket.addEventListener('close', () => resolve(), { once: true })));
     await api('tournaments/faisca/import', snapshot);
+    await Promise.all(closed);
+    expect(p1.messages.some(m => m.type === 'info' && m.message.includes('restaurado'))).toBe(true);
+    const restored: TournamentExport = await api('tournaments/faisca/export');
+    const pausedMatch = [...restored.winnersMatches, ...restored.losersMatches].find(m => m.id === match.id)!;
+    expect(pausedMatch.isPaused).toBe(true);
 
     const back1 = await rejoin(codes.get(match.player1!.id)!);
     const back2 = await rejoin(codes.get(match.player2!.id)!);

@@ -63,7 +63,7 @@ export interface MatchSummary {
   matchNumber?: number;           // Número sequencial da partida (Jogo #1, #2, etc.)
   sourceLabel1?: string;          // "Vencedor do Jogo #X" ou "Vencedor: Maria vs Joana"
   sourceLabel2?: string;          // Idem para jogador 2
-  result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
+  result?: 'normal' | 'bye' | 'forfeit' | null; // 'bye' = isenção; 'forfeit' = vitória por falta
 }
 
 /** Match completo (usado em match_assigned) */
@@ -87,7 +87,7 @@ export interface Match {
   sourceLabel2?: string;          // Idem para jogador 2
   nextMatchIfWin?: number | null;        // Próxima partida se ganhar
   nextMatchIfLose?: number | null;       // Próxima partida se perder (losers bracket)
-  result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
+  result?: 'normal' | 'bye' | 'forfeit' | null; // 'bye' = isenção; 'forfeit' = vitória por falta
   player1Ready?: boolean;                // Jogador 1 carregou em «Estou pronto» para o jogo atual
   player2Ready?: boolean;                // Jogador 2 carregou em «Estou pronto» para o jogo atual
 }
@@ -121,6 +121,8 @@ export interface JoinTournamentMessage {
 export interface ReadyForMatchMessage {
   type: 'ready_for_match';
   matchId: string;
+  /** Jogo para o qual o aluno está pronto; pedidos atrasados de um jogo anterior são ignorados. */
+  gameNumber?: number;
 }
 
 /** Jogada genérica – o payload depende do jogo */
