@@ -1187,6 +1187,33 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
   }
 }
 
+/**
+ * Confirma, com as regras do jogo, que cada jogo em curso de um torneio importado pode
+ * continuar: tabuleiro reconhecido, por acabar e com a vez coerente com quem começou.
+ */
+function findUnplayableGame(tournament: Tournament): string | null {
+  const matches = [
+    ...tournament.winnersMatches, ...tournament.losersMatches,
+    ...(tournament.grandFinal ? [tournament.grandFinal] : []),
+    ...(tournament.grandFinalReset ? [tournament.grandFinalReset] : []),
+  ];
+  for (const match of matches) {
+    if (match.phase !== 'playing') continue;
+    const label = `Ficheiro de torneio inválido: confronto #${match.matchNumber}`;
+    try {
+      const state = match.gameState as Parameters<typeof getCurrentGamePlayer>[1];
+      const current = getCurrentGamePlayer(tournament.gameId, state);
+      if (current !== 'jogador1' && current !== 'jogador2') return `${label} com tabuleiro desconhecido`;
+      if (isGameFinished(tournament.gameId, state)) return `${label} com um jogo já acabado`;
+      const expectedSeat = (current === 'jogador1') === (match.whoStartsCurrentGame === 'player1') ? 'player1' : 'player2';
+      if (match.whoseTurn !== expectedSeat) return `${label} com a vez trocada`;
+    } catch {
+      return `${label} com tabuleiro ilegível`;
+    }
+  }
+  return null;
+}
+
 /** Avisa o adversário de que o confronto ficou em pausa. */
 function notifyOpponentOfPause(tournament: Tournament, pausedMatchId: string | null, playerId: string, playerName: string): void {
   if (!pausedMatchId) return;
@@ -1638,8 +1665,12 @@ async function handleHttpRequest(req: Request): Promise<Response> {
         }, { status: 400, headers: corsHeaders });
       }
 
-      // Importar o torneio
+      // Importar o torneio (valida a estrutura antes de tocar no torneio em curso)
       const imported = importTournament(body);
+      const unplayable = findUnplayableGame(imported);
+      if (unplayable) {
+        return Response.json({ error: 'Invalid import data', details: unplayable }, { status: 400, headers: corsHeaders });
+      }
 
       // Substituir o torneio existente (ou adicionar se não existir)
       const previous = tournaments.get(gameId);

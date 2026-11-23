@@ -1119,16 +1119,31 @@ function validateExport(data: TournamentExport): void {
     fail('faltam jogadores ou confrontos');
   }
   const playerIds = new Set<string>();
+  const codes = new Set<string>();
+  const eliminated = new Set<string>();
   for (const player of data.players) {
     if (!player || typeof player.id !== 'string' || typeof player.reconnectionCode !== 'string') fail('jogador sem id ou código');
+    if (playerIds.has(player.id)) fail(`jogador repetido (${player.id})`);
+    if (codes.has(player.reconnectionCode)) fail(`código de reconexão repetido (${player.reconnectionCode})`);
     playerIds.add(player.id);
+    codes.add(player.reconnectionCode);
+    if (player.status === 'eliminated') eliminated.add(player.id);
   }
   const matches = [...data.winnersMatches, ...data.losersMatches, data.grandFinal, data.grandFinalReset]
     .filter((match): match is ExportedMatch => match !== null && match !== undefined);
+  const busy = new Set<string>();
   for (const match of matches) {
+    if (!Array.isArray(match.games)) fail(`confronto #${match.matchNumber} sem histórico de jogos`);
     if (match.phase === 'finished') continue;
     if (!match.player1 || !match.player2 || !playerIds.has(match.player1.id) || !playerIds.has(match.player2.id)) {
       fail(`confronto #${match.matchNumber} por terminar sem os dois jogadores`);
+    }
+    const seats = [match.player1!.id, match.player2!.id];
+    if (seats[0] === seats[1]) fail(`confronto #${match.matchNumber} com o mesmo jogador nos dois lugares`);
+    for (const id of seats) {
+      if (eliminated.has(id)) fail(`confronto #${match.matchNumber} por terminar com um jogador eliminado`);
+      if (busy.has(id)) fail(`jogador ${id} em dois confrontos por terminar`);
+      busy.add(id);
     }
     if (match.phase === 'playing'
       && (match.gameState === undefined || match.gameState === null

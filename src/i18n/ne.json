@@ -1896,5 +1896,6 @@
   "Este código está a ser usado noutro dispositivo.": "यो कोड अर्को उपकरणमा प्रयोग भइरहेको छ।",
   "Não foi possível voltar a ligar. Carrega em «Reconectar».": "फेरि जडान हुन सकेन। «फेरि जोडिऊ» थिच।",
   "A voltar a entrar…": "फेरि सामेल हुँदै…",
-  "Ligação perdida. Volta a inscrever-te.": "जडान टुट्यो। फेरि दर्ता गर।"
+  "Ligação perdida. Volta a inscrever-te.": "जडान टुट्यो। फेरि दर्ता गर।",
+  "Não foi possível ligar ao servidor. Confirma o endereço.": "सर्भरसँग जडान हुन सकेन। ठेगाना जाँच गर।"
 }

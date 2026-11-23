@@ -211,8 +211,15 @@ async function startServer() {
     return response.json();
   }
   await ready();
+  async function importRaw(body: unknown) {
+    return fetch(`${base}/api/tournaments/faisca/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${adminKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+  }
   return {
-    base, api, ready,
+    base, api, ready, importRaw,
     async stop() { process.kill(); await process.exited; },
     async restart() { process = spawnServer(); await ready(); },
     async cleanup() { process.kill(); await process.exited; await rm(directory, { recursive: true, force: true }); },
@@ -272,6 +279,52 @@ test('reentrada automática de outro dispositivo não tira o lugar; o mesmo disp
     const again = await connect();
     again.send({ type: 'rejoin_tournament', reconnectionCode: code, auto: true, deviceId: 'tablet-novo' });
     await again.next('welcome');
+  } finally {
+    for (const client of sockets) client.socket.close();
+    await server.cleanup();
+  }
+}, 30000);
+
+test('importar recusa tabuleiro adulterado ou lugares impossíveis sem tocar no torneio em curso', async () => {
+  const server = await startServer();
+  const sockets: Participant[] = [];
+  async function connect() {
+    const socket = new WebSocket(`${server.base.replace('http', 'ws')}/ws`);
+    const participant = new Participant(socket);
+    sockets.push(participant);
+    await new Promise<void>((resolve, reject) => { socket.onopen = () => resolve(); socket.onerror = () => reject(new Error('WebSocket failed')); });
+    return participant;
+  }
+  try {
+    const created = await server.api('tournaments/faisca/create-with-players', { players: [{ name: 'Ana' }, { name: 'Beto' }] });
+    const clients: Participant[] = [];
+    for (const player of created.players) {
+      const client = await connect();
+      client.send({ type: 'rejoin_tournament', reconnectionCode: player.reconnectionCode });
+      await client.next('welcome');
+      clients.push(client);
+    }
+    await server.api('tournaments/faisca/start', {});
+    const match = (await clients[0]!.next('match_assigned')).match;
+    for (const client of clients) client.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 1 });
+    await clients[0]!.next('game_start');
+    const snapshot: TournamentExport = await server.api('tournaments/faisca/export');
+
+    const tampered = JSON.parse(JSON.stringify(snapshot));
+    tampered.winnersMatches[0].gameState = { tabuleiro: [] };
+    const sameSeat = JSON.parse(JSON.stringify(snapshot));
+    sameSeat.winnersMatches[0].player2 = sameSeat.winnersMatches[0].player1;
+    for (const bad of [tampered, sameSeat]) {
+      const response = await server.importRaw(bad);
+      expect(response.status).toBe(400);
+    }
+    // O torneio em curso continua intacto e os alunos ligados.
+    await Bun.sleep(50);
+    for (const client of clients) expect(client.socket.readyState).toBe(WebSocket.OPEN);
+    const live: TournamentExport = await server.api('tournaments/faisca/export');
+    expect(live.id).toBe(snapshot.id);
+    // Um ficheiro válido continua a ser aceite.
+    expect((await server.importRaw(snapshot)).status).toBe(200);
   } finally {
     for (const client of sockets) client.socket.close();
     await server.cleanup();

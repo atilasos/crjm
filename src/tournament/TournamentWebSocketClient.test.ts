@@ -193,3 +193,42 @@ test('reentrada manual sem resposta passa a recuperação automática com o mesm
     restore();
   }
 });
+
+test('reentrada manual para um endereço que não responde falha logo, sem recuperação', async () => {
+  const restore = fastRecovery();
+  // Porta livre: ninguém está à escuta.
+  const probe = Bun.serve({ port: 0, fetch: () => new Response() });
+  const url = `http://127.0.0.1:${probe.port}`;
+  probe.stop(true);
+  const client = new TournamentWebSocketClient();
+  const statuses: string[] = [];
+  client.setEventHandlers({ onConnectionStatusChange: (status, reason) => statuses.push(`${status}:${reason ?? ''}`) });
+  try {
+    await expect(client.rejoin(url, 'abc234')).rejects.toBeDefined();
+    for (let i = 0; i < 50 && !statuses.some(s => s.startsWith('disconnected')); i++) await Bun.sleep(20);
+    expect(statuses.at(-1)).toBe('disconnected:Não foi possível ligar ao servidor. Confirma o endereço.');
+    await Bun.sleep(600); // mais do que o prazo de uma tentativa
+    expect(statuses.filter(s => s.startsWith('connecting')).length).toBe(1);
+    expect(client.status).not.toBe('connecting');
+  } finally {
+    client.disconnect();
+    restore();
+  }
+});
+
+test('endereço mal formado não deixa tentativas pendentes', async () => {
+  const restore = fastRecovery();
+  const client = new TournamentWebSocketClient();
+  const statuses: string[] = [];
+  client.setEventHandlers({ onConnectionStatusChange: status => statuses.push(status) });
+  try {
+    await expect(client.rejoin('ws://[::1', 'abc234')).rejects.toBeDefined();
+    const before = statuses.length;
+    await Bun.sleep(600);
+    expect(statuses.length).toBe(before);
+    expect(statuses.at(-1)).toBe('error');
+  } finally {
+    client.disconnect();
+    restore();
+  }
+});

@@ -1896,5 +1896,6 @@
   "Este código está a ser usado noutro dispositivo.": "This code is being used on another device.",
   "Não foi possível voltar a ligar. Carrega em «Reconectar».": "Could not reconnect. Press «Reconnect».",
   "A voltar a entrar…": "Rejoining…",
-  "Ligação perdida. Volta a inscrever-te.": "Connection lost. Sign up again."
+  "Ligação perdida. Volta a inscrever-te.": "Connection lost. Sign up again.",
+  "Não foi possível ligar ao servidor. Confirma o endereço.": "Could not reach the server. Check the address."
 }

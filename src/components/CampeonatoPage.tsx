@@ -796,7 +796,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                 logs={logs}
                 logsEndRef={logsEndRef}
                 connectionStatus={connectionStatus}
-                onDisconnect={phase !== 'connect' ? handleDisconnect : undefined}
+                onDisconnect={phase !== 'connect' || connectionStatus === 'connecting' ? handleDisconnect : undefined}
+                disconnectLabel={phase === 'connect' ? 'Cancelar' : undefined}
               />
             </div>
           </div>
@@ -1713,9 +1714,11 @@ interface EventLogProps {
   logsEndRef: React.RefObject<HTMLDivElement | null>;
   connectionStatus: ConnectionStatus;
   onDisconnect?: () => void;
+  /** No ecrã de ligação, o botão cancela a tentativa em curso. */
+  disconnectLabel?: string;
 }
 
-function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLogProps) {
+function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect, disconnectLabel }: EventLogProps) {
   const { t, locale } = useTranslation();
   const statusColors: Record<ConnectionStatus, string> = {
     disconnected: '[background:var(--tinta-suave)]',
@@ -1770,7 +1773,7 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLog
         <button
           onClick={onDisconnect}
           className="mt-4 w-full py-2 px-4 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-sm hover:[background:color-mix(in_srgb,var(--perigo)_10%,transparent)] transition-colors"
-        >{t("❌ Sair do Campeonato")}</button>
+        >{t(disconnectLabel ?? "❌ Sair do Campeonato")}</button>
       )}
     </div>
   );
