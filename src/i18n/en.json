@@ -1882,5 +1882,21 @@
   "Jogo desconhecido:": "Unknown game:",
   "Grande Final": "Grand final",
   "Final Reset": "Grand final reset",
-  "Ronda": "Round"
+  "Ronda": "Round",
+  "✅ Estás pronto!": "✅ You are ready!",
+  "À espera de {0}…": "Waiting for {0}…",
+  "{0} já está pronto! Carrega no botão para começar.": "{0} is ready! Press the button to start.",
+  "{0} está desligado. O jogo começa quando voltar.": "{0} is offline. The game starts when they come back.",
+  "Final de desempate": "Grand final reset",
+  "Vai haver uma final de desempate!": "There will be a grand final reset!",
+  "Foste eliminado do campeonato pelo professor.": "The teacher removed you from the championship.",
+  "O torneio foi restaurado pelo professor. A voltar a entrar…": "The teacher restored the tournament. Rejoining…",
+  "Atualiza a página para continuar.": "Refresh the page to continue.",
+  "O campeonato continua. Obrigado por jogares!": "The championship goes on. Thanks for playing!",
+  "Este código está a ser usado noutro dispositivo.": "This code is being used on another device.",
+  "Não foi possível voltar a ligar. Carrega em «Reconectar».": "Could not reconnect. Press «Reconnect».",
+  "A voltar a entrar…": "Rejoining…",
+  "Ligação perdida. Volta a inscrever-te.": "Connection lost. Sign up again.",
+  "Não foi possível ligar ao servidor. Confirma o endereço.": "Could not reach the server. Check the address.",
+  "📶 A voltar a ligar… Espera um pouco.": "📶 Reconnecting… Please wait a moment."
 }

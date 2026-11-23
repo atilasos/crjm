@@ -123,6 +123,7 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
 }
 
 export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
+  const { t } = useTranslation();
   // Estado de conexão
   const [serverUrl, setServerUrl] = useState(DEFAULT_TOURNAMENT_SERVER_URL);
   const [useMockServer, setUseMockServer] = useState(false); // Default to real server with preset
@@ -170,6 +171,14 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Estado para anúncio de fim de partida individual
   const [gameJustEnded, setGameJustEnded] = useState(false);
+  // «Estou pronto»: pedido local (otimista) e confirmação do servidor para o jogo atual.
+  const [readyRequested, setReadyRequested] = useState(false);
+  // Jogo para o qual o «Estou pronto» conta (o servidor ignora pedidos de jogos anteriores).
+  const [nextGameNumber, setNextGameNumber] = useState(1);
+  // Estado de prontidão do servidor, associado ao confronto e ao jogo a que se refere.
+  type ReadyFlags = { matchId: string | null; gameNumber: number; player1: boolean; player2: boolean };
+  const NO_READY: ReadyFlags = { matchId: null, gameNumber: 0, player1: false, player2: false };
+  const [readyFlagsRaw, setReadyFlags] = useState<ReadyFlags>(NO_READY);
   const [lastGameWinnerId, setLastGameWinnerId] = useState<string | null>(null);
   const [lastGameWinnerRole, setLastGameWinnerRole] = useState<'player1' | 'player2' | null>(null);
 
@@ -193,6 +202,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Refs para handlers - evita recriar o cliente quando o estado muda
   const playerIdRef = useRef<string | null>(null);
+  const reconnectionCodeRef = useRef<string | null>(null);
+  /** Confronto e jogo do tabuleiro em ecrã (`id:jogo`). */
+  const boardKeyRef = useRef<string | null>(null);
+  /** Este aparelho acabou de receber `welcome` (entrada ou reentrada). */
+  const justJoinedRef = useRef(false);
   const currentGameIdRef = useRef<GameId | null>(null);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
@@ -206,13 +220,18 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   }, []);
 
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Rolar só dentro do painel do registo: a página não salta (os botões de ligação
+    // continuam à vista no telemóvel).
+    const end = logsEndRef.current;
+    const panel = end?.parentElement;
+    if (panel) panel.scrollTop = panel.scrollHeight;
   }, [logs]);
 
   // Mantém as refs sincronizadas com o estado
   useEffect(() => {
     playerIdRef.current = playerId;
-  }, [playerId]);
+    reconnectionCodeRef.current = reconnectionCode;
+  }, [playerId, reconnectionCode]);
 
   useEffect(() => {
     currentGameIdRef.current = currentGameId;
@@ -222,6 +241,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const handleServerMessage = useCallback((message: ServerMessage) => {
     switch (message.type) {
       case 'welcome':
+        justJoinedRef.current = true;
         setPlayerId(message.playerId);
         // Guardar código de reconexão
         if (message.reconnectionCode) {
@@ -235,8 +255,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
             setTournamentState(normalized);
             setCurrentGameId(normalized.gameId);
           }
+          // Reentrada depois do fim (ou já eliminado): o ecrã final, não a sala de espera.
+          const finishedForMe = normalized?.phase === 'finished'
+            || normalized?.players.some(p => p.id === message.playerId && p.status === 'eliminated');
+          setPhase(finishedForMe ? 'finished' : 'lobby');
         }
-        setPhase('lobby');
         addLog('Inscrito no campeonato!', 'success');
         break;
 
@@ -259,11 +282,40 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
           break;
         }
         setTournamentState(newState);
+        // Eliminado pelo professor enquanto esperava: mostrar o ecrã de fim.
+        if (newState.players.some(p => p.id === playerIdRef.current && p.status === 'eliminated')) {
+          setPhase(prev => (prev === 'lobby' ? 'finished' : prev));
+        }
         break;
       }
 
       case 'match_assigned':
         setCurrentMatch(message.match);
+        setReadyRequested(false);
+        setNextGameNumber(message.match.currentGame || 1);
+        {
+          // Confronto (re)atribuído a meio de um jogo: o tabuleiro guardado pode estar
+          // desatualizado se este aparelho acabou de (re)entrar (ex.: torneio restaurado) ou
+          // se o confronto/jogo mudou. Só se joga depois do estado do servidor. O aluno que
+          // ficou ligado mantém o tabuleiro (e uma jogada a meio) quando o adversário volta.
+          const key = `${message.match.id}:${message.match.currentGame}`;
+          if (message.match.phase === 'playing' && (justJoinedRef.current || boardKeyRef.current !== key)) {
+            setGameState(null);
+            setIsMyTurn(false);
+          }
+          boardKeyRef.current = key;
+          justJoinedRef.current = false;
+        }
+        setReadyFlags({
+          matchId: message.match.id,
+          gameNumber: message.match.currentGame || 1,
+          player1: message.match.player1Ready ?? false,
+          player2: message.match.player2Ready ?? false,
+        });
+        // Um confronto (re)atribuído substitui qualquer ecrã de fim de jogo anterior.
+        setGameJustEnded(false);
+        setLastGameWinnerId(null);
+        setLastGameWinnerRole(null);
         setMyRole(message.yourRole);
         // Usar o número do jogo e score do match (importante para reconexões!)
         setCurrentGameNumber(message.match.currentGame || 1);
@@ -276,7 +328,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         break;
 
       case 'game_start': {
+        boardKeyRef.current = `${message.matchId}:${message.gameNumber}`;
         setIsMyTurn(message.youStart);
+        setNextGameNumber(message.gameNumber);
+        setReadyRequested(false);
+        setReadyFlags(NO_READY);
         setCurrentGameNumber(message.gameNumber);
         // Reset do estado de fim de partida
         setGameJustEnded(false);
@@ -342,6 +398,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
         // Ativar estado de anúncio de fim de partida
         setGameJustEnded(true);
+        setNextGameNumber(message.gameNumber + 1);
+        setReadyRequested(false);
+        setReadyFlags(NO_READY);
         setLastGameWinnerId(message.winnerId);
         setLastGameWinnerRole(message.winnerRole);
 
@@ -361,6 +420,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'match_end':
         setCurrentMatch(null);
+        setReadyRequested(false);
+        setReadyFlags(NO_READY);
         setMyRole(null);
         setGameState(null);
         setCurrentGameNumber(1);
@@ -380,7 +441,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         } else {
           // Jogador continua no torneio - volta ao lobby para esperar próximo match
           // (pode ir para Winners ou Losers bracket dependendo do resultado)
-          if (!message.youWon) {
+          if (message.nextBracket === 'grandFinalReset') {
+            addLog('Vai haver uma final de desempate!', 'info');
+          } else if (!message.youWon) {
             addLog('Vais para a Losers Bracket. Uma derrota e estás eliminado!', 'warning');
           }
           // Voltar ao lobby para ver o painel de espera/espectador
@@ -403,10 +466,23 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'error':
         addLog(`Erro: ${message.message}`, 'error');
+        // Reentrada (automática ou com o código) recusada porque o aluno já foi eliminado.
+        if (message.code === 'PLAYER_ELIMINATED') setPhase('finished');
         break;
 
       case 'info':
         addLog(message.message, 'info');
+        break;
+
+      case 'ready_state':
+        setNextGameNumber(message.gameNumber);
+        if (message.reset) setReadyRequested(false);
+        setReadyFlags({
+          matchId: message.matchId,
+          gameNumber: message.gameNumber,
+          player1: message.player1Ready,
+          player2: message.player2Ready,
+        });
         break;
 
       case 'active_games_list':
@@ -471,9 +547,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     const client = createTournamentClient(effectiveUrl);
     clientRef.current = client;
 
-    // Configura handlers
+    // Configura handlers (um cliente cancelado ou substituído já não mexe na página)
+    const isCurrent = () => clientRef.current === client;
     client.setEventHandlers({
       onConnectionStatusChange: (status, error) => {
+        if (!isCurrent()) return;
         setConnectionStatus(status);
         setConnectionError(error ?? null);
         if (status === 'connected') {
@@ -481,15 +559,16 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         } else if (status === 'error') {
           addLog(`Erro de ligação: ${error}`, 'error');
         } else if (status === 'disconnected') {
-          // Só volta ao ecrã de connect se não estiver já lá
           addLog('Desligado do servidor.', 'warning');
+          returnToCodeScreen();
         }
       },
-      onMessage: handleServerMessage,
+      onMessage: message => { if (isCurrent()) handleServerMessage(message); },
     });
 
     try {
       await client.connect(effectiveUrl);
+      if (!isCurrent()) { client.disconnect(); return; } // cancelado durante a ligação
       client.send({
         type: 'join_tournament',
         gameId: selectedGame,
@@ -497,9 +576,19 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         classId: classId.trim() || undefined,
       });
     } catch {
-      addLog('Falha ao ligar ao servidor.', 'error');
+      if (isCurrent()) addLog('Falha ao ligar ao servidor.', 'error');
     }
   };
+
+  /**
+   * A recuperação automática desistiu (ou o código foi recusado): voltar ao ecrã de
+   * entrada com o código já preenchido, para o aluno só ter de carregar em «Reconectar».
+   */
+  function returnToCodeScreen() {
+    const code = clientRef.current?.reconnectionCode ?? reconnectionCodeRef.current;
+    if (code) setReconnectionCodeInput(code);
+    setPhase(prev => (prev === 'lobby' || prev === 'match' ? 'connect' : prev));
+  }
 
   const handleRejoin = async () => {
     if (!reconnectionCodeInput.trim() || reconnectionCodeInput.length !== 6) {
@@ -522,9 +611,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     const client = createTournamentClient(serverUrl);
     clientRef.current = client;
 
-    // Configura handlers
+    // Configura handlers (um cliente cancelado ou substituído já não mexe na página)
+    const isCurrent = () => clientRef.current === client;
     client.setEventHandlers({
       onConnectionStatusChange: (status, error) => {
+        if (!isCurrent()) return;
         setConnectionStatus(status);
         setConnectionError(error ?? null);
         if (status === 'connected') {
@@ -533,30 +624,52 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
           addLog(`Erro de ligação: ${error}`, 'error');
         } else if (status === 'disconnected') {
           addLog('Desligado do servidor.', 'warning');
+          returnToCodeScreen();
         }
       },
-      onMessage: handleServerMessage,
+      onMessage: message => { if (isCurrent()) handleServerMessage(message); },
     });
 
     try {
       addLog(`A reconectar com código ${reconnectionCodeInput}...`, 'info');
       await client.rejoin(serverUrl, reconnectionCodeInput);
+      if (!isCurrent()) client.disconnect(); // cancelado durante a ligação
     } catch {
-      addLog('Falha ao reconectar ao servidor.', 'error');
+      if (isCurrent()) addLog('Falha ao reconectar ao servidor.', 'error');
     }
   };
 
+  // Só conta a prontidão do confronto que está no ecrã. (Entre jogos, o servidor já
+  // fala do jogo seguinte; game_start/game_end limpam o estado do jogo anterior.)
+  const readyFlags = readyFlagsRaw.matchId === currentMatch?.id ? readyFlagsRaw : NO_READY;
+  const myReadyConfirmed = myRole ? readyFlags[myRole] : false;
+
   const handleReadyForMatch = () => {
-    if (!currentMatch || !clientRef.current) return;
+    // Um só pedido por jogo: o botão desaparece logo ao primeiro clique.
+    if (!currentMatch || !clientRef.current || readyRequested || myReadyConfirmed || connectionStatus !== 'connected') return;
+    setReadyRequested(true);
     clientRef.current.send({
       type: 'ready_for_match',
       matchId: currentMatch.id,
+      gameNumber: nextGameNumber,
     });
-    addLog('Estás pronto! A aguardar...', 'info');
   };
 
+  // Confirmado pelo servidor: a partir daqui manda o estado do servidor (uma pausa volta a mostrar o botão).
+  useEffect(() => {
+    if (readyRequested && myReadyConfirmed) setReadyRequested(false);
+  }, [readyRequested, myReadyConfirmed]);
+
+  // Se o servidor não confirmar (ex.: ligação perdida), o botão volta passados 6 s.
+  useEffect(() => {
+    if (!readyRequested || myReadyConfirmed) return;
+    const timer = setTimeout(() => setReadyRequested(false), 6000);
+    return () => clearTimeout(timer);
+  }, [readyRequested, myReadyConfirmed]);
+
   const handleMove = (move: unknown) => {
-    if (!currentMatch || !clientRef.current || !isMyTurn) return;
+    // Sem lugar recuperado, uma jogada não chegaria ao servidor.
+    if (!currentMatch || !clientRef.current || !isMyTurn || connectionStatus !== 'connected') return;
 
     // Ignorar previews (usados apenas para visualização, não são jogadas reais)
     if (move && typeof move === 'object' && (move as any).isPreview) return;
@@ -598,11 +711,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   };
 
   const handleNextGame = () => {
-    // Limpa o estado de fim de partida e inicia a próxima
-    setGameJustEnded(false);
-    setLastGameWinnerId(null);
-    setLastGameWinnerRole(null);
-    // Chama ready_for_match para iniciar a próxima partida
+    // O cartão do resultado fica no ecrã (com «✅ Estás pronto!») até o jogo seguinte
+    // começar: game_start limpa o estado de fim de partida.
     handleReadyForMatch();
   };
 
@@ -614,6 +724,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     setPhase('connect');
     setTournamentState(null);
     setCurrentMatch(null);
+    setReadyRequested(false);
+    setReadyFlags(NO_READY);
     setMyRole(null);
     setGameState(null);
     setPlayerId(null);
@@ -633,6 +745,15 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
+          {/* Sempre montado (fora da grelha; vazio não ocupa espaço) para os leitores de ecrã
+              anunciarem a mudança; o aviso fica fixo no topo do ecrã enquanto se religa. */}
+          <div role="status" aria-live="polite">
+            {phase === 'match' && currentMatch && connectionStatus !== 'connected' && (
+              <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 w-[min(92vw,28rem)] rounded-lg border p-3 text-center font-medium [background:var(--painel)] [border-color:var(--ouro)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
+                {t('📶 A voltar a ligar… Espera um pouco.')}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {phase === 'connect' && (
@@ -655,6 +776,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   reconnectionCodeInput={reconnectionCodeInput}
                   setReconnectionCodeInput={setReconnectionCodeInput}
                   onRejoin={handleRejoin}
+                  onCancel={handleDisconnect}
                 />
               )}
 
@@ -673,6 +795,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
               {phase === 'match' && currentMatch && (
                 <MatchArea
+                  reconnecting={connectionStatus !== 'connected'}
                   match={currentMatch}
                   myRole={myRole}
                   isMyTurn={isMyTurn}
@@ -685,9 +808,20 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   lastGameWinnerRole={lastGameWinnerRole}
                   playerId={playerId}
                   onReady={handleReadyForMatch}
+                  iAmReady={readyRequested || myReadyConfirmed}
+                  opponentReady={myRole === 'player1' ? readyFlags.player2 : myRole === 'player2' ? readyFlags.player1 : false}
+                  opponentOnline={(() => {
+                    const opponentId = myRole === 'player1' ? currentMatch.player2?.id : currentMatch.player1?.id;
+                    const opponent = tournamentState?.players.find(p => p.id === opponentId);
+                    return opponent ? opponent.isOnline : true;
+                  })()}
                   onMove={handleMove}
                   onNextGame={handleNextGame}
                 />
+              )}
+
+              {phase === 'finished' && !tournamentState && (
+                <EliminatedNotice onLeave={handleDisconnect} />
               )}
 
               {phase === 'finished' && tournamentState && (
@@ -737,6 +871,8 @@ interface ConnectFormProps {
   reconnectionCodeInput: string;
   setReconnectionCodeInput: (code: string) => void;
   onRejoin: () => void;
+  /** Cancela uma ligação em curso (fica visível junto ao botão, também no telemóvel). */
+  onCancel: () => void;
 }
 
 function ConnectForm({
@@ -750,6 +886,7 @@ function ConnectForm({
   onConnect,
   reconnectionCodeInput, setReconnectionCodeInput,
   onRejoin,
+  onCancel,
 }: ConnectFormProps) {
   const { t, locale } = useTranslation();
   // Jogos suportados no modo campeonato (servidor real + mock)
@@ -898,6 +1035,12 @@ function ConnectForm({
             </>
           )}
         </button>
+        {isConnecting && (
+          <button
+            onClick={onCancel}
+            className="mt-2 w-full py-2 px-4 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-sm"
+          >{t('Cancelar')}</button>
+        )}
 
         {/* Secção de reconexão */}
         {!useMockServer && (
@@ -1299,12 +1442,17 @@ interface MatchAreaProps {
   lastGameWinnerRole: 'player1' | 'player2' | null;
   playerId: string | null;
   onReady: () => void;
+  /** Ligação a recuperar: o confronto fica visível mas sem interação. */
+  reconnecting: boolean;
+  iAmReady: boolean;
+  opponentReady: boolean;
+  opponentOnline: boolean;
   onMove: (move: unknown) => void;
   onNextGame: () => void;
 }
 
-function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, onMove, onNextGame }: MatchAreaProps) {
-  const { t, locale } = useTranslation();
+function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, reconnecting, iAmReady, opponentReady, opponentOnline, onMove, onNextGame }: MatchAreaProps) {
+  const { t, msg, locale } = useTranslation();
   // IMPORTANTE: myRole é o SEAT fixo no match (player1 ou player2), definido em match_assigned
   // O seat NUNCA muda durante o match. O que muda é apenas quem joga como Gatos/Cães.
   const mySeatInMatch = myRole;
@@ -1350,11 +1498,19 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const matchContinues = myScore < maxWins && opponentScore < maxWins;
 
   return (
-    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
+    <div
+      inert={reconnecting || undefined}
+      aria-busy={reconnecting || undefined}
+      className={`rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] ${reconnecting ? 'opacity-50' : ''}`}
+    >
       {/* Header do match */}
       <div className="text-center mb-6">
         <div className="inline-block px-3 py-1 rounded-full border [border-color:var(--ouro)] [color:var(--tinta-suave)] text-sm mb-3">
-          {t(match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket')}{t(" • Ronda ")}{t(match.round)}
+          {match.round === 999
+            ? t('Grande Final')
+            : match.round === 1000
+              ? t('Final de desempate')
+              : <>{t(match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket')}{t(" • Ronda ")}{t(match.round)}</>}
         </div>
         <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">{t("Tu vs ")}{opponent?.name}
         </h2>
@@ -1421,22 +1577,53 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                 {t(iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.')}
               </p>
             </div>
-            <button
-              onClick={onNextGame}
-              className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-            >{t("▶️ Próxima Partida")}</button>
+            {opponentReady && !iAmReady && (
+              <p role="status" className="[color:var(--sucesso)] text-sm mb-2">{msg('{0} já está pronto! Carrega no botão para começar.', [opponent?.name ?? ''])}</p>
+            )}
+            {!opponentOnline && (
+              <p className="[color:var(--tinta-suave)] text-sm mb-2">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
+            )}
+            {iAmReady ? (
+              <div role="status" aria-live="polite">
+                <p className="font-bold [color:var(--sucesso)]">{t("✅ Estás pronto!")}</p>
+                <p className="[color:var(--tinta)] animate-pulse">{msg('À espera de {0}…', [opponent?.name ?? ''])}</p>
+              </div>
+            ) : (
+              <button
+                onClick={onNextGame}
+                className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+              >{t("▶️ Próxima Partida")}</button>
+            )}
           </div>
         </div>
       )}
 
       {/* Área de jogo - fase waiting (antes de começar) */}
       {match.phase === 'waiting' && !gameJustEnded && (
-        <div className="text-center py-8">
-          <p className="[color:var(--tinta)] mb-4">{t("Estás pronto para começar?")}</p>
-          <button
-            onClick={onReady}
-            className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-          >{t("✅ Estou pronto!")}</button>
+        <div className="text-center py-8" data-ready-panel>
+          {iAmReady ? (
+            <div role="status" aria-live="polite" className="space-y-2">
+              <p className="text-xl font-bold [color:var(--sucesso)]">{t("✅ Estás pronto!")}</p>
+              <p className="[color:var(--tinta)] animate-pulse">{msg('À espera de {0}…', [opponent?.name ?? ''])}</p>
+              {!opponentOnline && (
+                <p className="[color:var(--tinta-suave)] text-sm">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
+              )}
+            </div>
+          ) : (
+            <>
+              <p className="[color:var(--tinta)] mb-2">{t("Estás pronto para começar?")}</p>
+              {opponentReady && (
+                <p role="status" className="[color:var(--sucesso)] text-sm mb-2">{msg('{0} já está pronto! Carrega no botão para começar.', [opponent?.name ?? ''])}</p>
+              )}
+              {!opponentOnline && (
+                <p className="[color:var(--tinta-suave)] text-sm mb-2">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
+              )}
+              <button
+                onClick={onReady}
+                className="mt-2 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+              >{t("✅ Estou pronto!")}</button>
+            </>
+          )}
         </div>
       )}
 
@@ -1529,10 +1716,26 @@ interface TournamentFinishedProps {
   onNewTournament: () => void;
 }
 
+/** Eliminado sem estado do torneio (ex.: reentrada com o código depois de ser eliminado). */
+function EliminatedNotice({ onLeave }: { onLeave: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
+      <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">{t('Foste eliminado do campeonato.')}</h2>
+      <button
+        onClick={onLeave}
+        className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+      >{t('❌ Sair do Campeonato')}</button>
+    </div>
+  );
+}
+
 function TournamentFinished({ tournamentState, playerId, onNewTournament }: TournamentFinishedProps) {
   const { t, locale } = useTranslation();
   const isChampion = tournamentState.championId === playerId;
   const champion = tournamentState.players.find(p => p.id === tournamentState.championId);
+  // Eliminado com o campeonato ainda a decorrer: não é o ecrã de fim de campeonato.
+  const stillRunning = tournamentState.phase !== 'finished' && !isChampion;
 
   return (
     <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
@@ -1540,8 +1743,11 @@ function TournamentFinished({ tournamentState, playerId, onNewTournament }: Tour
         {t(isChampion ? '🏆' : '🎮')}
       </div>
       <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">
-        {t(isChampion ? 'CAMPEÃO!' : 'Campeonato Terminado')}
+        {t(isChampion ? 'CAMPEÃO!' : stillRunning ? 'Foste eliminado do campeonato.' : 'Campeonato Terminado')}
       </h2>
+      {stillRunning && (
+        <p className="[color:var(--tinta)] text-lg mb-4">{t('O campeonato continua. Obrigado por jogares!')}</p>
+      )}
       {!isChampion && champion && (
         <p className="[color:var(--tinta)] text-lg mb-4">{t("Campeão: ")}<span className="[color:var(--ouro)] font-bold">{champion.name}</span>
         </p>
@@ -1554,7 +1760,7 @@ function TournamentFinished({ tournamentState, playerId, onNewTournament }: Tour
       <button
         onClick={onNewTournament}
         className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-      >{t("🔄 Novo Campeonato")}</button>
+      >{t(stillRunning ? '❌ Sair do Campeonato' : '🔄 Novo Campeonato')}</button>
     </div>
   );
 }

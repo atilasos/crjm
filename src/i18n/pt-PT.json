@@ -1882,5 +1882,21 @@
   "Jogo desconhecido:": "Jogo desconhecido:",
   "Grande Final": "Grande Final",
   "Final Reset": "Repetição da grande final",
-  "Ronda": "Ronda"
+  "Ronda": "Ronda",
+  "✅ Estás pronto!": "✅ Estás pronto!",
+  "À espera de {0}…": "À espera de {0}…",
+  "{0} já está pronto! Carrega no botão para começar.": "{0} já está pronto! Carrega no botão para começar.",
+  "{0} está desligado. O jogo começa quando voltar.": "{0} está desligado. O jogo começa quando voltar.",
+  "Final de desempate": "Final de desempate",
+  "Vai haver uma final de desempate!": "Vai haver uma final de desempate!",
+  "Foste eliminado do campeonato pelo professor.": "Foste eliminado do campeonato pelo professor.",
+  "O torneio foi restaurado pelo professor. A voltar a entrar…": "O torneio foi restaurado pelo professor. A voltar a entrar…",
+  "Atualiza a página para continuar.": "Atualiza a página para continuar.",
+  "O campeonato continua. Obrigado por jogares!": "O campeonato continua. Obrigado por jogares!",
+  "Este código está a ser usado noutro dispositivo.": "Este código está a ser usado noutro dispositivo.",
+  "Não foi possível voltar a ligar. Carrega em «Reconectar».": "Não foi possível voltar a ligar. Carrega em «Reconectar».",
+  "A voltar a entrar…": "A voltar a entrar…",
+  "Ligação perdida. Volta a inscrever-te.": "Ligação perdida. Volta a inscrever-te.",
+  "Não foi possível ligar ao servidor. Confirma o endereço.": "Não foi possível ligar ao servidor. Confirma o endereço.",
+  "📶 A voltar a ligar… Espera um pouco.": "📶 A voltar a ligar… Espera um pouco."
 }

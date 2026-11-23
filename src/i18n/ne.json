@@ -1882,5 +1882,21 @@
   "Jogo desconhecido:": "अज्ञात खेल:",
   "Grande Final": "महाफाइनल",
   "Final Reset": "महाफाइनल पुनः",
-  "Ronda": "चरण"
+  "Ronda": "चरण",
+  "✅ Estás pronto!": "✅ तिमी तयार छौ!",
+  "À espera de {0}…": "{0} लाई पर्खँदै…",
+  "{0} já está pronto! Carrega no botão para começar.": "{0} तयार छ! सुरु गर्न बटन थिच।",
+  "{0} está desligado. O jogo começa quando voltar.": "{0} अफलाइन छ। फर्केपछि खेल सुरु हुन्छ।",
+  "Final de desempate": "निर्णायक फाइनल",
+  "Vai haver uma final de desempate!": "अब निर्णायक फाइनल हुनेछ!",
+  "Foste eliminado do campeonato pelo professor.": "शिक्षकले तिमीलाई प्रतियोगिताबाट हटाउनुभयो।",
+  "O torneio foi restaurado pelo professor. A voltar a entrar…": "शिक्षकले प्रतियोगिता पुनर्स्थापित गर्नुभयो। फेरि सामेल हुँदै…",
+  "Atualiza a página para continuar.": "जारी राख्न पेज रिफ्रेस गर।",
+  "O campeonato continua. Obrigado por jogares!": "प्रतियोगिता जारी छ। खेलेकोमा धन्यवाद!",
+  "Este código está a ser usado noutro dispositivo.": "यो कोड अर्को उपकरणमा प्रयोग भइरहेको छ।",
+  "Não foi possível voltar a ligar. Carrega em «Reconectar».": "फेरि जडान हुन सकेन। «फेरि जोडिऊ» थिच।",
+  "A voltar a entrar…": "फेरि सामेल हुँदै…",
+  "Ligação perdida. Volta a inscrever-te.": "जडान टुट्यो। फेरि दर्ता गर।",
+  "Não foi possível ligar ao servidor. Confirma o endereço.": "सर्भरसँग जडान हुन सकेन। ठेगाना जाँच गर।",
+  "📶 A voltar a ligar… Espera um pouco.": "📶 फेरि जडान हुँदै… अलि पर्ख।"
 }

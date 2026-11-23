@@ -222,8 +222,8 @@ No topo do painel de administração:
 - Se estás na mesma rede, podes usar `ws://IP-DO-COMPUTADOR:4000/ws`
 
 #### "Perdi a ligação durante um jogo"
-- O jogador que desconecta perde automaticamente o match atual
-- Pode voltar a inscrever-se se o torneio permitir
+- O confronto fica em pausa até o aluno voltar com o seu código de reconexão
+- Se não voltar, o professor pode eliminá-lo no painel (o adversário vence por falta)
 
 #### "Um jogo ficou bloqueado"
 - No painel admin, localiza o match no bracket
@@ -258,26 +258,34 @@ VITE_TOURNAMENT_SERVER_URL=wss://torneio.exemplo.com bun run build
 
 ## Regras do Torneio
 
-### Dupla Eliminação
+### Dupla Eliminação Dinâmica
 
-- Todos começam na **Winners Bracket**
-- 1ª derrota → vais para a **Losers Bracket**
-- 2ª derrota → estás **eliminado**
-- O campeão da Winners enfrenta o campeão da Losers na **Grand Final**
-- Se o campeão da Losers ganhar a Grand Final, há um **Grand Final Reset** (ele tem de ganhar duas vezes porque o da Winners ainda não perdeu)
+- Todos começam na **Winners Bracket**; à 1.ª derrota passam para a **Losers Bracket**; à 2.ª derrota são **eliminados**.
+- Os confrontos **não são sorteados todos no início**: são criados à medida que os alunos ficam livres. Funciona com qualquer número de alunos (5, 17, 23…).
+- **Winners**: só se defrontam alunos do mesmo nível, como numa chave clássica. Sobe-se de nível com uma vitória ou com uma isenção. Quem acaba primeiro joga contra o próximo que chegar ao mesmo nível.
+- **Losers**: logo que haja dois alunos livres com uma derrota, jogam (evitando repetir adversários, quando possível).
+- **Isenções**: com número ímpar num nível, o aluno que sobra sobe automaticamente quando já ninguém o pode alcançar, e joga contra o primeiro vencedor seguinte. Só recebe isenção quem está ligado.
+- **Grande Final**: campeão da Winners (começa os jogos 1 e 3) contra campeão da Losers. Se o campeão da Losers ganhar, há **final de desempate** (ninguém sai sem duas derrotas).
+- Em simulações com confrontos de 1 a 3 minutos, a espera média entre confrontos foi de poucos segundos; quem espera mais é o campeão da Winners (pela final). Um aluno pode ainda esperar alguns minutos quando o adversário do seu nível está num confronto longo — não há um limite garantido.
+- **Alunos ausentes ou desligados não são emparelhados nem sobem por isenção** até voltarem. Se um aluno está desligado e os outros ficam à espera, elimine-o no painel: o adversário vence por falta e a chave continua. Convém eliminar logo no início quem faltou.
+- A classificação final segue a ordem de eliminação (quem sai mais tarde fica mais acima).
 
 ### Melhor de 3
 
-- Cada confronto é melhor de 3 jogos
-- No jogo 1, o player1 (sorteado) começa
-- No jogo 2, o player2 começa
-- No jogo 3, volta ao player1
-- Ganha quem vencer 2 jogos primeiro
+- Cada confronto é melhor de 3 jogos; o lugar de player1 é sorteado.
+- No jogo 1 começa o player1, no jogo 2 o player2, no jogo 3 volta o player1.
+- Ganha quem vencer 2 jogos primeiro.
 
-### Byes Automáticos
+### «Estou pronto»
 
-- Se o número de jogadores for ímpar, um jogador avança automaticamente para a próxima ronda (bye)
-- O servidor gere isto automaticamente
+- Depois de carregar, o botão desaparece e aparece «✅ Estás pronto! À espera de …».
+- O aluno vê quando o adversário já está pronto ou está desligado. Cliques repetidos são ignorados pelo servidor.
+
+### Exportação (formato v2)
+
+- O JSON é compacto: guarda o histórico de todos os jogos de cada confronto (quem começou, vencedor, horas e jogadas) e só guarda tabuleiros dos confrontos ainda por terminar.
+- Importar um torneio a meio retoma-o: os alunos voltam a entrar com o seu código.
+- Exports antigos (v1) não são aceites.
 
 ## API de Administração
 

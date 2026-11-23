@@ -1376,9 +1376,15 @@ Pedro Costa"></textarea>
         if (loserId && !positionedPlayers.has(loserId)) positionedPlayers.set(loserId, 2);
       }
       
-      // 3rd, 4th, 5th: Only assign when tournament is finished (has champion)
-      // Otherwise eliminated players shouldn't have positions yet
-      if (state?.championId) {
+      // Pódio calculado no servidor (ordem real de eliminação, não a ronda).
+      const serverStandings = Array.isArray(tournament.standings) ? tournament.standings : null;
+      if (state?.championId && serverStandings) {
+        positionedPlayers.clear();
+        for (const entry of serverStandings) {
+          // Todos os lugares (numa turma de 17, do 1.º ao 17.º); os 5 primeiros mantêm o destaque.
+          positionedPlayers.set(entry.playerId, entry.rank);
+        }
+      } else if (state?.championId) {
         const remainingEliminated = eliminationOrder
           .filter(id => !positionedPlayers.has(id))
           .reverse();
@@ -1404,7 +1410,7 @@ Pedro Costa"></textarea>
         let status = 'waiting';
         if (state?.championId === player.id) {
           status = 'champion';
-        } else if (losses >= 2) {
+        } else if (losses >= 2 || player.status === 'eliminated') {
           status = 'eliminated';
         } else {
           // Check if currently playing
@@ -1658,7 +1664,7 @@ Pedro Costa"></textarea>
       // Match number header
       const matchNumberHeader = match.matchNumber
         ? '<div style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-align: center; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.1);">' +
-            'Jogo #' + match.matchNumber + (isBye ? ' (BYE)' : '') +
+            'Jogo #' + match.matchNumber + (isBye ? ' (BYE)' : '') + (match.result === 'forfeit' ? ' (falta)' : '') +
           '</div>'
         : '';
 
@@ -1732,7 +1738,7 @@ Pedro Costa"></textarea>
     function renderListMatch(match, gameId) {
       const p1 = match.player1 ? match.player1.name : 'TBD';
       const p2 = match.player2 ? match.player2.name : 'TBD';
-      const score = (match.score?.player1Wins || 0) + '-' + (match.score?.player2Wins || 0);
+      const score = (match.score?.player1Wins || 0) + '-' + (match.score?.player2Wins || 0) + (match.result === 'forfeit' ? ' (falta)' : '');
       const p1Winner = match.winnerId === match.player1?.id;
       const p2Winner = match.winnerId === match.player2?.id;
       const showRestartButtons = match.phase === 'playing' || match.phase === 'waiting';
@@ -1947,7 +1953,7 @@ Pedro Costa"></textarea>
         }
         
         const data = await res.json();
-        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -2121,11 +2127,28 @@ Pedro Costa"></textarea>
       y += 6;
       
       doc.setFont(undefined, 'normal');
-      const sortedPlayers = [...data.players].sort((a, b) => {
-        if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
-        if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
-        return (a.losses || 0) - (b.losses || 0);
-      });
+      // A mesma ordem do painel: classificação do servidor (torneio ao vivo) ou, num
+      // export v2, campeão primeiro e depois a ordem inversa de eliminação.
+      let sortedPlayers;
+      if (Array.isArray(data.standings)) {
+        const rankOf = new Map(data.standings.map(entry => [entry.playerId, entry.rank]));
+        sortedPlayers = [...data.players].sort((a, b) => (rankOf.get(a.id) ?? 1e9) - (rankOf.get(b.id) ?? 1e9));
+      } else if (data.players.some(p => 'eliminationOrder' in p)) {
+        const championId = data.championId ?? data.state?.championId ?? null;
+        sortedPlayers = [...data.players].sort((a, b) => {
+          if (a.id === championId) return -1;
+          if (b.id === championId) return 1;
+          const ea = a.eliminationOrder ?? Number.MAX_SAFE_INTEGER;
+          const eb = b.eliminationOrder ?? Number.MAX_SAFE_INTEGER;
+          return eb - ea || (a.losses || 0) - (b.losses || 0);
+        });
+      } else {
+        sortedPlayers = [...data.players].sort((a, b) => {
+          if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
+          if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
+          return (a.losses || 0) - (b.losses || 0);
+        });
+      }
       
       sortedPlayers.forEach((p, i) => {
         const pos = (i + 1) + '.';

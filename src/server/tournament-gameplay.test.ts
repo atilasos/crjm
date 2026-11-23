@@ -98,8 +98,8 @@ test.each(['faisca', 'y'] as const)('%s real: autoridade, reconexão, espectador
       brackets.add(match.bracket);
       let p1 = players.get(match.player1!.id)!;
       let p2 = players.get(match.player2!.id)!;
-      p1.send({ type: 'ready_for_match', matchId: match.id });
-      p2.send({ type: 'ready_for_match', matchId: match.id });
+      p1.send({ type: 'ready_for_match', matchId: match.id, gameNumber: match.currentGame });
+      p2.send({ type: 'ready_for_match', matchId: match.id, gameNumber: match.currentGame });
       const started = await p1.next('game_start', m => m.matchId === match.id && m.gameNumber === match.currentGame);
       await p2.next('game_start', m => m.matchId === match.id && m.gameNumber === match.currentGame);
       let state = gameId === 'y' ? criarY() : criarEstadoInicial();

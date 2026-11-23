@@ -522,7 +522,7 @@ async function checkArchiveAdministration(browser: Browser): Promise<void> {
             const message = JSON.parse(String(event.data));
             if (message.type === 'welcome') { clearTimeout(timeout); resolve(); }
             if (message.type === 'match_assigned') {
-              socket.send(JSON.stringify({ type: 'ready_for_match', matchId: message.match.id }));
+              socket.send(JSON.stringify({ type: 'ready_for_match', matchId: message.match.id, gameNumber: message.match.currentGame }));
             }
             if (message.type === 'game_start') { started += 1; matchId = message.matchId; }
           };

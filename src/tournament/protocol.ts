@@ -29,7 +29,7 @@ export interface Player {
   isOnline: boolean;
   isBot?: boolean;
   status?: PlayerStatus;
-  reconnectionCode?: string;
+  // Sem código de reconexão: os jogadores difundidos a todos nunca levam códigos.
 }
 
 export type BracketType = 'winners' | 'losers';
@@ -63,7 +63,7 @@ export interface MatchSummary {
   matchNumber?: number;           // Número sequencial da partida (Jogo #1, #2, etc.)
   sourceLabel1?: string;          // "Vencedor do Jogo #X" ou "Vencedor: Maria vs Joana"
   sourceLabel2?: string;          // Idem para jogador 2
-  result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
+  result?: 'normal' | 'bye' | 'forfeit' | null; // 'bye' = isenção; 'forfeit' = vitória por falta
 }
 
 /** Match completo (usado em match_assigned) */
@@ -87,7 +87,9 @@ export interface Match {
   sourceLabel2?: string;          // Idem para jogador 2
   nextMatchIfWin?: number | null;        // Próxima partida se ganhar
   nextMatchIfLose?: number | null;       // Próxima partida se perder (losers bracket)
-  result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
+  result?: 'normal' | 'bye' | 'forfeit' | null; // 'bye' = isenção; 'forfeit' = vitória por falta
+  player1Ready?: boolean;                // Jogador 1 carregou em «Estou pronto» para o jogo atual
+  player2Ready?: boolean;                // Jogador 2 carregou em «Estou pronto» para o jogo atual
 }
 
 /** Estado do torneio conforme CLIENT-INTEGRATION_NEW */
@@ -114,11 +116,15 @@ export interface JoinTournamentMessage {
   playerName: string;
   classId?: string;
   playerId?: string; // Para reconexão
+  /** Identificador aleatório da sessão do cliente (ver RejoinTournamentMessage). */
+  deviceId?: string;
 }
 
 export interface ReadyForMatchMessage {
   type: 'ready_for_match';
   matchId: string;
+  /** Jogo para o qual o aluno está pronto; pedidos sem número (clientes antigos) ou de outro jogo são ignorados. */
+  gameNumber: number;
 }
 
 /** Jogada genérica – o payload depende do jogo */
@@ -136,6 +142,10 @@ export interface LeaveTournamentMessage {
 export interface RejoinTournamentMessage {
   type: 'rejoin_tournament';
   reconnectionCode: string;
+  /** Reentrada automática depois de uma queda: não tira o lugar a outro dispositivo ligado. */
+  auto?: boolean;
+  /** Identificador aleatório da sessão do cliente (o mesmo em todas as reentradas). */
+  deviceId?: string;
 }
 
 export type ClientMessage =
@@ -217,7 +227,7 @@ export interface MatchEndMessage {
   finalScore: MatchScore;
   youWon: boolean;
   nextMatchId?: string;
-  nextBracket?: 'winners' | 'losers' | 'champion' | 'eliminated';
+  nextBracket?: 'winners' | 'losers' | 'champion' | 'eliminated' | 'grandFinalReset';
   eliminatedFromTournament: boolean;
 }
 
@@ -259,6 +269,17 @@ export interface SpectatorGameStateMessage {
   whoseTurn: 'player1' | 'player2' | null;
 }
 
+/** Quem já carregou em «Estou pronto» para o próximo jogo do confronto. */
+export interface ReadyStateMessage {
+  type: 'ready_state';
+  matchId: string;
+  gameNumber: number;
+  player1Ready: boolean;
+  player2Ready: boolean;
+  /** O servidor anulou o «pronto» (pausa ou pedido de outro jogo): o cliente volta a mostrar o botão. */
+  reset?: boolean;
+}
+
 /** Lista de jogos em curso disponíveis para observar */
 export interface ActiveGamesListMessage {
   type: 'active_games_list';
@@ -288,7 +309,8 @@ export type ServerMessage =
   | ErrorMessage
   | InfoMessage
   | SpectatorGameStateMessage
-  | ActiveGamesListMessage;
+  | ActiveGamesListMessage
+  | ReadyStateMessage;
 
 // ============================================================================
 // Helpers para converter entre formatos
