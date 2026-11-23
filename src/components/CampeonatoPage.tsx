@@ -680,11 +680,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   };
 
   const handleNextGame = () => {
-    // Limpa o estado de fim de partida e inicia a próxima
-    setGameJustEnded(false);
-    setLastGameWinnerId(null);
-    setLastGameWinnerRole(null);
-    // Chama ready_for_match para iniciar a próxima partida
+    // O cartão do resultado fica no ecrã (com «✅ Estás pronto!») até o jogo seguinte
+    // começar: game_start limpa o estado de fim de partida.
     handleReadyForMatch();
   };
 
@@ -1668,7 +1665,6 @@ function EliminatedNotice({ onLeave }: { onLeave: () => void }) {
   return (
     <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
       <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">{t('Foste eliminado do campeonato.')}</h2>
-      <p className="[color:var(--tinta)] text-lg mb-4">{t('O campeonato continua. Obrigado por jogares!')}</p>
       <button
         onClick={onLeave}
         className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"

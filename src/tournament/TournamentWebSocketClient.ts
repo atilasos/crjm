@@ -37,6 +37,7 @@ const RECOVERY_ATTEMPT_TIMEOUT_MS = 8000;
 /** Ajustes de tempo (os testes encurtam-nos). */
 export const recoveryTiming = { attemptTimeoutMs: RECOVERY_ATTEMPT_TIMEOUT_MS, maxDelayMs: 10000, baseDelayMs: 1000 };
 const RECOVERY_GAVE_UP = 'Não foi possível voltar a ligar. Carrega em «Reconectar».';
+const LOST_WITHOUT_CODE = 'Ligação perdida. Volta a inscrever-te.';
 
 export class TournamentWebSocketClient implements TournamentClient {
   private _status: ConnectionStatus = 'disconnected';
@@ -58,6 +59,8 @@ export class TournamentWebSocketClient implements TournamentClient {
   private _reconnectionCode: string | null = null;
   /** Código pedido em `rejoin()` antes da confirmação (cobre uma queda antes do `welcome`). */
   private _pendingCode: string | null = null;
+  /** À espera de `welcome` depois de uma reentrada: pedida pelo aluno ou automática. */
+  private _joinMode: 'manual' | 'auto' | null = null;
 
   get status(): ConnectionStatus {
     return this._status;
@@ -80,8 +83,11 @@ export class TournamentWebSocketClient implements TournamentClient {
   }
 
   async connect(serverUrl: string): Promise<void> {
-    // Limpa tentativas anteriores
+    // Limpa tentativas anteriores e um socket anterior (ignorado a partir daqui).
     this.clearReconnectTimeout();
+    const previous = this._ws;
+    this._ws = null;
+    if (previous) { try { previous.close(1000, 'Substituído'); } catch { /* já fechado */ } }
 
     this._serverUrl = serverUrl;
     this._status = 'connecting';
@@ -104,10 +110,16 @@ export class TournamentWebSocketClient implements TournamentClient {
 
         const ws = new WebSocket(wsUrl);
         this._ws = ws;
+        // Um handshake que nunca termina não deixa a página presa em «A ligar…».
+        const handshake = setTimeout(() => {
+          if (this._ws === ws && this._status === 'connecting') ws.close();
+        }, recoveryTiming.attemptTimeoutMs);
 
         ws.onopen = () => {
+          clearTimeout(handshake);
+          if (this._ws !== ws) { ws.close(); reject(new Error('Ligação abandonada')); return; }
           this._status = 'connected';
-          if (this._recovering) {
+          if (this._recovering || this._joinMode) {
             // Socket aberto ainda não é lugar recuperado: o sucesso é o `welcome`.
             this._events.onConnectionStatusChange?.('connecting', 'A voltar a entrar…');
           } else {
@@ -118,6 +130,7 @@ export class TournamentWebSocketClient implements TournamentClient {
         };
 
         ws.onclose = (event) => {
+          clearTimeout(handshake);
           if (this._ws !== ws) return; // socket substituído ou abandonado
           const wasConnected = this._status === 'connected';
           this._status = 'disconnected';
@@ -127,15 +140,21 @@ export class TournamentWebSocketClient implements TournamentClient {
           // 4001: o mesmo aluno entrou noutro dispositivo — não disputar a sessão.
           const replacedElsewhere = event.code === 4001;
           const canRetry = this._reconnectAttempts < this._maxReconnectAttempts;
+          const hasCode = Boolean(this._reconnectionCode ?? this._pendingCode);
+          const dropped = wasConnected || this._recovering || this._joinMode !== null;
           // Continua a tentar enquanto recupera (uma tentativa falhada não põe fim à recuperação).
-          if ((wasConnected || this._recovering) && !replacedElsewhere && this._serverUrl && canRetry) {
+          if (dropped && hasCode && !replacedElsewhere && this._serverUrl && canRetry) {
             this._recovering = true;
             this._events.onConnectionStatusChange?.('connecting', 'Ligação perdida, a reconectar...');
             this.scheduleReconnect();
           } else {
             const gaveUp = this._recovering && !canRetry;
             this._recovering = false;
-            this._events.onConnectionStatusChange?.('disconnected', gaveUp ? RECOVERY_GAVE_UP : (event.reason || undefined));
+            this._joinMode = null;
+            const reason = gaveUp ? RECOVERY_GAVE_UP
+              : (wasConnected && !hasCode && !replacedElsewhere) ? LOST_WITHOUT_CODE
+              : (event.reason || undefined);
+            this._events.onConnectionStatusChange?.('disconnected', reason);
           }
         };
 
@@ -184,6 +203,7 @@ export class TournamentWebSocketClient implements TournamentClient {
     this._serverUrl = null;
     this._reconnectionCode = null;
     this._pendingCode = null;
+    this._joinMode = null;
     this._events.onConnectionStatusChange?.('disconnected');
     // Um cliente desligado não volta a falar com a página (eventos tardios do socket antigo).
     this._events = {};
@@ -195,6 +215,8 @@ export class TournamentWebSocketClient implements TournamentClient {
   async rejoin(serverUrl: string, reconnectionCode: string): Promise<void> {
     const code = reconnectionCode.toUpperCase().trim();
     this._pendingCode = code;
+    this._joinMode = 'manual';
+    this.armAttemptDeadline();
     await this.connect(serverUrl);
     this.send({ type: 'rejoin_tournament', reconnectionCode: code, deviceId: this._deviceId });
   }
@@ -229,15 +251,18 @@ export class TournamentWebSocketClient implements TournamentClient {
   private handleServerMessage(message: ServerMessage): void {
     switch (message.type) {
       case 'welcome': {
-        const recovered = this._recovering;
+        const recovered = this._recovering || this._joinMode === 'auto';
+        const awaited = recovered || this._joinMode !== null;
         this._playerId = message.playerId;
         this._tournamentState = message.tournamentState;
         this._reconnectionCode = message.reconnectionCode;
         this._pendingCode = null;
         this._recovering = false;
+        this._joinMode = null;
         this._reconnectAttempts = 0;
         this.clearAttemptDeadline();
-        if (recovered) this._events.onConnectionStatusChange?.('connected');
+        // Só agora o lugar está recuperado: «ligado» depois do `welcome`, não do socket.
+        if (awaited) this._events.onConnectionStatusChange?.('connected');
         this._events.onMessage?.(message);
         if (recovered) this._events.onMessage?.({ type: 'info', message: 'Reconectado ao servidor!' });
         return;
@@ -249,6 +274,14 @@ export class TournamentWebSocketClient implements TournamentClient {
           // Código recusado que vai ser tentado de novo: não encher o registo de erros.
           if (!willRetry) this._events.onMessage?.(message);
           this.handleRecoveryError(message.code, message.message);
+          return;
+        }
+        if (this._joinMode === 'manual'
+          && (message.code === 'INVALID_CODE' || message.code === 'PLAYER_ELIMINATED')) {
+          // Recusa definitiva da reentrada pedida pelo aluno: avisar e fechar, sem recuperação.
+          this._events.onMessage?.(message);
+          this._pendingCode = null;
+          this.stopRecovery(message.message);
           return;
         }
         if (message.code === 'INVALID_CODE') this._pendingCode = null;
@@ -285,6 +318,7 @@ export class TournamentWebSocketClient implements TournamentClient {
     this.clearReconnectTimeout();
     this.clearAttemptDeadline();
     this._recovering = false;
+    this._joinMode = null;
     this._reconnectAttempts = this._maxReconnectAttempts;
     const ws = this._ws;
     this._ws = null; // o onclose deste socket é ignorado
@@ -303,14 +337,16 @@ export class TournamentWebSocketClient implements TournamentClient {
       if (!this._serverUrl || !this._recovering) return;
       const code = this._reconnectionCode ?? this._pendingCode;
       if (!code) {
-        this.stopRecovery(RECOVERY_GAVE_UP);
+        this.stopRecovery(LOST_WITHOUT_CODE);
         return;
       }
+      this._joinMode = 'auto';
       // Uma tentativa que fica pendurada (handshake ou `welcome` que não chega) é abandonada.
-      this.clearAttemptDeadline();
-      this._attemptDeadline = setTimeout(() => this.abandonAttempt(), recoveryTiming.attemptTimeoutMs);
+      this.armAttemptDeadline();
       try {
         if (this._status !== 'connected') await this.connect(this._serverUrl);
+        // Tentativa entretanto abandonada ou terminada: não enviar por um socket que já não é este.
+        if (!this._recovering || this._status !== 'connected') return;
         // Voltar a ocupar o lugar com o código guardado; o sucesso é o `welcome`.
         this.send({ type: 'rejoin_tournament', reconnectionCode: code, auto: true, deviceId: this._deviceId });
       } catch {
@@ -319,10 +355,17 @@ export class TournamentWebSocketClient implements TournamentClient {
     }, delay);
   }
 
+  private armAttemptDeadline(): void {
+    this.clearAttemptDeadline();
+    this._attemptDeadline = setTimeout(() => this.abandonAttempt(), recoveryTiming.attemptTimeoutMs);
+  }
+
   /** Abandona a tentativa em curso e passa à seguinte (ou desiste no fim do orçamento). */
   private abandonAttempt(): void {
     this._attemptDeadline = null;
-    if (!this._recovering) return;
+    if (!this._recovering && this._joinMode === null) return;
+    // Uma reentrada manual que não responde passa a recuperação automática com o mesmo código.
+    this._recovering = true;
     const ws = this._ws;
     this._ws = null;
     this._status = 'disconnected';

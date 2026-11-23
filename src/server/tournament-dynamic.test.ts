@@ -358,6 +358,26 @@ describe('Dupla eliminação dinâmica — situações de aula', () => {
     }
   });
 
+  test('importar rejeita um ficheiro com um jogo em curso sem tabuleiro', () => {
+    withRandom(seeded(31), () => {
+      const tournament = createTournament('dominorio');
+      for (const name of ['A', 'B']) addPlayer(tournament, name);
+      startTournament(tournament);
+      const match = openMatches(tournament)[0]!;
+      match.phase = 'playing';
+      match.gameState = { tabuleiro: [] };
+      match.whoseTurn = 'player1';
+      const good = JSON.parse(JSON.stringify(exportTournament(tournament)));
+      expect(() => importTournament(good)).not.toThrow();
+      const broken = JSON.parse(JSON.stringify(good));
+      delete broken.winnersMatches[0].gameState;
+      expect(() => importTournament(broken)).toThrow(/sem tabuleiro/);
+      const orphan = JSON.parse(JSON.stringify(good));
+      orphan.winnersMatches[0].player2 = { id: 'desconhecido', name: 'X' };
+      expect(() => importTournament(orphan)).toThrow(/sem os dois jogadores/);
+    });
+  });
+
   test('o export é compacto: sem tabuleiros de confrontos terminados nem dados de ligação', () => {
     const { tournament } = simulate(17, 99);
     const exported = exportTournament(tournament);

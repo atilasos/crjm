@@ -1109,9 +1109,39 @@ export function exportTournament(tournament: Tournament): TournamentExport {
   };
 }
 
+/**
+ * Rejeita ficheiros que deixariam o torneio restaurado num estado impossível de jogar
+ * (validado antes de substituir o torneio em curso ou fechar ligações).
+ */
+function validateExport(data: TournamentExport): void {
+  const fail = (reason: string): never => { throw new Error(`Ficheiro de torneio inválido: ${reason}`); };
+  if (!Array.isArray(data.players) || !Array.isArray(data.winnersMatches) || !Array.isArray(data.losersMatches)) {
+    fail('faltam jogadores ou confrontos');
+  }
+  const playerIds = new Set<string>();
+  for (const player of data.players) {
+    if (!player || typeof player.id !== 'string' || typeof player.reconnectionCode !== 'string') fail('jogador sem id ou código');
+    playerIds.add(player.id);
+  }
+  const matches = [...data.winnersMatches, ...data.losersMatches, data.grandFinal, data.grandFinalReset]
+    .filter((match): match is ExportedMatch => match !== null && match !== undefined);
+  for (const match of matches) {
+    if (match.phase === 'finished') continue;
+    if (!match.player1 || !match.player2 || !playerIds.has(match.player1.id) || !playerIds.has(match.player2.id)) {
+      fail(`confronto #${match.matchNumber} por terminar sem os dois jogadores`);
+    }
+    if (match.phase === 'playing'
+      && (match.gameState === undefined || match.gameState === null
+        || (match.whoseTurn !== 'player1' && match.whoseTurn !== 'player2'))) {
+      fail(`confronto #${match.matchNumber} em jogo sem tabuleiro ou sem vez`);
+    }
+  }
+}
+
 /** Reconstrói um torneio a partir de um export v2. Todos ficam desligados. */
 export function importTournament(data: TournamentExport): Tournament {
   if (data.version !== 2) throw new Error(`Versão de exportação não suportada: ${String((data as { version?: unknown }).version)}`);
+  validateExport(data);
 
   const tournament = createTournament(data.gameId);
   tournament.id = data.id;
