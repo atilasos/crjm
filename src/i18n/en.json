@@ -1890,5 +1890,7 @@
   "Final de desempate": "Grand final reset",
   "Vai haver uma final de desempate!": "There will be a grand final reset!",
   "Foste eliminado do campeonato pelo professor.": "The teacher removed you from the championship.",
-  "O torneio foi restaurado pelo professor. Volta a entrar com o teu código.": "The teacher restored the tournament. Join again with your code."
+  "O torneio foi restaurado pelo professor. A voltar a entrar…": "The teacher restored the tournament. Rejoining…",
+  "Atualiza a página para continuar.": "Refresh the page to continue.",
+  "O campeonato continua. Obrigado por jogares!": "The championship goes on. Thanks for playing!"
 }

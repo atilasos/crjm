@@ -237,13 +237,14 @@ function dispatchMatches(matches: TournamentMatch[]): void {
   }
 }
 
-function readyStateMessage(match: TournamentMatch): ServerMessage {
+function readyStateMessage(match: TournamentMatch, reset = false): ServerMessage {
   return {
     type: 'ready_state',
     matchId: match.id,
     gameNumber: match.currentGame,
     player1Ready: match.player1Ready,
     player2Ready: match.player2Ready,
+    ...(reset ? { reset: true } : {}),
   };
 }
 
@@ -427,7 +428,7 @@ function handleRejoinTournament(
   if (existingSocket) {
     // Fechar socket antigo se ainda existir
     try {
-      existingSocket.close(1000, 'Reconexão de outro dispositivo');
+      existingSocket.close(4001, 'Reconexão de outro dispositivo');
     } catch {
       // Ignorar erros ao fechar socket
     }
@@ -647,9 +648,12 @@ function handleReadyForMatch(
   // Depois de o jogo começar, cliques atrasados são ignorados em silêncio.
   if (match.phase !== 'waiting') return;
 
-  // Pedido atrasado de um jogo anterior: não conta para o próximo; ressincronizar quem clicou.
-  if (gameNumber !== undefined && gameNumber !== match.currentGame) {
-    sendToSocket(socket, readyStateMessage(match));
+  // Pedido sem número (cliente antigo) ou de outro jogo: não conta; ressincronizar quem clicou.
+  if (gameNumber !== match.currentGame) {
+    sendToSocket(socket, readyStateMessage(match, true));
+    if (gameNumber === undefined) {
+      sendToSocket(socket, { type: 'info', message: 'Atualiza a página para continuar.' });
+    }
     return;
   }
 
@@ -1175,7 +1179,7 @@ function notifyOpponentOfPause(tournament: Tournament, pausedMatchId: string | n
       message: `O teu adversário ${playerName} desconectou. O jogo está pausado. A aguardar reconexão...`,
     });
     // A pausa limpou a prontidão de um jogo por começar.
-    if (match.phase === 'waiting') sendToPlayer(opponentId, readyStateMessage(match));
+    if (match.phase === 'waiting') sendToPlayer(opponentId, readyStateMessage(match, true));
   }
   log({
     type: 'match',
@@ -1511,6 +1515,11 @@ async function handleHttpRequest(req: Request): Promise<Response> {
             message: `O teu adversário ${player.name} foi suspenso. O jogo está pausado.`,
           });
         }
+        // A pausa anulou o «pronto» de um jogo por começar: os dois voltam a ver o botão.
+        if (match.phase === 'waiting') {
+          if (match.player1) sendToPlayer(match.player1.id, readyStateMessage(match, true));
+          if (match.player2) sendToPlayer(match.player2.id, readyStateMessage(match, true));
+        }
       }
     }
 
@@ -1628,7 +1637,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
         playerSockets.delete(id);
         stale.data.playerId = null;
         stale.data.tournamentId = null;
-        sendToSocket(stale, { type: 'info', message: 'O torneio foi restaurado pelo professor. Volta a entrar com o teu código.' });
+        sendToSocket(stale, { type: 'info', message: 'O torneio foi restaurado pelo professor. A voltar a entrar…' });
         try { stale.close(4000, 'Torneio restaurado'); } catch { /* já fechado */ }
       }
 

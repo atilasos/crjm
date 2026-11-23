@@ -444,6 +444,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         break;
 
       case 'ready_state':
+        setNextGameNumber(message.gameNumber);
+        if (message.reset) setReadyRequested(false);
         setReadyFlags({
           matchId: message.matchId,
           gameNumber: message.gameNumber,
@@ -604,6 +606,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       gameNumber: nextGameNumber,
     });
   };
+
+  // Confirmado pelo servidor: a partir daqui manda o estado do servidor (uma pausa volta a mostrar o botão).
+  useEffect(() => {
+    if (readyRequested && myReadyConfirmed) setReadyRequested(false);
+  }, [readyRequested, myReadyConfirmed]);
 
   // Se o servidor não confirmar (ex.: ligação perdida), o botão volta passados 6 s.
   useEffect(() => {
@@ -1631,6 +1638,8 @@ function TournamentFinished({ tournamentState, playerId, onNewTournament }: Tour
   const { t, locale } = useTranslation();
   const isChampion = tournamentState.championId === playerId;
   const champion = tournamentState.players.find(p => p.id === tournamentState.championId);
+  // Eliminado com o campeonato ainda a decorrer: não é o ecrã de fim de campeonato.
+  const stillRunning = tournamentState.phase !== 'finished' && !isChampion;
 
   return (
     <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
@@ -1638,8 +1647,11 @@ function TournamentFinished({ tournamentState, playerId, onNewTournament }: Tour
         {t(isChampion ? '🏆' : '🎮')}
       </div>
       <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">
-        {t(isChampion ? 'CAMPEÃO!' : 'Campeonato Terminado')}
+        {t(isChampion ? 'CAMPEÃO!' : stillRunning ? 'Foste eliminado do campeonato.' : 'Campeonato Terminado')}
       </h2>
+      {stillRunning && (
+        <p className="[color:var(--tinta)] text-lg mb-4">{t('O campeonato continua. Obrigado por jogares!')}</p>
+      )}
       {!isChampion && champion && (
         <p className="[color:var(--tinta)] text-lg mb-4">{t("Campeão: ")}<span className="[color:var(--ouro)] font-bold">{champion.name}</span>
         </p>

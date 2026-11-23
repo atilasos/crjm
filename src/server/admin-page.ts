@@ -1737,7 +1737,7 @@ Pedro Costa"></textarea>
     function renderListMatch(match, gameId) {
       const p1 = match.player1 ? match.player1.name : 'TBD';
       const p2 = match.player2 ? match.player2.name : 'TBD';
-      const score = (match.score?.player1Wins || 0) + '-' + (match.score?.player2Wins || 0);
+      const score = (match.score?.player1Wins || 0) + '-' + (match.score?.player2Wins || 0) + (match.result === 'forfeit' ? ' (falta)' : '');
       const p1Winner = match.winnerId === match.player1?.id;
       const p2Winner = match.winnerId === match.player2?.id;
       const showRestartButtons = match.phase === 'playing' || match.phase === 'waiting';

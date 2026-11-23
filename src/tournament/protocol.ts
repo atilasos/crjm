@@ -121,7 +121,7 @@ export interface JoinTournamentMessage {
 export interface ReadyForMatchMessage {
   type: 'ready_for_match';
   matchId: string;
-  /** Jogo para o qual o aluno está pronto; pedidos atrasados de um jogo anterior são ignorados. */
+  /** Jogo para o qual o aluno está pronto; pedidos sem número ou de outro jogo são ignorados. */
   gameNumber?: number;
 }
 
@@ -270,6 +270,8 @@ export interface ReadyStateMessage {
   gameNumber: number;
   player1Ready: boolean;
   player2Ready: boolean;
+  /** O servidor anulou o «pronto» (pausa ou pedido de outro jogo): o cliente volta a mostrar o botão. */
+  reset?: boolean;
 }
 
 /** Lista de jogos em curso disponíveis para observar */

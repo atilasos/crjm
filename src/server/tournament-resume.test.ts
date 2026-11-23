@@ -6,6 +6,7 @@ import type { ClientMessage, ServerMessage } from '../tournament/protocol';
 import type { TournamentExport } from './tournament-engine';
 import { criarEstadoInicial, colocarPeca, getJogadasValidas } from '../games/faisca/logic';
 import { toNetworkFaiscaMove } from '../tournament/game-protocol';
+import { TournamentWebSocketClient } from '../tournament/TournamentWebSocketClient';
 
 /** Real WebSocket client that keeps every message for later assertions. */
 class Participant {
@@ -76,14 +77,20 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
 
     // Um pedido atrasado de outro jogo não conta.
     p1.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 2 });
+    const resync = await p1.next('ready_state');
+    expect(resync.player1Ready).toBe(false);
+    expect(resync.reset).toBe(true);
+    // Sem número de jogo (separador antigo): também não conta, e pede para atualizar.
+    p1.send({ type: 'ready_for_match', matchId: match.id });
     expect((await p1.next('ready_state')).player1Ready).toBe(false);
+    await p1.next('info', m => m.message.includes('Atualiza'));
     // «Pronto» é confirmado a ambos; um clique repetido é confirmado de novo a quem clicou.
     p1.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 1 });
     expect((await p1.next('ready_state')).player1Ready).toBe(true);
     expect((await p2.next('ready_state')).player1Ready).toBe(true);
-    p1.send({ type: 'ready_for_match', matchId: match.id });
+    p1.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 1 });
     expect((await p1.next('ready_state')).player1Ready).toBe(true);
-    p2.send({ type: 'ready_for_match', matchId: match.id });
+    p2.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 1 });
     const started = await p1.next('game_start');
     await p2.next('game_start');
 
@@ -118,6 +125,54 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
     expect(secondMover.messages.some(m => m.type === 'error' && m.code === 'MATCH_NOT_PLAYING')).toBe(false);
   } finally {
     for (const client of sockets) client.socket.close();
+    server.kill();
+    await server.exited;
+    await rm(directory, { recursive: true, force: true });
+  }
+}, 30000);
+
+test('o cliente do aluno volta a entrar sozinho com o código depois de o torneio ser restaurado', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'crjm-autorejoin-'));
+  const reservation = Bun.serve({ port: 0, fetch: () => new Response() });
+  const port = reservation.port!;
+  reservation.stop(true);
+  const base = `http://127.0.0.1:${port}`;
+  const adminKey = crypto.randomUUID();
+  const server = Bun.spawn(['bun', 'src/server/tournament-server.ts'], {
+    env: { ...process.env, PORT: String(port), ADMIN_KEY: adminKey, CLASS_STORE_PATH: join(directory, 'classes.json') },
+    stdout: 'ignore', stderr: 'pipe',
+  });
+  const client = new TournamentWebSocketClient();
+  async function api(path: string, body?: unknown) {
+    const response = await fetch(`${base}/api/${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: { Authorization: `Bearer ${adminKey}`, 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    expect(response.ok).toBe(true);
+    return response.json();
+  }
+  try {
+    for (let i = 0; i < 100; i++) {
+      try { if ((await fetch(`${base}/api/tournaments`, { headers: { Authorization: `Bearer ${adminKey}` } })).ok) break; } catch {}
+      await Bun.sleep(20);
+    }
+    const created = await api('tournaments/faisca/create-with-players', { players: [{ name: 'Ana' }, { name: 'Beto' }] });
+    const welcomes: string[] = [];
+    client.setEventHandlers({ onMessage: message => { if (message.type === 'welcome') welcomes.push(message.playerId); } });
+    await client.rejoin(base, created.players[0].reconnectionCode);
+    for (let i = 0; i < 100 && welcomes.length < 1; i++) await Bun.sleep(20);
+    expect(welcomes).toEqual([created.players[0].id]);
+
+    const snapshot = await api('tournaments/faisca/export');
+    await api('tournaments/faisca/import', snapshot);
+    // O servidor fecha a ligação antiga; o cliente religa e reenvia o código sozinho.
+    for (let i = 0; i < 200 && welcomes.length < 2; i++) await Bun.sleep(20);
+    expect(welcomes).toEqual([created.players[0].id, created.players[0].id]);
+    const state = await api('tournaments');
+    expect(state[0].players.find((p: { id: string }) => p.id === created.players[0].id).isConnected).toBe(true);
+  } finally {
+    client.disconnect();
     server.kill();
     await server.exited;
     await rm(directory, { recursive: true, force: true });

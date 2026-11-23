@@ -85,7 +85,9 @@ export class TournamentWebSocketClient implements TournamentClient {
           this._status = 'disconnected';
           this._ws = null;
           
-          if (wasConnected && this._reconnectAttempts < this._maxReconnectAttempts) {
+          // 4001: o mesmo aluno entrou noutro dispositivo — não disputar a sessão.
+          const replacedElsewhere = event.code === 4001;
+          if (wasConnected && !replacedElsewhere && this._reconnectAttempts < this._maxReconnectAttempts) {
             // Tentar reconectar
             this._events.onConnectionStatusChange?.('connecting', 'Ligação perdida, a reconectar...');
             this.scheduleReconnect();
@@ -200,9 +202,12 @@ export class TournamentWebSocketClient implements TournamentClient {
       if (this._serverUrl && this._status !== 'connected') {
         try {
           await this.connect(this._serverUrl);
-          
-          // Se tinha um playerId, tenta re-juntar (o servidor pode ter guardado a sessão)
-          // Isto depende da implementação do servidor
+
+          // Voltar a ocupar o lugar no torneio com o código guardado (rede instável,
+          // reinício do servidor ou torneio restaurado pelo professor).
+          if (this._reconnectionCode) {
+            this.send({ type: 'rejoin_tournament', reconnectionCode: this._reconnectionCode });
+          }
           this._events.onMessage?.({
             type: 'info',
             message: 'Reconectado ao servidor!',

@@ -1160,8 +1160,9 @@ export function importTournament(data: TournamentExport): Tournament {
       whoStartsCurrentGame: m.whoStartsCurrentGame,
       phase: m.phase,
       winnerId: m.winnerId,
-      player1Ready: m.player1Ready ?? false,
-      player2Ready: m.player2Ready ?? false,
+      // Depois de restaurar, cada aluno confirma de novo que está pronto.
+      player1Ready: false,
+      player2Ready: false,
       gameState: m.gameState ?? null,
       whoseTurn: m.whoseTurn ?? null,
       moves: (m.moves ?? []).map(entry => ({
