@@ -70,6 +70,15 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
     for (const [id, code] of codes) clients.set(id, await rejoin(code));
     await api('tournaments/faisca/start', {});
 
+    // Nenhum aluno recebe os códigos dos colegas (só o seu, no welcome).
+    const leak = [...clients.values()].flatMap(client => client.messages)
+      .filter(m => m.type === 'tournament_state_update' || m.type === 'welcome')
+      .flatMap(m => ('tournamentState' in m ? m.tournamentState.players : m.players))
+      .filter(player => player.reconnectionCode !== undefined);
+    expect(leak).toEqual([]);
+    const adminView = await api('tournaments');
+    expect(adminView[0].players.every((player: { reconnectionCode?: string }) => typeof player.reconnectionCode === 'string')).toBe(true);
+
     const assigned = await [...clients.values()][0]!.next('match_assigned');
     const match = assigned.match;
     const p1 = clients.get(match.player1!.id)!;

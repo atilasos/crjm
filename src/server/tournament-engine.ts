@@ -727,7 +727,8 @@ export function toTournamentState(tournament: Tournament): TournamentState {
       classId: p.classId,
       isOnline: p.isConnected,
       status: p.status,
-      reconnectionCode: p.reconnectionCode,
+      // Sem códigos de reconexão: este estado vai para todos os alunos. Cada um recebe só
+      // o seu (welcome); o professor vê-os na lista autenticada de /api/tournaments.
     })),
     winnersMatches: tournament.winnersMatches.map(toProtocolMatch),
     losersMatches: tournament.losersMatches.map(toProtocolMatch),
