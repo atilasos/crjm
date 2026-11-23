@@ -1381,7 +1381,8 @@ Pedro Costa"></textarea>
       if (state?.championId && serverStandings) {
         positionedPlayers.clear();
         for (const entry of serverStandings) {
-          if (entry.rank <= 5) positionedPlayers.set(entry.playerId, entry.rank);
+          // Todos os lugares (numa turma de 17, do 1.º ao 17.º); os 5 primeiros mantêm o destaque.
+          positionedPlayers.set(entry.playerId, entry.rank);
         }
       } else if (state?.championId) {
         const remainingEliminated = eliminationOrder

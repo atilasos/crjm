@@ -1897,5 +1897,6 @@
   "Não foi possível voltar a ligar. Carrega em «Reconectar».": "Could not reconnect. Press «Reconnect».",
   "A voltar a entrar…": "Rejoining…",
   "Ligação perdida. Volta a inscrever-te.": "Connection lost. Sign up again.",
-  "Não foi possível ligar ao servidor. Confirma o endereço.": "Could not reach the server. Check the address."
+  "Não foi possível ligar ao servidor. Confirma o endereço.": "Could not reach the server. Check the address.",
+  "📶 A voltar a ligar… Espera um pouco.": "📶 Reconnecting… Please wait a moment."
 }

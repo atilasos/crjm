@@ -123,6 +123,7 @@ function normalizeTournamentState(raw: any | null | undefined): TournamentState 
 }
 
 export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
+  const { t } = useTranslation();
   // Estado de conexão
   const [serverUrl, setServerUrl] = useState(DEFAULT_TOURNAMENT_SERVER_URL);
   const [useMockServer, setUseMockServer] = useState(false); // Default to real server with preset
@@ -626,7 +627,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   const handleReadyForMatch = () => {
     // Um só pedido por jogo: o botão desaparece logo ao primeiro clique.
-    if (!currentMatch || !clientRef.current || readyRequested || myReadyConfirmed) return;
+    if (!currentMatch || !clientRef.current || readyRequested || myReadyConfirmed || connectionStatus !== 'connected') return;
     setReadyRequested(true);
     clientRef.current.send({
       type: 'ready_for_match',
@@ -648,7 +649,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   }, [readyRequested, myReadyConfirmed]);
 
   const handleMove = (move: unknown) => {
-    if (!currentMatch || !clientRef.current || !isMyTurn) return;
+    // Sem lugar recuperado, uma jogada não chegaria ao servidor.
+    if (!currentMatch || !clientRef.current || !isMyTurn || connectionStatus !== 'connected') return;
 
     // Ignorar previews (usados apenas para visualização, não são jogadas reais)
     if (move && typeof move === 'object' && (move as any).isPreview) return;
@@ -763,8 +765,16 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                 />
               )}
 
+              {phase === 'match' && currentMatch && connectionStatus !== 'connected' && (
+                // Visível no próprio confronto (o indicador de ligação pode estar fora do ecrã no telemóvel).
+                <div role="status" aria-live="polite" className="mb-3 rounded-lg border p-3 text-center font-medium [border-color:var(--ouro)] [color:var(--tinta)]">
+                  {t('📶 A voltar a ligar… Espera um pouco.')}
+                </div>
+              )}
+
               {phase === 'match' && currentMatch && (
                 <MatchArea
+                  reconnecting={connectionStatus !== 'connected'}
                   match={currentMatch}
                   myRole={myRole}
                   isMyTurn={isMyTurn}
@@ -1411,6 +1421,8 @@ interface MatchAreaProps {
   lastGameWinnerRole: 'player1' | 'player2' | null;
   playerId: string | null;
   onReady: () => void;
+  /** Ligação a recuperar: o confronto fica visível mas sem interação. */
+  reconnecting: boolean;
   iAmReady: boolean;
   opponentReady: boolean;
   opponentOnline: boolean;
@@ -1418,7 +1430,7 @@ interface MatchAreaProps {
   onNextGame: () => void;
 }
 
-function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, iAmReady, opponentReady, opponentOnline, onMove, onNextGame }: MatchAreaProps) {
+function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, reconnecting, iAmReady, opponentReady, opponentOnline, onMove, onNextGame }: MatchAreaProps) {
   const { t, msg, locale } = useTranslation();
   // IMPORTANTE: myRole é o SEAT fixo no match (player1 ou player2), definido em match_assigned
   // O seat NUNCA muda durante o match. O que muda é apenas quem joga como Gatos/Cães.
@@ -1465,7 +1477,11 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
   const matchContinues = myScore < maxWins && opponentScore < maxWins;
 
   return (
-    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)]">
+    <div
+      inert={reconnecting || undefined}
+      aria-busy={reconnecting || undefined}
+      className={`rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] ${reconnecting ? 'opacity-50' : ''}`}
+    >
       {/* Header do match */}
       <div className="text-center mb-6">
         <div className="inline-block px-3 py-1 rounded-full border [border-color:var(--ouro)] [color:var(--tinta-suave)] text-sm mb-3">
