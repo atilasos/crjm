@@ -1882,5 +1882,9 @@
   "Jogo desconhecido:": "अज्ञात खेल:",
   "Grande Final": "महाफाइनल",
   "Final Reset": "महाफाइनल पुनः",
-  "Ronda": "चरण"
+  "Ronda": "चरण",
+  "✅ Estás pronto!": "✅ तिमी तयार छौ!",
+  "À espera de {0}…": "{0} लाई पर्खँदै…",
+  "{0} já está pronto! Carrega no botão para começar.": "{0} तयार छ! सुरु गर्न बटन थिच।",
+  "{0} está desligado. O jogo começa quando voltar.": "{0} अफलाइन छ। फर्केपछि खेल सुरु हुन्छ।"
 }

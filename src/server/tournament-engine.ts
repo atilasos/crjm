@@ -1,18 +1,28 @@
 /**
- * Motor de torneios com dupla eliminação.
- * 
- * Suporta:
- * - Qualquer número de jogadores (ímpar, primo, etc.)
- * - Byes automáticos quando necessário
- * - Winners e Losers brackets
- * - Grand Final com possível reset
- * - Confrontos melhor de 3
+ * Motor de torneios com dupla eliminação dinâmica.
+ *
+ * Em vez de pré-planear uma árvore de potência de 2 (que deixava jogadores
+ * parados ou bloqueava a chave para tamanhos como 5, 6, 17…), os confrontos
+ * são criados à medida que os jogadores ficam livres:
+ *
+ * - Winners: só joga quem tem 0 derrotas, sempre contra alguém do mesmo nível
+ *   (mesmo número de vitórias na winners), como numa chave clássica. Um
+ *   jogador sozinho num nível sobe por isenção quando já ninguém o pode
+ *   alcançar.
+ * - Losers: quem tem 1 derrota joga logo que haja outro jogador livre com 1
+ *   derrota (preferindo não repetir adversários e níveis semelhantes).
+ * - Final: campeão da winners contra campeão da losers, com reset se o
+ *   campeão da losers ganhar.
+ * - Cada confronto é à melhor de 3, alternando quem começa.
+ *
+ * Invariantes: cada confronto termina com exatamente uma derrota; um jogador
+ * é eliminado à segunda derrota; o número total de confrontos é 2n−2 (ou
+ * 2n−1 com reset), independentemente da ordem dos emparelhamentos.
  */
 
 import type {
   Player,
   Match,
-  MatchScore,
   TournamentState,
   TournamentPhase,
   BracketType,
@@ -29,33 +39,57 @@ export interface TournamentPlayer extends Omit<Player, 'isOnline'> {
   losses: number; // 0, 1 ou 2 (eliminado)
   isConnected: boolean;
   socketId: string | null;
-  // Campos para reconexão
   reconnectionCode: string;           // Código único 6 caracteres (ex: ABC234)
-  status: PlayerStatus;               // Estado do jogador
-  suspendedAt: Date | null;           // Quando foi suspenso
-  suspendedMatchId: string | null;    // Match pausado (se houver)
+  status: PlayerStatus;
+  suspendedAt: Date | null;
+  suspendedMatchId: string | null;
+  /** Nível na winners (1 + vitórias/isenções na winners). */
+  winnersLevel: number;
+  /** Vitórias na losers. */
+  losersWins: number;
+  /** Isenções recebidas na winners. */
+  byes: number;
+  /** Desde quando está livre à espera de adversário (null se a jogar/eliminado). */
+  freeSince: Date | null;
+  /** Ordem de eliminação (1 = primeiro eliminado). */
+  eliminationOrder: number | null;
+  /** Sorteio inicial, usado como desempate estável. */
+  drawOrder: number;
+}
+
+/** Registo compacto de um jogo terminado dentro de um confronto. */
+export interface GameRecord {
+  number: number;
+  starter: 'player1' | 'player2';
+  winner: 'player1' | 'player2';
+  startedAt: Date | null;
+  endedAt: Date;
+  moves: unknown[];
 }
 
 export interface TournamentMatch extends Match {
-  // Estado interno adicional
   player1Ready: boolean;
   player2Ready: boolean;
   gameState: unknown | null;
   whoseTurn: 'player1' | 'player2' | null;
+  /** Jogadas do jogo em curso. */
   moves: Array<{ playerId: string; move: unknown; timestamp: Date }>;
-  // Campos para pausa por desconexão
+  /** Histórico dos jogos já terminados deste confronto. */
+  games: GameRecord[];
+  gameStartedAt: Date | null;
+  createdAt: Date;
+  finishedAt: Date | null;
   isPaused: boolean;
   pausedAt: Date | null;
   pausedByPlayerId: string | null;
-  // Campos para brackets pré-planeados (herdados de Match, mas declarados explicitamente)
-  matchNumber: number;            // Número sequencial da partida
-  sourceMatch1: number | null;    // Partida de origem do jogador 1
-  sourceMatch2: number | null;    // Partida de origem do jogador 2
-  sourceLabel1: string;           // "Vencedor do Jogo #X" ou nome do jogador
-  sourceLabel2: string;           // Idem para jogador 2
-  nextMatchIfWin: number | null;  // Próxima partida se ganhar
-  nextMatchIfLose: number | null; // Próxima partida se perder (winners bracket)
-  result: 'normal' | 'bye' | null; // null=não terminado, 'bye'=vitória automática
+  matchNumber: number;
+  sourceMatch1: number | null;
+  sourceMatch2: number | null;
+  sourceLabel1: string;
+  sourceLabel2: string;
+  nextMatchIfWin: number | null;
+  nextMatchIfLose: number | null;
+  result: 'normal' | 'bye' | null; // 'bye' = vitória por falta/eliminação
 }
 
 export interface Tournament {
@@ -72,24 +106,16 @@ export interface Tournament {
   startedAt: Date | null;
   finishedAt: Date | null;
 
-  // Índices para lookup rápido
   playerById: Map<string, TournamentPlayer>;
   matchById: Map<string, TournamentMatch>;
-  playerByCode: Map<string, TournamentPlayer>; // Índice por código de reconexão
+  playerByCode: Map<string, TournamentPlayer>;
 
-  // Rastreia jogadores a aguardar próximo match em cada bracket
+  /** Jogadores livres à espera, por chave (derivado; atualizado pelo escalonador). */
   winnersWaiting: string[];
   losersWaiting: string[];
 
-  // Contadores de rondas
-  winnersRound: number;
-  losersRound: number;
-
-  // Contador para numeração de matches (pré-planeamento)
   nextMatchNumber: number;
-
-  // Mapa de matchNumber para match (lookup rápido)
-  matchByNumber: Map<number, TournamentMatch>;
+  eliminationCounter: number;
 }
 
 // ============================================================================
@@ -105,15 +131,11 @@ function generateId(): string {
  * Exclui caracteres confusos (O, I, 0, 1).
  */
 function generateReconnectionCode(): string {
-  const letters = 'ABCDEFGHJKMNPQRSTUVWXYZ'; // Sem O, I
-  const numbers = '23456789';                 // Sem 0, 1
+  const letters = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const numbers = '23456789';
   let code = '';
-  for (let i = 0; i < 3; i++) {
-    code += letters[Math.floor(Math.random() * letters.length)];
-  }
-  for (let i = 0; i < 3; i++) {
-    code += numbers[Math.floor(Math.random() * numbers.length)];
-  }
+  for (let i = 0; i < 3; i++) code += letters[Math.floor(Math.random() * letters.length)];
+  for (let i = 0; i < 3; i++) code += numbers[Math.floor(Math.random() * numbers.length)];
   return code;
 }
 
@@ -121,22 +143,31 @@ function shuffle<T>(array: T[]): T[] {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
-    const left = result.slice(i, i + 1);
-    const right = result.slice(j, j + 1);
-    result.splice(i, 1, ...right);
-    result.splice(j, 1, ...left);
+    [result[i], result[j]] = [result[j]!, result[i]!];
   }
   return result;
 }
 
+function allMatches(tournament: Tournament): TournamentMatch[] {
+  return [
+    ...tournament.winnersMatches,
+    ...tournament.losersMatches,
+    ...(tournament.grandFinal ? [tournament.grandFinal] : []),
+    ...(tournament.grandFinalReset ? [tournament.grandFinalReset] : []),
+  ];
+}
+
+function playerInfo(player: TournamentPlayer) {
+  return { id: player.id, name: player.name, classId: player.classId };
+}
+
 // ============================================================================
-// Criação de torneio
+// Criação de torneio e jogadores
 // ============================================================================
 
 export function createTournament(gameId: GameId): Tournament {
-  const id = generateId();
   return {
-    id,
+    id: generateId(),
     gameId,
     phase: 'registration',
     players: [],
@@ -153,16 +184,10 @@ export function createTournament(gameId: GameId): Tournament {
     playerByCode: new Map(),
     winnersWaiting: [],
     losersWaiting: [],
-    winnersRound: 1,
-    losersRound: 1,
     nextMatchNumber: 1,
-    matchByNumber: new Map(),
+    eliminationCounter: 0,
   };
 }
-
-// ============================================================================
-// Gestão de jogadores
-// ============================================================================
 
 export function addPlayer(
   tournament: Tournament,
@@ -170,11 +195,8 @@ export function addPlayer(
   classId?: string,
   socketId?: string
 ): TournamentPlayer | null {
-  if (tournament.phase !== 'registration') {
-    return null;
-  }
+  if (tournament.phase !== 'registration') return null;
 
-  // Gera código único (verifica colisões)
   let reconnectionCode: string;
   do {
     reconnectionCode = generateReconnectionCode();
@@ -191,26 +213,26 @@ export function addPlayer(
     status: 'active',
     suspendedAt: null,
     suspendedMatchId: null,
+    winnersLevel: 1,
+    losersWins: 0,
+    byes: 0,
+    freeSince: null,
+    eliminationOrder: null,
+    drawOrder: tournament.players.length,
   };
 
   tournament.players.push(player);
   tournament.playerById.set(player.id, player);
   tournament.playerByCode.set(reconnectionCode, player);
-
   return player;
 }
 
 export function removePlayer(tournament: Tournament, playerId: string): boolean {
-  if (tournament.phase !== 'registration') {
-    return false;
-  }
-
+  if (tournament.phase !== 'registration') return false;
   const player = tournament.playerById.get(playerId);
   if (!player) return false;
-
   const index = tournament.players.findIndex(p => p.id === playerId);
   if (index === -1) return false;
-
   tournament.players.splice(index, 1);
   tournament.playerById.delete(playerId);
   tournament.playerByCode.delete(player.reconnectionCode);
@@ -224,43 +246,28 @@ export function updatePlayerConnection(
   socketId?: string
 ): void {
   const player = tournament.playerById.get(playerId);
-  if (player) {
-    player.isConnected = isConnected;
-    if (socketId !== undefined) {
-      player.socketId = socketId;
-    }
-  }
+  if (!player) return;
+  player.isConnected = isConnected;
+  if (socketId !== undefined) player.socketId = socketId;
 }
 
 // ============================================================================
-// Criação de matches
+// Criação de confrontos
 // ============================================================================
 
-interface CreateMatchOptions {
-  bracket: BracketType | 'grandFinal' | 'grandFinalReset';
-  round: number;
-  matchNumber: number;
-  player1?: TournamentPlayer | null;
-  player2?: TournamentPlayer | null;
-  sourceMatch1?: number | null;
-  sourceMatch2?: number | null;
-  sourceLabel1?: string;
-  sourceLabel2?: string;
-  nextMatchIfWin?: number | null;
-  nextMatchIfLose?: number | null;
-}
-
-function createMatch(opts: CreateMatchOptions): TournamentMatch {
-  const actualBracket: BracketType = opts.bracket === 'grandFinal' || opts.bracket === 'grandFinalReset'
-    ? 'winners'
-    : opts.bracket;
-
-  return {
+function createMatch(
+  tournament: Tournament,
+  bracket: BracketType | 'grandFinal' | 'grandFinalReset',
+  round: number,
+  first: TournamentPlayer,
+  second: TournamentPlayer,
+): TournamentMatch {
+  const match: TournamentMatch = {
     id: generateId(),
-    round: opts.round,
-    bracket: actualBracket,
-    player1: opts.player1 ? { id: opts.player1.id, name: opts.player1.name, classId: opts.player1.classId } : null,
-    player2: opts.player2 ? { id: opts.player2.id, name: opts.player2.name, classId: opts.player2.classId } : null,
+    round,
+    bracket: bracket === 'grandFinal' || bracket === 'grandFinalReset' ? 'winners' : bracket,
+    player1: playerInfo(first),
+    player2: playerInfo(second),
     score: { player1Wins: 0, player2Wins: 0 },
     bestOf: 3,
     currentGame: 1,
@@ -272,674 +279,200 @@ function createMatch(opts: CreateMatchOptions): TournamentMatch {
     gameState: null,
     whoseTurn: null,
     moves: [],
+    games: [],
+    gameStartedAt: null,
+    createdAt: new Date(),
+    finishedAt: null,
     isPaused: false,
     pausedAt: null,
     pausedByPlayerId: null,
-    // Campos para brackets pré-planeados
-    matchNumber: opts.matchNumber,
-    sourceMatch1: opts.sourceMatch1 ?? null,
-    sourceMatch2: opts.sourceMatch2 ?? null,
-    sourceLabel1: opts.sourceLabel1 ?? (opts.player1?.name ?? 'TBD'),
-    sourceLabel2: opts.sourceLabel2 ?? (opts.player2?.name ?? 'TBD'),
-    nextMatchIfWin: opts.nextMatchIfWin ?? null,
-    nextMatchIfLose: opts.nextMatchIfLose ?? null,
+    matchNumber: tournament.nextMatchNumber++,
+    sourceMatch1: null,
+    sourceMatch2: null,
+    sourceLabel1: first.name,
+    sourceLabel2: second.name,
+    nextMatchIfWin: null,
+    nextMatchIfLose: null,
     result: null,
   };
+
+  tournament.matchById.set(match.id, match);
+  if (bracket === 'grandFinal') tournament.grandFinal = match;
+  else if (bracket === 'grandFinalReset') tournament.grandFinalReset = match;
+  else if (bracket === 'winners') tournament.winnersMatches.push(match);
+  else tournament.losersMatches.push(match);
+
+  first.freeSince = null;
+  second.freeSince = null;
+  return match;
+}
+
+/** Sorteia quem fica como player1 (começa o jogo 1). */
+function createPairing(
+  tournament: Tournament,
+  bracket: BracketType,
+  round: number,
+  a: TournamentPlayer,
+  b: TournamentPlayer,
+): TournamentMatch {
+  return Math.random() < 0.5
+    ? createMatch(tournament, bracket, round, a, b)
+    : createMatch(tournament, bracket, round, b, a);
 }
 
 // ============================================================================
-// Pré-planeamento de brackets (Double Elimination)
+// Escalonador dinâmico
 // ============================================================================
 
+function busyPlayerIds(tournament: Tournament): Set<string> {
+  const busy = new Set<string>();
+  for (const match of allMatches(tournament)) {
+    if (match.phase === 'finished') continue;
+    if (match.player1) busy.add(match.player1.id);
+    if (match.player2) busy.add(match.player2.id);
+  }
+  return busy;
+}
+
+/** Pode ser emparelhado agora (ligado e não suspenso). */
+function isPairable(player: TournamentPlayer): boolean {
+  return player.status === 'active' && player.isConnected;
+}
+
+function byWaitingTime(a: TournamentPlayer, b: TournamentPlayer): number {
+  const ta = a.freeSince?.getTime() ?? 0;
+  const tb = b.freeSince?.getTime() ?? 0;
+  return ta - tb || a.drawOrder - b.drawOrder;
+}
+
+function timesPlayed(tournament: Tournament, a: string, b: string): number {
+  let count = 0;
+  for (const match of allMatches(tournament)) {
+    const ids = [match.player1?.id, match.player2?.id];
+    if (ids.includes(a) && ids.includes(b)) count++;
+  }
+  return count;
+}
+
+function finishTournament(tournament: Tournament, championId: string | null): void {
+  tournament.championId = championId;
+  tournament.phase = 'finished';
+  tournament.finishedAt = new Date();
+  for (const player of tournament.players) player.freeSince = null;
+  tournament.winnersWaiting = [];
+  tournament.losersWaiting = [];
+}
+
+function eliminate(tournament: Tournament, player: TournamentPlayer): void {
+  if (player.status === 'eliminated' && player.eliminationOrder !== null) return;
+  player.status = 'eliminated';
+  player.losses = Math.max(player.losses, 2);
+  player.freeSince = null;
+  player.suspendedMatchId = null;
+  player.eliminationOrder = ++tournament.eliminationCounter;
+}
+
 /**
- * Pré-planeia todas as partidas de um torneio de dupla eliminação.
- * Cria a estrutura completa do bracket desde o início.
+ * Cria todos os confrontos possíveis neste momento e devolve os novos.
+ * Idempotente: chamar sem alterações de estado não cria nada.
  */
-function planBracket(tournament: Tournament): void {
-  const players = shuffle([...tournament.players]);
-  const n = players.length;
-
-  if (n < 2) return;
-
-  // Calcular tamanho do bracket (próxima potência de 2)
-  const bracketSize = Math.pow(2, Math.ceil(Math.log2(n)));
-  const numByes = bracketSize - n;
-  const winnersRounds = Math.log2(bracketSize);
-
-  // Distribuir byes aleatoriamente
-  const playersWithByes: (TournamentPlayer | null)[] = [...players];
-  for (let i = 0; i < numByes; i++) {
-    // Inserir byes em posições intercaladas para distribuição justa
-    playersWithByes.push(null);
+export function scheduleMatches(tournament: Tournament): TournamentMatch[] {
+  const created: TournamentMatch[] = [];
+  if (tournament.phase !== 'running') return created;
+  // Durante a final só os dois finalistas estão em prova.
+  if (tournament.grandFinal) {
+    refreshWaitingLists(tournament);
+    return created;
   }
 
-  // Reorganizar para que byes fiquem distribuídos (não todos no fim)
-  const seededPlayers = seedPlayersWithByes(playersWithByes, bracketSize);
+  for (let guard = 0; guard < 10_000; guard++) {
+    const busy = busyPlayerIds(tournament);
+    const active = tournament.players.filter(p => p.status !== 'eliminated');
+    const winners = active.filter(p => p.losses === 0);
+    const losers = active.filter(p => p.losses === 1);
+    const isFree = (p: TournamentPlayer) => !busy.has(p.id);
 
-  let matchNumber = 1;
-  const allMatches: TournamentMatch[] = [];
-
-  // Mapa para rastrear qual match alimenta qual
-  const winnersMatchesByRound: TournamentMatch[][] = [];
-  const losersMatchesByRound: TournamentMatch[][] = [];
-
-  // ========================================
-  // WINNERS BRACKET
-  // ========================================
-
-  // Ronda 1 do Winners
-  const winnersR1: TournamentMatch[] = [];
-  for (let i = 0; i < seededPlayers.length; i += 2) {
-    const p1 = seededPlayers[i];
-    const p2 = seededPlayers[i + 1];
-
-    // Se ambos são bye, não criar match (não deveria acontecer com seeding correto)
-    if (!p1 && !p2) continue;
-
-    const match = createMatch({
-      bracket: 'winners',
-      round: 1,
-      matchNumber: matchNumber++,
-      player1: p1,
-      player2: p2,
-      sourceLabel1: p1?.name ?? 'BYE',
-      sourceLabel2: p2?.name ?? 'BYE',
-    });
-
-    // Se um jogador tem bye, o match é automaticamente resolvido
-    if (!p1 || !p2) {
-      const winner = p1 || p2;
-      match.winnerId = winner!.id;
-      match.phase = 'finished';
-      match.result = 'bye';
-      match.score = p1 ? { player1Wins: 2, player2Wins: 0 } : { player1Wins: 0, player2Wins: 2 };
+    // Fim por falta de adversários (ex.: eliminações administrativas).
+    if (active.length <= 1 && busy.size === 0) {
+      finishTournament(tournament, active[0]?.id ?? null);
+      return created;
     }
 
-    winnersR1.push(match);
-    allMatches.push(match);
-  }
-  winnersMatchesByRound.push(winnersR1);
-
-  // Rondas seguintes do Winners (R2 até final do winners)
-  for (let round = 2; round <= winnersRounds; round++) {
-    const prevRoundMatches = winnersMatchesByRound[round - 2];
-    if (prevRoundMatches === undefined) throw new TypeError('Previous winners round is missing.');
-    const thisRound: TournamentMatch[] = [];
-
-    for (let i = 0; i < prevRoundMatches.length; i += 2) {
-      const source1 = prevRoundMatches[i];
-      const source2 = prevRoundMatches[i + 1];
-
-      const match = createMatch({
-        bracket: 'winners',
-        round,
-        matchNumber: matchNumber++,
-        sourceMatch1: source1?.matchNumber ?? null,
-        sourceMatch2: source2?.matchNumber ?? null,
-        sourceLabel1: `Vencedor do Jogo #${source1?.matchNumber}`,
-        sourceLabel2: source2 ? `Vencedor do Jogo #${source2.matchNumber}` : 'BYE',
-      });
-
-      thisRound.push(match);
-      allMatches.push(match);
-
-      // Configurar nextMatchIfWin dos matches anteriores
-      if (source1) source1.nextMatchIfWin = match.matchNumber;
-      if (source2) source2.nextMatchIfWin = match.matchNumber;
-    }
-    winnersMatchesByRound.push(thisRound);
-  }
-
-  // ========================================
-  // LOSERS BRACKET
-  // ========================================
-
-  // O losers bracket recebe perdedores do winners em diferentes pontos
-  // Ronda 1 do Losers: perdedores do Winners R1
-  // Ronda 2 do Losers: vencedores de Losers R1 vs perdedores do Winners R2
-  // etc.
-
-  // Losers R1: perdedores do Winners R1 (apenas se houver pelo menos 2 matches no Winners R1)
-  // Rastrear match ímpar do Winners R1 (sem par no Losers R1)
-  let oddWinnersR1Match: TournamentMatch | null = null;
-
-  if (winnersR1.length >= 2) {
-    const losersR1: TournamentMatch[] = [];
-    const winnersR1Matches = winnersR1.filter(m => m.result !== 'bye');
-
-    for (let i = 0; i < winnersR1Matches.length; i += 2) {
-      const source1 = winnersR1Matches[i];
-      const source2 = winnersR1Matches[i + 1];
-
-      if (!source2) {
-        // Número ímpar de matches - rastrear para configurar nextMatchIfLose depois
-        if (source1 === undefined) throw new TypeError('Winners match is missing.');
-        oddWinnersR1Match = source1;
-        continue;
-      }
-
-      const match = createMatch({
-        bracket: 'losers',
-        round: 1,
-        matchNumber: matchNumber++,
-        sourceMatch1: source1?.matchNumber ?? null,
-        sourceMatch2: source2?.matchNumber ?? null,
-        sourceLabel1: `Perdedor do Jogo #${source1?.matchNumber}`,
-        sourceLabel2: `Perdedor do Jogo #${source2?.matchNumber}`,
-      });
-
-      losersR1.push(match);
-      allMatches.push(match);
-
-      // Configurar nextMatchIfLose dos matches do Winners R1
-      if (source1) source1.nextMatchIfLose = match.matchNumber;
-      if (source2) source2.nextMatchIfLose = match.matchNumber;
-    }
-    if (losersR1.length > 0) {
-      losersMatchesByRound.push(losersR1);
-    }
-  }
-
-  // Rondas seguintes do Losers
-  // Padrão alternado: ronda de consolidação (losers vs losers) + ronda mista (perdedor winners entra)
-  let losersRound = losersMatchesByRound.length > 0 ? 2 : 1;
-  let winnersRoundForDropdown = 2; // Começa a receber perdedores do Winners R2
-
-  while (winnersRoundForDropdown <= winnersRounds || losersMatchesByRound.length > 0) {
-    // Ronda de entrada de perdedores do Winners
-    const winnersDropping = winnersMatchesByRound[winnersRoundForDropdown - 1];
-    if (winnersRoundForDropdown <= winnersRounds && winnersDropping) {
-      const prevLosersMatches = losersMatchesByRound[losersMatchesByRound.length - 1] || [];
-      const thisRound: TournamentMatch[] = [];
-
-      // Emparelhar perdedores do winners com vencedores do losers
-      const numMatchesNeeded = Math.max(winnersDropping.length, prevLosersMatches.length);
-
-      for (let i = 0; i < numMatchesNeeded; i++) {
-        const winnersDrop = winnersDropping[i];
-        const losersAdvance = prevLosersMatches[i];
-
-        if (!winnersDrop && !losersAdvance && !oddWinnersR1Match) continue; // Only skip if absolutely no source
-
-        // Se não há losersAdvance mas há oddWinnersR1Match, usar o perdedor desse match
-        const oddMatchAsSource = !losersAdvance && oddWinnersR1Match ? oddWinnersR1Match : null;
-
-        const match = createMatch({
-          bracket: 'losers',
-          round: losersRound,
-          matchNumber: matchNumber++,
-          sourceMatch1: oddMatchAsSource?.matchNumber ?? losersAdvance?.matchNumber ?? null,
-          sourceMatch2: winnersDrop?.matchNumber ?? null,
-          sourceLabel1: oddMatchAsSource
-            ? `Perdedor do Jogo #${oddMatchAsSource.matchNumber}`
-            : (losersAdvance ? `Vencedor do Jogo #${losersAdvance.matchNumber}` : 'BYE'),
-          sourceLabel2: winnersDrop ? `Perdedor do Jogo #${winnersDrop.matchNumber}` : 'BYE',
-        });
-
-        thisRound.push(match);
-        allMatches.push(match);
-
-        // Configurar links
-        if (losersAdvance) losersAdvance.nextMatchIfWin = match.matchNumber;
-        if (oddMatchAsSource) {
-          oddMatchAsSource.nextMatchIfLose = match.matchNumber;
-          oddWinnersR1Match = null; // Já foi usado, limpar
-        }
-        if (winnersDrop) winnersDrop.nextMatchIfLose = match.matchNumber;
-      }
-
-      if (thisRound.length > 0) {
-        losersMatchesByRound.push(thisRound);
-        losersRound++;
-      }
-
-      winnersRoundForDropdown++;
-    }
-
-    // Ronda de consolidação no losers (se necessário)
-    const lastLosersRound = losersMatchesByRound[losersMatchesByRound.length - 1];
-    if (lastLosersRound && lastLosersRound.length >= 2) {
-      const consolidationRound: TournamentMatch[] = [];
-
-      for (let i = 0; i < lastLosersRound.length; i += 2) {
-        const source1 = lastLosersRound[i];
-        const source2 = lastLosersRound[i + 1];
-
-        if (!source2) continue; // Número ímpar, avança automaticamente
-
-        const match = createMatch({
-          bracket: 'losers',
-          round: losersRound,
-          matchNumber: matchNumber++,
-          sourceMatch1: source1?.matchNumber ?? null,
-          sourceMatch2: source2?.matchNumber ?? null,
-          sourceLabel1: `Vencedor do Jogo #${source1?.matchNumber}`,
-          sourceLabel2: `Vencedor do Jogo #${source2?.matchNumber}`,
-        });
-
-        consolidationRound.push(match);
-        allMatches.push(match);
-
-        if (source1) source1.nextMatchIfWin = match.matchNumber;
-        if (source2) source2.nextMatchIfWin = match.matchNumber;
-      }
-
-      if (consolidationRound.length > 0) {
-        losersMatchesByRound.push(consolidationRound);
-        losersRound++;
-      }
-    }
-
-    // Verificar se já terminamos (1 match no losers e não há mais perdedores a entrar)
-    const currentLosers = losersMatchesByRound[losersMatchesByRound.length - 1];
-    if (currentLosers && currentLosers.length === 1 && winnersRoundForDropdown > winnersRounds) {
+    // Final: campeão da winners vs campeão da losers.
+    if (winners.length === 1 && losers.length === 1 && isFree(winners[0]!) && isFree(losers[0]!)) {
+      created.push(createMatch(tournament, 'grandFinal', 999, winners[0]!, losers[0]!));
       break;
     }
+    // Sem winners em prova (campeão eliminado pelo admin): a losers decide.
+    // Sem losers em prova: o campeão da winners vence.
+    if (winners.length === 1 && losers.length === 0 && busy.size === 0) {
+      finishTournament(tournament, winners[0]!.id);
+      return created;
+    }
 
-    // Prevenção de loop infinito
-    if (losersMatchesByRound.length > 20) break;
-  }
+    let changed = false;
 
-  // ========================================
-  // GRAND FINAL
-  // ========================================
-
-  const winnersChampionMatch = winnersMatchesByRound[winnersMatchesByRound.length - 1]?.[0];
-  const losersChampionMatch = losersMatchesByRound[losersMatchesByRound.length - 1]?.[0];
-
-  if (winnersChampionMatch && losersChampionMatch) {
-    const grandFinal = createMatch({
-      bracket: 'grandFinal',
-      round: 999,
-      matchNumber: matchNumber++,
-      sourceMatch1: winnersChampionMatch.matchNumber,
-      sourceMatch2: losersChampionMatch.matchNumber,
-      sourceLabel1: `Vencedor do Jogo #${winnersChampionMatch.matchNumber}`,
-      sourceLabel2: `Vencedor do Jogo #${losersChampionMatch.matchNumber}`,
-    });
-
-    winnersChampionMatch.nextMatchIfWin = grandFinal.matchNumber;
-    losersChampionMatch.nextMatchIfWin = grandFinal.matchNumber;
-
-    tournament.grandFinal = grandFinal;
-    allMatches.push(grandFinal);
-
-    // Grand Final Reset (pré-criado mas só usado se necessário)
-    const grandFinalReset = createMatch({
-      bracket: 'grandFinalReset',
-      round: 1000,
-      matchNumber: matchNumber++,
-      sourceMatch1: grandFinal.matchNumber,
-      sourceMatch2: grandFinal.matchNumber,
-      sourceLabel1: 'Vencedor da Grand Final',
-      sourceLabel2: 'Perdedor da Grand Final',
-    });
-
-    grandFinal.nextMatchIfLose = grandFinalReset.matchNumber; // Se winner do winners perder
-    tournament.grandFinalReset = grandFinalReset;
-    allMatches.push(grandFinalReset);
-  } else if (n === 2 && winnersChampionMatch) {
-    const grandFinal = createMatch({
-      bracket: 'grandFinal',
-      round: 999,
-      matchNumber: matchNumber++,
-      sourceMatch1: winnersChampionMatch.matchNumber,
-      sourceMatch2: winnersChampionMatch.matchNumber,
-      sourceLabel1: `Vencedor do Jogo #${winnersChampionMatch.matchNumber}`,
-      sourceLabel2: `Perdedor do Jogo #${winnersChampionMatch.matchNumber}`,
-    });
-
-    winnersChampionMatch.nextMatchIfWin = grandFinal.matchNumber;
-    winnersChampionMatch.nextMatchIfLose = grandFinal.matchNumber;
-
-    tournament.grandFinal = grandFinal;
-    allMatches.push(grandFinal);
-
-    const grandFinalReset = createMatch({
-      bracket: 'grandFinalReset',
-      round: 1000,
-      matchNumber: matchNumber++,
-      sourceMatch1: grandFinal.matchNumber,
-      sourceMatch2: grandFinal.matchNumber,
-      sourceLabel1: 'Vencedor da Grand Final',
-      sourceLabel2: 'Perdedor da Grand Final',
-    });
-
-    grandFinal.nextMatchIfLose = grandFinalReset.matchNumber;
-    tournament.grandFinalReset = grandFinalReset;
-    allMatches.push(grandFinalReset);
-  }
-
-  // ========================================
-  // Registar todos os matches
-  // ========================================
-
-  tournament.winnersMatches = winnersMatchesByRound.flat();
-  tournament.losersMatches = losersMatchesByRound.flat();
-
-  for (const match of allMatches) {
-    tournament.matchById.set(match.id, match);
-    tournament.matchByNumber.set(match.matchNumber, match);
-  }
-
-  tournament.nextMatchNumber = matchNumber;
-
-  // Propagar jogadores de matches com bye para os próximos matches
-  propagateByeWinners(tournament);
-
-  // Resolver matches do Losers que têm TBD (sem fonte de jogador)
-  resolveLosersBracketTBDs(tournament);
-}
-
-/**
- * Distribui jogadores e byes de forma equilibrada no bracket.
- */
-function seedPlayersWithByes(
-  players: (TournamentPlayer | null)[],
-  bracketSize: number
-): (TournamentPlayer | null)[] {
-  const actualPlayers = players.filter(p => p !== null) as TournamentPlayer[];
-  const result: (TournamentPlayer | null)[] = [...actualPlayers];
-
-  while (result.length < bracketSize) {
-    result.push(null);
-  }
-
-  return result;
-}
-
-/**
- * Gera a ordem de seeds para distribuição equilibrada.
- */
-function generateSeedOrder(size: number): number[] {
-  if (size === 2) return [0, 1];
-
-  const halfSize = size / 2;
-  const topHalf = generateSeedOrder(halfSize);
-  const bottomHalf = generateSeedOrder(halfSize).map(i => i + halfSize);
-
-  // Intercalar as duas metades
-  const result: number[] = [];
-  for (let i = 0; i < halfSize; i++) {
-    const top = topHalf[i];
-    const bottom = bottomHalf[halfSize - 1 - i];
-    if (top === undefined || bottom === undefined) throw new TypeError('Seed order is incomplete.');
-    result.push(top, bottom);
-  }
-  return result;
-}
-
-/**
- * Resolve matches do Losers Bracket que têm TBD (sem fonte de jogador).
- * Estes são convertidos em byes quando apenas um jogador está presente.
- */
-function resolveLosersBracketTBDs(tournament: Tournament): void {
-  for (const match of tournament.losersMatches) {
-    // Se o match já tem resultado, ignorar
-    if (match.result !== null) continue;
-
-    // Se não tem player1 mas tem player2, e sourceMatch1 é null (sem fonte)
-    // Então é um bye - o player2 avança
-    if (!match.player1 && match.player2 && match.sourceMatch1 === null) {
-      match.winnerId = match.player2.id;
-      match.phase = 'finished';
-      match.result = 'bye';
-      match.score = { player1Wins: 0, player2Wins: 2 };
-      match.sourceLabel1 = 'BYE';
-
-      // Propagar para o próximo match
-      const winnerPlayer = tournament.playerById.get(match.player2.id);
-      if (winnerPlayer && match.nextMatchIfWin) {
-        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-        if (nextMatch) {
-          assignPlayerToMatch(nextMatch, winnerPlayer, match);
+    // --- Winners: emparelhar por nível ---
+    const freeWinners = winners.filter(isFree);
+    const levels = [...new Set(freeWinners.map(p => p.winnersLevel))].sort((a, b) => a - b);
+    for (const level of levels) {
+      const atLevel = freeWinners.filter(p => p.winnersLevel === level).sort(byWaitingTime);
+      const pairable = atLevel.filter(isPairable);
+      while (pairable.length >= 2) {
+        const a = pairable.shift()!;
+        const b = pairable.shift()!;
+        created.push(createPairing(tournament, 'winners', level, a, b));
+        changed = true;
+      }
+      // Isenção: único livre neste nível e ninguém mais o pode alcançar.
+      const stillFree = atLevel.filter(p => !created.some(m => m.player1?.id === p.id || m.player2?.id === p.id));
+      if (stillFree.length === 1 && winners.length > 1) {
+        const lone = stillFree[0]!;
+        const canBeReached = winners.some(p => p.id !== lone.id && p.winnersLevel < level);
+        if (!canBeReached) {
+          lone.winnersLevel++;
+          lone.byes++;
+          changed = true;
+          break; // recomeçar: o nível mudou
         }
       }
     }
+    if (changed) continue;
 
-    // Caso inverso: tem player1 mas não tem player2, e sourceMatch2 é null
-    if (match.player1 && !match.player2 && match.sourceMatch2 === null) {
-      match.winnerId = match.player1.id;
-      match.phase = 'finished';
-      match.result = 'bye';
-      match.score = { player1Wins: 2, player2Wins: 0 };
-      match.sourceLabel2 = 'BYE';
-
-      // Propagar para o próximo match
-      const winnerPlayer = tournament.playerById.get(match.player1.id);
-      if (winnerPlayer && match.nextMatchIfWin) {
-        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-        if (nextMatch) {
-          assignPlayerToMatch(nextMatch, winnerPlayer, match);
+    // --- Losers: emparelhar quem estiver livre ---
+    const freeLosers = losers.filter(p => isFree(p) && isPairable(p)).sort(byWaitingTime);
+    while (freeLosers.length >= 2) {
+      const a = freeLosers.shift()!;
+      // Preferir quem ainda não defrontou; depois nível parecido; depois quem espera há mais tempo.
+      let bestIndex = 0;
+      let bestRematches = Number.POSITIVE_INFINITY;
+      let bestGap = Number.POSITIVE_INFINITY;
+      for (let index = 0; index < freeLosers.length; index++) {
+        const candidate = freeLosers[index]!;
+        const rematches = timesPlayed(tournament, a.id, candidate.id);
+        const gap = Math.abs(a.losersWins - candidate.losersWins);
+        if (rematches < bestRematches || (rematches === bestRematches && gap < bestGap)) {
+          bestRematches = rematches;
+          bestGap = gap;
+          bestIndex = index;
         }
       }
+      const b = freeLosers.splice(bestIndex, 1)[0]!;
+      created.push(createPairing(tournament, 'losers', 1 + Math.max(a.losersWins, b.losersWins), a, b));
+      changed = true;
     }
+    if (!changed) break;
   }
 
-  // Recursivamente resolver novos TBDs criados pela propagação
-  let hasChanges = true;
-  let iterations = 0;
-  while (hasChanges && iterations < 10) {
-    hasChanges = false;
-    iterations++;
-
-    for (const match of tournament.losersMatches) {
-      if (match.result !== null) continue;
-
-      const hasP1 = match.player1 !== null;
-      const hasP2 = match.player2 !== null;
-
-      if (hasP1 !== hasP2) {
-        // Verificar se a fonte em falta não vai enviar mais ninguém
-        const missingSource = hasP1 ? match.sourceMatch2 : match.sourceMatch1;
-        if (missingSource === null) {
-          const winner = hasP1 ? match.player1 : match.player2;
-          if (winner) {
-            match.winnerId = winner.id;
-            match.phase = 'finished';
-            match.result = 'bye';
-            match.score = hasP1 ? { player1Wins: 2, player2Wins: 0 } : { player1Wins: 0, player2Wins: 2 };
-            hasChanges = true;
-
-            const winnerPlayer = tournament.playerById.get(winner.id);
-            if (winnerPlayer && match.nextMatchIfWin) {
-              const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-              if (nextMatch) {
-                assignPlayerToMatch(nextMatch, winnerPlayer, match);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
+  refreshWaitingLists(tournament);
+  return created;
 }
 
-/**
- * Propaga os vencedores de matches com bye para os próximos matches.
- */
-function propagateByeWinners(tournament: Tournament): void {
-  const processedMatches = new Set<number>();
-
-  function propagateWinner(match: TournamentMatch): void {
-    if (processedMatches.has(match.matchNumber)) return;
-    processedMatches.add(match.matchNumber);
-
-    if (match.result !== 'bye' || !match.winnerId) return;
-
-    const winner = tournament.playerById.get(match.winnerId);
-    if (!winner) return;
-
-    // Propagar para o próximo match (se existe)
-    if (match.nextMatchIfWin) {
-      const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-      if (nextMatch) {
-        assignPlayerToMatch(nextMatch, winner, match);
-        // Se o próximo match também ficar com bye (só 1 jogador), propagar recursivamente
-        checkAndResolveBye(tournament, nextMatch);
-      }
-    }
-  }
-
-  // Processar todos os matches com bye
-  for (const match of tournament.winnersMatches) {
-    propagateWinner(match);
-  }
-  for (const match of tournament.losersMatches) {
-    propagateWinner(match);
-  }
-}
-
-/**
- * Verifica se um match tem apenas 1 jogador e deve ser resolvido como bye.
- */
-function checkAndResolveBye(tournament: Tournament, match: TournamentMatch): void {
-  // Se já tem vencedor ou está a jogar, não fazer nada
-  if (match.winnerId || match.phase === 'playing') return;
-
-  // Verificar se só tem 1 jogador (o outro é TBD de um bye)
-  const hasPlayer1 = match.player1 !== null;
-  const hasPlayer2 = match.player2 !== null;
-
-  // Se ambos têm jogador, não é bye - é um match normal
-  if (hasPlayer1 && hasPlayer2) return;
-
-  // Se ambos não têm jogador, ainda não há dados suficientes
-  if (!hasPlayer1 && !hasPlayer2) return;
-
-  // Caso especial: se a fonte do slot vazio é NULL, significa que nunca vai haver jogador
-  // Nesse caso, o jogador existente ganha por bye imediato
-  if (!hasPlayer1 && match.sourceMatch1 === null) {
-    // Slot 1 nunca terá jogador - player2 ganha por bye
-    const winner = match.player2;
-    if (winner) {
-      match.winnerId = winner.id;
-      match.phase = 'finished';
-      match.result = 'bye';
-      match.score = { player1Wins: 0, player2Wins: 2 };
-      match.sourceLabel1 = 'BYE';
-
-      // Propagar para o próximo match
-      const winnerPlayer = tournament.playerById.get(winner.id);
-      if (winnerPlayer && match.nextMatchIfWin) {
-        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-        if (nextMatch) {
-          assignPlayerToMatch(nextMatch, winnerPlayer, match);
-          checkAndResolveBye(tournament, nextMatch);
-        }
-      }
-      return;
-    }
-  }
-
-  if (!hasPlayer2 && match.sourceMatch2 === null) {
-    // Slot 2 nunca terá jogador - player1 ganha por bye
-    const winner = match.player1;
-    if (winner) {
-      match.winnerId = winner.id;
-      match.phase = 'finished';
-      match.result = 'bye';
-      match.score = { player1Wins: 2, player2Wins: 0 };
-      match.sourceLabel2 = 'BYE';
-
-      // Propagar para o próximo match
-      const winnerPlayer = tournament.playerById.get(winner.id);
-      if (winnerPlayer && match.nextMatchIfWin) {
-        const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-        if (nextMatch) {
-          assignPlayerToMatch(nextMatch, winnerPlayer, match);
-          checkAndResolveBye(tournament, nextMatch);
-        }
-      }
-      return;
-    }
-  }
-
-  // Verificar se as fontes têm vencedores que ainda não propagaram
-  // Se uma fonte terminou com vencedor mas o slot está vazio, aguardar propagação
-  if (!hasPlayer1 && match.sourceMatch1) {
-    const src1 = tournament.matchByNumber.get(match.sourceMatch1);
-    // Se a fonte ainda não terminou, ou terminou com vencedor (propagação pendente)
-    if (src1 && (src1.phase !== 'finished' || src1.winnerId)) return;
-  }
-  if (!hasPlayer2 && match.sourceMatch2) {
-    const src2 = tournament.matchByNumber.get(match.sourceMatch2);
-    // Se a fonte ainda não terminou, ou terminou com vencedor (propagação pendente)
-    if (src2 && (src2.phase !== 'finished' || src2.winnerId)) return;
-  }
-
-  // Só 1 jogador e ambas as fontes terminaram - resolver como bye
-  const winner = hasPlayer1 ? match.player1 : match.player2;
-  if (!winner) return;
-
-  match.winnerId = winner.id;
-  match.phase = 'finished';
-  match.result = 'bye';
-  match.score = hasPlayer1 ? { player1Wins: 2, player2Wins: 0 } : { player1Wins: 0, player2Wins: 2 };
-
-  // Propagar para o próximo match
-  const winnerPlayer = tournament.playerById.get(winner.id);
-  if (winnerPlayer && match.nextMatchIfWin) {
-    const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-    if (nextMatch) {
-      assignPlayerToMatch(nextMatch, winnerPlayer, match);
-      checkAndResolveBye(tournament, nextMatch);
-    }
-  }
-}
-
-/**
- * Atribui um jogador a um slot vazio de um match.
- */
-function assignPlayerToMatch(
-  match: TournamentMatch,
-  player: TournamentPlayer,
-  sourceMatch: TournamentMatch
-): void {
-  const playerInfo = { id: player.id, name: player.name, classId: player.classId };
-
-  if (
-    match.sourceMatch1 === sourceMatch.matchNumber &&
-    match.sourceMatch2 === sourceMatch.matchNumber
-  ) {
-    if (!match.player1) {
-      match.player1 = playerInfo;
-      match.sourceLabel1 = `Vencedor: ${sourceMatch.player1?.name ?? player.name} vs ${sourceMatch.player2?.name ?? player.name}`;
-      return;
-    }
-    if (!match.player2 && match.player1.id !== player.id) {
-      match.player2 = playerInfo;
-      match.sourceLabel2 = `Perdedor: ${sourceMatch.player1?.name ?? player.name} vs ${sourceMatch.player2?.name ?? player.name}`;
-      return;
-    }
-  }
-
-  // Determinar qual slot (player1 ou player2) baseado na fonte
-  if (match.sourceMatch1 === sourceMatch.matchNumber) {
-    match.player1 = playerInfo;
-    // Atualizar label com nomes reais
-    if (sourceMatch.player1 && sourceMatch.player2) {
-      match.sourceLabel1 = `Vencedor: ${sourceMatch.player1.name} vs ${sourceMatch.player2.name}`;
-    } else {
-      match.sourceLabel1 = player.name;
-    }
-  } else if (match.sourceMatch2 === sourceMatch.matchNumber) {
-    match.player2 = playerInfo;
-    if (sourceMatch.player1 && sourceMatch.player2) {
-      match.sourceLabel2 = `Vencedor: ${sourceMatch.player1.name} vs ${sourceMatch.player2.name}`;
-    } else {
-      match.sourceLabel2 = player.name;
-    }
-  } else {
-    // Fallback: atribuir ao primeiro slot vazio
-    if (!match.player1) {
-      match.player1 = playerInfo;
-      match.sourceLabel1 = player.name;
-    } else if (!match.player2) {
-      match.player2 = playerInfo;
-      match.sourceLabel2 = player.name;
-    }
-  }
+function refreshWaitingLists(tournament: Tournament): void {
+  const busy = busyPlayerIds(tournament);
+  const free = tournament.players.filter(p => p.status !== 'eliminated' && !busy.has(p.id));
+  tournament.winnersWaiting = free.filter(p => p.losses === 0).map(p => p.id);
+  tournament.losersWaiting = free.filter(p => p.losses === 1).map(p => p.id);
 }
 
 // ============================================================================
@@ -947,239 +480,146 @@ function assignPlayerToMatch(
 // ============================================================================
 
 export function startTournament(tournament: Tournament): boolean {
-  if (tournament.phase !== 'registration') {
-    return false;
-  }
-
-  if (tournament.players.length < 2) {
-    return false;
-  }
+  if (tournament.phase !== 'registration') return false;
+  if (tournament.players.length < 2) return false;
 
   tournament.phase = 'running';
   tournament.startedAt = new Date();
-
-  // Pré-planear todas as partidas do torneio
-  planBracket(tournament);
-
-  const initialWinners = tournament.winnersMatches.filter((match) => match.round === 1 && match.result !== 'bye');
-  const roundOneByeWinners = tournament.winnersMatches
-    .filter((match) => match.round === 1 && match.result === 'bye' && match.winnerId)
-    .map((match) => match.winnerId!)
-    .filter(Boolean);
-
-  tournament.winnersMatches = initialWinners;
-  tournament.losersMatches = [];
-  tournament.winnersWaiting = [...roundOneByeWinners];
-  tournament.losersWaiting = [];
-  tournament.grandFinal = null;
-  tournament.grandFinalReset = null;
-
+  const order = shuffle(tournament.players);
+  order.forEach((player, index) => {
+    player.drawOrder = index;
+    player.freeSince = tournament.startedAt;
+  });
+  scheduleMatches(tournament);
   return true;
 }
 
-function isMatchVisible(tournament: Tournament, match: TournamentMatch): boolean {
-  return (
-    tournament.winnersMatches.some((item) => item.id === match.id) ||
-    tournament.losersMatches.some((item) => item.id === match.id) ||
-    tournament.grandFinal?.id === match.id ||
-    tournament.grandFinalReset?.id === match.id
-  );
-}
-
-function removeWaitingPlayer(tournament: Tournament, playerId: string): void {
-  tournament.winnersWaiting = tournament.winnersWaiting.filter((id) => id !== playerId);
-  tournament.losersWaiting = tournament.losersWaiting.filter((id) => id !== playerId);
-}
-
-function revealMatch(tournament: Tournament, match: TournamentMatch): void {
-  if (isMatchVisible(tournament, match)) return;
-
-  if (match.round === 999) {
-    tournament.grandFinal = match;
-  } else if (match.round === 1000) {
-    tournament.grandFinalReset = match;
-  } else if (match.bracket === 'winners') {
-    tournament.winnersMatches.push(match);
-  } else {
-    tournament.losersMatches.push(match);
-  }
-
-  if (match.player1?.id) removeWaitingPlayer(tournament, match.player1.id);
-  if (match.player2?.id) removeWaitingPlayer(tournament, match.player2.id);
-}
-
 // ============================================================================
-// Processamento de resultados de match (com brackets pré-planeados)
+// Resultados
 // ============================================================================
 
-/**
- * Avança um jogador para o próximo match pré-planeado.
- * Atualiza os labels com os nomes reais dos jogadores.
- */
-function advancePlayerToNextMatch(
-  tournament: Tournament,
-  match: TournamentMatch,
-  player: TournamentPlayer,
-  isWinner: boolean
-): TournamentMatch | null {
-  const nextMatchNumber = isWinner ? match.nextMatchIfWin : match.nextMatchIfLose;
-  if (!nextMatchNumber) return null;
-
-  const nextMatch = tournament.matchByNumber.get(nextMatchNumber);
-  if (!nextMatch) return null;
-
-  // Atribuir jogador ao próximo match
-  assignPlayerToMatch(nextMatch, player, match);
-
-  // Verificar se o próximo match tem ambos jogadores e pode começar
-  // (ou se é um bye automático)
-  checkAndResolveBye(tournament, nextMatch);
-
-  if (nextMatch.player1 && nextMatch.player2 && nextMatch.phase === 'waiting') {
-    revealMatch(tournament, nextMatch);
-  }
-
-  return nextMatch;
-}
-
-export function processMatchResult(
-  tournament: Tournament,
-  matchId: string,
-  winnerId: string
-): {
+export interface MatchOutcome {
   affectedPlayerIds: string[];
   newMatches: TournamentMatch[];
   isGrandFinal: boolean;
   isTournamentEnd: boolean;
-} {
-  const match = tournament.matchById.get(matchId);
-  if (!match) {
-    return { affectedPlayerIds: [], newMatches: [], isGrandFinal: false, isTournamentEnd: false };
-  }
+}
 
-  const loserId = match.player1!.id === winnerId ? match.player2!.id : match.player1!.id;
+/**
+ * Regista o vencedor de um confronto, atualiza as chaves e cria os
+ * confrontos que ficarem possíveis. Ignora confrontos já terminados.
+ */
+export function processMatchResult(
+  tournament: Tournament,
+  matchId: string,
+  winnerId: string,
+  options: { forfeit?: boolean } = {}
+): MatchOutcome {
+  const empty: MatchOutcome = { affectedPlayerIds: [], newMatches: [], isGrandFinal: false, isTournamentEnd: false };
+  const match = tournament.matchById.get(matchId);
+  if (!match || match.phase === 'finished' || !match.player1 || !match.player2) return empty;
+  if (winnerId !== match.player1.id && winnerId !== match.player2.id) return empty;
+
+  const loserId = match.player1.id === winnerId ? match.player2.id : match.player1.id;
   const winner = tournament.playerById.get(winnerId)!;
   const loser = tournament.playerById.get(loserId)!;
+  const now = new Date();
 
-  // Marcar match como terminado
   match.winnerId = winnerId;
   match.phase = 'finished';
-  match.result = 'normal';
+  match.result = options.forfeit ? 'bye' : 'normal';
+  match.finishedAt = now;
+  match.isPaused = false;
+  match.pausedAt = null;
+  match.pausedByPlayerId = null;
+  if (options.forfeit) {
+    match.score = match.player1.id === winnerId
+      ? { player1Wins: 2, player2Wins: 0 }
+      : { player1Wins: 0, player2Wins: 2 };
+  }
 
   const affectedPlayerIds = [winnerId, loserId];
-  const matchesNowReady: TournamentMatch[] = [];
+  const isGrandFinal = match === tournament.grandFinal || match === tournament.grandFinalReset;
 
-  // ========================================
-  // Verifica se é Grand Final
-  // ========================================
-  if (tournament.grandFinal && tournament.grandFinal.id === matchId) {
-    // Se o campeão da losers (player2) ganhou, ativar o Grand Final Reset
-    if (winnerId === match.player2!.id) {
-      const reset =
-        tournament.grandFinalReset ??
-        (match.nextMatchIfLose ? tournament.matchByNumber.get(match.nextMatchIfLose) ?? null : null);
-      if (!reset) {
-        return { affectedPlayerIds, newMatches: [], isGrandFinal: true, isTournamentEnd: true };
-      }
-
-      // Ativar o Grand Final Reset pré-criado
-      reset.player1 = { id: winner.id, name: winner.name, classId: winner.classId };
-      reset.player2 = { id: loser.id, name: loser.name, classId: loser.classId };
-      reset.sourceLabel1 = winner.name;
-      reset.sourceLabel2 = loser.name;
-      tournament.grandFinalReset = reset;
-      matchesNowReady.push(reset);
-      return { affectedPlayerIds, newMatches: matchesNowReady, isGrandFinal: true, isTournamentEnd: false };
-    } else {
-      // Campeão da winners ganhou - torneio termina
-      tournament.championId = winnerId;
-      tournament.phase = 'finished';
-      tournament.finishedAt = new Date();
-      return { affectedPlayerIds, newMatches: [], isGrandFinal: true, isTournamentEnd: true };
+  if (match === tournament.grandFinal) {
+    // player1 da final é sempre o campeão da winners.
+    if (winnerId === match.player1.id) {
+      eliminate(tournament, loser);
+      finishTournament(tournament, winnerId);
+      return { affectedPlayerIds, newMatches: [], isGrandFinal, isTournamentEnd: true };
     }
-  }
-
-  // ========================================
-  // Verifica se é Grand Final Reset
-  // ========================================
-  if (tournament.grandFinalReset && tournament.grandFinalReset.id === matchId) {
-    tournament.championId = winnerId;
-    tournament.phase = 'finished';
-    tournament.finishedAt = new Date();
-    return { affectedPlayerIds, newMatches: [], isGrandFinal: true, isTournamentEnd: true };
-  }
-
-  // ========================================
-  // Match normal: avançar jogadores
-  // ========================================
-  loser.losses++;
-
-  // Avançar vencedor para o próximo match
-  const nextWinMatch = advancePlayerToNextMatch(tournament, match, winner, true);
-  if (nextWinMatch && nextWinMatch.player1 && nextWinMatch.player2 && nextWinMatch.phase === 'waiting') {
-    matchesNowReady.push(nextWinMatch);
-  } else if (match.nextMatchIfWin) {
-    tournament.winnersWaiting.push(winnerId);
-  }
-
-  // Se é winners bracket, perdedor vai para losers bracket
-  if (match.bracket === 'winners' && loser.losses < 2) {
-    const nextLoseMatch = advancePlayerToNextMatch(tournament, match, loser, false);
-    if (nextLoseMatch && nextLoseMatch.player1 && nextLoseMatch.player2 && nextLoseMatch.phase === 'waiting') {
-      // Não duplicar se for o mesmo match
-      if (!matchesNowReady.includes(nextLoseMatch)) {
-        matchesNowReady.push(nextLoseMatch);
-      }
-    } else if (match.nextMatchIfLose) {
-      tournament.losersWaiting.push(loserId);
+    if (loser.status === 'eliminated') {
+      finishTournament(tournament, winnerId);
+      return { affectedPlayerIds, newMatches: [], isGrandFinal, isTournamentEnd: true };
     }
+    loser.losses = 1;
+    winner.freeSince = now;
+    loser.freeSince = now;
+    const reset = createMatch(tournament, 'grandFinalReset', 1000, winner, loser);
+    return { affectedPlayerIds, newMatches: [reset], isGrandFinal, isTournamentEnd: false };
   }
 
-  // Se é losers bracket, perdedor é eliminado (já tem 2 derrotas)
-  if (match.bracket === 'losers') {
-    loser.status = 'eliminated';
+  if (match === tournament.grandFinalReset) {
+    eliminate(tournament, loser);
+    finishTournament(tournament, winnerId);
+    return { affectedPlayerIds, newMatches: [], isGrandFinal, isTournamentEnd: true };
   }
 
-  return { affectedPlayerIds, newMatches: matchesNowReady, isGrandFinal: false, isTournamentEnd: false };
+  // Confronto normal.
+  if (match.bracket === 'winners') winner.winnersLevel++;
+  else winner.losersWins++;
+  winner.freeSince = now;
+
+  if (loser.status === 'eliminated') {
+    // Eliminado pelo administrador: a derrota já está contabilizada.
+  } else {
+    loser.losses++;
+    if (loser.losses >= 2) eliminate(tournament, loser);
+    else loser.freeSince = now;
+  }
+
+  const newMatches = scheduleMatches(tournament);
+  return {
+    affectedPlayerIds,
+    newMatches,
+    isGrandFinal,
+    isTournamentEnd: tournament.phase === 'finished',
+  };
 }
 
 // ============================================================================
-// Gestão de jogos dentro de um match (melhor de 3)
+// Gestão de jogos dentro de um confronto (melhor de 3)
 // ============================================================================
 
 export function setPlayerReady(
   tournament: Tournament,
   matchId: string,
   playerId: string
-): { bothReady: boolean; match: TournamentMatch | null } {
+): { bothReady: boolean; match: TournamentMatch | null; changed: boolean } {
   const match = tournament.matchById.get(matchId);
-  if (!match || match.phase !== 'waiting') {
-    return { bothReady: false, match: null };
-  }
+  if (!match || match.phase !== 'waiting') return { bothReady: false, match: null, changed: false };
 
+  let changed = false;
   if (match.player1?.id === playerId) {
+    changed = !match.player1Ready;
     match.player1Ready = true;
   } else if (match.player2?.id === playerId) {
+    changed = !match.player2Ready;
     match.player2Ready = true;
   } else {
-    return { bothReady: false, match: null };
+    return { bothReady: false, match: null, changed: false };
   }
 
-  const bothReady = match.player1Ready && match.player2Ready;
-  return { bothReady, match };
+  return { bothReady: match.player1Ready && match.player2Ready, match, changed };
 }
 
-export function startGame(
-  match: TournamentMatch,
-  initialGameState: unknown
-): void {
+export function startGame(match: TournamentMatch, initialGameState: unknown): void {
   match.phase = 'playing';
   match.gameState = initialGameState;
   match.player1Ready = false;
   match.player2Ready = false;
   match.moves = [];
-
-  // Determina quem começa baseado no número do jogo
+  match.gameStartedAt = new Date();
   // Jogo 1: player1, Jogo 2: player2, Jogo 3: player1
   match.whoStartsCurrentGame = match.currentGame % 2 === 1 ? 'player1' : 'player2';
   match.whoseTurn = match.whoStartsCurrentGame;
@@ -1192,14 +632,8 @@ export function recordMove(
   newGameState: unknown,
   nextTurn: 'player1' | 'player2'
 ): void {
-  match.moves.push({
-    playerId,
-    move,
-    timestamp: new Date(),
-  });
+  match.moves.push({ playerId, move, timestamp: new Date() });
   match.gameState = newGameState;
-
-  // Define a vez baseada no argumento
   match.whoseTurn = nextTurn;
 }
 
@@ -1207,43 +641,64 @@ export function endGame(
   match: TournamentMatch,
   winnerId: string
 ): { matchEnded: boolean; matchWinnerId: string | null } {
-  // Atualiza o score
-  if (match.player1?.id === winnerId) {
-    match.score.player1Wins++;
-  } else {
-    match.score.player2Wins++;
-  }
+  const winnerSeat: 'player1' | 'player2' = match.player1?.id === winnerId ? 'player1' : 'player2';
+  if (winnerSeat === 'player1') match.score.player1Wins++;
+  else match.score.player2Wins++;
 
-  // Verifica se o match terminou (melhor de 3 = primeiro a 2)
+  match.games.push({
+    number: match.currentGame,
+    starter: match.whoStartsCurrentGame,
+    winner: winnerSeat,
+    startedAt: match.gameStartedAt,
+    endedAt: new Date(),
+    moves: match.moves.map(entry => entry.move),
+  });
+
   const winsNeeded = Math.ceil(match.bestOf / 2);
-  if (match.score.player1Wins >= winsNeeded) {
-    return { matchEnded: true, matchWinnerId: match.player1!.id };
-  }
-  if (match.score.player2Wins >= winsNeeded) {
-    return { matchEnded: true, matchWinnerId: match.player2!.id };
-  }
+  if (match.score.player1Wins >= winsNeeded) return { matchEnded: true, matchWinnerId: match.player1!.id };
+  if (match.score.player2Wins >= winsNeeded) return { matchEnded: true, matchWinnerId: match.player2!.id };
 
-  // Match continua, prepara próximo jogo
   match.currentGame++;
   match.phase = 'waiting';
   match.gameState = null;
   match.whoseTurn = null;
-
+  match.moves = [];
+  match.gameStartedAt = null;
   return { matchEnded: false, matchWinnerId: null };
 }
 
 // ============================================================================
-// Conversão para o formato do protocolo (para enviar aos clientes)
+// Conversão para o protocolo
 // ============================================================================
 
+export function toProtocolMatch(match: TournamentMatch): Match {
+  return {
+    id: match.id,
+    round: match.round,
+    bracket: match.bracket,
+    player1: match.player1,
+    player2: match.player2,
+    score: { ...match.score },
+    bestOf: match.bestOf,
+    currentGame: match.currentGame,
+    whoStartsCurrentGame: match.whoStartsCurrentGame,
+    phase: match.phase,
+    winnerId: match.winnerId,
+    matchNumber: match.matchNumber,
+    sourceMatch1: match.sourceMatch1,
+    sourceMatch2: match.sourceMatch2,
+    sourceLabel1: match.sourceLabel1,
+    sourceLabel2: match.sourceLabel2,
+    nextMatchIfWin: match.nextMatchIfWin,
+    nextMatchIfLose: match.nextMatchIfLose,
+    result: match.result,
+    player1Ready: match.player1Ready,
+    player2Ready: match.player2Ready,
+  };
+}
+
 export function toTournamentState(tournament: Tournament): TournamentState {
-  const champion = tournament.championId
-    ? tournament.playerById.get(tournament.championId)
-    : null;
-
-  // Filtrar matches de BYE do Losers e reajustar labels
-  const { filteredLosers, labelRemapping } = filterByeMatches(tournament);
-
+  const champion = tournament.championId ? tournament.playerById.get(tournament.championId) : null;
   return {
     tournamentId: tournament.id,
     gameId: tournament.gameId,
@@ -1257,7 +712,7 @@ export function toTournamentState(tournament: Tournament): TournamentState {
       reconnectionCode: p.reconnectionCode,
     })),
     winnersMatches: tournament.winnersMatches.map(toProtocolMatch),
-    losersMatches: filteredLosers.map(m => toProtocolMatchWithRemapping(m, labelRemapping)),
+    losersMatches: tournament.losersMatches.map(toProtocolMatch),
     grandFinal: tournament.grandFinal ? toProtocolMatch(tournament.grandFinal) : null,
     grandFinalReset: tournament.grandFinalReset ? toProtocolMatch(tournament.grandFinalReset) : null,
     championId: tournament.championId,
@@ -1266,197 +721,75 @@ export function toTournamentState(tournament: Tournament): TournamentState {
 }
 
 /**
- * Filtra matches BYE do Losers e cria mapeamento de labels.
- * Matches BYE são aqueles que têm sourceLabel1 === 'BYE' ou sourceLabel2 === 'BYE'.
+ * Classificação: campeão em 1.º; os restantes pela ordem inversa de
+ * eliminação (quem saiu mais tarde fica mais acima). Ainda em prova ficam
+ * à frente dos eliminados.
  */
-function filterByeMatches(tournament: Tournament): {
-  filteredLosers: TournamentMatch[];
-  labelRemapping: Map<number, string>;
-} {
-  const labelRemapping = new Map<number, string>();
-  const byeMatches = new Set<number>();
-
-  // Identificar matches BYE e criar remapeamento
-  for (const match of tournament.losersMatches) {
-    const isBye1 = match.sourceLabel1 === 'BYE';
-    const isBye2 = match.sourceLabel2 === 'BYE';
-
-    if (isBye1 && !isBye2 && match.sourceMatch2) {
-      // Slot 1 é BYE, jogador vem do slot 2
-      byeMatches.add(match.matchNumber);
-      labelRemapping.set(match.matchNumber, match.sourceLabel2);
-    } else if (isBye2 && !isBye1 && match.sourceMatch1) {
-      // Slot 2 é BYE, jogador vem do slot 1
-      byeMatches.add(match.matchNumber);
-      labelRemapping.set(match.matchNumber, match.sourceLabel1);
-    }
-  }
-
-  // Filtrar matches BYE
-  const filteredLosers = tournament.losersMatches.filter(m => !byeMatches.has(m.matchNumber));
-
-  return { filteredLosers, labelRemapping };
-}
-
-/**
- * Converte match para protocolo, aplicando remapeamento de labels.
- */
-function toProtocolMatchWithRemapping(
-  match: TournamentMatch,
-  labelRemapping: Map<number, string>
-): Match {
-  let label1 = match.sourceLabel1;
-  let label2 = match.sourceLabel2;
-
-  // Remapar labels que apontam para matches BYE
-  if (match.sourceMatch1 && labelRemapping.has(match.sourceMatch1)) {
-    label1 = labelRemapping.get(match.sourceMatch1) || label1;
-  }
-  if (match.sourceMatch2 && labelRemapping.has(match.sourceMatch2)) {
-    label2 = labelRemapping.get(match.sourceMatch2) || label2;
-  }
-
-  return {
-    id: match.id,
-    round: match.round,
-    bracket: match.bracket,
-    player1: match.player1,
-    player2: match.player2,
-    score: match.score,
-    bestOf: match.bestOf,
-    currentGame: match.currentGame,
-    whoStartsCurrentGame: match.whoStartsCurrentGame,
-    phase: match.phase,
-    winnerId: match.winnerId,
-    matchNumber: match.matchNumber,
-    sourceMatch1: match.sourceMatch1,
-    sourceMatch2: match.sourceMatch2,
-    sourceLabel1: label1,
-    sourceLabel2: label2,
-    nextMatchIfWin: match.nextMatchIfWin,
-    nextMatchIfLose: match.nextMatchIfLose,
-    result: match.result,
-  };
-}
-
-function toProtocolMatch(match: TournamentMatch): Match {
-  return {
-    id: match.id,
-    round: match.round,
-    bracket: match.bracket,
-    player1: match.player1,
-    player2: match.player2,
-    score: match.score,
-    bestOf: match.bestOf,
-    currentGame: match.currentGame,
-    whoStartsCurrentGame: match.whoStartsCurrentGame,
-    phase: match.phase,
-    winnerId: match.winnerId,
-    // Campos para brackets pré-planeados
-    matchNumber: match.matchNumber,
-    sourceMatch1: match.sourceMatch1,
-    sourceMatch2: match.sourceMatch2,
-    sourceLabel1: match.sourceLabel1,
-    sourceLabel2: match.sourceLabel2,
-    nextMatchIfWin: match.nextMatchIfWin,
-    nextMatchIfLose: match.nextMatchIfLose,
-    result: match.result,
-  };
+export function computeStandings(tournament: Tournament): Array<{ rank: number; playerId: string; playerName: string }> {
+  const ordered = [...tournament.players].sort((a, b) => {
+    if (a.id === tournament.championId) return -1;
+    if (b.id === tournament.championId) return 1;
+    const ea = a.eliminationOrder ?? Number.MAX_SAFE_INTEGER;
+    const eb = b.eliminationOrder ?? Number.MAX_SAFE_INTEGER;
+    return eb - ea || a.losses - b.losses || a.drawOrder - b.drawOrder;
+  });
+  return ordered.map((player, index) => ({ rank: index + 1, playerId: player.id, playerName: player.name }));
 }
 
 // ============================================================================
-// Utilitários para reconexão e gestão de jogadores
+// Reconexão e gestão de jogadores
 // ============================================================================
 
-/**
- * Encontra jogador pelo código de reconexão.
- */
-export function findPlayerByCode(
-  tournament: Tournament,
-  code: string
-): TournamentPlayer | null {
-  const normalizedCode = code.toUpperCase().trim();
-  return tournament.playerByCode.get(normalizedCode) ?? null;
+export function findPlayerByCode(tournament: Tournament, code: string): TournamentPlayer | null {
+  return tournament.playerByCode.get(code.toUpperCase().trim()) ?? null;
 }
 
-/**
- * Encontra o match ativo onde o jogador está envolvido.
- */
-export function findActiveMatchForPlayer(
-  tournament: Tournament,
-  playerId: string
-): TournamentMatch | null {
-  return [...tournament.winnersMatches, ...tournament.losersMatches]
-    .concat(tournament.grandFinal ? [tournament.grandFinal] : [])
-    .concat(tournament.grandFinalReset ? [tournament.grandFinalReset] : [])
-    .find(m =>
-      m.phase !== 'finished' &&
-      (m.player1?.id === playerId || m.player2?.id === playerId)
-    ) ?? null;
+export function findActiveMatchForPlayer(tournament: Tournament, playerId: string): TournamentMatch | null {
+  return allMatches(tournament).find(m =>
+    m.phase !== 'finished' && (m.player1?.id === playerId || m.player2?.id === playerId)
+  ) ?? null;
 }
 
-/**
- * Pausa um match devido a desconexão de jogador.
- */
-export function pauseMatch(
-  tournament: Tournament,
-  matchId: string,
-  byPlayerId: string
-): void {
+export function pauseMatch(tournament: Tournament, matchId: string, byPlayerId: string): void {
   const match = tournament.matchById.get(matchId);
   if (!match || match.phase === 'finished') return;
-
   match.isPaused = true;
   match.pausedAt = new Date();
   match.pausedByPlayerId = byPlayerId;
 }
 
-/**
- * Retoma um match que estava pausado.
- */
-export function resumeMatch(
-  tournament: Tournament,
-  matchId: string
-): void {
+export function resumeMatch(tournament: Tournament, matchId: string): void {
   const match = tournament.matchById.get(matchId);
   if (!match || !match.isPaused) return;
-
   match.isPaused = false;
   match.pausedAt = null;
   match.pausedByPlayerId = null;
 }
 
 /**
- * Suspende um jogador (desconectado mas pode voltar).
- * Se estiver num match ativo, pausa o match em vez de forfeit.
+ * Suspende um jogador (desligado mas pode voltar). Se estiver num confronto,
+ * o confronto fica em pausa. Jogadores eliminados mantêm o estado.
  */
-export function suspendPlayer(
-  tournament: Tournament,
-  playerId: string
-): { pausedMatchId: string | null } {
+export function suspendPlayer(tournament: Tournament, playerId: string): { pausedMatchId: string | null } {
   const player = tournament.playerById.get(playerId);
   if (!player) return { pausedMatchId: null };
 
+  player.isConnected = false;
+  if (player.status === 'eliminated') return { pausedMatchId: null };
   player.status = 'suspended';
   player.suspendedAt = new Date();
-  player.isConnected = false;
 
-  // Se está em match ativo, pausar em vez de forfeit
   if (tournament.phase === 'running') {
     const activeMatch = findActiveMatchForPlayer(tournament, playerId);
-    if (activeMatch && activeMatch.phase !== 'finished') {
+    if (activeMatch) {
       pauseMatch(tournament, activeMatch.id, playerId);
       player.suspendedMatchId = activeMatch.id;
       return { pausedMatchId: activeMatch.id };
     }
   }
-
   return { pausedMatchId: null };
 }
 
-/**
- * Reativa um jogador que estava suspenso (reconectou).
- */
 export function reactivatePlayer(
   tournament: Tournament,
   playerId: string,
@@ -1465,439 +798,378 @@ export function reactivatePlayer(
   const player = tournament.playerById.get(playerId);
   if (!player) return { resumedMatchId: null };
 
-  player.status = 'active';
   player.isConnected = true;
   player.socketId = socketId;
+  if (player.status === 'eliminated') return { resumedMatchId: null };
+  player.status = 'active';
   player.suspendedAt = null;
 
-  // Se tinha um match pausado, retomar
   const pausedMatchId = player.suspendedMatchId;
   if (pausedMatchId) {
     resumeMatch(tournament, pausedMatchId);
     player.suspendedMatchId = null;
     return { resumedMatchId: pausedMatchId };
   }
-
   return { resumedMatchId: null };
 }
 
+/** Desligou-se: fica suspenso (o confronto pausa) até voltar. */
+export function handlePlayerDisconnect(
+  tournament: Tournament,
+  playerId: string
+): { pausedMatchId: string | null } {
+  const player = tournament.playerById.get(playerId);
+  if (!player) return { pausedMatchId: null };
+  player.socketId = null;
+  if (tournament.phase !== 'running') {
+    player.isConnected = false;
+    if (player.status !== 'eliminated') {
+      player.status = 'suspended';
+      player.suspendedAt = new Date();
+    }
+    return { pausedMatchId: null };
+  }
+  return suspendPlayer(tournament, playerId);
+}
+
 /**
- * Elimina um jogador do torneio.
- * Todos os matches onde o jogador está envolvido recebem vitória automática para o adversário.
- * A vitória é propagada pelos matches pré-planeados.
+ * Elimina um jogador por decisão do administrador. Se estiver num confronto,
+ * o adversário vence por falta. A eliminação conta como as derrotas em
+ * falta — nunca soma derrotas extra.
  */
 export function eliminatePlayer(
   tournament: Tournament,
   playerId: string
-): { forfeitedMatchIds: string[]; advancedMatches: TournamentMatch[] } {
+): { endedMatches: TournamentMatch[]; newMatches: TournamentMatch[]; isTournamentEnd: boolean } {
   const player = tournament.playerById.get(playerId);
-  if (!player) return { forfeitedMatchIds: [], advancedMatches: [] };
+  if (!player || player.status === 'eliminated') {
+    return { endedMatches: [], newMatches: [], isTournamentEnd: false };
+  }
 
-  player.status = 'eliminated';
-  player.losses = 2; // Marcar como eliminado
+  const activeMatch = tournament.phase === 'running' ? findActiveMatchForPlayer(tournament, playerId) : null;
+  eliminate(tournament, player);
   player.isConnected = false;
   player.suspendedAt = null;
-  player.suspendedMatchId = null;
 
-  const forfeitedMatchIds: string[] = [];
-  const advancedMatches: TournamentMatch[] = [];
-  const processedMatches = new Set<string>();
-
-  // Encontrar todos os matches onde este jogador está envolvido (incluindo pendentes)
-  const allMatches = [...tournament.winnersMatches, ...tournament.losersMatches]
-    .concat(tournament.grandFinal ? [tournament.grandFinal] : [])
-    .concat(tournament.grandFinalReset ? [tournament.grandFinalReset] : []);
-
-  // Processar matches em ordem de matchNumber para garantir propagação correta
-  const matchesToProcess = allMatches
-    .filter(m => m.phase !== 'finished' && (m.player1?.id === playerId || m.player2?.id === playerId))
-    .sort((a, b) => a.matchNumber - b.matchNumber);
-
-  for (const match of matchesToProcess) {
-    if (processedMatches.has(match.id)) continue;
-    processedMatches.add(match.id);
-
-    // Forfeit este match e avançar o adversário
-    const result = forfeitMatchWithAdvance(tournament, match.id, playerId);
-    if (result.winnerId) {
-      forfeitedMatchIds.push(match.id);
-      if (result.advancedMatch) {
-        advancedMatches.push(result.advancedMatch);
-      }
-    }
+  if (activeMatch && activeMatch.player1 && activeMatch.player2) {
+    const opponentId = activeMatch.player1.id === playerId ? activeMatch.player2.id : activeMatch.player1.id;
+    const outcome = processMatchResult(tournament, activeMatch.id, opponentId, { forfeit: true });
+    return { endedMatches: [activeMatch], newMatches: outcome.newMatches, isTournamentEnd: outcome.isTournamentEnd };
   }
 
-  return { forfeitedMatchIds, advancedMatches };
+  const newMatches = scheduleMatches(tournament);
+  return { endedMatches: [], newMatches, isTournamentEnd: tournament.phase === 'finished' };
 }
 
-/**
- * Forfeit um match e avançar o adversário usando os brackets pré-planeados.
- */
-function forfeitMatchWithAdvance(
-  tournament: Tournament,
-  matchId: string,
-  forfeitingPlayerId: string
-): { winnerId: string | null; advancedMatch: TournamentMatch | null } {
+// ============================================================================
+// Reinício de jogos/confrontos (recuperação de bloqueios)
+// ============================================================================
+
+export function restartCurrentGame(tournament: Tournament, matchId: string): { success: boolean; error?: string } {
+  if (tournament.phase !== 'running') return { success: false, error: 'Torneio não está a decorrer' };
   const match = tournament.matchById.get(matchId);
-  if (!match || match.phase === 'finished') {
-    return { winnerId: null, advancedMatch: null };
-  }
+  if (!match) return { success: false, error: 'Match não encontrado' };
+  if (match.phase === 'finished') return { success: false, error: 'Match já terminou' };
 
-  // O vencedor é o outro jogador
-  const winnerId = match.player1?.id === forfeitingPlayerId
-    ? match.player2?.id
-    : match.player1?.id;
-
-  if (!winnerId) {
-    // Se não há adversário, apenas marcar como terminado sem vencedor
-    match.phase = 'finished';
-    match.result = 'bye';
-    return { winnerId: null, advancedMatch: null };
-  }
-
-  const winner = tournament.playerById.get(winnerId);
-  if (!winner) {
-    return { winnerId: null, advancedMatch: null };
-  }
-
-  // Limpar estado de pausa se existia
-  match.isPaused = false;
-  match.pausedAt = null;
-  match.pausedByPlayerId = null;
-
-  // Dá vitória ao outro jogador (2-0 automático)
-  match.score = match.player1?.id === winnerId
-    ? { player1Wins: 2, player2Wins: 0 }
-    : { player1Wins: 0, player2Wins: 2 };
-
-  match.winnerId = winnerId;
-  match.phase = 'finished';
-  match.result = 'bye';
-
-  // Avançar o vencedor para o próximo match
-  let advancedMatch: TournamentMatch | null = null;
-  if (match.nextMatchIfWin) {
-    const nextMatch = tournament.matchByNumber.get(match.nextMatchIfWin);
-    if (nextMatch && nextMatch.phase !== 'finished') {
-      assignPlayerToMatch(nextMatch, winner, match);
-      checkAndResolveBye(tournament, nextMatch);
-      if (nextMatch.player1 && nextMatch.player2 && nextMatch.phase === 'waiting') {
-        advancedMatch = nextMatch;
-      }
-    }
-  }
-
-  return { winnerId, advancedMatch };
-}
-
-// ============================================================================
-// Utilitários para desconexão (legado - mantido para compatibilidade)
-// ============================================================================
-
-/**
- * @deprecated Use suspendPlayer() em vez disso para suportar reconexão.
- * Esta função agora suspende o jogador em vez de forfeit imediato.
- */
-export function handlePlayerDisconnect(
-  tournament: Tournament,
-  playerId: string
-): { forfeitMatchId: string | null; pausedMatchId: string | null } {
-  const player = tournament.playerById.get(playerId);
-  if (!player) {
-    return { forfeitMatchId: null, pausedMatchId: null };
-  }
-
-  player.isConnected = false;
-  player.socketId = null;
-
-  // Se o torneio não está a decorrer, apenas marcar como suspenso
-  if (tournament.phase !== 'running') {
-    player.status = 'suspended';
-    player.suspendedAt = new Date();
-    return { forfeitMatchId: null, pausedMatchId: null };
-  }
-
-  // Suspender jogador e pausar match (em vez de forfeit imediato)
-  const { pausedMatchId } = suspendPlayer(tournament, playerId);
-
-  return { forfeitMatchId: null, pausedMatchId };
-}
-
-export function forfeitMatch(
-  tournament: Tournament,
-  matchId: string,
-  forfeitingPlayerId: string
-): string | null {
-  const result = forfeitMatchWithAdvance(tournament, matchId, forfeitingPlayerId);
-  return result.winnerId;
-}
-
-// ============================================================================
-// Funções para reiniciar jogos/matches (recuperação de bloqueios)
-// ============================================================================
-
-/**
- * Reinicia apenas o jogo atual de um match.
- * Mantém o score do match, só limpa o estado do jogo atual.
- * Útil quando um jogo fica bloqueado/corrupto.
- */
-export function restartCurrentGame(
-  tournament: Tournament,
-  matchId: string
-): { success: boolean; error?: string } {
-  if (tournament.phase !== 'running') {
-    return { success: false, error: 'Torneio não está a decorrer' };
-  }
-
-  const match = tournament.matchById.get(matchId);
-  if (!match) {
-    return { success: false, error: 'Match não encontrado' };
-  }
-
-  if (match.phase === 'finished') {
-    return { success: false, error: 'Match já terminou' };
-  }
-
-  // Limpa o estado do jogo atual
   match.gameState = null;
   match.whoseTurn = null;
   match.moves = [];
+  match.gameStartedAt = null;
   match.player1Ready = false;
   match.player2Ready = false;
   match.phase = 'waiting';
-
-  // Limpa estado de pausa se existia
   match.isPaused = false;
   match.pausedAt = null;
   match.pausedByPlayerId = null;
-
   return { success: true };
 }
 
-/**
- * Reinicia um match completo.
- * Reseta o score para 0-0, volta ao jogo 1, limpa todos os estados.
- * Mantém o bracket e os jogadores.
- * Útil quando um match inteiro está bloqueado.
- */
-export function restartMatch(
-  tournament: Tournament,
-  matchId: string
-): { success: boolean; error?: string } {
-  if (tournament.phase !== 'running') {
-    return { success: false, error: 'Torneio não está a decorrer' };
-  }
-
+export function restartMatch(tournament: Tournament, matchId: string): { success: boolean; error?: string } {
+  if (tournament.phase !== 'running') return { success: false, error: 'Torneio não está a decorrer' };
   const match = tournament.matchById.get(matchId);
-  if (!match) {
-    return { success: false, error: 'Match não encontrado' };
-  }
+  if (!match) return { success: false, error: 'Match não encontrado' };
+  if (match.phase === 'finished') return { success: false, error: 'Match já terminou' };
 
-  if (match.phase === 'finished') {
-    return { success: false, error: 'Match já terminou' };
-  }
-
-  // Reseta tudo
   match.score = { player1Wins: 0, player2Wins: 0 };
   match.currentGame = 1;
   match.whoStartsCurrentGame = 'player1';
   match.gameState = null;
   match.whoseTurn = null;
   match.moves = [];
+  match.games = [];
+  match.gameStartedAt = null;
   match.player1Ready = false;
   match.player2Ready = false;
   match.phase = 'waiting';
   match.winnerId = null;
-
-  // Limpa estado de pausa se existia
   match.isPaused = false;
   match.pausedAt = null;
   match.pausedByPlayerId = null;
-
   return { success: true };
 }
 
-/**
- * Obtém todos os matches em curso (para modo espectador).
- * Devolve os matches com fase 'playing' e os seus estados de jogo.
- */
+/** Confrontos em curso com estado de jogo (modo espectador). */
 export function getActiveMatchesWithGameState(
   tournament: Tournament
 ): Array<{ match: TournamentMatch; gameState: unknown }> {
-  const allMatches = [
-    ...tournament.winnersMatches,
-    ...tournament.losersMatches,
-    ...(tournament.grandFinal ? [tournament.grandFinal] : []),
-    ...(tournament.grandFinalReset ? [tournament.grandFinalReset] : []),
-  ];
-
-  return allMatches
+  return allMatches(tournament)
     .filter(m => m.phase === 'playing' && m.gameState !== null)
-    .map(m => ({
-      match: m,
-      gameState: m.gameState,
-    }));
+    .map(m => ({ match: m, gameState: m.gameState }));
 }
 
 // ============================================================================
-// Exportação e importação de torneios
+// Exportação e importação (versão 2, compacta)
 // ============================================================================
 
-/**
- * Formato exportado de um jogador (sem Maps e com Dates como strings).
- */
-export interface ExportedPlayer extends Omit<TournamentPlayer, 'suspendedAt'> {
+type ExportedPlayerInfo = { id: string; name: string; classId?: string };
+
+export interface ExportedPlayer {
+  id: string;
+  name: string;
+  classId?: string;
+  reconnectionCode: string;
+  status: PlayerStatus;
+  losses: number;
+  winnersLevel: number;
+  losersWins: number;
+  byes: number;
+  drawOrder: number;
+  eliminationOrder: number | null;
+  freeSince: string | null;
   suspendedAt: string | null;
+  suspendedMatchId: string | null;
 }
 
-/**
- * Formato exportado de um match (sem Maps e com Dates como strings).
- */
-export interface ExportedMatch extends Omit<TournamentMatch, 'moves' | 'pausedAt'> {
-  moves: Array<{ playerId: string; move: unknown; timestamp: string }>;
-  pausedAt: string | null;
+export interface ExportedGame {
+  number: number;
+  starter: 'player1' | 'player2';
+  winner: 'player1' | 'player2';
+  startedAt: string | null;
+  endedAt: string;
+  moves: unknown[];
 }
 
-/**
- * Formato completo de exportação de um torneio.
- */
+export interface ExportedMatch {
+  id: string;
+  matchNumber: number;
+  bracket: BracketType;
+  round: number;
+  player1: ExportedPlayerInfo | null;
+  player2: ExportedPlayerInfo | null;
+  score: { player1Wins: number; player2Wins: number };
+  bestOf: number;
+  currentGame: number;
+  whoStartsCurrentGame: 'player1' | 'player2';
+  phase: TournamentMatch['phase'];
+  winnerId: string | null;
+  result: TournamentMatch['result'];
+  createdAt: string;
+  finishedAt: string | null;
+  games: ExportedGame[];
+  /** Só em confrontos por terminar (necessário para retomar). */
+  player1Ready?: boolean;
+  player2Ready?: boolean;
+  gameState?: unknown;
+  whoseTurn?: 'player1' | 'player2' | null;
+  moves?: unknown[];
+  gameStartedAt?: string | null;
+  isPaused?: boolean;
+  pausedAt?: string | null;
+  pausedByPlayerId?: string | null;
+}
+
 export interface TournamentExport {
-  version: 1;
+  version: 2;
   exportedAt: string;
   id: string;
   gameId: GameId;
   phase: TournamentPhase;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  championId: string | null;
+  nextMatchNumber: number;
+  eliminationCounter: number;
   players: ExportedPlayer[];
   winnersMatches: ExportedMatch[];
   losersMatches: ExportedMatch[];
   grandFinal: ExportedMatch | null;
   grandFinalReset: ExportedMatch | null;
-  championId: string | null;
-  createdAt: string;
-  startedAt: string | null;
-  finishedAt: string | null;
-  winnersWaiting: string[];
-  losersWaiting: string[];
-  winnersRound: number;
-  losersRound: number;
-  nextMatchNumber: number;
 }
 
-/**
- * Exporta um torneio para um formato JSON serializável.
- */
-export function exportTournament(tournament: Tournament): TournamentExport {
-  const exportMatch = (m: TournamentMatch): ExportedMatch => ({
-    ...m,
-    moves: m.moves.map(move => ({
-      ...move,
-      timestamp: move.timestamp.toISOString(),
-    })),
-    pausedAt: m.pausedAt?.toISOString() ?? null,
-  });
+const iso = (date: Date | null) => date ? date.toISOString() : null;
+const fromIso = (value: string | null | undefined) => value ? new Date(value) : null;
 
-  const exportPlayer = (p: TournamentPlayer): ExportedPlayer => ({
-    ...p,
-    suspendedAt: p.suspendedAt?.toISOString() ?? null,
-  });
+export function exportTournament(tournament: Tournament): TournamentExport {
+  const exportMatch = (m: TournamentMatch): ExportedMatch => {
+    const base: ExportedMatch = {
+      id: m.id,
+      matchNumber: m.matchNumber,
+      bracket: m.bracket,
+      round: m.round,
+      player1: m.player1,
+      player2: m.player2,
+      score: { ...m.score },
+      bestOf: m.bestOf,
+      currentGame: m.currentGame,
+      whoStartsCurrentGame: m.whoStartsCurrentGame,
+      phase: m.phase,
+      winnerId: m.winnerId,
+      result: m.result,
+      createdAt: m.createdAt.toISOString(),
+      finishedAt: iso(m.finishedAt),
+      games: m.games.map(g => ({
+        number: g.number,
+        starter: g.starter,
+        winner: g.winner,
+        startedAt: iso(g.startedAt),
+        endedAt: g.endedAt.toISOString(),
+        moves: g.moves,
+      })),
+    };
+    if (m.phase === 'finished') return base;
+    return {
+      ...base,
+      player1Ready: m.player1Ready,
+      player2Ready: m.player2Ready,
+      gameState: m.gameState,
+      whoseTurn: m.whoseTurn,
+      moves: m.moves.map(entry => entry.move),
+      gameStartedAt: iso(m.gameStartedAt),
+      isPaused: m.isPaused,
+      pausedAt: iso(m.pausedAt),
+      pausedByPlayerId: m.pausedByPlayerId,
+    };
+  };
 
   return {
-    version: 1,
+    version: 2,
     exportedAt: new Date().toISOString(),
     id: tournament.id,
     gameId: tournament.gameId,
     phase: tournament.phase,
-    players: tournament.players.map(exportPlayer),
+    createdAt: tournament.createdAt.toISOString(),
+    startedAt: iso(tournament.startedAt),
+    finishedAt: iso(tournament.finishedAt),
+    championId: tournament.championId,
+    nextMatchNumber: tournament.nextMatchNumber,
+    eliminationCounter: tournament.eliminationCounter,
+    players: tournament.players.map(p => ({
+      id: p.id,
+      name: p.name,
+      ...(p.classId ? { classId: p.classId } : {}),
+      reconnectionCode: p.reconnectionCode,
+      status: p.status,
+      losses: p.losses,
+      winnersLevel: p.winnersLevel,
+      losersWins: p.losersWins,
+      byes: p.byes,
+      drawOrder: p.drawOrder,
+      eliminationOrder: p.eliminationOrder,
+      freeSince: iso(p.freeSince),
+      suspendedAt: iso(p.suspendedAt),
+      suspendedMatchId: p.suspendedMatchId,
+    })),
     winnersMatches: tournament.winnersMatches.map(exportMatch),
     losersMatches: tournament.losersMatches.map(exportMatch),
     grandFinal: tournament.grandFinal ? exportMatch(tournament.grandFinal) : null,
     grandFinalReset: tournament.grandFinalReset ? exportMatch(tournament.grandFinalReset) : null,
-    championId: tournament.championId,
-    createdAt: tournament.createdAt.toISOString(),
-    startedAt: tournament.startedAt?.toISOString() ?? null,
-    finishedAt: tournament.finishedAt?.toISOString() ?? null,
-    winnersWaiting: [...tournament.winnersWaiting],
-    losersWaiting: [...tournament.losersWaiting],
-    winnersRound: tournament.winnersRound,
-    losersRound: tournament.losersRound,
-    nextMatchNumber: tournament.nextMatchNumber,
   };
 }
 
-/**
- * Importa um torneio a partir de dados exportados.
- * Reconstrói os Maps e converte strings ISO de volta para Dates.
- */
+/** Reconstrói um torneio a partir de um export v2. Todos ficam desligados. */
 export function importTournament(data: TournamentExport): Tournament {
-  // Converter matches de volta para o formato interno
-  const importMatch = (m: ExportedMatch): TournamentMatch => ({
-    ...m,
-    moves: m.moves.map(move => ({
-      ...move,
-      timestamp: new Date(move.timestamp),
-    })),
-    pausedAt: m.pausedAt ? new Date(m.pausedAt) : null,
-  });
+  if (data.version !== 2) throw new Error(`Versão de exportação não suportada: ${String((data as { version?: unknown }).version)}`);
 
-  // Converter players de volta para o formato interno
-  const importPlayer = (p: ExportedPlayer): TournamentPlayer => ({
-    ...p,
-    suspendedAt: p.suspendedAt ? new Date(p.suspendedAt) : null,
-    // Marcar todos como desconectados ao importar (precisarão reconectar)
-    isConnected: false,
-    socketId: null,
-  });
+  const tournament = createTournament(data.gameId);
+  tournament.id = data.id;
+  tournament.phase = data.phase;
+  tournament.createdAt = new Date(data.createdAt);
+  tournament.startedAt = fromIso(data.startedAt);
+  tournament.finishedAt = fromIso(data.finishedAt);
+  tournament.championId = data.championId;
+  tournament.nextMatchNumber = data.nextMatchNumber;
+  tournament.eliminationCounter = data.eliminationCounter;
 
-  const players = data.players.map(importPlayer);
-  const winnersMatches = data.winnersMatches.map(importMatch);
-  const losersMatches = data.losersMatches.map(importMatch);
-  const grandFinal = data.grandFinal ? importMatch(data.grandFinal) : null;
-  const grandFinalReset = data.grandFinalReset ? importMatch(data.grandFinalReset) : null;
-
-  // Reconstruir Maps
-  const playerById = new Map<string, TournamentPlayer>();
-  const playerByCode = new Map<string, TournamentPlayer>();
-  for (const player of players) {
-    playerById.set(player.id, player);
-    playerByCode.set(player.reconnectionCode, player);
+  for (const p of data.players) {
+    const player: TournamentPlayer = {
+      id: p.id,
+      name: p.name,
+      classId: p.classId,
+      losses: p.losses,
+      isConnected: false,
+      socketId: null,
+      reconnectionCode: p.reconnectionCode,
+      status: p.status === 'eliminated' ? 'eliminated' : 'suspended',
+      suspendedAt: p.status === 'eliminated' ? null : (fromIso(p.suspendedAt) ?? new Date()),
+      suspendedMatchId: p.suspendedMatchId,
+      winnersLevel: p.winnersLevel,
+      losersWins: p.losersWins,
+      byes: p.byes,
+      freeSince: fromIso(p.freeSince),
+      eliminationOrder: p.eliminationOrder,
+      drawOrder: p.drawOrder,
+    };
+    tournament.players.push(player);
+    tournament.playerById.set(player.id, player);
+    tournament.playerByCode.set(player.reconnectionCode, player);
   }
 
-  const matchById = new Map<string, TournamentMatch>();
-  const matchByNumber = new Map<number, TournamentMatch>();
-
-  const allMatches = [
-    ...winnersMatches,
-    ...losersMatches,
-    ...(grandFinal ? [grandFinal] : []),
-    ...(grandFinalReset ? [grandFinalReset] : []),
-  ];
-
-  for (const match of allMatches) {
-    matchById.set(match.id, match);
-    matchByNumber.set(match.matchNumber, match);
-  }
-
-  return {
-    id: data.id,
-    gameId: data.gameId,
-    phase: data.phase,
-    players,
-    winnersMatches,
-    losersMatches,
-    grandFinal,
-    grandFinalReset,
-    championId: data.championId,
-    createdAt: new Date(data.createdAt),
-    startedAt: data.startedAt ? new Date(data.startedAt) : null,
-    finishedAt: data.finishedAt ? new Date(data.finishedAt) : null,
-    playerById,
-    matchById,
-    playerByCode,
-    winnersWaiting: [...data.winnersWaiting],
-    losersWaiting: [...data.losersWaiting],
-    winnersRound: data.winnersRound,
-    losersRound: data.losersRound,
-    nextMatchNumber: data.nextMatchNumber,
-    matchByNumber,
+  const importMatch = (m: ExportedMatch): TournamentMatch => {
+    const firstId = m.player1?.id;
+    const match: TournamentMatch = {
+      id: m.id,
+      round: m.round,
+      bracket: m.bracket,
+      player1: m.player1,
+      player2: m.player2,
+      score: { ...m.score },
+      bestOf: m.bestOf,
+      currentGame: m.currentGame,
+      whoStartsCurrentGame: m.whoStartsCurrentGame,
+      phase: m.phase,
+      winnerId: m.winnerId,
+      player1Ready: m.player1Ready ?? false,
+      player2Ready: m.player2Ready ?? false,
+      gameState: m.gameState ?? null,
+      whoseTurn: m.whoseTurn ?? null,
+      moves: (m.moves ?? []).map((move, index) => ({
+        // O jogador de cada jogada não é necessário para retomar; fica aproximado.
+        playerId: index % 2 === 0 ? firstId ?? '' : m.player2?.id ?? '',
+        move,
+        timestamp: new Date(),
+      })),
+      games: m.games.map(g => ({
+        number: g.number,
+        starter: g.starter,
+        winner: g.winner,
+        startedAt: fromIso(g.startedAt),
+        endedAt: new Date(g.endedAt),
+        moves: g.moves,
+      })),
+      gameStartedAt: fromIso(m.gameStartedAt),
+      createdAt: new Date(m.createdAt),
+      finishedAt: fromIso(m.finishedAt),
+      isPaused: m.isPaused ?? false,
+      pausedAt: fromIso(m.pausedAt),
+      pausedByPlayerId: m.pausedByPlayerId ?? null,
+      matchNumber: m.matchNumber,
+      sourceMatch1: null,
+      sourceMatch2: null,
+      sourceLabel1: m.player1?.name ?? '',
+      sourceLabel2: m.player2?.name ?? '',
+      nextMatchIfWin: null,
+      nextMatchIfLose: null,
+      result: m.result,
+    };
+    tournament.matchById.set(match.id, match);
+    return match;
   };
+
+  tournament.winnersMatches = data.winnersMatches.map(importMatch);
+  tournament.losersMatches = data.losersMatches.map(importMatch);
+  tournament.grandFinal = data.grandFinal ? importMatch(data.grandFinal) : null;
+  tournament.grandFinalReset = data.grandFinalReset ? importMatch(data.grandFinalReset) : null;
+  refreshWaitingLists(tournament);
+  return tournament;
 }

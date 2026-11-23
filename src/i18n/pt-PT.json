@@ -1882,5 +1882,9 @@
   "Jogo desconhecido:": "Jogo desconhecido:",
   "Grande Final": "Grande Final",
   "Final Reset": "Repetição da grande final",
-  "Ronda": "Ronda"
+  "Ronda": "Ronda",
+  "✅ Estás pronto!": "✅ Estás pronto!",
+  "À espera de {0}…": "À espera de {0}…",
+  "{0} já está pronto! Carrega no botão para começar.": "{0} já está pronto! Carrega no botão para começar.",
+  "{0} está desligado. O jogo começa quando voltar.": "{0} está desligado. O jogo começa quando voltar."
 }

@@ -88,6 +88,8 @@ export interface Match {
   nextMatchIfWin?: number | null;        // Próxima partida se ganhar
   nextMatchIfLose?: number | null;       // Próxima partida se perder (losers bracket)
   result?: 'normal' | 'bye' | null;      // 'bye' indica vitória automática
+  player1Ready?: boolean;                // Jogador 1 carregou em «Estou pronto» para o jogo atual
+  player2Ready?: boolean;                // Jogador 2 carregou em «Estou pronto» para o jogo atual
 }
 
 /** Estado do torneio conforme CLIENT-INTEGRATION_NEW */
@@ -259,6 +261,15 @@ export interface SpectatorGameStateMessage {
   whoseTurn: 'player1' | 'player2' | null;
 }
 
+/** Quem já carregou em «Estou pronto» para o próximo jogo do confronto. */
+export interface ReadyStateMessage {
+  type: 'ready_state';
+  matchId: string;
+  gameNumber: number;
+  player1Ready: boolean;
+  player2Ready: boolean;
+}
+
 /** Lista de jogos em curso disponíveis para observar */
 export interface ActiveGamesListMessage {
   type: 'active_games_list';
@@ -288,7 +299,8 @@ export type ServerMessage =
   | ErrorMessage
   | InfoMessage
   | SpectatorGameStateMessage
-  | ActiveGamesListMessage;
+  | ActiveGamesListMessage
+  | ReadyStateMessage;
 
 // ============================================================================
 // Helpers para converter entre formatos

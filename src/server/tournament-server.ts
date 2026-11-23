@@ -31,7 +31,6 @@ import {
   processMatchResult,
   toTournamentState,
   handlePlayerDisconnect,
-  forfeitMatch,
   findPlayerByCode,
   reactivatePlayer,
   eliminatePlayer,
@@ -42,6 +41,10 @@ import {
   getActiveMatchesWithGameState,
   exportTournament,
   importTournament,
+  scheduleMatches,
+  toProtocolMatch,
+  computeStandings,
+  type MatchOutcome,
   type Tournament,
   type TournamentPlayer,
   type TournamentMatch,
@@ -208,6 +211,42 @@ function broadcastTournamentState(tournament: Tournament): void {
 
   // Também envia a lista de jogos activos para espectadores
   broadcastActiveGamesList(tournament);
+}
+
+/** Envia match_assigned aos dois jogadores de cada novo confronto. */
+function dispatchMatches(matches: TournamentMatch[]): void {
+  for (const match of matches) {
+    if (match.phase === 'finished') continue;
+    if (match.player1) {
+      sendToPlayer(match.player1.id, {
+        type: 'match_assigned',
+        match: toProtocolMatch(match),
+        yourRole: 'player1',
+        opponentName: match.player2?.name || 'A aguardar adversário...',
+      });
+    }
+    if (match.player2) {
+      sendToPlayer(match.player2.id, {
+        type: 'match_assigned',
+        match: toProtocolMatch(match),
+        yourRole: 'player2',
+        opponentName: match.player1?.name || 'A aguardar adversário...',
+      });
+    }
+  }
+}
+
+/** Diz aos dois jogadores quem já está pronto para o próximo jogo. */
+function sendReadyState(match: TournamentMatch): void {
+  const message: ServerMessage = {
+    type: 'ready_state',
+    matchId: match.id,
+    gameNumber: match.currentGame,
+    player1Ready: match.player1Ready,
+    player2Ready: match.player2Ready,
+  };
+  if (match.player1) sendToPlayer(match.player1.id, message);
+  if (match.player2) sendToPlayer(match.player2.id, message);
 }
 
 /** Envia a lista de jogos em curso para todos os jogadores e espectadores */
@@ -449,7 +488,7 @@ function handleRejoinTournament(
         // Re-enviar match assignment para o jogador
         sendToSocket(socket, {
           type: 'match_assigned',
-          match: match,
+          match: toProtocolMatch(match),
           yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
           opponentName: opponent?.name ?? 'Adversário desconectado',
         });
@@ -486,14 +525,14 @@ function handleRejoinTournament(
         // Re-enviar match assignment para ambos
         sendToSocket(socket, {
           type: 'match_assigned',
-          match: match,
+          match: toProtocolMatch(match),
           yourRole: match.player1?.id === foundPlayer.id ? 'player1' : 'player2',
           opponentName: opponent?.name || '',
         });
 
         sendToPlayer(opponentId!, {
           type: 'match_assigned',
-          match: match,
+          match: toProtocolMatch(match),
           yourRole: match.player1?.id === opponentId ? 'player1' : 'player2',
           opponentName: foundPlayer.name,
         });
@@ -535,6 +574,8 @@ function handleRejoinTournament(
       type: 'info',
       message: 'Voltaste ao campeonato! A aguardar próximo match...',
     });
+    // Voltar a estar ligado pode desbloquear um emparelhamento.
+    dispatchMatches(scheduleMatches(foundTournament));
   }
 
   // Notificar todos os jogadores da atualização
@@ -587,17 +628,12 @@ function handleReadyForMatch(
     return;
   }
 
-  // Marcar jogador como pronto
-  const { bothReady, match: updatedMatch } = setPlayerReady(tournament, matchId, playerId);
+  // Cliques repetidos (ou depois de o jogo já ter começado) são ignorados em silêncio.
+  if (match.phase !== 'waiting') return;
 
-  if (!updatedMatch) {
-    sendToSocket(socket, {
-      type: 'error',
-      code: 'INVALID_STATE',
-      message: 'O match não está em estado de espera.',
-    });
-    return;
-  }
+  // Marcar jogador como pronto
+  const { bothReady, match: updatedMatch, changed } = setPlayerReady(tournament, matchId, playerId);
+  if (!updatedMatch || !changed) return;
 
   // Se ambos estão prontos, iniciar o jogo
   if (bothReady) {
@@ -645,11 +681,8 @@ function handleReadyForMatch(
     broadcastSpectatorGameState(tournament, updatedMatch);
     broadcastTournamentState(tournament);
   } else {
-    // Notificar que estamos à espera do outro jogador
-    sendToSocket(socket, {
-      type: 'info',
-      message: 'Estás pronto! A aguardar o adversário...',
-    });
+    // Ambos veem quem já está pronto.
+    sendReadyState(updatedMatch);
   }
 }
 
@@ -900,11 +933,43 @@ function handleMatchEnd(
 
   // Processar resultado no motor de torneios
   const result = processMatchResult(tournament, match.id, winnerId);
+  announceMatchOutcome(tournament, match, winnerId, result);
+}
+
+/** Anuncia o campeão e a classificação final a todos. */
+function announceTournamentEnd(tournament: Tournament): void {
+  const champion = tournament.championId ? tournament.playerById.get(tournament.championId) : null;
+  log({
+    type: 'info',
+    tournamentId: tournament.id,
+    message: `Torneio terminado! Campeão: ${champion?.name ?? '—'}`,
+  });
+  broadcastTournamentState(tournament);
+  if (!champion) return;
+  broadcastToTournament(tournament, {
+    type: 'tournament_end',
+    tournamentId: tournament.id,
+    championId: champion.id,
+    championName: champion.name,
+    finalStandings: computeStandings(tournament),
+  });
+}
+
+/** Notifica o fim de um confronto já processado pelo motor. */
+function announceMatchOutcome(
+  tournament: Tournament,
+  match: TournamentMatch,
+  winnerId: string,
+  result: MatchOutcome
+): void {
+  const loserId = match.player1!.id === winnerId ? match.player2!.id : match.player1!.id;
+  const winner = tournament.playerById.get(winnerId)!;
+  const loser = tournament.playerById.get(loserId)!;
 
   // Determinar próximo bracket para cada jogador
   const winnerNextBracket = result.isTournamentEnd ? 'champion' :
     (match.bracket === 'winners' ? 'winners' : 'losers');
-  const loserNextBracket = loser.losses >= 2 ? 'eliminated' : 'losers';
+  const loserNextBracket = loser.status === 'eliminated' ? 'eliminated' : 'losers';
 
   // Notificar jogadores
   sendToPlayer(winnerId, {
@@ -931,44 +996,10 @@ function handleMatchEnd(
 
   // Se o torneio terminou
   if (result.isTournamentEnd) {
-    log({
-      type: 'info',
-      tournamentId: tournament.id,
-      message: `Torneio terminado! Campeão: ${winner.name}`,
-    });
-
-    broadcastToTournament(tournament, {
-      type: 'tournament_end',
-      tournamentId: tournament.id,
-      championId: winnerId,
-      championName: winner.name,
-      finalStandings: tournament.players.map((p, i) => ({
-        rank: p.id === winnerId ? 1 : (p.losses < 2 ? 2 : Math.min(3, 1 + p.losses)),
-        playerId: p.id,
-        playerName: p.name,
-      })),
-    });
+    announceTournamentEnd(tournament);
   } else {
     // Notificar novos matches se foram criados
-    for (const newMatch of result.newMatches) {
-      if (newMatch.player1) {
-        sendToPlayer(newMatch.player1.id, {
-          type: 'match_assigned',
-          match: newMatch,
-          yourRole: 'player1',
-          opponentName: newMatch.player2?.name || 'A aguardar adversário...',
-        });
-      }
-      if (newMatch.player2) {
-        sendToPlayer(newMatch.player2.id, {
-          type: 'match_assigned',
-          match: newMatch,
-          yourRole: 'player2',
-          opponentName: newMatch.player1?.name || 'A aguardar adversário...',
-        });
-      }
-    }
-
+    dispatchMatches(result.newMatches);
     broadcastTournamentState(tournament);
   }
 }
@@ -991,15 +1022,10 @@ function handleLeaveTournament(socket: ServerWebSocket<ClientData>): void {
         });
         broadcastTournamentState(tournament);
       } else if (tournament.phase === 'running') {
-        // Forfeit em match ativo
-        const { forfeitMatchId } = handlePlayerDisconnect(tournament, playerId);
-        if (forfeitMatchId) {
-          const winnerId = forfeitMatch(tournament, forfeitMatchId, playerId);
-          if (winnerId) {
-            const match = tournament.matchById.get(forfeitMatchId)!;
-            handleMatchEnd(tournament, match, winnerId);
-          }
-        }
+        // Sair a meio fica como desligado: o confronto pausa até voltar
+        // (ou até o professor o eliminar no painel).
+        handlePlayerDisconnect(tournament, playerId);
+        broadcastTournamentState(tournament);
       }
       break;
     }
@@ -1310,44 +1336,8 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       message: `O campeonato começou com ${tournament.players.length} jogadores!`,
     });
 
-    // Enviar match assignments para os primeiros matches
-    const allMatches = [...tournament.winnersMatches, ...tournament.losersMatches];
-    for (const match of allMatches) {
-      // Skip matches já terminados (byes) - jogadores serão notificados separadamente
-      if (match.phase === 'finished') {
-        continue;
-      }
-      const p1 = match.player1;
-      const p2 = match.player2;
-      if (p1) {
-        sendToPlayer(p1.id, {
-          type: 'match_assigned',
-          match: match,
-          yourRole: 'player1',
-          opponentName: p2?.name || 'A aguardar adversário...',
-        });
-      }
-      if (p2) {
-        sendToPlayer(p2.id, {
-          type: 'match_assigned',
-          match: match,
-          yourRole: 'player2',
-          opponentName: p1?.name || 'A aguardar adversário...',
-        });
-      }
-    }
-
-    // Notificar jogadores que ganharam por bye para irem ao lobby ver jogos
-    for (const match of allMatches) {
-      if (match.result === 'bye' && match.winnerId) {
-        sendToPlayer(match.winnerId, {
-          type: 'info',
-          message: 'Avançaste automaticamente! Podes ver os outros jogos enquanto esperas pelo próximo adversário.',
-        });
-        // Enviar também a lista de jogos ativos para que possam ver
-        broadcastActiveGamesList(tournament);
-      }
-    }
+    // Enviar os primeiros confrontos (os emparelhamentos seguintes são dinâmicos)
+    dispatchMatches([...tournament.winnersMatches, ...tournament.losersMatches]);
 
     return Response.json({ success: true, state: toTournamentState(tournament) }, { headers: corsHeaders });
   }
@@ -1394,8 +1384,9 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       return Response.json({ error: 'Player already eliminated' }, { status: 400, headers: corsHeaders });
     }
 
-    // Eliminar jogador (forfeit todos os matches)
-    const { forfeitedMatchIds } = eliminatePlayer(tournament, playerId);
+    // Eliminar jogador: o adversário do confronto em curso vence por falta.
+    const elimination = eliminatePlayer(tournament, playerId);
+    const forfeitedMatchIds = elimination.endedMatches.map(match => match.id);
 
     log({
       type: 'info',
@@ -1403,12 +1394,20 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       message: `Jogador ${player.name} eliminado pelo administrador`,
     });
 
-    // Processar resultados dos matches forfeitados
-    for (const matchId of forfeitedMatchIds) {
-      const match = tournament.matchById.get(matchId);
-      if (match && match.winnerId) {
-        handleMatchEnd(tournament, match, match.winnerId);
+    // O motor já processou os resultados; aqui só se notifica.
+    for (const match of elimination.endedMatches) {
+      if (match.winnerId) {
+        announceMatchOutcome(tournament, match, match.winnerId, {
+          affectedPlayerIds: [],
+          newMatches: elimination.newMatches,
+          isGrandFinal: match === tournament.grandFinal || match === tournament.grandFinalReset,
+          isTournamentEnd: elimination.isTournamentEnd,
+        });
       }
+    }
+    if (elimination.endedMatches.length === 0) {
+      dispatchMatches(elimination.newMatches);
+      if (elimination.isTournamentEnd) announceTournamentEnd(tournament);
     }
 
     broadcastTournamentState(tournament);
@@ -1559,7 +1558,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       }
 
       // Validar versão
-      if (body.version !== 1) {
+      if (body.version !== 2) {
         return Response.json({
           error: 'Unsupported export version',
           version: body.version,
@@ -1724,7 +1723,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       });
       sendToPlayer(match.player1.id, {
         type: 'match_assigned',
-        match: match,
+        match: toProtocolMatch(match),
         yourRole: 'player1',
         opponentName: match.player2?.name || 'TBD',
       });
@@ -1736,7 +1735,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       });
       sendToPlayer(match.player2.id, {
         type: 'match_assigned',
-        match: match,
+        match: toProtocolMatch(match),
         yourRole: 'player2',
         opponentName: match.player1?.name || 'TBD',
       });
@@ -1788,7 +1787,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       });
       sendToPlayer(match.player1.id, {
         type: 'match_assigned',
-        match: match,
+        match: toProtocolMatch(match),
         yourRole: 'player1',
         opponentName: match.player2?.name || 'TBD',
       });
@@ -1800,7 +1799,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
       });
       sendToPlayer(match.player2.id, {
         type: 'match_assigned',
-        match: match,
+        match: toProtocolMatch(match),
         yourRole: 'player2',
         opponentName: match.player1?.name || 'TBD',
       });

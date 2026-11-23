@@ -1882,5 +1882,9 @@
   "Jogo desconhecido:": "Unknown game:",
   "Grande Final": "Grand final",
   "Final Reset": "Grand final reset",
-  "Ronda": "Round"
+  "Ronda": "Round",
+  "✅ Estás pronto!": "✅ You are ready!",
+  "À espera de {0}…": "Waiting for {0}…",
+  "{0} já está pronto! Carrega no botão para começar.": "{0} is ready! Press the button to start.",
+  "{0} está desligado. O jogo começa quando voltar.": "{0} is offline. The game starts when they come back."
 }

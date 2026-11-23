@@ -170,6 +170,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Estado para anúncio de fim de partida individual
   const [gameJustEnded, setGameJustEnded] = useState(false);
+  // «Estou pronto»: pedido local (otimista) e confirmação do servidor para o jogo atual.
+  const [readyRequested, setReadyRequested] = useState(false);
+  const [readyFlags, setReadyFlags] = useState<{ player1: boolean; player2: boolean }>({ player1: false, player2: false });
   const [lastGameWinnerId, setLastGameWinnerId] = useState<string | null>(null);
   const [lastGameWinnerRole, setLastGameWinnerRole] = useState<'player1' | 'player2' | null>(null);
 
@@ -264,6 +267,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'match_assigned':
         setCurrentMatch(message.match);
+        setReadyRequested(false);
+        setReadyFlags({ player1: message.match.player1Ready ?? false, player2: message.match.player2Ready ?? false });
         setMyRole(message.yourRole);
         // Usar o número do jogo e score do match (importante para reconexões!)
         setCurrentGameNumber(message.match.currentGame || 1);
@@ -277,6 +282,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'game_start': {
         setIsMyTurn(message.youStart);
+        setReadyRequested(false);
+        setReadyFlags({ player1: false, player2: false });
         setCurrentGameNumber(message.gameNumber);
         // Reset do estado de fim de partida
         setGameJustEnded(false);
@@ -342,6 +349,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
         // Ativar estado de anúncio de fim de partida
         setGameJustEnded(true);
+        setReadyRequested(false);
+        setReadyFlags({ player1: false, player2: false });
         setLastGameWinnerId(message.winnerId);
         setLastGameWinnerRole(message.winnerRole);
 
@@ -361,6 +370,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'match_end':
         setCurrentMatch(null);
+        setReadyRequested(false);
+        setReadyFlags({ player1: false, player2: false });
         setMyRole(null);
         setGameState(null);
         setCurrentGameNumber(1);
@@ -407,6 +418,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'info':
         addLog(message.message, 'info');
+        break;
+
+      case 'ready_state':
+        setReadyFlags({ player1: message.player1Ready, player2: message.player2Ready });
         break;
 
       case 'active_games_list':
@@ -546,14 +561,24 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     }
   };
 
+  const myReadyConfirmed = myRole ? readyFlags[myRole] : false;
+
   const handleReadyForMatch = () => {
-    if (!currentMatch || !clientRef.current) return;
+    // Um só pedido por jogo: o botão desaparece logo ao primeiro clique.
+    if (!currentMatch || !clientRef.current || readyRequested || myReadyConfirmed) return;
+    setReadyRequested(true);
     clientRef.current.send({
       type: 'ready_for_match',
       matchId: currentMatch.id,
     });
-    addLog('Estás pronto! A aguardar...', 'info');
   };
+
+  // Se o servidor não confirmar (ex.: ligação perdida), o botão volta passados 6 s.
+  useEffect(() => {
+    if (!readyRequested || myReadyConfirmed) return;
+    const timer = setTimeout(() => setReadyRequested(false), 6000);
+    return () => clearTimeout(timer);
+  }, [readyRequested, myReadyConfirmed]);
 
   const handleMove = (move: unknown) => {
     if (!currentMatch || !clientRef.current || !isMyTurn) return;
@@ -685,6 +710,13 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   lastGameWinnerRole={lastGameWinnerRole}
                   playerId={playerId}
                   onReady={handleReadyForMatch}
+                  iAmReady={readyRequested || myReadyConfirmed}
+                  opponentReady={myRole === 'player1' ? readyFlags.player2 : myRole === 'player2' ? readyFlags.player1 : false}
+                  opponentOnline={(() => {
+                    const opponentId = myRole === 'player1' ? currentMatch.player2?.id : currentMatch.player1?.id;
+                    const opponent = tournamentState?.players.find(p => p.id === opponentId);
+                    return opponent ? opponent.isOnline : true;
+                  })()}
                   onMove={handleMove}
                   onNextGame={handleNextGame}
                 />
@@ -1299,12 +1331,15 @@ interface MatchAreaProps {
   lastGameWinnerRole: 'player1' | 'player2' | null;
   playerId: string | null;
   onReady: () => void;
+  iAmReady: boolean;
+  opponentReady: boolean;
+  opponentOnline: boolean;
   onMove: (move: unknown) => void;
   onNextGame: () => void;
 }
 
-function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, onMove, onNextGame }: MatchAreaProps) {
-  const { t, locale } = useTranslation();
+function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumber, matchScore, gameJustEnded, lastGameWinnerId, lastGameWinnerRole, playerId, onReady, iAmReady, opponentReady, opponentOnline, onMove, onNextGame }: MatchAreaProps) {
+  const { t, msg, locale } = useTranslation();
   // IMPORTANTE: myRole é o SEAT fixo no match (player1 ou player2), definido em match_assigned
   // O seat NUNCA muda durante o match. O que muda é apenas quem joga como Gatos/Cães.
   const mySeatInMatch = myRole;
@@ -1423,7 +1458,8 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
             </div>
             <button
               onClick={onNextGame}
-              className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+              disabled={iAmReady}
+              className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors disabled:opacity-60"
             >{t("▶️ Próxima Partida")}</button>
           </div>
         </div>
@@ -1431,12 +1467,27 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
 
       {/* Área de jogo - fase waiting (antes de começar) */}
       {match.phase === 'waiting' && !gameJustEnded && (
-        <div className="text-center py-8">
-          <p className="[color:var(--tinta)] mb-4">{t("Estás pronto para começar?")}</p>
-          <button
-            onClick={onReady}
-            className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-          >{t("✅ Estou pronto!")}</button>
+        <div className="text-center py-8" data-ready-panel>
+          {iAmReady ? (
+            <div role="status" aria-live="polite" className="space-y-2">
+              <p className="text-xl font-bold [color:var(--sucesso)]">{t("✅ Estás pronto!")}</p>
+              <p className="[color:var(--tinta)] animate-pulse">{msg('À espera de {0}…', [opponent?.name ?? ''])}</p>
+              {!opponentOnline && (
+                <p className="[color:var(--tinta-suave)] text-sm">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
+              )}
+            </div>
+          ) : (
+            <>
+              <p className="[color:var(--tinta)] mb-2">{t("Estás pronto para começar?")}</p>
+              {opponentReady && (
+                <p role="status" className="[color:var(--sucesso)] text-sm mb-2">{msg('{0} já está pronto! Carrega no botão para começar.', [opponent?.name ?? ''])}</p>
+              )}
+              <button
+                onClick={onReady}
+                className="mt-2 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+              >{t("✅ Estou pronto!")}</button>
+            </>
+          )}
         </div>
       )}
 
