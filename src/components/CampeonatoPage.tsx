@@ -442,10 +442,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'error':
         addLog(`Erro: ${message.message}`, 'error');
-        // A reentrada automática foi recusada porque o aluno já foi eliminado.
-        if (message.code === 'PLAYER_ELIMINATED') {
-          setPhase(prev => (prev === 'lobby' || prev === 'match' ? 'finished' : prev));
-        }
+        // Reentrada (automática ou com o código) recusada porque o aluno já foi eliminado.
+        if (message.code === 'PLAYER_ELIMINATED') setPhase('finished');
         break;
 
       case 'info':
@@ -781,6 +779,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   onMove={handleMove}
                   onNextGame={handleNextGame}
                 />
+              )}
+
+              {phase === 'finished' && !tournamentState && (
+                <EliminatedNotice onLeave={handleDisconnect} />
               )}
 
               {phase === 'finished' && tournamentState && (
@@ -1527,11 +1529,17 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
             {!opponentOnline && (
               <p className="[color:var(--tinta-suave)] text-sm mb-2">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
             )}
-            <button
-              onClick={onNextGame}
-              disabled={iAmReady}
-              className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors disabled:opacity-60"
-            >{t("▶️ Próxima Partida")}</button>
+            {iAmReady ? (
+              <div role="status" aria-live="polite">
+                <p className="font-bold [color:var(--sucesso)]">{t("✅ Estás pronto!")}</p>
+                <p className="[color:var(--tinta)] animate-pulse">{msg('À espera de {0}…', [opponent?.name ?? ''])}</p>
+              </div>
+            ) : (
+              <button
+                onClick={onNextGame}
+                className="px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+              >{t("▶️ Próxima Partida")}</button>
+            )}
           </div>
         </div>
       )}
@@ -1652,6 +1660,21 @@ interface TournamentFinishedProps {
   tournamentState: TournamentState;
   playerId: string | null;
   onNewTournament: () => void;
+}
+
+/** Eliminado sem estado do torneio (ex.: reentrada com o código depois de ser eliminado). */
+function EliminatedNotice({ onLeave }: { onLeave: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-xl border p-6 md:p-8 [background:var(--painel)] [border-color:var(--linha)] [box-shadow:var(--sombra)] text-center">
+      <h2 className="text-3xl font-bold [color:var(--tinta)] mb-2">{t('Foste eliminado do campeonato.')}</h2>
+      <p className="[color:var(--tinta)] text-lg mb-4">{t('O campeonato continua. Obrigado por jogares!')}</p>
+      <button
+        onClick={onLeave}
+        className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
+      >{t('❌ Sair do Campeonato')}</button>
+    </div>
+  );
 }
 
 function TournamentFinished({ tournamentState, playerId, onNewTournament }: TournamentFinishedProps) {

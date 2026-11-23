@@ -262,7 +262,7 @@ VITE_TOURNAMENT_SERVER_URL=wss://torneio.exemplo.com bun run build
 
 - Todos começam na **Winners Bracket**; à 1.ª derrota passam para a **Losers Bracket**; à 2.ª derrota são **eliminados**.
 - Os confrontos **não são sorteados todos no início**: são criados à medida que os alunos ficam livres. Funciona com qualquer número de alunos (5, 17, 23…).
-- **Winners**: só se defrontam alunos com o mesmo número de vitórias (como numa chave clássica). Quem acaba primeiro joga contra o próximo que acabar ao mesmo nível.
+- **Winners**: só se defrontam alunos do mesmo nível, como numa chave clássica. Sobe-se de nível com uma vitória ou com uma isenção. Quem acaba primeiro joga contra o próximo que chegar ao mesmo nível.
 - **Losers**: logo que haja dois alunos livres com uma derrota, jogam (evitando repetir adversários, quando possível).
 - **Isenções**: com número ímpar num nível, o aluno que sobra sobe automaticamente quando já ninguém o pode alcançar, e joga contra o primeiro vencedor seguinte. Só recebe isenção quem está ligado.
 - **Grande Final**: campeão da Winners (começa os jogos 1 e 3) contra campeão da Losers. Se o campeão da Losers ganhar, há **final de desempate** (ninguém sai sem duas derrotas).
