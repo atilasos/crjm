@@ -89,6 +89,8 @@ interface ClientData {
   playerId: string | null;
   tournamentId: string | null;
   isPrivilegedSpectator: boolean;
+  /** Identificador da sessão do cliente que ocupa o lugar (para reentradas automáticas). */
+  deviceId?: string;
 }
 
 // Mapa de torneios ativos (por jogo, só um torneio por jogo de cada vez)
@@ -305,7 +307,8 @@ function handleJoinTournament(
   socket: ServerWebSocket<ClientData>,
   gameId: GameId,
   playerName: string,
-  classId?: string
+  classId?: string,
+  deviceId?: string
 ): void {
   // Verificar se o jogo é suportado
   if (!isGameSupported(gameId)) {
@@ -355,6 +358,7 @@ function handleJoinTournament(
 
   // Associar socket ao jogador (e remover do set de espectadores)
   socket.data.playerId = player.id;
+  socket.data.deviceId = deviceId;
   socket.data.tournamentId = tournament.id;
   playerSockets.set(player.id, socket);
   spectatorSockets.delete(socket);
@@ -386,7 +390,9 @@ function handleJoinTournament(
 
 function handleRejoinTournament(
   socket: ServerWebSocket<ClientData>,
-  reconnectionCode: string
+  reconnectionCode: string,
+  automatic = false,
+  deviceId?: string
 ): void {
   const normalizedCode = reconnectionCode.toUpperCase().trim();
 
@@ -425,6 +431,17 @@ function handleRejoinTournament(
   // Verificar se já está conectado (evitar duplicados)
   // Mas primeiro limpar socket antigo se existir (evita race condition)
   const existingSocket = playerSockets.get(foundPlayer.id);
+  // Um tablet antigo que recupera a rede não tira o lugar ao dispositivo que o aluno está a usar.
+  // O mesmo dispositivo pode sempre voltar (a ligação antiga pode estar morta sem o servidor saber).
+  const otherDevice = !deviceId || existingSocket?.data.deviceId !== deviceId;
+  if (automatic && existingSocket && existingSocket !== socket && existingSocket.readyState === 1 && otherDevice) {
+    sendToSocket(socket, {
+      type: 'error',
+      code: 'SEAT_TAKEN',
+      message: 'Este código está a ser usado noutro dispositivo.',
+    });
+    return;
+  }
   if (existingSocket) {
     // Fechar socket antigo se ainda existir
     try {
@@ -447,6 +464,7 @@ function handleRejoinTournament(
 
   // Associar socket ao jogador (e remover do set de espectadores)
   socket.data.playerId = foundPlayer.id;
+  socket.data.deviceId = deviceId;
   socket.data.tournamentId = foundTournament.id;
   playerSockets.set(foundPlayer.id, socket);
   spectatorSockets.delete(socket);
@@ -1110,16 +1128,18 @@ function handleMessage(
         socket,
         message.gameId,
         message.playerName,
-        message.classId
+        message.classId,
+        message.deviceId
       );
       break;
 
     case 'rejoin_tournament':
-      handleRejoinTournament(socket, message.reconnectionCode);
+      handleRejoinTournament(socket, message.reconnectionCode, message.auto === true, message.deviceId);
       break;
 
     case 'ready_for_match':
-      handleReadyForMatch(socket, message.matchId, message.gameNumber);
+      // Clientes antigos podem não enviar o número do jogo.
+      handleReadyForMatch(socket, message.matchId, (message as { gameNumber?: number }).gameNumber);
       break;
 
     case 'submit_move':

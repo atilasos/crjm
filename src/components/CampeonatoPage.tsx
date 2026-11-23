@@ -201,6 +201,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
   // Refs para handlers - evita recriar o cliente quando o estado muda
   const playerIdRef = useRef<string | null>(null);
+  const reconnectionCodeRef = useRef<string | null>(null);
   const currentGameIdRef = useRef<GameId | null>(null);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
@@ -220,7 +221,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   // Mantém as refs sincronizadas com o estado
   useEffect(() => {
     playerIdRef.current = playerId;
-  }, [playerId]);
+    reconnectionCodeRef.current = reconnectionCode;
+  }, [playerId, reconnectionCode]);
 
   useEffect(() => {
     currentGameIdRef.current = currentGameId;
@@ -243,8 +245,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
             setTournamentState(normalized);
             setCurrentGameId(normalized.gameId);
           }
+          // Reentrada depois do fim (ou já eliminado): o ecrã final, não a sala de espera.
+          const finishedForMe = normalized?.phase === 'finished'
+            || normalized?.players.some(p => p.id === message.playerId && p.status === 'eliminated');
+          setPhase(finishedForMe ? 'finished' : 'lobby');
         }
-        setPhase('lobby');
         addLog('Inscrito no campeonato!', 'success');
         break;
 
@@ -437,6 +442,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       case 'error':
         addLog(`Erro: ${message.message}`, 'error');
+        // A reentrada automática foi recusada porque o aluno já foi eliminado.
+        if (message.code === 'PLAYER_ELIMINATED') {
+          setPhase(prev => (prev === 'lobby' || prev === 'match' ? 'finished' : prev));
+        }
         break;
 
       case 'info':
@@ -526,8 +535,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         } else if (status === 'error') {
           addLog(`Erro de ligação: ${error}`, 'error');
         } else if (status === 'disconnected') {
-          // Só volta ao ecrã de connect se não estiver já lá
           addLog('Desligado do servidor.', 'warning');
+          returnToCodeScreen();
         }
       },
       onMessage: handleServerMessage,
@@ -545,6 +554,16 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       addLog('Falha ao ligar ao servidor.', 'error');
     }
   };
+
+  /**
+   * A recuperação automática desistiu (ou o código foi recusado): voltar ao ecrã de
+   * entrada com o código já preenchido, para o aluno só ter de carregar em «Reconectar».
+   */
+  function returnToCodeScreen() {
+    const code = clientRef.current?.reconnectionCode ?? reconnectionCodeRef.current;
+    if (code) setReconnectionCodeInput(code);
+    setPhase(prev => (prev === 'lobby' || prev === 'match' ? 'connect' : prev));
+  }
 
   const handleRejoin = async () => {
     if (!reconnectionCodeInput.trim() || reconnectionCodeInput.length !== 6) {
@@ -578,6 +597,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
           addLog(`Erro de ligação: ${error}`, 'error');
         } else if (status === 'disconnected') {
           addLog('Desligado do servidor.', 'warning');
+          returnToCodeScreen();
         }
       },
       onMessage: handleServerMessage,
@@ -1664,7 +1684,7 @@ function TournamentFinished({ tournamentState, playerId, onNewTournament }: Tour
       <button
         onClick={onNewTournament}
         className="mt-6 px-8 py-3 rounded-xl [background:var(--tinta)] [color:var(--fundo)] font-bold [box-shadow:var(--sombra)] hover:[background:var(--tinta-suave)] transition-colors"
-      >{t("🔄 Novo Campeonato")}</button>
+      >{t(stillRunning ? '❌ Sair do Campeonato' : '🔄 Novo Campeonato')}</button>
     </div>
   );
 }

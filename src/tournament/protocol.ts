@@ -116,13 +116,15 @@ export interface JoinTournamentMessage {
   playerName: string;
   classId?: string;
   playerId?: string; // Para reconexão
+  /** Identificador aleatório da sessão do cliente (ver RejoinTournamentMessage). */
+  deviceId?: string;
 }
 
 export interface ReadyForMatchMessage {
   type: 'ready_for_match';
   matchId: string;
-  /** Jogo para o qual o aluno está pronto; pedidos sem número ou de outro jogo são ignorados. */
-  gameNumber?: number;
+  /** Jogo para o qual o aluno está pronto; pedidos sem número (clientes antigos) ou de outro jogo são ignorados. */
+  gameNumber: number;
 }
 
 /** Jogada genérica – o payload depende do jogo */
@@ -140,6 +142,10 @@ export interface LeaveTournamentMessage {
 export interface RejoinTournamentMessage {
   type: 'rejoin_tournament';
   reconnectionCode: string;
+  /** Reentrada automática depois de uma queda: não tira o lugar a outro dispositivo ligado. */
+  auto?: boolean;
+  /** Identificador aleatório da sessão do cliente (o mesmo em todas as reentradas). */
+  deviceId?: string;
 }
 
 export type ClientMessage =

@@ -81,7 +81,7 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
     expect(resync.player1Ready).toBe(false);
     expect(resync.reset).toBe(true);
     // Sem número de jogo (separador antigo): também não conta, e pede para atualizar.
-    p1.send({ type: 'ready_for_match', matchId: match.id });
+    p1.send({ type: 'ready_for_match', matchId: match.id } as unknown as ClientMessage);
     expect((await p1.next('ready_state')).player1Ready).toBe(false);
     await p1.next('info', m => m.message.includes('Atualiza'));
     // «Pronto» é confirmado a ambos; um clique repetido é confirmado de novo a quem clicou.
@@ -176,5 +176,104 @@ test('o cliente do aluno volta a entrar sozinho com o código depois de o tornei
     server.kill();
     await server.exited;
     await rm(directory, { recursive: true, force: true });
+  }
+}, 30000);
+
+/** Arranca um servidor de torneios isolado; `restart` volta a abrir na mesma porta. */
+async function startServer() {
+  const directory = await mkdtemp(join(tmpdir(), 'crjm-recovery-'));
+  const reservation = Bun.serve({ port: 0, fetch: () => new Response() });
+  const port = reservation.port!;
+  reservation.stop(true);
+  const base = `http://127.0.0.1:${port}`;
+  const adminKey = crypto.randomUUID();
+  let process = spawnServer();
+  function spawnServer() {
+    return Bun.spawn(['bun', 'src/server/tournament-server.ts'], {
+      env: { ...Bun.env, PORT: String(port), ADMIN_KEY: adminKey, CLASS_STORE_PATH: join(directory, 'classes.json') },
+      stdout: 'ignore', stderr: 'pipe',
+    });
+  }
+  async function ready() {
+    for (let i = 0; i < 200; i++) {
+      try { if ((await fetch(`${base}/api/tournaments`, { headers: { Authorization: `Bearer ${adminKey}` } })).ok) return; } catch {}
+      await Bun.sleep(20);
+    }
+    throw new Error('server did not start');
+  }
+  async function api(path: string, body?: unknown) {
+    const response = await fetch(`${base}/api/${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: { Authorization: `Bearer ${adminKey}`, 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    expect(response.ok).toBe(true);
+    return response.json();
+  }
+  await ready();
+  return {
+    base, api, ready,
+    async stop() { process.kill(); await process.exited; },
+    async restart() { process = spawnServer(); await ready(); },
+    async cleanup() { process.kill(); await process.exited; await rm(directory, { recursive: true, force: true }); },
+  };
+}
+
+test('servidor reiniciado durante vários segundos e torneio restaurado depois: o aluno volta sozinho', async () => {
+  const server = await startServer();
+  const client = new TournamentWebSocketClient();
+  try {
+    const created = await server.api('tournaments/faisca/create-with-players', { players: [{ name: 'Ana' }, { name: 'Beto' }] });
+    const welcomes: string[] = [];
+    client.setEventHandlers({ onMessage: message => { if (message.type === 'welcome') welcomes.push(message.playerId); } });
+    await client.rejoin(server.base, created.players[0].reconnectionCode);
+    for (let i = 0; i < 100 && welcomes.length < 1; i++) await Bun.sleep(20);
+    const snapshot = await server.api('tournaments/faisca/export');
+
+    await server.stop();
+    await Bun.sleep(2500); // mais do que a primeira tentativa (1 s)
+    await server.restart();
+    await Bun.sleep(1500); // o código é recusado enquanto o professor ainda não restaurou
+    await server.api('tournaments/faisca/import', snapshot);
+
+    for (let i = 0; i < 1000 && welcomes.length < 2; i++) await Bun.sleep(20);
+    expect(welcomes).toEqual([created.players[0].id, created.players[0].id]);
+  } finally {
+    client.disconnect();
+    await server.cleanup();
+  }
+}, 40000);
+
+test('reentrada automática de outro dispositivo não tira o lugar; o mesmo dispositivo volta sempre', async () => {
+  const server = await startServer();
+  const sockets: Participant[] = [];
+  async function connect() {
+    const socket = new WebSocket(`${server.base.replace('http', 'ws')}/ws`);
+    const participant = new Participant(socket);
+    sockets.push(participant);
+    await new Promise<void>((resolve, reject) => { socket.onopen = () => resolve(); socket.onerror = () => reject(new Error('WebSocket failed')); });
+    return participant;
+  }
+  try {
+    const created = await server.api('tournaments/faisca/create-with-players', { players: [{ name: 'Ana' }, { name: 'Beto' }] });
+    const code = created.players[0].reconnectionCode;
+    // O aluno está agora no tablet novo.
+    const current = await connect();
+    current.send({ type: 'rejoin_tournament', reconnectionCode: code, deviceId: 'tablet-novo' });
+    await current.next('welcome');
+
+    // O tablet antigo recupera a rede e tenta voltar sozinho: recusado, o lugar fica onde está.
+    const old = await connect();
+    old.send({ type: 'rejoin_tournament', reconnectionCode: code, auto: true, deviceId: 'tablet-antigo' });
+    expect((await old.next('error')).code).toBe('SEAT_TAKEN');
+    expect(current.socket.readyState).toBe(WebSocket.OPEN);
+
+    // O tablet novo perde a ligação sem o servidor saber; ao voltar, retoma o lugar.
+    const again = await connect();
+    again.send({ type: 'rejoin_tournament', reconnectionCode: code, auto: true, deviceId: 'tablet-novo' });
+    await again.next('welcome');
+  } finally {
+    for (const client of sockets) client.socket.close();
+    await server.cleanup();
   }
 }, 30000);
