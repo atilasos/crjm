@@ -288,6 +288,12 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         setCurrentMatch(message.match);
         setReadyRequested(false);
         setNextGameNumber(message.match.currentGame || 1);
+        // Confronto (re)atribuído a meio de um jogo: o tabuleiro guardado pode estar
+        // desatualizado (ex.: torneio restaurado). Só se joga depois do estado do servidor.
+        if (message.match.phase === 'playing') {
+          setGameState(null);
+          setIsMyTurn(false);
+        }
         setReadyFlags({
           matchId: message.match.id,
           gameNumber: message.match.currentGame || 1,
@@ -765,12 +771,15 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                 />
               )}
 
-              {phase === 'match' && currentMatch && connectionStatus !== 'connected' && (
-                // Visível no próprio confronto (o indicador de ligação pode estar fora do ecrã no telemóvel).
-                <div role="status" aria-live="polite" className="mb-3 rounded-lg border p-3 text-center font-medium [border-color:var(--ouro)] [color:var(--tinta)]">
-                  {t('📶 A voltar a ligar… Espera um pouco.')}
-                </div>
-              )}
+              {/* Sempre montado para os leitores de ecrã anunciarem a mudança; fixo no topo do
+                  ecrã enquanto se religa, para se ver mesmo com o tabuleiro rolado no telemóvel. */}
+              <div role="status" aria-live="polite">
+                {phase === 'match' && currentMatch && connectionStatus !== 'connected' && (
+                  <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 w-[min(92vw,28rem)] rounded-lg border p-3 text-center font-medium [background:var(--painel)] [border-color:var(--ouro)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
+                    {t('📶 A voltar a ligar… Espera um pouco.')}
+                  </div>
+                )}
+              </div>
 
               {phase === 'match' && currentMatch && (
                 <MatchArea
