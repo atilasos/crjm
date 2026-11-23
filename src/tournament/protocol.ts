@@ -29,7 +29,7 @@ export interface Player {
   isOnline: boolean;
   isBot?: boolean;
   status?: PlayerStatus;
-  reconnectionCode?: string;
+  // Sem código de reconexão: os jogadores difundidos a todos nunca levam códigos.
 }
 
 export type BracketType = 'winners' | 'losers';

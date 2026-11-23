@@ -11,8 +11,14 @@ import { TournamentWebSocketClient } from '../tournament/TournamentWebSocketClie
 /** Real WebSocket client that keeps every message for later assertions. */
 class Participant {
   messages: ServerMessage[] = [];
+  /** Tudo o que foi recebido, mesmo depois de `next()` consumir (para verificar fugas). */
+  all: ServerMessage[] = [];
   constructor(readonly socket: WebSocket) {
-    socket.addEventListener('message', event => this.messages.push(JSON.parse(String(event.data))));
+    socket.addEventListener('message', event => {
+      const message = JSON.parse(String(event.data)) as ServerMessage;
+      this.messages.push(message);
+      this.all.push(message);
+    });
   }
   send(message: ClientMessage) { this.socket.send(JSON.stringify(message)); }
   async next<T extends ServerMessage['type']>(type: T, accept: (message: Extract<ServerMessage, { type: T }>) => boolean = () => true): Promise<Extract<ServerMessage, { type: T }>> {
@@ -70,14 +76,34 @@ test('torneio importado a meio de um jogo retoma quando os dois voltam; «pronto
     for (const [id, code] of codes) clients.set(id, await rejoin(code));
     await api('tournaments/faisca/start', {});
 
-    // Nenhum aluno recebe os códigos dos colegas (só o seu, no welcome).
-    const leak = [...clients.values()].flatMap(client => client.messages)
-      .filter(m => m.type === 'tournament_state_update' || m.type === 'welcome')
-      .flatMap(m => ('tournamentState' in m ? m.tournamentState.players : m.players))
-      .filter(player => player.reconnectionCode !== undefined);
-    expect(leak).toEqual([]);
+    // Nenhum aluno recebe os códigos dos colegas: só o seu, no welcome.
+    for (const client of clients.values()) {
+      await client.next('tournament_state_update', m => m.phase === 'running');
+    }
+    for (const [id, client] of clients) {
+      const welcomes = client.all.filter((m): m is Extract<ServerMessage, { type: 'welcome' }> => m.type === 'welcome');
+      const updates = client.all.filter(m => m.type === 'tournament_state_update');
+      expect(welcomes.length).toBeGreaterThan(0);
+      expect(updates.length).toBeGreaterThan(0);
+      for (const welcome of welcomes) {
+        expect(welcome.reconnectionCode).toBe(codes.get(id)!);
+        expect(welcome.tournamentState.players.length).toBe(2);
+      }
+      // Nenhum código de colega em lado nenhum do que este aluno recebeu.
+      const received = JSON.stringify(client.all);
+      for (const [otherId, otherCode] of codes) {
+        if (otherId !== id) expect(received).not.toContain(otherCode);
+      }
+      for (const update of updates) {
+        if (update.type !== 'tournament_state_update') continue;
+        expect(update.players.length).toBe(2);
+        for (const player of update.players) expect('reconnectionCode' in player).toBe(false);
+      }
+    }
+    // O professor continua a ter todos os códigos (cartões e painel).
     const adminView = await api('tournaments');
-    expect(adminView[0].players.every((player: { reconnectionCode?: string }) => typeof player.reconnectionCode === 'string')).toBe(true);
+    const adminCodes = new Map<string, string>(adminView[0].players.map((p: { id: string; reconnectionCode: string }) => [p.id, p.reconnectionCode]));
+    expect(adminCodes).toEqual(codes);
 
     const assigned = await [...clients.values()][0]!.next('match_assigned');
     const match = assigned.match;
