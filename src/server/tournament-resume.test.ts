@@ -219,7 +219,7 @@ async function startServer() {
     });
   }
   return {
-    base, api, ready, importRaw,
+    base, api, ready, importRaw, adminKey,
     async stop() { process.kill(); await process.exited; },
     async restart() { process = spawnServer(); await ready(); },
     async cleanup() { process.kill(); await process.exited; await rm(directory, { recursive: true, force: true }); },
@@ -330,6 +330,52 @@ test('importar recusa tabuleiro adulterado ou lugares impossíveis sem tocar no 
     expect(live.id).toBe(snapshot.id);
     // Um ficheiro válido continua a ser aceite.
     expect((await server.importRaw(snapshot)).status).toBe(200);
+  } finally {
+    for (const client of sockets) client.socket.close();
+    await server.cleanup();
+  }
+}, 30000);
+
+test('importar recusa um jogo não suportado e um tabuleiro de Y sem uma casa', async () => {
+  const server = await startServer();
+  const sockets: Participant[] = [];
+  try {
+    const created = await server.api('tournaments/y/create-with-players', { players: [{ name: 'Ana' }, { name: 'Beto' }] });
+    for (const player of created.players) {
+      const socket = new WebSocket(`${server.base.replace('http', 'ws')}/ws`);
+      const client = new Participant(socket);
+      sockets.push(client);
+      await new Promise<void>(resolve => { socket.onopen = () => resolve(); });
+      client.send({ type: 'rejoin_tournament', reconnectionCode: player.reconnectionCode });
+      await client.next('welcome');
+    }
+    await server.api('tournaments/y/start', {});
+    const match = (await sockets[0]!.next('match_assigned')).match;
+    for (const client of sockets) client.send({ type: 'ready_for_match', matchId: match.id, gameNumber: 1 });
+    await sockets[0]!.next('game_start');
+    const snapshot: TournamentExport = await server.api('tournaments/y/export');
+
+    const missingCell = JSON.parse(JSON.stringify(snapshot));
+    const board = missingCell.winnersMatches[0].gameState.tabuleiro as Record<string, unknown>;
+    delete board[Object.keys(board)[0]!];
+    const response = await fetch(`${server.base}/api/tournaments/y/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${server.adminKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(missingCell),
+    });
+    expect(response.status).toBe(400);
+
+    const unknownGame = { ...JSON.parse(JSON.stringify(snapshot)), gameId: 'xadrez' };
+    const unsupported = await fetch(`${server.base}/api/tournaments/xadrez/import`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${server.adminKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(unknownGame),
+    });
+    expect(unsupported.status).toBe(400);
+
+    // O torneio em curso continua lá e os alunos ligados.
+    for (const client of sockets) expect(client.socket.readyState).toBe(WebSocket.OPEN);
+    expect(((await server.api('tournaments/y/export')) as TournamentExport).id).toBe(snapshot.id);
   } finally {
     for (const client of sockets) client.socket.close();
     await server.cleanup();

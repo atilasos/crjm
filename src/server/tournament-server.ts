@@ -1204,7 +1204,13 @@ function hasSameShape(gameId: GameId, state: unknown): boolean {
     return a.every((row, index) => !Array.isArray(row)
       || (Array.isArray(b[index]) && (b[index] as unknown[]).length === row.length));
   }
-  if (a && typeof a === 'object') return Boolean(b) && typeof b === 'object' && !Array.isArray(b);
+  if (a && typeof a === 'object') {
+    // Tabuleiros em mapa (Y, Produto): exatamente as mesmas casas de um tabuleiro novo.
+    if (!b || typeof b !== 'object' || Array.isArray(b)) return false;
+    const freshCells = Object.keys(a as Record<string, unknown>);
+    const importedCells = b as Record<string, unknown>;
+    return Object.keys(importedCells).length === freshCells.length && freshCells.every(cell => cell in importedCells);
+  }
   return true;
 }
 

@@ -215,7 +215,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   }, []);
 
   useEffect(() => {
-    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Rolar só dentro do painel do registo: a página não salta (os botões de ligação
+    // continuam à vista no telemóvel).
+    const end = logsEndRef.current;
+    const panel = end?.parentElement;
+    if (panel) panel.scrollTop = panel.scrollHeight;
   }, [logs]);
 
   // Mantém as refs sincronizadas com o estado

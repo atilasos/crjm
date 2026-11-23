@@ -232,3 +232,19 @@ test('endereço mal formado não deixa tentativas pendentes', async () => {
     restore();
   }
 });
+
+test('inscrição nova num endereço que não responde mostra a mesma mensagem clara', async () => {
+  const probe = Bun.serve({ port: 0, fetch: () => new Response() });
+  const url = `http://127.0.0.1:${probe.port}`;
+  probe.stop(true);
+  const client = new TournamentWebSocketClient();
+  const statuses: string[] = [];
+  client.setEventHandlers({ onConnectionStatusChange: (status, reason) => statuses.push(`${status}:${reason ?? ''}`) });
+  try {
+    await expect(client.connect(url)).rejects.toBeDefined();
+    for (let i = 0; i < 50 && !statuses.some(s => s.startsWith('disconnected')); i++) await Bun.sleep(20);
+    expect(statuses.at(-1)).toBe('disconnected:Não foi possível ligar ao servidor. Confirma o endereço.');
+  } finally {
+    client.disconnect();
+  }
+});
