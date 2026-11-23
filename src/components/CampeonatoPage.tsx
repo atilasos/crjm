@@ -203,6 +203,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   // Refs para handlers - evita recriar o cliente quando o estado muda
   const playerIdRef = useRef<string | null>(null);
   const reconnectionCodeRef = useRef<string | null>(null);
+  /** Confronto e jogo do tabuleiro em ecrã (`id:jogo`). */
+  const boardKeyRef = useRef<string | null>(null);
+  /** Este aparelho acabou de receber `welcome` (entrada ou reentrada). */
+  const justJoinedRef = useRef(false);
   const currentGameIdRef = useRef<GameId | null>(null);
 
   const addLog = useCallback((message: string, type: LogEntry['type'] = 'info') => {
@@ -237,6 +241,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const handleServerMessage = useCallback((message: ServerMessage) => {
     switch (message.type) {
       case 'welcome':
+        justJoinedRef.current = true;
         setPlayerId(message.playerId);
         // Guardar código de reconexão
         if (message.reconnectionCode) {
@@ -288,11 +293,18 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         setCurrentMatch(message.match);
         setReadyRequested(false);
         setNextGameNumber(message.match.currentGame || 1);
-        // Confronto (re)atribuído a meio de um jogo: o tabuleiro guardado pode estar
-        // desatualizado (ex.: torneio restaurado). Só se joga depois do estado do servidor.
-        if (message.match.phase === 'playing') {
-          setGameState(null);
-          setIsMyTurn(false);
+        {
+          // Confronto (re)atribuído a meio de um jogo: o tabuleiro guardado pode estar
+          // desatualizado se este aparelho acabou de (re)entrar (ex.: torneio restaurado) ou
+          // se o confronto/jogo mudou. Só se joga depois do estado do servidor. O aluno que
+          // ficou ligado mantém o tabuleiro (e uma jogada a meio) quando o adversário volta.
+          const key = `${message.match.id}:${message.match.currentGame}`;
+          if (message.match.phase === 'playing' && (justJoinedRef.current || boardKeyRef.current !== key)) {
+            setGameState(null);
+            setIsMyTurn(false);
+          }
+          boardKeyRef.current = key;
+          justJoinedRef.current = false;
         }
         setReadyFlags({
           matchId: message.match.id,
@@ -316,6 +328,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         break;
 
       case 'game_start': {
+        boardKeyRef.current = `${message.matchId}:${message.gameNumber}`;
         setIsMyTurn(message.youStart);
         setNextGameNumber(message.gameNumber);
         setReadyRequested(false);
@@ -732,6 +745,15 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
 
       <main className="flex-1 p-4 md:p-6">
         <div className="max-w-6xl mx-auto">
+          {/* Sempre montado (fora da grelha; vazio não ocupa espaço) para os leitores de ecrã
+              anunciarem a mudança; o aviso fica fixo no topo do ecrã enquanto se religa. */}
+          <div role="status" aria-live="polite">
+            {phase === 'match' && currentMatch && connectionStatus !== 'connected' && (
+              <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 w-[min(92vw,28rem)] rounded-lg border p-3 text-center font-medium [background:var(--painel)] [border-color:var(--ouro)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
+                {t('📶 A voltar a ligar… Espera um pouco.')}
+              </div>
+            )}
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {phase === 'connect' && (
@@ -770,16 +792,6 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   currentGameId={currentGameId}
                 />
               )}
-
-              {/* Sempre montado para os leitores de ecrã anunciarem a mudança; fixo no topo do
-                  ecrã enquanto se religa, para se ver mesmo com o tabuleiro rolado no telemóvel. */}
-              <div role="status" aria-live="polite">
-                {phase === 'match' && currentMatch && connectionStatus !== 'connected' && (
-                  <div className="fixed top-2 left-1/2 -translate-x-1/2 z-50 w-[min(92vw,28rem)] rounded-lg border p-3 text-center font-medium [background:var(--painel)] [border-color:var(--ouro)] [color:var(--tinta)] [box-shadow:var(--sombra)]">
-                    {t('📶 A voltar a ligar… Espera um pouco.')}
-                  </div>
-                )}
-              </div>
 
               {phase === 'match' && currentMatch && (
                 <MatchArea

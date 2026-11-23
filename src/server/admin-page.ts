@@ -2127,11 +2127,28 @@ Pedro Costa"></textarea>
       y += 6;
       
       doc.setFont(undefined, 'normal');
-      const sortedPlayers = [...data.players].sort((a, b) => {
-        if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
-        if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
-        return (a.losses || 0) - (b.losses || 0);
-      });
+      // A mesma ordem do painel: classificação do servidor (torneio ao vivo) ou, num
+      // export v2, campeão primeiro e depois a ordem inversa de eliminação.
+      let sortedPlayers;
+      if (Array.isArray(data.standings)) {
+        const rankOf = new Map(data.standings.map(entry => [entry.playerId, entry.rank]));
+        sortedPlayers = [...data.players].sort((a, b) => (rankOf.get(a.id) ?? 1e9) - (rankOf.get(b.id) ?? 1e9));
+      } else if (data.players.some(p => 'eliminationOrder' in p)) {
+        const championId = data.championId ?? data.state?.championId ?? null;
+        sortedPlayers = [...data.players].sort((a, b) => {
+          if (a.id === championId) return -1;
+          if (b.id === championId) return 1;
+          const ea = a.eliminationOrder ?? Number.MAX_SAFE_INTEGER;
+          const eb = b.eliminationOrder ?? Number.MAX_SAFE_INTEGER;
+          return eb - ea || (a.losses || 0) - (b.losses || 0);
+        });
+      } else {
+        sortedPlayers = [...data.players].sort((a, b) => {
+          if (a.status === 'eliminated' && b.status !== 'eliminated') return 1;
+          if (b.status === 'eliminated' && a.status !== 'eliminated') return -1;
+          return (a.losses || 0) - (b.losses || 0);
+        });
+      }
       
       sortedPlayers.forEach((p, i) => {
         const pos = (i + 1) + '.';
