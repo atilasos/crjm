@@ -219,7 +219,7 @@ export interface MatchEndMessage {
   finalScore: MatchScore;
   youWon: boolean;
   nextMatchId?: string;
-  nextBracket?: 'winners' | 'losers' | 'champion' | 'eliminated';
+  nextBracket?: 'winners' | 'losers' | 'champion' | 'eliminated' | 'grandFinalReset';
   eliminatedFromTournament: boolean;
 }
 

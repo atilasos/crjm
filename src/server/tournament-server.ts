@@ -33,6 +33,7 @@ import {
   handlePlayerDisconnect,
   findPlayerByCode,
   reactivatePlayer,
+  resumeMatch,
   eliminatePlayer,
   suspendPlayer,
   findActiveMatchForPlayer,
@@ -236,15 +237,19 @@ function dispatchMatches(matches: TournamentMatch[]): void {
   }
 }
 
-/** Diz aos dois jogadores quem já está pronto para o próximo jogo. */
-function sendReadyState(match: TournamentMatch): void {
-  const message: ServerMessage = {
+function readyStateMessage(match: TournamentMatch): ServerMessage {
+  return {
     type: 'ready_state',
     matchId: match.id,
     gameNumber: match.currentGame,
     player1Ready: match.player1Ready,
     player2Ready: match.player2Ready,
   };
+}
+
+/** Diz aos dois jogadores quem já está pronto para o próximo jogo. */
+function sendReadyState(match: TournamentMatch): void {
+  const message = readyStateMessage(match);
   if (match.player1) sendToPlayer(match.player1.id, message);
   if (match.player2) sendToPlayer(match.player2.id, message);
 }
@@ -511,7 +516,12 @@ function handleRejoinTournament(
           message: `${foundPlayer.name} voltou mas adversário ainda está desconectado`,
         });
       } else {
-        // Ambos conectados - retomar match normalmente
+        // Ambos ligados: retomar sempre (ex.: depois de importar, nenhum tinha a pausa registada).
+        resumeMatch(foundTournament, match.id);
+        foundPlayer.suspendedMatchId = null;
+        const opponentPlayer = opponentId ? foundTournament.playerById.get(opponentId) : null;
+        if (opponentPlayer?.suspendedMatchId === match.id) opponentPlayer.suspendedMatchId = null;
+
         sendToSocket(socket, {
           type: 'info',
           message: 'Voltaste ao teu match! O jogo vai continuar.',
@@ -567,6 +577,9 @@ function handleRejoinTournament(
           matchId: resumedMatchId,
           message: `Match retomado após reconexão de ${foundPlayer.name}`,
         });
+
+        // Se os dois já tinham carregado em «Estou pronto» durante a pausa, o jogo arranca agora.
+        if (!startGameIfReady(foundTournament, match)) sendReadyState(match);
       }
     }
   } else {
@@ -574,9 +587,10 @@ function handleRejoinTournament(
       type: 'info',
       message: 'Voltaste ao campeonato! A aguardar próximo match...',
     });
-    // Voltar a estar ligado pode desbloquear um emparelhamento.
-    dispatchMatches(scheduleMatches(foundTournament));
   }
+
+  // Voltar a estar ligado pode desbloquear um emparelhamento (idempotente).
+  dispatchMatches(scheduleMatches(foundTournament));
 
   // Notificar todos os jogadores da atualização
   broadcastTournamentState(foundTournament);
@@ -628,62 +642,69 @@ function handleReadyForMatch(
     return;
   }
 
-  // Cliques repetidos (ou depois de o jogo já ter começado) são ignorados em silêncio.
+  // Depois de o jogo começar, cliques atrasados são ignorados em silêncio.
   if (match.phase !== 'waiting') return;
 
-  // Marcar jogador como pronto
-  const { bothReady, match: updatedMatch, changed } = setPlayerReady(tournament, matchId, playerId);
-  if (!updatedMatch || !changed) return;
+  // Marcar jogador como pronto (idempotente)
+  const { match: updatedMatch, changed } = setPlayerReady(tournament, matchId, playerId);
+  if (!updatedMatch) return;
 
-  // Se ambos estão prontos, iniciar o jogo
-  if (bothReady) {
-    const gameState = createGameState(tournament.gameId);
-    if (!gameState) {
-      sendToSocket(socket, {
-        type: 'error',
-        code: 'GAME_ERROR',
-        message: 'Erro ao criar estado do jogo.',
-      });
-      return;
-    }
+  if (!changed) {
+    // Clique repetido: o cliente pode ter perdido a confirmação; reenviar só a quem clicou.
+    sendToSocket(socket, readyStateMessage(updatedMatch));
+    return;
+  }
 
-    startGame(updatedMatch, gameState);
-
-    log({
-      type: 'game',
-      tournamentId: tournament.id,
-      matchId: match.id,
-      message: `Jogo ${match.currentGame} iniciado: ${match.player1?.name} vs ${match.player2?.name}`,
-    });
-
-    // Notificar ambos os jogadores
-    const p1Start = updatedMatch.whoStartsCurrentGame === 'player1';
-
-    sendToPlayer(match.player1!.id, {
-      type: 'game_start',
-      matchId,
-      gameNumber: updatedMatch.currentGame,
-      youStart: p1Start,
-      initialState: gameState,
-      yourRole: 'player1',
-    });
-
-    sendToPlayer(match.player2!.id, {
-      type: 'game_start',
-      matchId,
-      gameNumber: updatedMatch.currentGame,
-      youStart: !p1Start,
-      initialState: gameState,
-      yourRole: 'player2',
-    });
-
-    // Broadcast para espectadores
-    broadcastSpectatorGameState(tournament, updatedMatch);
-    broadcastTournamentState(tournament);
-  } else {
+  if (!startGameIfReady(tournament, updatedMatch)) {
     // Ambos veem quem já está pronto.
     sendReadyState(updatedMatch);
   }
+}
+
+/**
+ * Arranca o próximo jogo se os dois estiverem prontos e o confronto não
+ * estiver em pausa (um adversário desligado). Devolve true se arrancou.
+ */
+function startGameIfReady(tournament: Tournament, match: TournamentMatch): boolean {
+  if (match.phase !== 'waiting' || match.isPaused || !match.player1Ready || !match.player2Ready) return false;
+  if (!match.player1 || !match.player2) return false;
+
+  const gameState = createGameState(tournament.gameId);
+  if (!gameState) {
+    log({ type: 'error', tournamentId: tournament.id, matchId: match.id, message: 'Erro ao criar estado do jogo.' });
+    return false;
+  }
+
+  startGame(match, gameState);
+
+  log({
+    type: 'game',
+    tournamentId: tournament.id,
+    matchId: match.id,
+    message: `Jogo ${match.currentGame} iniciado: ${match.player1.name} vs ${match.player2.name}`,
+  });
+
+  const p1Start = match.whoStartsCurrentGame === 'player1';
+  sendToPlayer(match.player1.id, {
+    type: 'game_start',
+    matchId: match.id,
+    gameNumber: match.currentGame,
+    youStart: p1Start,
+    initialState: gameState,
+    yourRole: 'player1',
+  });
+  sendToPlayer(match.player2.id, {
+    type: 'game_start',
+    matchId: match.id,
+    gameNumber: match.currentGame,
+    youStart: !p1Start,
+    initialState: gameState,
+    yourRole: 'player2',
+  });
+
+  broadcastSpectatorGameState(tournament, match);
+  broadcastTournamentState(tournament);
+  return true;
 }
 
 function handleSubmitMove(
@@ -967,9 +988,13 @@ function announceMatchOutcome(
   const loser = tournament.playerById.get(loserId)!;
 
   // Determinar próximo bracket para cada jogador
-  const winnerNextBracket = result.isTournamentEnd ? 'champion' :
-    (match.bracket === 'winners' ? 'winners' : 'losers');
-  const loserNextBracket = loser.status === 'eliminated' ? 'eliminated' : 'losers';
+  const goesToReset = result.isGrandFinal && !result.isTournamentEnd;
+  const winnerNextBracket = result.isTournamentEnd ? 'champion'
+    : goesToReset ? 'grandFinalReset'
+    : (match.bracket === 'winners' ? 'winners' : 'losers');
+  const loserNextBracket = loser.status === 'eliminated' ? 'eliminated'
+    : goesToReset ? 'grandFinalReset'
+    : 'losers';
 
   // Notificar jogadores
   sendToPlayer(winnerId, {
@@ -1024,7 +1049,8 @@ function handleLeaveTournament(socket: ServerWebSocket<ClientData>): void {
       } else if (tournament.phase === 'running') {
         // Sair a meio fica como desligado: o confronto pausa até voltar
         // (ou até o professor o eliminar no painel).
-        handlePlayerDisconnect(tournament, playerId);
+        const { pausedMatchId } = handlePlayerDisconnect(tournament, playerId);
+        notifyOpponentOfPause(tournament, pausedMatchId, player.id, player.name);
         broadcastTournamentState(tournament);
       }
       break;
@@ -1126,6 +1152,26 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
   }
 }
 
+/** Avisa o adversário de que o confronto ficou em pausa. */
+function notifyOpponentOfPause(tournament: Tournament, pausedMatchId: string | null, playerId: string, playerName: string): void {
+  if (!pausedMatchId) return;
+  const match = tournament.matchById.get(pausedMatchId);
+  if (!match) return;
+  const opponentId = match.player1?.id === playerId ? match.player2?.id : match.player1?.id;
+  if (opponentId) {
+    sendToPlayer(opponentId, {
+      type: 'info',
+      message: `O teu adversário ${playerName} desconectou. O jogo está pausado. A aguardar reconexão...`,
+    });
+  }
+  log({
+    type: 'match',
+    tournamentId: tournament.id,
+    matchId: pausedMatchId,
+    message: `Match pausado devido a desconexão de ${playerName}`,
+  });
+}
+
 function handleClose(socket: ServerWebSocket<ClientData>): void {
   // Remover do set de espectadores
   spectatorSockets.delete(socket);
@@ -1149,29 +1195,7 @@ function handleClose(socket: ServerWebSocket<ClientData>): void {
         // Suspender jogador (pausa match em vez de forfeit imediato)
         const { pausedMatchId } = handlePlayerDisconnect(tournament, playerId);
 
-        if (pausedMatchId) {
-          const match = tournament.matchById.get(pausedMatchId);
-          if (match) {
-            // Notificar o oponente que o match está pausado
-            const opponentId = match.player1?.id === playerId
-              ? match.player2?.id
-              : match.player1?.id;
-
-            if (opponentId) {
-              sendToPlayer(opponentId, {
-                type: 'info',
-                message: `O teu adversário ${player.name} desconectou. O jogo está pausado. A aguardar reconexão...`,
-              });
-            }
-
-            log({
-              type: 'match',
-              tournamentId: tournament.id,
-              matchId: pausedMatchId,
-              message: `Match pausado devido a desconexão de ${player.name}`,
-            });
-          }
-        }
+        notifyOpponentOfPause(tournament, pausedMatchId, playerId, player.name);
 
         // Atualizar estado para todos
         broadcastTournamentState(tournament);
@@ -1296,6 +1320,7 @@ async function handleHttpRequest(req: Request): Promise<Response> {
           reconnectionCode: p.reconnectionCode,
         })),
         state: toTournamentState(t),
+        standings: computeStandings(t),
       })),
       { headers: corsHeaders }
     );

@@ -1376,9 +1376,14 @@ Pedro Costa"></textarea>
         if (loserId && !positionedPlayers.has(loserId)) positionedPlayers.set(loserId, 2);
       }
       
-      // 3rd, 4th, 5th: Only assign when tournament is finished (has champion)
-      // Otherwise eliminated players shouldn't have positions yet
-      if (state?.championId) {
+      // Pódio calculado no servidor (ordem real de eliminação, não a ronda).
+      const serverStandings = Array.isArray(tournament.standings) ? tournament.standings : null;
+      if (state?.championId && serverStandings) {
+        positionedPlayers.clear();
+        for (const entry of serverStandings) {
+          if (entry.rank <= 5) positionedPlayers.set(entry.playerId, entry.rank);
+        }
+      } else if (state?.championId) {
         const remainingEliminated = eliminationOrder
           .filter(id => !positionedPlayers.has(id))
           .reverse();
@@ -1404,7 +1409,7 @@ Pedro Costa"></textarea>
         let status = 'waiting';
         if (state?.championId === player.id) {
           status = 'champion';
-        } else if (losses >= 2) {
+        } else if (losses >= 2 || player.status === 'eliminated') {
           status = 'eliminated';
         } else {
           // Check if currently playing

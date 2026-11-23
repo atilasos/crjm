@@ -172,7 +172,10 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
   const [gameJustEnded, setGameJustEnded] = useState(false);
   // «Estou pronto»: pedido local (otimista) e confirmação do servidor para o jogo atual.
   const [readyRequested, setReadyRequested] = useState(false);
-  const [readyFlags, setReadyFlags] = useState<{ player1: boolean; player2: boolean }>({ player1: false, player2: false });
+  // Estado de prontidão do servidor, associado ao confronto e ao jogo a que se refere.
+  type ReadyFlags = { matchId: string | null; gameNumber: number; player1: boolean; player2: boolean };
+  const NO_READY: ReadyFlags = { matchId: null, gameNumber: 0, player1: false, player2: false };
+  const [readyFlagsRaw, setReadyFlags] = useState<ReadyFlags>(NO_READY);
   const [lastGameWinnerId, setLastGameWinnerId] = useState<string | null>(null);
   const [lastGameWinnerRole, setLastGameWinnerRole] = useState<'player1' | 'player2' | null>(null);
 
@@ -268,7 +271,16 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'match_assigned':
         setCurrentMatch(message.match);
         setReadyRequested(false);
-        setReadyFlags({ player1: message.match.player1Ready ?? false, player2: message.match.player2Ready ?? false });
+        setReadyFlags({
+          matchId: message.match.id,
+          gameNumber: message.match.currentGame || 1,
+          player1: message.match.player1Ready ?? false,
+          player2: message.match.player2Ready ?? false,
+        });
+        // Um confronto (re)atribuído substitui qualquer ecrã de fim de jogo anterior.
+        setGameJustEnded(false);
+        setLastGameWinnerId(null);
+        setLastGameWinnerRole(null);
         setMyRole(message.yourRole);
         // Usar o número do jogo e score do match (importante para reconexões!)
         setCurrentGameNumber(message.match.currentGame || 1);
@@ -283,7 +295,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'game_start': {
         setIsMyTurn(message.youStart);
         setReadyRequested(false);
-        setReadyFlags({ player1: false, player2: false });
+        setReadyFlags(NO_READY);
         setCurrentGameNumber(message.gameNumber);
         // Reset do estado de fim de partida
         setGameJustEnded(false);
@@ -350,7 +362,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         // Ativar estado de anúncio de fim de partida
         setGameJustEnded(true);
         setReadyRequested(false);
-        setReadyFlags({ player1: false, player2: false });
+        setReadyFlags(NO_READY);
         setLastGameWinnerId(message.winnerId);
         setLastGameWinnerRole(message.winnerRole);
 
@@ -371,7 +383,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
       case 'match_end':
         setCurrentMatch(null);
         setReadyRequested(false);
-        setReadyFlags({ player1: false, player2: false });
+        setReadyFlags(NO_READY);
         setMyRole(null);
         setGameState(null);
         setCurrentGameNumber(1);
@@ -391,7 +403,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         } else {
           // Jogador continua no torneio - volta ao lobby para esperar próximo match
           // (pode ir para Winners ou Losers bracket dependendo do resultado)
-          if (!message.youWon) {
+          if (message.nextBracket === 'grandFinalReset') {
+            addLog('Vai haver uma final de desempate!', 'info');
+          } else if (!message.youWon) {
             addLog('Vais para a Losers Bracket. Uma derrota e estás eliminado!', 'warning');
           }
           // Voltar ao lobby para ver o painel de espera/espectador
@@ -421,7 +435,12 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         break;
 
       case 'ready_state':
-        setReadyFlags({ player1: message.player1Ready, player2: message.player2Ready });
+        setReadyFlags({
+          matchId: message.matchId,
+          gameNumber: message.gameNumber,
+          player1: message.player1Ready,
+          player2: message.player2Ready,
+        });
         break;
 
       case 'active_games_list':
@@ -561,6 +580,9 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     }
   };
 
+  // Só conta a prontidão do confronto que está no ecrã. (Entre jogos, o servidor já
+  // fala do jogo seguinte; game_start/game_end limpam o estado do jogo anterior.)
+  const readyFlags = readyFlagsRaw.matchId === currentMatch?.id ? readyFlagsRaw : NO_READY;
   const myReadyConfirmed = myRole ? readyFlags[myRole] : false;
 
   const handleReadyForMatch = () => {
@@ -639,6 +661,8 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     setPhase('connect');
     setTournamentState(null);
     setCurrentMatch(null);
+    setReadyRequested(false);
+    setReadyFlags(NO_READY);
     setMyRole(null);
     setGameState(null);
     setPlayerId(null);
@@ -1389,7 +1413,11 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
       {/* Header do match */}
       <div className="text-center mb-6">
         <div className="inline-block px-3 py-1 rounded-full border [border-color:var(--ouro)] [color:var(--tinta-suave)] text-sm mb-3">
-          {t(match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket')}{t(" • Ronda ")}{t(match.round)}
+          {match.round === 999
+            ? t('Grande Final')
+            : match.round === 1000
+              ? t('Final de desempate')
+              : <>{t(match.bracket === 'winners' ? 'Winners Bracket' : 'Losers Bracket')}{t(" • Ronda ")}{t(match.round)}</>}
         </div>
         <h2 className="text-2xl font-bold [color:var(--tinta)] mb-2">{t("Tu vs ")}{opponent?.name}
         </h2>
@@ -1456,6 +1484,12 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
                 {t(iStartNext ? '👆 Tu irás começar!' : '👀 O adversário irá começar.')}
               </p>
             </div>
+            {opponentReady && !iAmReady && (
+              <p role="status" className="[color:var(--sucesso)] text-sm mb-2">{msg('{0} já está pronto! Carrega no botão para começar.', [opponent?.name ?? ''])}</p>
+            )}
+            {!opponentOnline && (
+              <p className="[color:var(--tinta-suave)] text-sm mb-2">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
+            )}
             <button
               onClick={onNextGame}
               disabled={iAmReady}
@@ -1481,6 +1515,9 @@ function MatchArea({ match, myRole, isMyTurn, gameId, gameState, currentGameNumb
               <p className="[color:var(--tinta)] mb-2">{t("Estás pronto para começar?")}</p>
               {opponentReady && (
                 <p role="status" className="[color:var(--sucesso)] text-sm mb-2">{msg('{0} já está pronto! Carrega no botão para começar.', [opponent?.name ?? ''])}</p>
+              )}
+              {!opponentOnline && (
+                <p className="[color:var(--tinta-suave)] text-sm mb-2">{msg('{0} está desligado. O jogo começa quando voltar.', [opponent?.name ?? ''])}</p>
               )}
               <button
                 onClick={onReady}

@@ -57,6 +57,12 @@ export interface TournamentPlayer extends Omit<Player, 'isOnline'> {
   drawOrder: number;
 }
 
+/** Jogada compacta: lugar de quem jogou (1 = player1, 2 = player2) e a jogada. */
+export interface SeatMove {
+  by: 1 | 2;
+  move: unknown;
+}
+
 /** Registo compacto de um jogo terminado dentro de um confronto. */
 export interface GameRecord {
   number: number;
@@ -64,7 +70,11 @@ export interface GameRecord {
   winner: 'player1' | 'player2';
   startedAt: Date | null;
   endedAt: Date;
-  moves: unknown[];
+  moves: SeatMove[];
+}
+
+function toSeatMove(match: { player1: { id: string } | null }, entry: { playerId: string; move: unknown }): SeatMove {
+  return { by: entry.playerId === match.player1?.id ? 1 : 2, move: entry.move };
 }
 
 export interface TournamentMatch extends Match {
@@ -399,7 +409,9 @@ export function scheduleMatches(tournament: Tournament): TournamentMatch[] {
     }
 
     // Final: campeão da winners vs campeão da losers.
-    if (winners.length === 1 && losers.length === 1 && isFree(winners[0]!) && isFree(losers[0]!)) {
+    // Só com os dois ligados; ao voltar, o rejoin volta a chamar o escalonador.
+    if (winners.length === 1 && losers.length === 1) {
+      if (!isFree(winners[0]!) || !isFree(losers[0]!) || !isPairable(winners[0]!) || !isPairable(losers[0]!)) break;
       created.push(createMatch(tournament, 'grandFinal', 999, winners[0]!, losers[0]!));
       break;
     }
@@ -425,8 +437,10 @@ export function scheduleMatches(tournament: Tournament): TournamentMatch[] {
         changed = true;
       }
       // Isenção: único livre neste nível e ninguém mais o pode alcançar.
+      // Quem está desligado não sobe sem jogar: fica no nível até voltar
+      // (ou até o professor o eliminar), como no torneio de 2026-11-23.
       const stillFree = atLevel.filter(p => !created.some(m => m.player1?.id === p.id || m.player2?.id === p.id));
-      if (stillFree.length === 1 && winners.length > 1) {
+      if (stillFree.length === 1 && isPairable(stillFree[0]!) && winners.length > 1) {
         const lone = stillFree[0]!;
         const canBeReached = winners.some(p => p.id !== lone.id && p.winnersLevel < level);
         if (!canBeReached) {
@@ -536,6 +550,10 @@ export function processMatchResult(
     match.score = match.player1.id === winnerId
       ? { player1Wins: 2, player2Wins: 0 }
       : { player1Wins: 0, player2Wins: 2 };
+  }
+
+  for (const player of [winner, loser]) {
+    if (player.suspendedMatchId === match.id) player.suspendedMatchId = null;
   }
 
   const affectedPlayerIds = [winnerId, loserId];
@@ -651,7 +669,7 @@ export function endGame(
     winner: winnerSeat,
     startedAt: match.gameStartedAt,
     endedAt: new Date(),
-    moves: match.moves.map(entry => entry.move),
+    moves: match.moves.map(entry => toSeatMove(match, entry)),
   });
 
   const winsNeeded = Math.ceil(match.bestOf / 2);
@@ -805,10 +823,11 @@ export function reactivatePlayer(
   player.suspendedAt = null;
 
   const pausedMatchId = player.suspendedMatchId;
-  if (pausedMatchId) {
-    resumeMatch(tournament, pausedMatchId);
-    player.suspendedMatchId = null;
-    return { resumedMatchId: pausedMatchId };
+  player.suspendedMatchId = null;
+  const paused = pausedMatchId ? tournament.matchById.get(pausedMatchId) : null;
+  if (paused && paused.phase !== 'finished') {
+    resumeMatch(tournament, paused.id);
+    return { resumedMatchId: paused.id };
   }
   return { resumedMatchId: null };
 }
@@ -842,11 +861,11 @@ export function eliminatePlayer(
   playerId: string
 ): { endedMatches: TournamentMatch[]; newMatches: TournamentMatch[]; isTournamentEnd: boolean } {
   const player = tournament.playerById.get(playerId);
-  if (!player || player.status === 'eliminated') {
+  if (!player || player.status === 'eliminated' || tournament.phase !== 'running') {
     return { endedMatches: [], newMatches: [], isTournamentEnd: false };
   }
 
-  const activeMatch = tournament.phase === 'running' ? findActiveMatchForPlayer(tournament, playerId) : null;
+  const activeMatch = findActiveMatchForPlayer(tournament, playerId);
   eliminate(tournament, player);
   player.isConnected = false;
   player.suspendedAt = null;
@@ -858,7 +877,8 @@ export function eliminatePlayer(
   }
 
   const newMatches = scheduleMatches(tournament);
-  return { endedMatches: [], newMatches, isTournamentEnd: tournament.phase === 'finished' };
+  // scheduleMatches pode terminar o torneio (a fase muda dentro da chamada).
+  return { endedMatches: [], newMatches, isTournamentEnd: (tournament.phase as TournamentPhase) === 'finished' };
 }
 
 // ============================================================================
@@ -946,7 +966,7 @@ export interface ExportedGame {
   winner: 'player1' | 'player2';
   startedAt: string | null;
   endedAt: string;
-  moves: unknown[];
+  moves: SeatMove[];
 }
 
 export interface ExportedMatch {
@@ -971,7 +991,7 @@ export interface ExportedMatch {
   player2Ready?: boolean;
   gameState?: unknown;
   whoseTurn?: 'player1' | 'player2' | null;
-  moves?: unknown[];
+  moves?: SeatMove[];
   gameStartedAt?: string | null;
   isPaused?: boolean;
   pausedAt?: string | null;
@@ -1034,7 +1054,7 @@ export function exportTournament(tournament: Tournament): TournamentExport {
       player2Ready: m.player2Ready,
       gameState: m.gameState,
       whoseTurn: m.whoseTurn,
-      moves: m.moves.map(entry => entry.move),
+      moves: m.moves.map(entry => toSeatMove(m, entry)),
       gameStartedAt: iso(m.gameStartedAt),
       isPaused: m.isPaused,
       pausedAt: iso(m.pausedAt),
@@ -1116,7 +1136,6 @@ export function importTournament(data: TournamentExport): Tournament {
   }
 
   const importMatch = (m: ExportedMatch): TournamentMatch => {
-    const firstId = m.player1?.id;
     const match: TournamentMatch = {
       id: m.id,
       round: m.round,
@@ -1133,10 +1152,9 @@ export function importTournament(data: TournamentExport): Tournament {
       player2Ready: m.player2Ready ?? false,
       gameState: m.gameState ?? null,
       whoseTurn: m.whoseTurn ?? null,
-      moves: (m.moves ?? []).map((move, index) => ({
-        // O jogador de cada jogada não é necessário para retomar; fica aproximado.
-        playerId: index % 2 === 0 ? firstId ?? '' : m.player2?.id ?? '',
-        move,
+      moves: (m.moves ?? []).map(entry => ({
+        playerId: (entry.by === 1 ? m.player1?.id : m.player2?.id) ?? '',
+        move: entry.move,
         timestamp: new Date(),
       })),
       games: m.games.map(g => ({

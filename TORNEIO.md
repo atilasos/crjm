@@ -264,10 +264,10 @@ VITE_TOURNAMENT_SERVER_URL=wss://torneio.exemplo.com bun run build
 - Os confrontos **não são sorteados todos no início**: são criados à medida que os alunos ficam livres. Funciona com qualquer número de alunos (5, 17, 23…).
 - **Winners**: só se defrontam alunos com o mesmo número de vitórias (como numa chave clássica). Quem acaba primeiro joga contra o próximo que acabar ao mesmo nível.
 - **Losers**: logo que haja dois alunos livres com uma derrota, jogam (evitando repetir adversários, quando possível).
-- **Isenções**: com número ímpar num nível, o aluno que sobra sobe automaticamente quando já ninguém o pode alcançar, e joga contra o primeiro vencedor seguinte.
-- **Grande Final**: campeão da Winners contra campeão da Losers. Se o campeão da Losers ganhar, há **reset** (ninguém sai sem duas derrotas).
-- Na prática só o campeão da Winners espera mais tempo (pela final); os restantes esperam, no máximo, cerca de um confronto.
-- Alunos desligados não são emparelhados até voltarem. Se um aluno não voltar, elimine-o no painel: o adversário vence por falta e a chave continua.
+- **Isenções**: com número ímpar num nível, o aluno que sobra sobe automaticamente quando já ninguém o pode alcançar, e joga contra o primeiro vencedor seguinte. Só recebe isenção quem está ligado.
+- **Grande Final**: campeão da Winners (começa os jogos 1 e 3) contra campeão da Losers. Se o campeão da Losers ganhar, há **final de desempate** (ninguém sai sem duas derrotas).
+- Em simulações com confrontos de 1 a 3 minutos, a espera média entre confrontos foi de poucos segundos; quem espera mais é o campeão da Winners (pela final). Um aluno pode ainda esperar alguns minutos quando o adversário do seu nível está num confronto longo — não há um limite garantido.
+- **Alunos ausentes ou desligados não são emparelhados nem sobem por isenção** até voltarem. Se um aluno está desligado e os outros ficam à espera, elimine-o no painel: o adversário vence por falta e a chave continua. Convém eliminar logo no início quem faltou.
 - A classificação final segue a ordem de eliminação (quem sai mais tarde fica mais acima).
 
 ### Melhor de 3

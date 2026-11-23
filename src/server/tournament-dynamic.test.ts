@@ -243,6 +243,73 @@ describe('Dupla eliminação dinâmica — situações de aula', () => {
     });
   });
 
+  test('aluno desligado durante todo o torneio não sobe por isenções; eliminá-lo desbloqueia (17 alunos)', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      withRandom(seeded(seed), () => {
+        const tournament = createTournament('dominorio');
+        const players = Array.from({ length: 17 }, (_, i) => addPlayer(tournament, `P${i}`)!);
+        const absent = players[seed % 17]!;
+        absent.isConnected = false;
+        startTournament(tournament);
+        for (let step = 0; step < 100; step++) {
+          const open = openMatches(tournament);
+          if (open.length === 0) break;
+          const match = open[0]!;
+          processMatchResult(tournament, match.id, match.player1!.id);
+        }
+        // Sem jogar, nunca sobe: fica no nível 1 e é ele que segura a chave.
+        expect(absent.byes).toBe(0);
+        expect(absent.winnersLevel).toBe(1);
+        expect(tournament.phase).toBe('running');
+        expect(openMatches(tournament)).toHaveLength(0);
+        // O professor elimina o ausente e o torneio vai até ao fim.
+        eliminatePlayer(tournament, absent.id);
+        for (let step = 0; step < 100 && tournament.phase !== 'finished'; step++) {
+          const match = openMatches(tournament)[0]!;
+          expect(match).toBeDefined();
+          processMatchResult(tournament, match.id, match.player2!.id);
+        }
+        expect(tournament.phase).toBe('finished');
+      });
+    }
+  });
+
+  test('a final só é criada com os dois finalistas ligados', () => {
+    withRandom(seeded(21), () => {
+      const tournament = createTournament('dominorio');
+      const [a, b] = ['A', 'B'].map(name => addPlayer(tournament, name)!);
+      startTournament(tournament);
+      const first = openMatches(tournament)[0]!;
+      suspendPlayer(tournament, a!.id);
+      reactivatePlayer(tournament, a!.id, 'socket');
+      processMatchResult(tournament, first.id, a!.id);
+      expect(tournament.grandFinal).not.toBeNull();
+
+      const other = createTournament('dominorio');
+      const [c, d] = ['C', 'D'].map(name => addPlayer(other, name)!);
+      startTournament(other);
+      const match = openMatches(other)[0]!;
+      // D desliga durante o confronto; o confronto termina por resultado normal.
+      suspendPlayer(other, d!.id);
+      processMatchResult(other, match.id, c!.id);
+      expect(other.grandFinal).toBeNull();
+      // A referência ao confronto terminado foi limpa: ao voltar não há nada para retomar.
+      expect(d!.suspendedMatchId).toBeNull();
+      expect(reactivatePlayer(other, d!.id, 'socket').resumedMatchId).toBeNull();
+      expect(scheduleMatches(other)).toHaveLength(1);
+      expect(other.grandFinal).not.toBeNull();
+    });
+  });
+
+  test('eliminar fora de um torneio a decorrer não altera nada', () => {
+    const tournament = createTournament('dominorio');
+    const a = addPlayer(tournament, 'A')!;
+    addPlayer(tournament, 'B');
+    expect(eliminatePlayer(tournament, a.id).endedMatches).toHaveLength(0);
+    expect(a.status).toBe('active');
+    expect(a.eliminationOrder).toBeNull();
+  });
+
   test('exportar a meio e importar retoma o torneio até ao fim', () => {
     for (const n of [5, 8, 17]) {
       withRandom(seeded(n), () => {
