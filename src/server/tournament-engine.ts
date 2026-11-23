@@ -1138,6 +1138,9 @@ function validateExport(data: TournamentExport): void {
     if (!match.player1 || !match.player2 || !playerIds.has(match.player1.id) || !playerIds.has(match.player2.id)) {
       fail(`confronto #${match.matchNumber} por terminar sem os dois jogadores`);
     }
+    if (match.whoStartsCurrentGame !== 'player1' && match.whoStartsCurrentGame !== 'player2') {
+      fail(`confronto #${match.matchNumber} sem indicação de quem começa`);
+    }
     const seats = [match.player1!.id, match.player2!.id];
     if (seats[0] === seats[1]) fail(`confronto #${match.matchNumber} com o mesmo jogador nos dois lugares`);
     for (const id of seats) {

@@ -1188,6 +1188,27 @@ function handleOpen(socket: ServerWebSocket<ClientData>): void {
 }
 
 /**
+ * O estado importado tem os mesmos campos de um tabuleiro novo desse jogo e, se o
+ * tabuleiro for uma grelha, as mesmas dimensões (os tabuleiros não mudam de tamanho).
+ */
+function hasSameShape(gameId: GameId, state: unknown): boolean {
+  const fresh = createGameState(gameId) as Record<string, unknown> | null;
+  if (!fresh || !state || typeof state !== 'object') return false;
+  const imported = state as Record<string, unknown>;
+  // Campos com valor `undefined` desaparecem no JSON do export: não contam.
+  if (!Object.keys(fresh).every(key => fresh[key] === undefined || key in imported)) return false;
+  const a = fresh.tabuleiro;
+  const b = imported.tabuleiro;
+  if (Array.isArray(a)) {
+    if (!Array.isArray(b) || a.length !== b.length) return false;
+    return a.every((row, index) => !Array.isArray(row)
+      || (Array.isArray(b[index]) && (b[index] as unknown[]).length === row.length));
+  }
+  if (a && typeof a === 'object') return Boolean(b) && typeof b === 'object' && !Array.isArray(b);
+  return true;
+}
+
+/**
  * Confirma, com as regras do jogo, que cada jogo em curso de um torneio importado pode
  * continuar: tabuleiro reconhecido, por acabar e com a vez coerente com quem começou.
  */
@@ -1202,6 +1223,7 @@ function findUnplayableGame(tournament: Tournament): string | null {
     const label = `Ficheiro de torneio inválido: confronto #${match.matchNumber}`;
     try {
       const state = match.gameState as Parameters<typeof getCurrentGamePlayer>[1];
+      if (!hasSameShape(tournament.gameId, state)) return `${label} com um tabuleiro de outra forma`;
       const current = getCurrentGamePlayer(tournament.gameId, state);
       if (current !== 'jogador1' && current !== 'jogador2') return `${label} com tabuleiro desconhecido`;
       if (isGameFinished(tournament.gameId, state)) return `${label} com um jogo já acabado`;
@@ -1663,6 +1685,10 @@ async function handleHttpRequest(req: Request): Promise<Response> {
           error: 'Unsupported export version',
           version: body.version,
         }, { status: 400, headers: corsHeaders });
+      }
+
+      if (!isGameSupported(gameId)) {
+        return Response.json({ error: 'Unsupported game', gameId }, { status: 400, headers: corsHeaders });
       }
 
       // Importar o torneio (valida a estrutura antes de tocar no torneio em curso)

@@ -314,7 +314,12 @@ test('importar recusa tabuleiro adulterado ou lugares impossíveis sem tocar no 
     tampered.winnersMatches[0].gameState = { tabuleiro: [] };
     const sameSeat = JSON.parse(JSON.stringify(snapshot));
     sameSeat.winnersMatches[0].player2 = sameSeat.winnersMatches[0].player1;
-    for (const bad of [tampered, sameSeat]) {
+    // Vez e estado coerentes, mas tabuleiro com dimensões erradas.
+    const wrongBoard = JSON.parse(JSON.stringify(snapshot));
+    wrongBoard.winnersMatches[0].gameState.tabuleiro = wrongBoard.winnersMatches[0].gameState.tabuleiro.slice(1);
+    const noStarter = JSON.parse(JSON.stringify(snapshot));
+    delete noStarter.winnersMatches[0].whoStartsCurrentGame;
+    for (const bad of [tampered, sameSeat, wrongBoard, noStarter]) {
       const response = await server.importRaw(bad);
       expect(response.status).toBe(400);
     }

@@ -164,7 +164,7 @@ export class TournamentWebSocketClient implements TournamentClient {
             if (manualNeverOpened) this._pendingCode = null;
             const reason = gaveUp ? RECOVERY_GAVE_UP
               : (wasConnected && !hasCode && !replacedElsewhere) ? LOST_WITHOUT_CODE
-              : manualNeverOpened ? UNREACHABLE
+              : (!wasConnected && !replacedElsewhere) ? UNREACHABLE
               : (failure ?? (event.reason || undefined));
             this._events.onConnectionStatusChange?.('disconnected', reason);
           }
@@ -397,13 +397,16 @@ export class TournamentWebSocketClient implements TournamentClient {
     }
     // Socket aberto mas sem `welcome`: passa a recuperação automática com o mesmo código.
     this._recovering = true;
-    this._events.onConnectionStatusChange?.('connecting', 'Ligação perdida, a reconectar...');
     const ws = this._ws;
     this._ws = null;
     this._status = 'disconnected';
     if (ws) ws.close(4002, 'Tentativa expirada');
-    if (this._reconnectAttempts < this._maxReconnectAttempts) this.scheduleReconnect();
-    else this.stopRecovery(RECOVERY_GAVE_UP);
+    if (this._reconnectAttempts < this._maxReconnectAttempts) {
+      this._events.onConnectionStatusChange?.('connecting', 'Ligação perdida, a reconectar...');
+      this.scheduleReconnect();
+    } else {
+      this.stopRecovery(RECOVERY_GAVE_UP);
+    }
   }
 
   private clearAttemptDeadline(): void {

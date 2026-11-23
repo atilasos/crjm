@@ -523,9 +523,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     const client = createTournamentClient(effectiveUrl);
     clientRef.current = client;
 
-    // Configura handlers
+    // Configura handlers (um cliente cancelado ou substituído já não mexe na página)
+    const isCurrent = () => clientRef.current === client;
     client.setEventHandlers({
       onConnectionStatusChange: (status, error) => {
+        if (!isCurrent()) return;
         setConnectionStatus(status);
         setConnectionError(error ?? null);
         if (status === 'connected') {
@@ -537,11 +539,12 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
           returnToCodeScreen();
         }
       },
-      onMessage: handleServerMessage,
+      onMessage: message => { if (isCurrent()) handleServerMessage(message); },
     });
 
     try {
       await client.connect(effectiveUrl);
+      if (!isCurrent()) { client.disconnect(); return; } // cancelado durante a ligação
       client.send({
         type: 'join_tournament',
         gameId: selectedGame,
@@ -549,7 +552,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
         classId: classId.trim() || undefined,
       });
     } catch {
-      addLog('Falha ao ligar ao servidor.', 'error');
+      if (isCurrent()) addLog('Falha ao ligar ao servidor.', 'error');
     }
   };
 
@@ -584,9 +587,11 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
     const client = createTournamentClient(serverUrl);
     clientRef.current = client;
 
-    // Configura handlers
+    // Configura handlers (um cliente cancelado ou substituído já não mexe na página)
+    const isCurrent = () => clientRef.current === client;
     client.setEventHandlers({
       onConnectionStatusChange: (status, error) => {
+        if (!isCurrent()) return;
         setConnectionStatus(status);
         setConnectionError(error ?? null);
         if (status === 'connected') {
@@ -598,14 +603,15 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
           returnToCodeScreen();
         }
       },
-      onMessage: handleServerMessage,
+      onMessage: message => { if (isCurrent()) handleServerMessage(message); },
     });
 
     try {
       addLog(`A reconectar com código ${reconnectionCodeInput}...`, 'info');
       await client.rejoin(serverUrl, reconnectionCodeInput);
+      if (!isCurrent()) client.disconnect(); // cancelado durante a ligação
     } catch {
-      addLog('Falha ao reconectar ao servidor.', 'error');
+      if (isCurrent()) addLog('Falha ao reconectar ao servidor.', 'error');
     }
   };
 
@@ -736,6 +742,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                   reconnectionCodeInput={reconnectionCodeInput}
                   setReconnectionCodeInput={setReconnectionCodeInput}
                   onRejoin={handleRejoin}
+                  onCancel={handleDisconnect}
                 />
               )}
 
@@ -796,8 +803,7 @@ export function CampeonatoPage({ onVoltar }: CampeonatoPageProps) {
                 logs={logs}
                 logsEndRef={logsEndRef}
                 connectionStatus={connectionStatus}
-                onDisconnect={phase !== 'connect' || connectionStatus === 'connecting' ? handleDisconnect : undefined}
-                disconnectLabel={phase === 'connect' ? 'Cancelar' : undefined}
+                onDisconnect={phase !== 'connect' ? handleDisconnect : undefined}
               />
             </div>
           </div>
@@ -830,6 +836,8 @@ interface ConnectFormProps {
   reconnectionCodeInput: string;
   setReconnectionCodeInput: (code: string) => void;
   onRejoin: () => void;
+  /** Cancela uma ligação em curso (fica visível junto ao botão, também no telemóvel). */
+  onCancel: () => void;
 }
 
 function ConnectForm({
@@ -843,6 +851,7 @@ function ConnectForm({
   onConnect,
   reconnectionCodeInput, setReconnectionCodeInput,
   onRejoin,
+  onCancel,
 }: ConnectFormProps) {
   const { t, locale } = useTranslation();
   // Jogos suportados no modo campeonato (servidor real + mock)
@@ -991,6 +1000,12 @@ function ConnectForm({
             </>
           )}
         </button>
+        {isConnecting && (
+          <button
+            onClick={onCancel}
+            className="mt-2 w-full py-2 px-4 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-sm"
+          >{t('Cancelar')}</button>
+        )}
 
         {/* Secção de reconexão */}
         {!useMockServer && (
@@ -1714,11 +1729,9 @@ interface EventLogProps {
   logsEndRef: React.RefObject<HTMLDivElement | null>;
   connectionStatus: ConnectionStatus;
   onDisconnect?: () => void;
-  /** No ecrã de ligação, o botão cancela a tentativa em curso. */
-  disconnectLabel?: string;
 }
 
-function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect, disconnectLabel }: EventLogProps) {
+function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect }: EventLogProps) {
   const { t, locale } = useTranslation();
   const statusColors: Record<ConnectionStatus, string> = {
     disconnected: '[background:var(--tinta-suave)]',
@@ -1773,7 +1786,7 @@ function EventLog({ logs, logsEndRef, connectionStatus, onDisconnect, disconnect
         <button
           onClick={onDisconnect}
           className="mt-4 w-full py-2 px-4 rounded-lg border [border-color:var(--perigo)] [color:var(--perigo)] text-sm hover:[background:color-mix(in_srgb,var(--perigo)_10%,transparent)] transition-colors"
-        >{t(disconnectLabel ?? "❌ Sair do Campeonato")}</button>
+        >{t("❌ Sair do Campeonato")}</button>
       )}
     </div>
   );
